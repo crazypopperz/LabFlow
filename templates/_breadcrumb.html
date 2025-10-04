@@ -1,0 +1,24 @@
+{# templates/_breadcrumb.html (Version améliorée) #}
+{% if breadcrumbs %}
+<nav class="breadcrumb-nav">
+    {% for crumb in breadcrumbs %}
+        {% if not loop.last and crumb.endpoint %}
+            {# Cas 1 : C'est un lien cliquable (pas le dernier ET a un endpoint) #}
+            <a href="{{ url_for(crumb.endpoint, **crumb.url_args|default({})) }}" class="breadcrumb-link">
+                {% if crumb.icon_svg %}{{ crumb.icon_svg|safe }}{% endif %}
+                <span class="breadcrumb-text">{{ crumb.text }}</span>
+            </a>
+            <span class="breadcrumb-separator">></span>
+
+        {% elif loop.last %}
+            {# Cas 2 : C'est le dernier élément (la page actuelle) #}
+            <span class="breadcrumb-current">{{ crumb.text }}</span>
+
+        {% else %}
+            {# Cas 3 : C'est un élément intermédiaire non cliquable #}
+            <span class="breadcrumb-text">{{ crumb.text }}</span>
+            <span class="breadcrumb-separator">></span>
+        {% endif %}
+    {% endfor %}
+</nav>
+{% endif %}

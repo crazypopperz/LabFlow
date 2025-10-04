@@ -1,0 +1,5 @@
+Copyright (c) 2025 Xavier De Baudry d'Asson & Yll Basha
+
+Tous droits réservés.
+
+Il est interdit de reproduire, distribuer, modifier, décompiler ou faire de l'ingénierie inverse sur ce logiciel sans l'autorisation écrite préalable des détenteurs des droits d'auteur.

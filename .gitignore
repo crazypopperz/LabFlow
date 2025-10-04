@@ -1,0 +1,31 @@
+# Environnements virtuels Python
+# Ne jamais versionner les dépendances installées.
+venv/
+.venv/
+env/
+.env
+
+# Dossiers de cache Python
+# Fichiers temporaires générés par l'interpréteur.
+__pycache__/
+*.pyc
+
+# Dossiers de compilation PyInstaller
+# AJOUT CRITIQUE : Ces dossiers contiennent le résultat de la compilation.
+build/
+dist/
+*.spec
+
+# Dossier d'instance de Flask
+# RÈGLE AMÉLIORÉE : Ignore tout le dossier qui contient la BDD et autres données d'exécution.
+instance/
+
+# Fichiers de configuration de l'IDE (ex: VSCode)
+# Réglages personnels de l'éditeur de code.
+.vscode/
+.idea/
+
+# Fichiers de notes personnelles (si tu décides de les garder dans le dossier)
+arborescence_complete.txt
+code_bundle_complet.txt
+Commande-Github.txt

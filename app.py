@@ -5,11 +5,12 @@ import logging
 import os
 from datetime import date, datetime, timedelta
 from logging.handlers import RotatingFileHandler
+import sqlite3 # Ajout de l'import pour le context_processor
 
 # -----------------------------------------------------------------------------
 # 2. IMPORTS DES BIBLIOTHÈQUES TIERCES (PIP)
 # -----------------------------------------------------------------------------
-from flask import (Flask, redirect, request, send_from_directory, session, url_for)
+from flask import (Flask, redirect, request, send_from_directory, session, url_for, current_app)
 from flask_wtf.csrf import CSRFProtect
 
 # -----------------------------------------------------------------------------
@@ -105,66 +106,66 @@ app.jinja_env.filters['strftime_fr'] = format_datetime_fr
 
 app.jinja_env.filters['annee_scolaire'] = annee_scolaire_format
 
+
 # --- GESTION DE L'INITIALISATION AU PREMIER LANCEMENT ---
 @app.before_request
 def check_setup():
-    if not os.path.exists(DATABASE):
-        return
-    allowed_endpoints = ['static', 'setup', 'login', 'register']
-    if request.endpoint and request.endpoint not in allowed_endpoints:
-        if is_setup_needed(app):
-            return redirect(url_for('auth.setup'))
+    if is_setup_needed(current_app) and request.endpoint not in ['auth.setup', 'static']:
+        return redirect(url_for('auth.setup'))
 
 # --- FONCTIONS COMMUNES ET PROCESSEUR DE CONTEXTE ---
 @app.context_processor
 def inject_alert_info():
-    # Si l'application n'est pas encore configurée ou si l'utilisateur n'est pas connecté,
-    # on renvoie des valeurs par défaut sans interroger la base de données.
-    if 'user_id' not in session or is_setup_needed(app):
+    if 'user_id' not in session or is_setup_needed(current_app):
         return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0}
-    
-    # Ce bloc ne s'exécute que si l'app est configurée ET l'utilisateur connecté.
     try:
         db = get_db()
         return get_alerte_info(db)
     except sqlite3.Error:
-        # En cas d'erreur de base de données inattendue, on évite de planter l'application.
         return {'alertes_total': '!', 'alertes_stock': '!', 'alertes_peremption': '!'}
 
 
 @app.context_processor
 def inject_licence_info():
-    """
-    Injecte le statut de la licence dans le contexte de tous les templates.
-    Rend la variable 'licence' disponible globalement.
-    """
     licence_info = {'statut': 'FREE', 'is_pro': False, 'instance_id': 'N/A'}
-
-    # On ne fait rien si la session n'est pas active ou si l'app n'est pas configurée.
-    if 'user_id' not in session or is_setup_needed(app):
+    if 'user_id' not in session or is_setup_needed(current_app):
         return {'licence': licence_info}
-
     try:
         db = get_db()
         params = db.execute(
             "SELECT cle, valeur FROM parametres "
             "WHERE cle IN ('licence_statut', 'instance_id')").fetchall()
         params_dict = {row['cle']: row['valeur'] for row in params}
-
         if params_dict.get('licence_statut') == 'PRO':
             licence_info['statut'] = 'PRO'
             licence_info['is_pro'] = True
-
         if params_dict.get('instance_id'):
             licence_info['instance_id'] = params_dict.get('instance_id')
-
     except sqlite3.Error as e:
         app.logger.warning(
             f"Impossible de lire les informations de licence. Erreur : {e}"
         )
-    
     return {'licence': licence_info}
 
 
-# --- ROUTE POUR SERVIR LES IMAGES UPLOADÉES ---
-from flask import send_from_directory
+if __name__ == '__main__':
+    from waitress import serve
+    import socket
+
+    port = 5000
+
+    def get_network_ip():
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(('10.255.255.255', 1)); IP = s.getsockname()[0]
+        except Exception: IP = '127.0.0.1'
+        finally: s.close()
+        return IP
+
+    network_ip = get_network_ip()
+    print("="*70)
+    print("===== Serveur de l'Application GestionLabo Démarré =====")
+    print(f"1. Pour VOUS (administrateur), utilisez : http://127.0.0.1:{port}")
+    print(f"2. Pour les AUTRES utilisateurs, donnez-leur : http://{network_ip}:{port}")
+    print("="*70)
+    serve(app, host='0.0.0.0', port=port)

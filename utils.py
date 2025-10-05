@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from db import get_db
 from flask import current_app, session, flash, redirect, url_for, request, g
 from functools import wraps
@@ -6,12 +7,27 @@ from datetime import datetime, timedelta
 from fpdf import FPDF
 
 def is_setup_needed(app):
+    """
+    Vérifie si l'application a besoin d'être configurée.
+    La configuration est considérée comme terminée s'il existe au moins un utilisateur admin.
+    """
+    db_path = app.config['DATABASE']
+
+    if not os.path.exists(db_path):
+        return True
+
     try:
-        with app.app_context():
-            db = get_db()
-            user = db.execute("SELECT id FROM utilisateurs LIMIT 1").fetchone()
-            return user is None
-    except (sqlite3.OperationalError, RuntimeError):
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM utilisateurs WHERE role = 'admin'")
+        admin_count = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return admin_count == 0
+
+    except sqlite3.OperationalError:
         return True
 
 # --- DÉCORATEURS DE SÉCURITÉ ---
@@ -63,10 +79,11 @@ def limit_objets_required(f):
     return decorated_function
 
 def get_alerte_info(db):
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    date_limite = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+    try:
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        date_limite = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
 
-    query_stock = """
+        query_stock = """
             SELECT COUNT(*) FROM (
             SELECT 
                 o.seuil,
@@ -76,34 +93,37 @@ def get_alerte_info(db):
             WHERE o.en_commande = 0
             GROUP BY o.id
             HAVING quantite_disponible <= o.seuil
-        )
-    """
-    count_stock = db.execute(query_stock, (now_str,)).fetchone()[0]
+            )
+        """
+        result_stock = db.execute(query_stock, (now_str,)).fetchone()
+        count_stock = result_stock[0] if result_stock else 0
 
-    count_peremption = db.execute(
-        "SELECT COUNT(*) FROM objets WHERE date_peremption IS NOT NULL AND "
-        "date_peremption < ? AND traite = 0", (date_limite, )).fetchone()[0]
-    
-    total_alertes = count_stock + count_peremption
-    return {
-        "alertes_stock": count_stock,
-        "alertes_peremption": count_peremption,
-        "alertes_total": total_alertes
-    }
+        query_peremption = "SELECT COUNT(*) FROM objets WHERE date_peremption IS NOT NULL AND date_peremption < ? AND traite = 0"
+        result_peremption = db.execute(query_peremption, (date_limite,)).fetchone()
+        count_peremption = result_peremption[0] if result_peremption else 0
+        
+        total_alertes = count_stock + count_peremption
+        
+        return {
+            "alertes_stock": count_stock,
+            "alertes_peremption": count_peremption,
+            "alertes_total": total_alertes
+        }
+
+    except (sqlite3.Error, TypeError) as e:
+        print(f"ERREUR dans get_alerte_info: {e}")
+        return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0}
 
 def get_items_per_page():
-    # On vérifie si on a déjà chargé le paramètre pendant cette requête
     if 'items_per_page' not in g:
         db = get_db()
         param = db.execute("SELECT valeur FROM parametres WHERE cle = ?", ('items_per_page',)).fetchone()
-        # Si le paramètre n'existe pas, on met une valeur sûre par défaut
         g.items_per_page = int(param['valeur']) if param else 10
     return g.items_per_page
 
 class PDFWithFooter(FPDF):
     def footer(self):
         self.set_y(-15)
-        # CORRECTION : Utilisation de la police de base et de la nouvelle syntaxe
         self.set_font('Helvetica', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='R')
 

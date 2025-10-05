@@ -46,8 +46,8 @@
                     <td class="image-cell">
                         {% if f.logo %}
                         <div class="image-preview-wrapper">
-                            <img src="{{ url_for('static', filename='images/fournisseurs/' + f.logo) }}" class="image-objet-thumbnail" alt="Logo de {{ f.nom }}">
-                            <img src="{{ url_for('static', filename='images/fournisseurs/' + f.logo) }}" class="image-objet-preview" alt="Aperçu du logo de {{ f.nom }}">
+                            <img src="{{ url_for('main.serve_image', filename=f.logo) }}" class="image-objet-thumbnail" alt="Logo de {{ f.nom }}">
+                            <img src="{{ url_for('main.serve_image', filename=f.logo) }}" class="image-objet-preview" alt="Aperçu du logo de {{ f.nom }}">
                         </div>
                         {% endif %}
                     </td>

@@ -48,8 +48,8 @@
                     <li><strong>Quantité Disponible :</strong> <span class="stock-disponible">{{ objet.quantite_disponible }}</span></li>
                     <li><strong>Quantité Physique Totale :</strong> {{ objet.quantite_physique }}</li>
                     <li><strong>Seuil d'alerte :</strong> {{ objet.seuil }}</li>
-                    <li><strong>Armoire :</strong> <a href="{{ url_for('inventaire.voir_armoire', id=objet.armoire_id) }}">{{ objet.armoire_nom }}</a></li>
-                    <li><strong>Catégorie :</strong> <a href="{{ url_for('inventaire.voir_categorie', id=objet.categorie_id) }}">{{ objet.categorie_nom }}</a></li>
+                    <li><strong>Armoire :</strong> <a href="{{ url_for('inventaire.voir_armoire', armoire_id=objet.armoire_id) }}">{{ objet.armoire_nom }}</a></li>
+                    <li><strong>Catégorie :</strong> <a href="{{ url_for('inventaire.voir_categorie', categorie_id=objet.categorie_id) }}">{{ objet.categorie_nom }}</a></li>
                     <li>
                         <strong>Date de péremption :</strong>
                         {% if objet.date_peremption %}
@@ -77,7 +77,6 @@
                             data-armoire-id="{{ objet.armoire_id }}"
                             data-categorie-id="{{ objet.categorie_id }}"
                             data-nom="{{ objet.nom }}"
-                            {# CORRECTION : Le formulaire de modification utilise la quantité physique #}
                             data-quantite="{{ objet.quantite_physique }}"
                             data-seuil="{{ objet.seuil }}"
                             data-date-peremption="{{ objet.date_peremption or '' }}"

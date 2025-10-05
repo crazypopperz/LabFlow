@@ -363,16 +363,16 @@ def voir_objet(objet_id):
                            date_actuelle=datetime.now(),
                            now=datetime.now)
 
-@inventaire_bp.route("/armoire/<int:id>")
+@inventaire_bp.route("/armoire/<int:armoire_id>")
 @login_required
-def voir_armoire(id):
+def voir_armoire(armoire_id):
     db = get_db()
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
 
     armoire = db.execute("SELECT * FROM armoires WHERE id = ?",
-                         (id, )).fetchone()
+                         (armoire_id, )).fetchone()
     if not armoire:
         flash("Armoire non trouvée.", "error")
         return redirect(url_for('inventaire.index'))
@@ -382,7 +382,7 @@ def voir_armoire(id):
                                                sort_by=sort_by,
                                                direction=direction,
                                                filter_field='armoire_id',
-                                               filter_id=id)
+                                               filter_id=armoire_id)
 
     armoires = get_all_armoires(db)
     categories = get_all_categories(db)
@@ -391,7 +391,7 @@ def voir_armoire(id):
         'page': page,
         'total_pages': total_pages,
         'endpoint': 'inventaire.voir_armoire',
-        'id': id
+        'armoire_id': armoire_id
     }
 
     return render_template("armoire.html",
@@ -407,16 +407,16 @@ def voir_armoire(id):
                            direction=direction)
 
 
-@inventaire_bp.route("/categorie/<int:id>")
+@inventaire_bp.route("/categorie/<int:categorie_id>")
 @login_required
-def voir_categorie(id):
+def voir_categorie(categorie_id):
     db = get_db()
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
 
     categorie = db.execute("SELECT * FROM categories WHERE id = ?",
-                           (id, )).fetchone()
+                           (categorie_id, )).fetchone()
     if not categorie:
         flash("Catégorie non trouvée.", "error")
         return redirect(url_for('inventaire.index'))
@@ -426,7 +426,7 @@ def voir_categorie(id):
                                            sort_by=sort_by,
                                            direction=direction,
                                            filter_field='categorie_id',
-                                           filter_id=id)
+                                           filter_id=categorie_id)
 
     armoires = get_all_armoires(db)
     categories = get_all_categories(db)
@@ -435,7 +435,7 @@ def voir_categorie(id):
         'page': page,
         'total_pages': total_pages,
         'endpoint': 'inventaire.voir_categorie',
-        'id': id
+        'categorie_id': categorie_id
     }
 
     return render_template("categorie.html",

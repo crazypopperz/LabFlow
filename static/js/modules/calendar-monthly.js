@@ -1,7 +1,3 @@
-// =================================================================
-// MODULE: CALENDAR MONTHLY VIEW (Version Finale et Robuste)
-// Gère l'affichage et les interactions du calendrier mensuel.
-// =================================================================
 document.addEventListener("DOMContentLoaded", function () {
     const calendrierContainer = document.getElementById('calendrier-container');
     if (!calendrierContainer)
@@ -13,14 +9,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const calendrierGrid = calendrierContainer.querySelector('.calendrier-grid');
 
     let currentDate = new Date();
-	const currentMonth = currentDate.getMonth();
-	if (currentMonth < 8) { 
-    currentDate.setFullYear(currentDate.getFullYear() - 1);
-	}
-	currentDate.setMonth(8);
+    currentDate.setDate(1);
 
     async function renderCalendrier() {
         const year = currentDate.getFullYear();
+        // En JavaScript, les mois sont de 0 à 11. On ajoute 1 pour l'API.
         const month = currentDate.getMonth() + 1;
 
         const response = await fetch(`/api/reservations_par_mois/${year}/${month}`);
@@ -51,7 +44,6 @@ document.addEventListener("DOMContentLoaded", function () {
             calendrierGrid.appendChild(emptyCell);
         }
 
-        // --- BLOC DE CODE CORRIGÉ ---
         const today = new Date();
         today.setHours(0, 0, 0, 0); // On ignore l'heure pour la comparaison
 
@@ -84,7 +76,6 @@ document.addEventListener("DOMContentLoaded", function () {
             dayCell.innerHTML = cellHTML;
             calendrierGrid.appendChild(dayCell);
         }
-        // --- FIN DU BLOC DE CODE CORRIGÉ ---
     }
 
     calendrierGrid.addEventListener('click', function (e) {

@@ -5,7 +5,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, current_app)
 from utils import login_required
 from db import get_db, init_db, get_all_armoires, get_all_categories
-from utils import is_setup_needed, login_required
+from utils import is_setup_needed
 from werkzeug.security import check_password_hash, generate_password_hash
 
 auth_bp = Blueprint(
@@ -40,28 +40,46 @@ def login():
 def register():
     if is_setup_needed(current_app):
         return redirect(url_for('auth.setup'))
+    
     if request.method == 'POST':
         username = request.form.get('username').strip()
         password = request.form.get('password')
+        password_confirm = request.form.get('password_confirm')
         email = request.form.get('email').strip()
-        if not username or not password or not email:
+        
+        if not all([username, password, password_confirm, email]):
             flash("Tous les champs sont requis.", "error")
             return redirect(url_for('auth.register'))
+            
+        if password != password_confirm:
+            flash("Les mots de passe ne correspondent pas.", "error")
+            return redirect(url_for('auth.register'))
+            
+        if len(password) < 12 or \
+           not re.search(r"[a-z]", password) or \
+           not re.search(r"[A-Z]", password) or \
+           not re.search(r"[0-9]", password) or \
+           not re.search(r"[!@#$%^&*(),.?:{}|<>]", password):
+            flash("Le mot de passe doit contenir au moins 12 caractères, incluant une majuscule, une minuscule, un chiffre et un caractère spécial.", "error")
+            return redirect(url_for('auth.register'))
+            
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email):
+            flash("L'adresse e-mail fournie n'est pas valide.", "error")
+            return redirect(url_for('auth.register'))
+
         db = get_db()
         try:
             db.execute(
-                "INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe, "
-                "email) VALUES (?, ?, ?)",
-                (username, generate_password_hash(password,
-                                                  method='scrypt'), email))
+                "INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe, email) VALUES (?, ?, ?)",
+                (username, generate_password_hash(password, method='scrypt'), email))
             db.commit()
-            flash(
-                f"Le compte '{username}' a été créé. "
-                "Vous pouvez maintenant vous connecter.", "success")
+            flash(f"Le compte '{username}' a été créé. Vous pouvez maintenant vous connecter.", "success")
             return redirect(url_for('auth.login'))
         except sqlite3.IntegrityError:
             flash(f"Le nom d'utilisateur '{username}' existe déjà.", "error")
             return redirect(url_for('auth.register'))
+            
     return render_template('register.html')
 
 @auth_bp.route("/logout")
@@ -90,14 +108,10 @@ def profil():
            not re.search(r"[A-Z]", nouveau_mdp) or \
            not re.search(r"[0-9]", nouveau_mdp) or \
            not re.search(r"[!@#$%^&*(),.?:{}|<>]", nouveau_mdp):
-            flash("Le nouveau mot de passe doit contenir au moins 12 caractères, "
-                  "incluant une majuscule, une minuscule, un chiffre et "
-                  "un caractère spécial.", "error")
+            flash("Le nouveau mot de passe doit contenir au moins 12 caractères...", "error")
             return redirect(url_for('auth.profil'))
-        if len(nouveau_mdp) < 4:
-            flash(
-                "Le nouveau mot de passe doit contenir au moins 4 caractères.",
-                "error")
+        if nouveau_mdp != confirmation_mdp:
+            flash("Les nouveaux mots de passe ne correspondent pas.", "error")
             return redirect(url_for('auth.profil'))
         try:
             db.execute("UPDATE utilisateurs SET mot_de_passe = ? WHERE id = ?",
@@ -123,49 +137,49 @@ def setup():
         flash("L'application est déjà configurée.", "error")
         return redirect(url_for('auth.login'))
     
-    db = get_db()
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password')
         password_confirm = request.form.get('password_confirm')
         email = request.form.get('email', '').strip()
+        
         if not all([username, password, password_confirm, email]):
             flash("Tous les champs sont requis.", "error")
+            return redirect(url_for('auth.setup'))
+        if password != password_confirm:
+            flash("Les mots de passe ne correspondent pas.", "error")
             return redirect(url_for('auth.setup'))
         if len(password) < 12 or \
            not re.search(r"[a-z]", password) or \
            not re.search(r"[A-Z]", password) or \
            not re.search(r"[0-9]", password) or \
            not re.search(r"[!@#$%^&*(),.?:{}|<>]", password):
-            flash("Le mot de passe doit contenir au moins 12 caractères, "
-                  "incluant une majuscule, une minuscule, un chiffre et "
-                  "un caractère spécial.", "error")
-            return redirect(url_for('auth.setup'))
-        if password != password_confirm:
-            flash("Les mots de passe ne correspondent pas.", "error")
+            flash("Le mot de passe doit contenir au moins 12 caractères...", "error")
             return redirect(url_for('auth.setup'))
         email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_regex, email):
             flash("L'adresse e-mail fournie n'est pas valide.", "error")
             return redirect(url_for('auth.setup'))
         
-        init_db()
-        db = get_db()
-        db.execute(
-            "INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe, role, "
-            "email) VALUES (?, ?, 'admin', ?)",
-            (username, generate_password_hash(password, method='scrypt'), email))
-        
-        instance_id = str(uuid.uuid4())
-        db.execute(
-            "INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)",
-            ('instance_id', instance_id))
-        db.commit()
-        
-        flash(
-            f"Administrateur '{username}' créé avec succès ! "
-            "Vous pouvez maintenant vous connecter.", "success")
-        return redirect(url_for('auth.login'))
+        # --- LA CORRECTION DÉFINITIVE EST ICI ---
+        try:
+            init_db()
+            db = get_db()
+            
+            db.execute(
+                "INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe, role, email) VALUES (?, ?, 'admin', ?)",
+                (username, generate_password_hash(password, method='scrypt'), email)
+            )
+            
+            instance_id = str(uuid.uuid4())
+            db.execute(
+                "INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)",
+                ('instance_id', instance_id)
+            )
+            db.commit()
+            
+            flash(f"Administrateur '{username}' créé avec succès ! Vous pouvez maintenant vous connecter.", "success")
+            return redirect(url_for('auth.login'))
 
         except Exception as e:
             flash(f"Une erreur critique est survenue lors de l'initialisation : {e}", "error")

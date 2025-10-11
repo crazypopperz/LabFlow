@@ -16,8 +16,7 @@ from flask_wtf.csrf import CSRFProtect
 # -----------------------------------------------------------------------------
 # 3. IMPORTS DES MODULES LOCAUX
 # -----------------------------------------------------------------------------
-from db import get_db
-from db import init_app as init_db_app
+from db import get_db, init_app as init_db_app, get_all_armoires, get_all_categories
 from utils import (admin_required, get_alerte_info, is_setup_needed,
                    limit_objets_required, login_required, annee_scolaire_format)
 from views.auth import auth_bp

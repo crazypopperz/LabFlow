@@ -9,6 +9,7 @@ from datetime import datetime, date, timedelta
 from io import BytesIO
 import sqlite3
 import shutil
+import re
 
 # Imports depuis les bibliothèques tierces (Flask, etc.)
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -48,9 +49,11 @@ def admin():
                            categories=categories,
                            now=datetime.now)
 
-@admin_bp.route("/importer")
+@admin_bp.route("/importer", methods=['GET'])
 @admin_required
 def importer_page():
+    """Affiche la page d'importation en masse."""
+    # --- CORRECTION 1 : On fournit les données que base.html attend ---
     db = get_db()
     armoires = get_all_armoires(db)
     categories = get_all_categories(db)
@@ -59,7 +62,7 @@ def importer_page():
         ('Panneau d\'Administration', url_for('admin.admin')),
         ('Importation en Masse', '#')
     ]
-
+    
     return render_template("admin_import.html", 
                            breadcrumbs=breadcrumbs,
                            armoires=armoires,
@@ -121,9 +124,91 @@ def telecharger_modele_excel():
 @admin_bp.route("/importer", methods=['POST'])
 @admin_required
 def importer_fichier():
-    # Pour l'instant, cette fonction ne fait rien d'utile.
-    # Nous la compléterons à la prochaine étape.
-    flash("La fonctionnalité d'importation est en cours de développement.", "info")
+    if 'fichier_excel' not in request.files:
+        flash("Aucun fichier sélectionné.", "error")
+        return redirect(url_for('admin.importer_page'))
+
+    fichier = request.files['fichier_excel']
+    if fichier.filename == '' or not fichier.filename.endswith('.xlsx'):
+        flash("Veuillez sélectionner un fichier Excel (.xlsx) valide.", "error")
+        return redirect(url_for('admin.importer_page'))
+
+    db = get_db()
+    errors = []
+    success_count = 0
+
+    # Pré-chargement des armoires et catégories pour la validation
+    armoires_db = {a['nom'].lower(): a['id'] for a in get_all_armoires(db)}
+    categories_db = {c['nom'].lower(): c['id'] for c in get_all_categories(db)}
+
+    try:
+        workbook = Workbook(fichier)
+        sheet = workbook.active
+        
+        db.execute("BEGIN") # Début de la transaction
+
+        # On itère sur les lignes, en sautant l'en-tête
+        for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+            # On s'assure que la ligne n'est pas complètement vide
+            if all(cell is None for cell in row):
+                continue
+
+            nom, quantite, seuil, armoire, categorie, date_peremption = (row[0], row[1], row[2], row[3], row[4], row[5])
+
+            # --- Validations impitoyables ---
+            if not all([nom, quantite, seuil, armoire, categorie]):
+                errors.append(f"Ligne {i}: Tous les champs obligatoires (Nom, Quantité, Seuil, Armoire, Catégorie) doivent être remplis.")
+                continue
+
+            try:
+                quantite_int = int(quantite)
+                seuil_int = int(seuil)
+            except (ValueError, TypeError):
+                errors.append(f"Ligne {i}: La quantité et le seuil doivent être des nombres entiers.")
+                continue
+
+            armoire_id = armoires_db.get(str(armoire).lower())
+            if not armoire_id:
+                errors.append(f"Ligne {i}: L'armoire '{armoire}' n'existe pas. Veuillez la créer avant l'importation.")
+                continue
+
+            categorie_id = categories_db.get(str(categorie).lower())
+            if not categorie_id:
+                errors.append(f"Ligne {i}: La catégorie '{categorie}' n'existe pas. Veuillez la créer avant l'importation.")
+                continue
+            
+            date_peremption_db = None
+            if date_peremption:
+                try:
+                    # openpyxl peut retourner un objet datetime ou une chaîne
+                    if isinstance(date_peremption, datetime):
+                        date_peremption_db = date_peremption.strftime('%Y-%m-%d')
+                    else:
+                        date_peremption_db = datetime.strptime(str(date_peremption).split(' ')[0], '%Y-%m-%d').strftime('%Y-%m-%d')
+                except ValueError:
+                    errors.append(f"Ligne {i}: Le format de la date de péremption '{date_peremption}' est invalide (doit être AAAA-MM-JJ).")
+                    continue
+            
+            # Si toutes les validations sont passées, on insère
+            db.execute(
+                """INSERT INTO objets (nom, quantite_physique, seuil, armoire_id, categorie_id, date_peremption)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (nom, quantite_int, seuil_int, armoire_id, categorie_id, date_peremption_db)
+            )
+            success_count += 1
+
+        if errors:
+            db.rollback() # On annule tout si une seule erreur est trouvée
+            for error in errors:
+                flash(error, "error")
+        else:
+            db.commit() # On sauvegarde tout si aucune erreur n'est trouvée
+            flash(f"Importation réussie ! {success_count} objet(s) ont été ajouté(s) à l'inventaire.", "success")
+
+    except Exception as e:
+        db.rollback()
+        flash(f"Une erreur inattendue est survenue lors de la lecture du fichier : {e}", "error")
+
     return redirect(url_for('admin.importer_page'))
 
 #=== GESTION UTILISATEURS ===

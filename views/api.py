@@ -28,6 +28,26 @@ api_bp = Blueprint(
 # ============================================================
 # LES FONCTIONS DE ROUTES API SERONT COLLÉES ICI
 # ============================================================
+def get_disponibilite_objet(db, objet_id, debut_str, fin_str):
+    """
+    Calcule la quantité disponible d'un objet pour un créneau horaire spécifique.
+    """
+    objet = db.execute("SELECT quantite_physique FROM objets WHERE id = ?", (objet_id,)).fetchone()
+    if not objet:
+        return 0
+    quantite_physique = objet['quantite_physique']
+    
+    reservations_chevauchement = db.execute("""
+        SELECT SUM(quantite_reservee) as total_reserve
+        FROM reservations
+        WHERE objet_id = ? AND debut_reservation < ? AND fin_reservation > ?
+    """, (objet_id, fin_str,debut_str)).fetchone()
+    
+    quantite_reservee_max = reservations_chevauchement['total_reserve'] if reservations_chevauchement and reservations_chevauchement['total_reserve'] else 0
+
+    return quantite_physique - quantite_reservee_max
+
+
 @api_bp.route("/rechercher")
 @login_required
 def api_rechercher():
@@ -151,22 +171,19 @@ def api_reservation_details(groupe_id):
     return jsonify(details)
 
 
-@api_bp.route("/reservation_data/<date>")
+@api_bp.route("/reservation_data/<date>/<heure_debut>/<heure_fin>")
 @login_required
-def api_reservation_data(date):
+def api_reservation_data(date, heure_debut, heure_fin):
     db = get_db()
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    query = """
-        SELECT 
-            o.id, o.nom, c.nom as categorie, o.quantite_physique,
-            COALESCE((SELECT SUM(r.quantite_reservee) 
-                      FROM reservations r 
-                      WHERE r.objet_id = o.id AND r.fin_reservation > ?), 0) as total_reserve
-        FROM objets o
-        JOIN categories c ON o.categorie_id = c.id
+    
+    debut_str = f"{date} {heure_debut}"
+    fin_str = f"{date} {heure_fin}"
+
+    objets_bruts = db.execute("""
+        SELECT o.id, o.nom, c.nom as categorie, o.quantite_physique
+        FROM objets o JOIN categories c ON o.categorie_id = c.id
         ORDER BY c.nom, o.nom
-        """
-    objets_bruts = db.execute(query, (now_str,)).fetchall()
+    """).fetchall()
     
     grouped_objets = {}
     objets_map = {}
@@ -175,7 +192,7 @@ def api_reservation_data(date):
         if categorie_nom not in grouped_objets:
             grouped_objets[categorie_nom] = []
         
-        quantite_disponible = row['quantite_physique'] - row['total_reserve']
+        quantite_disponible = get_disponibilite_objet(db, row['id'], debut_str, fin_str)
         
         obj_data = {
             "id": row['id'],
@@ -191,17 +208,19 @@ def api_reservation_data(date):
     for kit in kits:
         objets_du_kit = db.execute("SELECT objet_id, quantite FROM kit_objets WHERE kit_id = ?", (kit['id'],)).fetchall()
         
-        disponibilite_kit = 9999
+        disponibilite_kit = 9999 # On part d'un nombre très grand
         if not objets_du_kit:
             disponibilite_kit = 0
         else:
             for obj_in_kit in objets_du_kit:
                 objet_data = objets_map.get(obj_in_kit['objet_id'])
+                
                 if not objet_data or obj_in_kit['quantite'] == 0:
                     disponibilite_kit = 0
                     break
                 
                 kits_possibles = math.floor(objet_data['quantite_disponible'] / obj_in_kit['quantite'])
+                
                 if kits_possibles < disponibilite_kit:
                     disponibilite_kit = kits_possibles
 
@@ -257,30 +276,35 @@ def api_modifier_reservation():
 def api_valider_panier_interne(cart_data, groupe_id_existant=None):
     db = get_db()
     user_id = session['user_id']
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     try:
-        objets_requis = {}
+        # Étape 1 : Vérifier la disponibilité pour chaque créneau
         for creneau_key, resa_details in cart_data.items():
+            debut_str = f"{resa_details['date']} {resa_details['heure_debut']}"
+            fin_str = f"{resa_details['date']} {resa_details['heure_fin']}"
+            
+            objets_requis_pour_creneau = {}
             for kit_id, kit_data in resa_details.get('kits', {}).items():
                 objets_du_kit = db.execute("SELECT objet_id, quantite FROM kit_objets WHERE kit_id = ?", (kit_id,)).fetchall()
                 for obj_in_kit in objets_du_kit:
-                    objets_requis[obj_in_kit['objet_id']] = objets_requis.get(obj_in_kit['objet_id'], 0) + (obj_in_kit['quantite'] * kit_data.get('quantite', 0))
+                    objets_requis_pour_creneau[obj_in_kit['objet_id']] = objets_requis_pour_creneau.get(obj_in_kit['objet_id'], 0) + (obj_in_kit['quantite'] * kit_data.get('quantite', 0))
             for obj_id, obj_data in resa_details.get('objets', {}).items():
-                objets_requis[int(obj_id)] = objets_requis.get(int(obj_id), 0) + obj_data.get('quantite', 0)
+                objets_requis_pour_creneau[int(obj_id)] = objets_requis_pour_creneau.get(int(obj_id), 0) + obj_data.get('quantite', 0)
 
-        for obj_id, quantite_demandee in objets_requis.items():
-            if quantite_demandee <= 0: continue
-            stock_info = db.execute("""SELECT o.nom, (o.quantite_physique - COALESCE((SELECT SUM(r.quantite_reservee) FROM reservations r WHERE r.objet_id = o.id AND r.fin_reservation > ?), 0)) as quantite_disponible
-                            FROM objets o WHERE o.id = ?""", (now_str, obj_id,)).fetchone()
-            if not stock_info or stock_info['quantite_disponible'] < quantite_demandee:
-                return {'success': False, 'error': f"Stock insuffisant pour '{stock_info['nom']}'"}
+            for obj_id, quantite_demandee in objets_requis_pour_creneau.items():
+                if quantite_demandee <= 0: continue
+                disponibilite_reelle = get_disponibilite_objet(db, obj_id, debut_str, fin_str)
+                objet_nom = db.execute("SELECT nom FROM objets WHERE id = ?", (obj_id,)).fetchone()['nom']
+                if disponibilite_reelle < quantite_demandee:
+                    return {'success': False, 'error': f"Stock insuffisant pour '{objet_nom}' sur le créneau {resa_details['heure_debut']}-{resa_details['heure_fin']} ({disponibilite_reelle} disponible(s))."}
 
+        # Étape 2 : Si tout est disponible, on insère les réservations
         for creneau_key, resa_details in cart_data.items():
             groupe_id = groupe_id_existant or str(uuid.uuid4())
             debut_dt = datetime.strptime(f"{resa_details['date']} {resa_details['heure_debut']}", '%Y-%m-%d %H:%M')
             fin_dt = datetime.strptime(f"{resa_details['date']} {resa_details['heure_fin']}", '%Y-%m-%d %H:%M')
             
+            # --- LA CORRECTION EST ICI : On reconstruit la liste des objets à insérer ---
             final_reservations = {}
             for kit_id_str, kit_data in resa_details.get('kits', {}).items():
                 objets_du_kit = db.execute("SELECT objet_id, quantite FROM kit_objets WHERE kit_id = ?", (kit_id_str,)).fetchall()
@@ -290,6 +314,7 @@ def api_valider_panier_interne(cart_data, groupe_id_existant=None):
             for obj_id_str, obj_data in resa_details.get('objets', {}).items():
                 key = (int(obj_id_str), None)
                 final_reservations[key] = final_reservations.get(key, 0) + obj_data.get('quantite', 0)
+            # --- FIN DE LA CORRECTION ---
 
             for (obj_id, kit_id), quantite_totale in final_reservations.items():
                 if quantite_totale > 0:
@@ -300,6 +325,7 @@ def api_valider_panier_interne(cart_data, groupe_id_existant=None):
                     action = "Modification Réservation" if groupe_id_existant else "Réservation"
                     enregistrer_action(obj_id, action, f"Quantité: {quantite_totale} pour le {debut_dt.strftime('%d/%m/%Y')}")
         
+        # On ne fait pas de commit ici, on laisse la fonction appelante décider.
         return {'success': True}
     except Exception as e:
         traceback.print_exc()

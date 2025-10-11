@@ -261,15 +261,52 @@ async function openReservationModal(dateStr, groupIdToEdit = null) {
         }
     }
     
-    // --- INITIALISATION DE LA MODALE ---
-    const localDate = new Date(dateStr + 'T00:00:00');
+    async function updateReservationData() {
+        const heureDebut = document.getElementById('heure_debut').value;
+        const heureFin = document.getElementById('heure_fin').value;
+        
+        // Affiche un indicateur de chargement
+        document.getElementById('reservation-objects-list').innerHTML = '<p class="text-discret" style="padding: 20px;">Chargement des disponibilités...</p>';
+        document.getElementById('kits-list').innerHTML = '';
+
+        try {
+            const response = await fetch(`/api/reservation_data/${dateStr}/${heureDebut}/${heureFin}`);
+            if (!response.ok) throw new Error('Erreur serveur');
+            
+            reservationData = await response.json();
+            
+            // Une fois les données reçues, on rafraîchit tout l'affichage
+            renderCategories();
+            renderAllObjects();
+            renderKits();
+            updateAllSteppers();
+
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour des données de réservation:", error);
+            showInfoModal("Erreur de Communication", "Impossible de charger les données de disponibilité pour ce créneau.");
+        }
+    }
+    
+	
+	const localDate = new Date(dateStr + 'T00:00:00');
     const title = (editingGroupId || editingCartKey) ? "Modifier la réservation pour le" : "Réserver du matériel pour le";
     document.getElementById('reservation-modal-title').textContent = `${title} ${localDate.toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'})}`;
     document.getElementById('reservation-search-input').value = '';
     reservationModal.style.display = 'flex';
 
-    const response = await fetch(`/api/reservation_data/${dateStr}`);
-    reservationData = await response.json();
+    const heureDebutSelect = document.getElementById('heure_debut');
+    const heureFinSelect = document.getElementById('heure_fin');
+    const addToCartBtn = document.getElementById('add-to-cart-btn');
+    const reservationObjectsList = document.getElementById('reservation-objects-list');
+    const kitsListContainer = document.getElementById('kits-list');
+    const reservationSearchInput = document.getElementById('reservation-search-input');
+	
+	heureDebutSelect.onchange = updateReservationData;
+    heureFinSelect.onchange = updateReservationData;
+    addToCartBtn.onclick = handleModalSubmit;
+    reservationObjectsList.onclick = handleQuantityChange;
+    kitsListContainer.onclick = handleQuantityChange;
+    reservationSearchInput.oninput = filterObjectsList;
     
     if (editingGroupId) {
         const detailsResponse = await fetch(`/api/reservation_details/${editingGroupId}`);
@@ -281,45 +318,13 @@ async function openReservationModal(dateStr, groupIdToEdit = null) {
                 return acc;
             }, {});
         }
-        document.getElementById('heure_debut').value = new Date(details.debut_reservation).toTimeString().slice(0, 5);
-        document.getElementById('heure_fin').value = new Date(details.fin_reservation).toTimeString().slice(0, 5);
+        heureDebutSelect.value = new Date(details.debut_reservation).toTimeString().slice(0, 5);
+        heureFinSelect.value = new Date(details.fin_reservation).toTimeString().slice(0, 5);
     }
 
-    renderCategories();
-    renderAllObjects();
-    renderKits();
-    updateAllSteppers();
+	addToCartBtn.textContent = editingGroupId ? "Valider la modification" : (editingCartKey ? "Mettre à jour le panier" : "Ajouter au panier");
 
-    // === CORRECTION FINALE : GESTION DES ÉCOUTEURS D'ÉVÉNEMENTS ===
-    const heureDebutSelect = document.getElementById('heure_debut');
-    const heureFinSelect = document.getElementById('heure_fin');
-    const addToCartBtn = document.getElementById('add-to-cart-btn');
-    const reservationObjectsList = document.getElementById('reservation-objects-list');
-    const kitsListContainer = document.getElementById('kits-list');
-    const reservationSearchInput = document.getElementById('reservation-search-input');
-
-    function updateHeureFin() {
-        const heureDebutParts = heureDebutSelect.value.split(':');
-        const heureDebutNum = parseInt(heureDebutParts[0], 10);
-        const heureFinNum = heureDebutNum + 1;
-        const heureFinStr = String(heureFinNum).padStart(2, '0') + ':00';
-        if (heureFinSelect.querySelector(`option[value="${heureFinStr}"]`)) {
-            heureFinSelect.value = heureFinStr;
-        }
-    }
-    
-    // On attache les écouteurs une seule fois en utilisant .on... qui écrase les précédents
-    heureDebutSelect.onchange = updateHeureFin;
-    addToCartBtn.onclick = handleModalSubmit;
-    reservationObjectsList.onclick = handleQuantityChange;
-    kitsListContainer.onclick = handleQuantityChange;
-    reservationSearchInput.oninput = filterObjectsList;
-
-    // On met à jour le texte du bouton et l'heure de fin
-    addToCartBtn.textContent = editingGroupId ? "Valider la modification" : (editingCartKey ? "Mettre à jour le panier" : "Ajouter au panier");
-    if (!editingGroupId && !editingCartKey) {
-        updateHeureFin();
-    }
+	await updateReservationData();
 }
 
 // --- DÉMARRAGE ---

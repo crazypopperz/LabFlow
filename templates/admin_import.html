@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Importation en Masse{% endblock %}
+
+{% block content %}
+    
+    {% include '_breadcrumb.html' %}
+
+    <div class="management-header">
+        <h2 class="page-title">
+            <svg class="page-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg>
+            <span>Importation en Masse depuis Excel</span>
+        </h2>
+    </div>
+
+    <div class="content-card">
+        <h3 class="card-title">Procédure d'Importation</h3>
+        
+        <ol class="procedure-list">
+            <li>
+                <strong>Téléchargez notre modèle officiel.</strong>
+                <p>C'est l'étape la plus importante. Utiliser ce modèle garantit que vos données seront importées correctement.</p>
+                <a href="{{ url_for('admin.telecharger_modele_excel') }}" class="btn-action">Télécharger le Modèle Excel</a>
+            </li>
+            <li>
+                <strong>Remplissez le fichier.</strong>
+                <p>Ouvrez le fichier téléchargé et remplissez-le avec les données de votre inventaire. Ne modifiez pas les noms des colonnes. Les colonnes suivantes sont obligatoires :</p>
+                <ul class="required-fields-list">
+                    <li>Nom</li>
+                    <li>Quantité</li>
+                    <li>Seuil</li>
+                    <li>Armoire</li>
+                    <li>Catégorie</li>
+                </ul>
+                <p class="text-discret">La colonne "Date Péremption" est optionnelle et doit être au format AAAA-MM-JJ.</p>
+            </li>
+            <li>
+                <strong>Envoyez votre fichier complété.</strong>
+                <p>Une fois le fichier prêt, utilisez le formulaire ci-dessous pour l'envoyer. L'application vérifiera chaque ligne avant d'importer les données.</p>
+                <form action="{{ url_for('admin.importer_fichier') }}" method="post" enctype="multipart/form-data" class="import-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="form-group">
+                        <label for="fichier_excel">Sélectionnez votre fichier Excel (.xlsx)</label>
+                        <input type="file" id="fichier_excel" name="fichier_excel" accept=".xlsx" required>
+                    </div>
+                    <button type="submit" class="btn-action btn-primary">Lancer l'Importation</button>
+                </form>
+            </li>
+        </ol>
+    </div>
+{% endblock %}

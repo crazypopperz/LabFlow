@@ -40,8 +40,8 @@ def get_disponibilite_objet(db, objet_id, debut_str, fin_str):
     reservations_chevauchement = db.execute("""
         SELECT SUM(quantite_reservee) as total_reserve
         FROM reservations
-        WHERE objet_id = ? AND debut_reservation < ? AND fin_reservation > ?
-    """, (objet_id, fin_str,debut_str)).fetchone()
+        WHERE objet_id = ? AND fin_reservation > ? AND debut_reservation < ?
+    """, (objet_id, debut_str, fin_str)).fetchone()
     
     quantite_reservee_max = reservations_chevauchement['total_reserve'] if reservations_chevauchement and reservations_chevauchement['total_reserve'] else 0
 

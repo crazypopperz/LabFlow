@@ -16,9 +16,9 @@
         <ul class="nav-links">
             <!-- Ces url_for() correspondent maintenant à tes fonctions dans app.py -->
             <li><a href="{{ url_for('inventaire.index') }}">Tableau de Bord</a></li>
-            <li><a href="{{ url_for('materiels') }}">Matériel</a></li>
-            <li><a href="{{ url_for('reactifs') }}">Réactifs</a></li>
-            <li><a href="{{ url_for('fournisseurs') }}">Fournisseurs</a></li>
+            <li><a href="{{ url_for('inventaire.inventaire') }}">Matériel</a></li>
+            <li><a href="{{ url_for('main.gestion_categories') }}">Réactifs</a></li>
+            <li><a href="{{ url_for('main.voir_fournisseurs') }}">Fournisseurs</a></li>
             <li><a href="{{ url_for('auth.logout') }}">Déconnexion</a></li>
         </ul>
     </nav>

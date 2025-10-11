@@ -48,6 +48,84 @@ def admin():
                            categories=categories,
                            now=datetime.now)
 
+@admin_bp.route("/importer")
+@admin_required
+def importer_page():
+    db = get_db()
+    armoires = get_all_armoires(db)
+    categories = get_all_categories(db)
+    
+    breadcrumbs = [
+        ('Panneau d\'Administration', url_for('admin.admin')),
+        ('Importation en Masse', '#')
+    ]
+
+    return render_template("admin_import.html", 
+                           breadcrumbs=breadcrumbs,
+                           armoires=armoires,
+                           categories=categories,
+                           now=datetime.now)
+
+#=== IMPORTATION FICHIER FICHIER EXCEL IMPORT MATERIEL ===
+@admin_bp.route("/telecharger_modele")
+@admin_required
+def telecharger_modele_excel():
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Inventaire à Importer"
+
+    headers = [
+        "Nom",              # Obligatoire
+        "Quantité",         # Obligatoire
+        "Seuil",            # Obligatoire
+        "Armoire",          # Obligatoire
+        "Catégorie",        # Obligatoire
+        "Date Péremption"   # Optionnel
+    ]
+    sheet.append(headers)
+
+    header_font = Font(name='Calibri', bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
+    note_font = Font(name='Calibri', italic=True, color="808080")
+
+    # On applique les styles à la première ligne (les en-têtes)
+    for cell in sheet[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+
+    # On ajuste la largeur des colonnes
+    sheet.column_dimensions['A'].width = 40  # Nom
+    sheet.column_dimensions['B'].width = 15  # Quantité
+    sheet.column_dimensions['C'].width = 15  # Seuil
+    sheet.column_dimensions['D'].width = 25  # Armoire
+    sheet.column_dimensions['E'].width = 25  # Catégorie
+    sheet.column_dimensions['F'].width = 25  # Date Péremption
+
+    # On ajoute une note de format dans la cellule F2
+    note_cell = sheet['F2']
+    note_cell.value = "Format : AAAA-MM-JJ"
+    note_cell.font = note_font
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='modele_import_inventaire.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+@admin_bp.route("/importer", methods=['POST'])
+@admin_required
+def importer_fichier():
+    # Pour l'instant, cette fonction ne fait rien d'utile.
+    # Nous la compléterons à la prochaine étape.
+    flash("La fonctionnalité d'importation est en cours de développement.", "info")
+    return redirect(url_for('admin.importer_page'))
+
 #=== GESTION UTILISATEURS ===
 @admin_bp.route("/utilisateurs")
 @admin_required

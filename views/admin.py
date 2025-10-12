@@ -10,6 +10,7 @@ from io import BytesIO
 import sqlite3
 import shutil
 import re
+import tempfile
 
 # Imports depuis les bibliothèques tierces (Flask, etc.)
 from flask import (Blueprint, render_template, request, redirect, url_for,

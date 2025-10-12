@@ -3,6 +3,7 @@
 # -----------------------------------------------------------------------------
 import logging
 import os
+import sys
 from datetime import date, datetime, timedelta
 from logging.handlers import RotatingFileHandler
 import sqlite3 # Ajout de l'import pour le context_processor
@@ -26,7 +27,21 @@ from views.main import main_bp
 from views.api import api_bp
 
 # --- CONFIGURATION DE L'APPLICATION ---
-app = Flask(__name__)
+# Ce bloc détermine les chemins corrects pour les templates et fichiers statiques,
+# que l'application soit lancée depuis le code source ou un exécutable PyInstaller.
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.abspath(os.path.dirname(__file__))
+template_folder = os.path.join(base_path, 'templates')
+static_folder = os.path.join(base_path, 'static')
+
+# Initialisation UNIQUE et CORRECTE de l'application Flask
+app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
+
+# La ligne "app = Flask(__name__)" qui se trouvait ici a été SUPPRIMÉE car elle écrasait la configuration ci-dessus.
+
+# --- LE RESTE DE LA CONFIGURATION S'APPLIQUE MAINTENANT À LA BONNE INSTANCE DE L'APP ---
 app.config.from_object('config')
 init_db_app(app)
 app.config['SECRET_KEY'] = os.environ.get('GMLCL_SECRET_KEY', 'une-cle-temporaire-pour-le-developpement-a-changer')
@@ -148,23 +163,9 @@ def inject_licence_info():
 
 
 if __name__ == '__main__':
-    from waitress import serve
-    import socket
-
     port = 5000
-
-    def get_network_ip():
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(('10.255.255.255', 1)); IP = s.getsockname()[0]
-        except Exception: IP = '127.0.0.1'
-        finally: s.close()
-        return IP
-
-    network_ip = get_network_ip()
-    print("="*70)
-    print("===== Serveur de l'Application GestionLabo Démarré =====")
-    print(f"1. Pour VOUS (administrateur), utilisez : http://127.0.0.1:{port}")
-    print(f"2. Pour les AUTRES utilisateurs, donnez-leur : http://{network_ip}:{port}")
-    print("="*70)
-    serve(app, host='0.0.0.0', port=port)
+    
+    # La configuration correcte pour le débogage dans un exécutable :
+    # - debug=True : pour activer le logger et voir les requêtes dans la console.
+    # - use_reloader=False : pour empêcher le crash de l'auto-reloader.
+    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=False)

@@ -15,7 +15,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from werkzeug.utils import secure_filename
 
 # Imports depuis nos propres modules
-from db import get_db, get_all_armoires, get_all_categories
+from db import get_db, get_all_armoires, get_all_categories, get_items_per_page, strip_accents
 from utils import login_required, admin_required, limit_objets_required, get_alerte_info, get_items_per_page, enregistrer_action
 
 # =============================================================
@@ -34,66 +34,78 @@ def get_paginated_objets(db,
     items_per_page = get_items_per_page()
     offset = (page - 1) * items_per_page
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    base_query = """
-    SELECT 
-    o.id, o.nom, o.quantite_physique, o.seuil, o.armoire_id, o.categorie_id,
-    o.fds_nom_original, o.fds_nom_securise,
-    a.nom AS armoire, c.nom AS categorie, o.image, o.en_commande,
-    o.date_peremption,
-    (o.quantite_physique - COALESCE(SUM(r.quantite_reservee), 0)) as quantite_disponible
-    FROM objets o
-    JOIN armoires a ON o.armoire_id = a.id
-    JOIN categories c ON o.categorie_id = c.id
-    LEFT JOIN reservations r ON o.id = r.objet_id AND r.fin_reservation > ?
+
+    # --- REQUÊTE DE BASE (INCHANGÉE, ELLE EST CORRECTE) ---
+    base_query_select = f"""
+        SELECT 
+            o.id, o.nom, o.quantite_physique, o.seuil, o.date_peremption, o.image, o.image_url,
+            a.nom AS armoire, a.id as armoire_id,
+            c.nom AS categorie, c.id as categorie_id,
+            (o.quantite_physique - COALESCE(SUM(r.quantite_reservee), 0)) as quantite_disponible
+        FROM objets o
+        JOIN armoires a ON o.armoire_id = a.id
+        JOIN categories c ON o.categorie_id = c.id
+        LEFT JOIN reservations r ON o.id = r.objet_id AND r.fin_reservation > ?
     """
-    conditions = []
-    params = [now_str]
     
-    if filter_field and filter_id:
-        conditions.append(f"o.{filter_field} = ?")
-        params.append(filter_id)
+    # --- CONSTRUCTION SIMPLIFIÉE ET CORRECTE DES FILTRES ---
+    where_clauses = []
+    params = [now_str]
 
     if search_query:
-        conditions.append("unaccent(LOWER(o.nom)) LIKE unaccent(LOWER(?))")
-        params.append(f"%{search_query}%")
-
+        where_clauses.append("unaccent(o.nom) LIKE ?")
+        params.append(f"%{strip_accents(search_query)}%")
+    
     if armoire_id:
-        conditions.append("o.armoire_id = ?")
+        where_clauses.append("o.armoire_id = ?")
         params.append(armoire_id)
 
     if categorie_id:
-        conditions.append("o.categorie_id = ?")
+        where_clauses.append("o.categorie_id = ?")
         params.append(categorie_id)
 
-    if conditions:
-        base_query += " WHERE " + " AND ".join(conditions)
-    
-    base_query += " GROUP BY o.id"
+    if filter_field and filter_id:
+        # Sécurisation pour éviter l'injection SQL, même si c'est peu probable ici
+        if filter_field in ['armoire_id', 'categorie_id']:
+            where_clauses.append(f"o.{filter_field} = ?")
+            params.append(filter_id)
 
+    # On assemble la requête
+    full_query = base_query_select
+    if where_clauses:
+        full_query += " WHERE " + " AND ".join(where_clauses)
+    
+    full_query += " GROUP BY o.id"
+
+    # --- GESTION DU FILTRE 'ETAT' (CLAUSE HAVING) ---
+    having_clauses = []
     if etat:
         date_limite_peremption = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
         current_date = now_str.split(' ')[0]
-        having_conditions = []
-
+        
         if etat == 'perime':
-            having_conditions.append("o.date_peremption < ?")
+            having_clauses.append("o.date_peremption < ?")
             params.append(current_date)
         elif etat == 'bientot':
-            having_conditions.append("o.date_peremption >= ? AND o.date_peremption < ?")
+            having_clauses.append("o.date_peremption >= ? AND o.date_peremption < ?")
             params.extend([current_date, date_limite_peremption])
         elif etat == 'stock':
-            having_conditions.append("quantite_disponible <= o.seuil")
+            having_clauses.append("quantite_disponible <= o.seuil")
         elif etat == 'ok':
-            having_conditions.append("quantite_disponible > o.seuil AND (o.date_peremption IS NULL OR o.date_peremption >= ?)")
+            having_clauses.append("quantite_disponible > o.seuil AND (o.date_peremption IS NULL OR o.date_peremption >= ?)")
             params.append(date_limite_peremption)
         
-        if having_conditions:
-            base_query += " HAVING " + " AND ".join(having_conditions)
+        if having_clauses:
+            full_query += " HAVING " + " AND ".join(having_clauses)
 
-    all_results = db.execute(base_query, params).fetchall()
-    total_objets = len(all_results)
-    total_pages = math.ceil(total_objets / items_per_page) if items_per_page > 0 else 0
+    # --- COMPTAGE DU NOMBRE TOTAL D'ÉLÉMENTS (POUR LA PAGINATION) ---
+    # On doit reconstruire une requête de comptage qui respecte les mêmes filtres
+    count_query = "SELECT COUNT(*) FROM (" + full_query.replace(base_query_select, "SELECT o.id FROM objets o JOIN armoires a ON o.armoire_id = a.id JOIN categories c ON o.categorie_id = c.id LEFT JOIN reservations r ON o.id = r.objet_id AND r.fin_reservation > ?") + ") as subquery"
+    total_items_result = db.execute(count_query, params).fetchone()
+    total_items = total_items_result[0] if total_items_result else 0
+    total_pages = math.ceil(total_items / items_per_page) if items_per_page > 0 else 0
 
+    # --- TRI ET PAGINATION FINALE ---
     valid_sort_columns = {
         'nom': 'o.nom', 'quantite': 'quantite_disponible', 'seuil': 'o.seuil',
         'date_peremption': 'o.date_peremption', 'categorie': 'c.nom', 'armoire': 'a.nom'
@@ -101,11 +113,12 @@ def get_paginated_objets(db,
     sort_column = valid_sort_columns.get(sort_by, 'o.nom')
     sort_direction = 'DESC' if direction == 'desc' else 'ASC'
     
-    base_query += f" ORDER BY {sort_column} {sort_direction}, o.nom ASC"
-    base_query += " LIMIT ? OFFSET ?"
+    full_query += f" ORDER BY {sort_column} {sort_direction}, o.nom ASC"
+    full_query += " LIMIT ? OFFSET ?"
     params.extend([items_per_page, offset])
 
-    objets = db.execute(base_query, params).fetchall()
+    objets = db.execute(full_query, params).fetchall()
+    
     return objets, total_pages
 
 # ============================================================

@@ -12,7 +12,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 auth_bp = Blueprint(
     'auth', 
     __name__,
-    template_folder='../templates'
+    template_folder='../templates',
+    url_prefix='/auth'
 )
 
 @auth_bp.route("/login", methods=['GET', 'POST'])

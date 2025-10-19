@@ -16,10 +16,12 @@ import tempfile
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, jsonify, send_file, current_app)
 from fpdf import FPDF, XPos, YPos
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
+from openpyxl.comments import Comment
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+from urllib.parse import urlparse
 
 # Imports depuis nos propres modules
 from db import get_db, get_all_armoires, get_all_categories
@@ -53,8 +55,6 @@ def admin():
 @admin_bp.route("/importer", methods=['GET'])
 @admin_required
 def importer_page():
-    """Affiche la page d'importation en masse."""
-    # --- CORRECTION 1 : On fournit les données que base.html attend ---
     db = get_db()
     armoires = get_all_armoires(db)
     categories = get_all_categories(db)
@@ -74,43 +74,42 @@ def importer_page():
 @admin_bp.route("/telecharger_modele")
 @admin_required
 def telecharger_modele_excel():
-
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Inventaire à Importer"
 
     headers = [
-        "Nom",              # Obligatoire
-        "Quantité",         # Obligatoire
-        "Seuil",            # Obligatoire
-        "Armoire",          # Obligatoire
-        "Catégorie",        # Obligatoire
-        "Date Péremption"   # Optionnel
+        "Nom", "Quantité", "Seuil", "Armoire", "Catégorie", 
+        "Date Péremption", "Image (URL)"
     ]
     sheet.append(headers)
 
+    # --- DÉFINITION DES STYLES ---
     header_font = Font(name='Calibri', bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
+    # NOUVEAU : On définit un alignement centré
+    center_alignment = Alignment(horizontal='center', vertical='center')
     note_font = Font(name='Calibri', italic=True, color="808080")
 
-    # On applique les styles à la première ligne (les en-têtes)
+    # --- APPLICATION DES STYLES ---
     for cell in sheet[1]:
         cell.font = header_font
         cell.fill = header_fill
+        cell.alignment = center_alignment # On applique l'alignement centré
 
-    # On ajuste la largeur des colonnes
+    # --- AJUSTEMENT DES LARGEURS DE COLONNES (CORRIGÉ) ---
     sheet.column_dimensions['A'].width = 40  # Nom
     sheet.column_dimensions['B'].width = 15  # Quantité
     sheet.column_dimensions['C'].width = 15  # Seuil
     sheet.column_dimensions['D'].width = 25  # Armoire
     sheet.column_dimensions['E'].width = 25  # Catégorie
-    sheet.column_dimensions['F'].width = 25  # Date Péremption
+    sheet.column_dimensions['F'].width = 20  # Date Péremption
+    sheet.column_dimensions['G'].width = 50  # Image (URL)
 
-    # On ajoute une note de format dans la cellule F2
-    note_cell = sheet['F2']
-    note_cell.value = "Format : AAAA-MM-JJ"
-    note_cell.font = note_font
+    date_header_cell = sheet['F1']
+    date_header_cell.comment = Comment("Le format de date doit être AAAA-MM-JJ.", "Note de format")
 
+    # --- GÉNÉRATION DU FICHIER ---
     buffer = BytesIO()
     workbook.save(buffer)
     buffer.seek(0)
@@ -121,7 +120,7 @@ def telecharger_modele_excel():
         download_name='modele_import_inventaire.xlsx',
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-
+    
 @admin_bp.route("/importer", methods=['POST'])
 @admin_required
 def importer_fichier():
@@ -136,29 +135,37 @@ def importer_fichier():
 
     db = get_db()
     errors = []
+    skipped_items = []
     success_count = 0
 
-    # Pré-chargement des armoires et catégories pour la validation
+    existing_objects = {row['nom'].lower() for row in db.execute("SELECT nom FROM objets").fetchall()}
     armoires_db = {a['nom'].lower(): a['id'] for a in get_all_armoires(db)}
     categories_db = {c['nom'].lower(): c['id'] for c in get_all_categories(db)}
 
     try:
-        workbook = Workbook(fichier)
+        workbook = load_workbook(fichier)
         sheet = workbook.active
         
-        db.execute("BEGIN") # Début de la transaction
+        db.execute("BEGIN")
 
-        # On itère sur les lignes, en sautant l'en-tête
         for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            # On s'assure que la ligne n'est pas complètement vide
             if all(cell is None for cell in row):
                 continue
 
-            nom, quantite, seuil, armoire, categorie, date_peremption = (row[0], row[1], row[2], row[3], row[4], row[5])
+            if len(row) < 5:
+                errors.append(f"Ligne {i}: Manque de colonnes. Assurez-vous que les 5 premières colonnes sont présentes.")
+                continue
 
-            # --- Validations impitoyables ---
+            nom, quantite, seuil, armoire, categorie = (row[0], row[1], row[2], row[3], row[4])
+            date_peremption = row[5] if len(row) > 5 else None
+            image_url = row[6] if len(row) > 6 else None
+
             if not all([nom, quantite, seuil, armoire, categorie]):
-                errors.append(f"Ligne {i}: Tous les champs obligatoires (Nom, Quantité, Seuil, Armoire, Catégorie) doivent être remplis.")
+                errors.append(f"Ligne {i}: Les champs Nom, Quantité, Seuil, Armoire et Catégorie sont obligatoires.")
+                continue
+
+            if str(nom).lower() in existing_objects:
+                skipped_items.append(nom)
                 continue
 
             try:
@@ -170,41 +177,61 @@ def importer_fichier():
 
             armoire_id = armoires_db.get(str(armoire).lower())
             if not armoire_id:
-                errors.append(f"Ligne {i}: L'armoire '{armoire}' n'existe pas. Veuillez la créer avant l'importation.")
+                errors.append(f"Ligne {i}: L'armoire '{armoire}' n'existe pas.")
                 continue
 
             categorie_id = categories_db.get(str(categorie).lower())
             if not categorie_id:
-                errors.append(f"Ligne {i}: La catégorie '{categorie}' n'existe pas. Veuillez la créer avant l'importation.")
+                errors.append(f"Ligne {i}: La catégorie '{categorie}' n'existe pas.")
                 continue
             
             date_peremption_db = None
             if date_peremption:
                 try:
-                    # openpyxl peut retourner un objet datetime ou une chaîne
                     if isinstance(date_peremption, datetime):
                         date_peremption_db = date_peremption.strftime('%Y-%m-%d')
                     else:
                         date_peremption_db = datetime.strptime(str(date_peremption).split(' ')[0], '%Y-%m-%d').strftime('%Y-%m-%d')
                 except ValueError:
-                    errors.append(f"Ligne {i}: Le format de la date de péremption '{date_peremption}' est invalide (doit être AAAA-MM-JJ).")
+                    errors.append(f"Ligne {i}: Le format de la date de péremption est invalide (doit être AAAA-MM-JJ).")
                     continue
             
-            # Si toutes les validations sont passées, on insère
+            image_url_db = None
+            if image_url:
+                image_url = str(image_url).strip()
+                valid_extensions = ('.jpg', '.jpeg', '.png', '.svg', '.webp')
+                
+                try:
+                    parsed_url = urlparse(image_url)
+                    path = parsed_url.path.lower()
+         
+                    if (parsed_url.scheme in ['http', 'https'] and 
+                        any(ext in path for ext in valid_extensions)):
+                        image_url_db = image_url
+                    else:
+                        errors.append(f"Ligne {i}: L'URL de l'image semble invalide. Elle doit être un lien internet complet (http/https) vers une image (.jpg, .png, etc.).")
+                        continue
+                except Exception:
+                    errors.append(f"Ligne {i}: L'URL de l'image n'a pas pu être analysée.")
+                    continue
+
             db.execute(
-                """INSERT INTO objets (nom, quantite_physique, seuil, armoire_id, categorie_id, date_peremption)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (nom, quantite_int, seuil_int, armoire_id, categorie_id, date_peremption_db)
+                """INSERT INTO objets (nom, quantite_physique, seuil, armoire_id, categorie_id, date_peremption, image_url)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (nom, quantite_int, seuil_int, armoire_id, categorie_id, date_peremption_db, image_url_db)
             )
             success_count += 1
 
         if errors:
-            db.rollback() # On annule tout si une seule erreur est trouvée
+            db.rollback()
             for error in errors:
                 flash(error, "error")
         else:
-            db.commit() # On sauvegarde tout si aucune erreur n'est trouvée
-            flash(f"Importation réussie ! {success_count} objet(s) ont été ajouté(s) à l'inventaire.", "success")
+            db.commit()
+            if success_count > 0:
+                flash(f"Importation réussie ! {success_count} nouvel/nouveaux objet(s) ajouté(s).", "success")
+            if skipped_items:
+                flash(f"Attention : {len(skipped_items)} objet(s) ont été ignoré(s) car ils existent déjà : {', '.join(skipped_items)}.", "warning")
 
     except Exception as e:
         db.rollback()

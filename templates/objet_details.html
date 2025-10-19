@@ -32,15 +32,21 @@
             <div class="details-card">
                 <div class="identity-header">
                     <div class="identity-image-wrapper">
-                        {% if objet.image %}
-                            <img src="{{ url_for('main.serve_image', filename=objet.image) }}" alt="Image de {{ objet.nom }}" class="identity-image-thumbnail">
-                            <img src="{{ url_for('main.serve_image', filename=objet.image) }}" alt="Aperçu de {{ objet.nom }}" class="identity-image-preview">
-                        {% else %}
-                            <div class="identity-image-placeholder">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h480L570-480 450-320l-90-120-120 160Zm-40 80v-560 560Z"/></svg>
-                            </div>
-                        {% endif %}
-                    </div>
+						{% if objet.image_url %}
+							<img src="{{ objet.image_url }}" alt="Image de {{ objet.nom }}" class="identity-image-thumbnail">
+							<img src="{{ objet.image_url }}" alt="Aperçu de {{ objet.nom }}" class="identity-image-preview">
+						
+						{% elif objet.image %}
+							<img src="{{ url_for('main.serve_image', filename=objet.image) }}" alt="Image de {{ objet.nom }}" class="identity-image-thumbnail">
+							<img src="{{ url_for('main.serve_image', filename=objet.image) }}" alt="Aperçu de {{ objet.nom }}" class="identity-image-preview">
+						
+						{% else %}
+							<div class="identity-image-placeholder">
+								<svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h480L570-480 450-320l-90-120-120 160Zm-40 80v-560 560Z"/></svg>
+							</div>
+						{% endif %}
+					</div>
+				</div>
                     <h2 class="details-title">{{ objet.nom }}</h2>
                 </div>
 

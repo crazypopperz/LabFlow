@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import math
 
 # Imports depuis les bibliothèques tierces (Flask)
-from flask import (Blueprint, jsonify, request, flash, session, current_app)
+from flask import (Blueprint, jsonify, request, flash, render_template, session, current_app)
 
 # Imports depuis nos propres modules
 from db import get_db
@@ -22,30 +22,32 @@ from utils import login_required, admin_required, enregistrer_action
 api_bp = Blueprint(
     'api', 
     __name__,
-    url_prefix='/api' # Toutes les routes commenceront par /api
+    url_prefix='/api'
 )
 
 # ============================================================
 # LES FONCTIONS DE ROUTES API SERONT COLLÉES ICI
 # ============================================================
-def get_disponibilite_objet(db, objet_id, debut_str, fin_str):
-    """
-    Calcule la quantité disponible d'un objet pour un créneau horaire spécifique.
-    """
+def get_disponibilite_objet(db, objet_id, debut_reservation_str, fin_reservation_str):
     objet = db.execute("SELECT quantite_physique FROM objets WHERE id = ?", (objet_id,)).fetchone()
     if not objet:
         return 0
     quantite_physique = objet['quantite_physique']
-    
-    reservations_chevauchement = db.execute("""
+
+    reservations_chevauchantes = db.execute(
+        """
         SELECT SUM(quantite_reservee) as total_reserve
         FROM reservations
-        WHERE objet_id = ? AND fin_reservation > ? AND debut_reservation < ?
-    """, (objet_id, debut_str, fin_str)).fetchone()
-    
-    quantite_reservee_max = reservations_chevauchement['total_reserve'] if reservations_chevauchement and reservations_chevauchement['total_reserve'] else 0
+        WHERE objet_id = ?
+          AND fin_reservation > ?   -- Une réservation existante qui se termine après le début de notre créneau
+          AND debut_reservation < ?  -- ET qui commence avant la fin de notre créneau
+        """,
+        (objet_id, debut_reservation_str, fin_reservation_str)
+    ).fetchone()
 
-    return quantite_physique - quantite_reservee_max
+    total_reserve = reservations_chevauchantes['total_reserve'] if reservations_chevauchantes and reservations_chevauchantes['total_reserve'] else 0
+    
+    return quantite_physique - total_reserve
 
 
 @api_bp.route("/rechercher")
@@ -171,19 +173,38 @@ def api_reservation_details(groupe_id):
     return jsonify(details)
 
 
-@api_bp.route("/reservation_data/<date>/<heure_debut>/<heure_fin>")
+@api_bp.route("/reservation_data")
 @login_required
-def api_reservation_data(date, heure_debut, heure_fin):
+def api_reservation_data():
     db = get_db()
     
-    debut_str = f"{date} {heure_debut}"
-    fin_str = f"{date} {heure_fin}"
+    # --- 1. On récupère TOUS les paramètres de la requête ---
+    date_str = request.args.get('date')
+    heure_debut = request.args.get('heure_debut')
+    heure_fin = request.args.get('heure_fin')
+    
+    if not all([date_str, heure_debut, heure_fin]):
+        return jsonify({"error": "Paramètres de date ou d'heure manquants"}), 400
 
-    objets_bruts = db.execute("""
-        SELECT o.id, o.nom, c.nom as categorie, o.quantite_physique
-        FROM objets o JOIN categories c ON o.categorie_id = c.id
-        ORDER BY c.nom, o.nom
-    """).fetchall()
+    debut_str = f"{date_str} {heure_debut}:00"
+    fin_str = f"{date_str} {heure_fin}:00"
+    
+    query = """
+        SELECT 
+            o.id, o.nom, c.nom as categorie, o.quantite_physique as quantite_totale,
+            (o.quantite_physique - COALESCE((
+                SELECT SUM(r.quantite_reservee) 
+                FROM reservations r 
+                WHERE r.objet_id = o.id 
+                  AND r.fin_reservation > ?
+                  AND r.debut_reservation < ?
+            ), 0)) as quantite_disponible
+        FROM objets o 
+        JOIN categories c ON o.categorie_id = c.id
+    """
+    params = [debut_str, fin_str]
+    
+    objets_bruts = db.execute(query, params).fetchall()
     
     grouped_objets = {}
     objets_map = {}
@@ -192,14 +213,7 @@ def api_reservation_data(date, heure_debut, heure_fin):
         if categorie_nom not in grouped_objets:
             grouped_objets[categorie_nom] = []
         
-        quantite_disponible = get_disponibilite_objet(db, row['id'], debut_str, fin_str)
-        
-        obj_data = {
-            "id": row['id'],
-            "nom": row['nom'],
-            "quantite_totale": row['quantite_physique'],
-            "quantite_disponible": quantite_disponible if quantite_disponible >= 0 else 0
-        }
+        obj_data = dict(row)
         grouped_objets[categorie_nom].append(obj_data)
         objets_map[row['id']] = obj_data
 
@@ -208,19 +222,16 @@ def api_reservation_data(date, heure_debut, heure_fin):
     for kit in kits:
         objets_du_kit = db.execute("SELECT objet_id, quantite FROM kit_objets WHERE kit_id = ?", (kit['id'],)).fetchall()
         
-        disponibilite_kit = 9999 # On part d'un nombre très grand
+        disponibilite_kit = 9999
         if not objets_du_kit:
             disponibilite_kit = 0
         else:
             for obj_in_kit in objets_du_kit:
                 objet_data = objets_map.get(obj_in_kit['objet_id'])
-                
                 if not objet_data or obj_in_kit['quantite'] == 0:
                     disponibilite_kit = 0
                     break
-                
                 kits_possibles = math.floor(objet_data['quantite_disponible'] / obj_in_kit['quantite'])
-                
                 if kits_possibles < disponibilite_kit:
                     disponibilite_kit = kits_possibles
 

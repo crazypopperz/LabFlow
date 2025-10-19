@@ -65,7 +65,7 @@ def init_db():
                 CREATE TABLE IF NOT EXISTS "objets" (
                     "id"	INTEGER,
                     "nom"	TEXT NOT NULL,
-                    "quantite_physique"	INTEGER NOT NULL, -- La colonne "quantite" a été renommée
+                    "quantite_physique"	INTEGER NOT NULL,
                     "seuil"	INTEGER NOT NULL,
                     "image"	TEXT,
                     "armoire_id"	INTEGER NOT NULL,
@@ -75,6 +75,7 @@ def init_db():
                     "traite"	INTEGER NOT NULL DEFAULT 0,
                     "fds_nom_original"	TEXT,
                     "fds_nom_securise"	TEXT,
+                    "image_url" TEXT,
                     PRIMARY KEY("id" AUTOINCREMENT),
                     FOREIGN KEY("armoire_id") REFERENCES "armoires"("id") ON DELETE RESTRICT,
                     FOREIGN KEY("categorie_id") REFERENCES "categories"("id") ON DELETE RESTRICT
@@ -127,3 +128,14 @@ def get_all_armoires(db):
 def get_all_categories(db):
     """Récupère toutes les catégories, triées par nom."""
     return db.execute("SELECT * FROM categories ORDER BY nom").fetchall()
+
+def get_items_per_page():
+    """Récupère le nombre d'items par page depuis les paramètres de la base de données."""
+    # On utilise 'g' pour mettre en cache la valeur pour la durée d'une seule requête.
+    # C'est plus efficace que d'interroger la base de données à chaque appel.
+    if 'items_per_page' not in g:
+        db = get_db()
+        param = db.execute("SELECT valeur FROM parametres WHERE cle = ?", ('items_per_page',)).fetchone()
+        # Si le paramètre n'existe pas, on utilise une valeur par défaut de 10.
+        g.items_per_page = int(param['valeur']) if param else 10
+    return g.items_per_page

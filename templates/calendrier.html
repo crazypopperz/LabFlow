@@ -5,8 +5,6 @@
     <title>Calendrier de Réservation</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-	<script src="{{ url_for('static', filename='js/modules/booking-modal.js') }}" defer></script>
-	<script src="{{ url_for('static', filename='js/modules/calendar-monthly.js') }}" defer></script>
 </head>
 <body>
     {% include 'header.html' %}
@@ -29,21 +27,22 @@
             </h2>
         </div>
         
-        <div id="calendrier-container">
+        <div id="calendrier-container" class="content-card">
             <div class="calendrier-header">
-                <button id="prev-month-btn">< Précédent</button>
+                <button id="prev-month-btn" class="btn-action">&lt; Précédent</button>
                 <h3 id="current-month-year"></h3>
-                <button id="next-month-btn">Suivant ></button>
+                <button id="next-month-btn" class="btn-action">Suivant &gt;</button>
             </div>
             <div class="calendrier-grid"></div>
         </div>
     </div>
 	
     {% include 'footer.html' %}
-
     {% include '_modals.html' %}
-
-    <!-- Pop-up de consultation des réservations (pour le survol) -->
     <div id="reservation-tooltip" class="tooltip"></div>
+
+    {% block scripts %}
+        <script src="{{ url_for('static', filename='modules/calendar-monthly.js') }}" type="module"></script>
+    {% endblock %}
 </body>
 </html>

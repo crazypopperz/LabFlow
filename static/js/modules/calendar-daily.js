@@ -1,6 +1,7 @@
 // =================================================================
 // MODULE: CALENDAR DAILY VIEW
 // =================================================================
+import { openReservationModal } from './booking-modal.js';
 document.addEventListener("DOMContentLoaded", function () {
     // CORRECTION 1: On cible le nouveau conteneur principal du calendrier
     const scheduleContainer = document.querySelector('.daily-schedule');

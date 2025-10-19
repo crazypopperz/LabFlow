@@ -3362,3 +3362,20 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
     transform: translateY(-2px);
     box-shadow: var(--ombre-moyenne);
 }
+
+/* =================================================================
+   33. STYLE POUR LE RETOUR VISUEL DE L'UPLOAD
+   ================================================================= */
+
+.file-drop-zone.file-selected {
+    border-color: var(--couleur-succes); /* La bordure devient verte */
+    background-color: #f0fff4; /* Un fond vert très pâle pour un effet subtil */
+}
+
+.file-drop-zone.file-selected .file-msg {
+    color: var(--couleur-succes); /* Le texte devient également vert */
+}
+
+.file-drop-zone.file-selected svg {
+    fill: var(--couleur-succes); /* L'icône passe aussi au vert */
+}

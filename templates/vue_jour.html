@@ -6,8 +6,6 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-	<script src="{{ url_for('static', filename='js/modules/booking-modal.js') }}" defer></script>
-	<script src="{{ url_for('static', filename='js/modules/calendar-daily.js') }}" defer></script>
 </head>
 <body data-is-admin="{{ 'true' if session.user_role == 'admin' else 'false' }}" data-user-id="{{ session.user_id }}">
     {% include 'header.html' %}
@@ -30,15 +28,11 @@
                     <div class="events-container">
                         {% set events = reservations_par_heure.get(hour, {}) %}
                         {% if events['starts'] or events['continues'] %}
-                            
-                            {# Affiche les réservations qui CONTINUENT sur ce créneau #}
                             {% for resa in events['continues'] %}
                             <div class="event-block continuation" data-groupe-id="{{ resa.groupe_id }}">
                                 <div class="event-user">(Suite) {{ resa.nom_utilisateur }}</div>
                             </div>
                             {% endfor %}
-
-                            {# Affiche les réservations qui COMMENCENT sur ce créneau #}
                             {% for resa in events['starts'] %}
                             <div class="event-block" data-groupe-id="{{ resa.groupe_id }}">
                                 <div class="event-time">
@@ -47,7 +41,6 @@
                                 <div class="event-user">{{ resa.nom_utilisateur }}</div>
                             </div>
                             {% endfor %}
-
                         {% else %}
                             <div class="no-event-placeholder"></div>
                         {% endif %}
@@ -62,5 +55,10 @@
 
     {% include '_modals.html' %} 
     {% include 'footer.html' %}
+
+    {% block scripts %}
+        <script src="{{ url_for('static', filename='modules/booking-modal.js') }}" type="module"></script>
+        <script src="{{ url_for('static', filename='modules/calendar-daily.js') }}" type="module"></script>
+    {% endblock %}
 </body>
 </html>

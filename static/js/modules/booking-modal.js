@@ -12,19 +12,15 @@ function updateCartIcon() {
     }
 }
 
-async function openReservationModal(dateStr, groupIdToEdit = null) {
+export async function openReservationModal(dateStr, groupIdToEdit = null) {
     const reservationModal = document.getElementById('reservation-modal');
     if (!reservationModal) return;
 
-    // --- ÉTAT LOCAL DE LA MODALE (réinitialisé à chaque ouverture) ---
-    let reservationCart = {};
-    let kitCart = {};
-    let reservationData = {};
+    let reservationCart = {}, kitCart = {}, reservationData = {};
     let selectedDateStr = dateStr;
     let editingGroupId = groupIdToEdit;
     let editingCartKey = null;
 
-    // --- GESTION DU CONTEXTE (Nouvelle / Modification) ---
     const editDataJSON = sessionStorage.getItem('editReservationData');
     if (editDataJSON) {
         try {
@@ -41,7 +37,6 @@ async function openReservationModal(dateStr, groupIdToEdit = null) {
         }
     }
 
-    // --- FONCTIONS INTERNES (inchangées) ---
     function findObjectData(objetId) {
         for (const categorie in reservationData.objets) {
             const found = reservationData.objets[categorie].find(o => o.id == objetId);
@@ -261,21 +256,35 @@ async function openReservationModal(dateStr, groupIdToEdit = null) {
         }
     }
     
+    // =================================================================
+    // LA CORRECTION FINALE EST ICI
+    // =================================================================
     async function updateReservationData() {
         const heureDebut = document.getElementById('heure_debut').value;
         const heureFin = document.getElementById('heure_fin').value;
+
+        if (heureFin <= heureDebut) {
+            return;
+        }
         
-        // Affiche un indicateur de chargement
         document.getElementById('reservation-objects-list').innerHTML = '<p class="text-discret" style="padding: 20px;">Chargement des disponibilités...</p>';
         document.getElementById('kits-list').innerHTML = '';
 
         try {
-            const response = await fetch(`/api/reservation_data/${dateStr}/${heureDebut}/${heureFin}`);
+            // On construit une URL propre avec des paramètres de recherche
+            const params = new URLSearchParams({
+                date: selectedDateStr,
+                heure_debut: heureDebut,
+                heure_fin: heureFin
+            });
+            
+            // On appelle la nouvelle route API unique
+            const response = await fetch(`/api/reservation_data?${params.toString()}`);
             if (!response.ok) throw new Error('Erreur serveur');
             
             reservationData = await response.json();
             
-            // Une fois les données reçues, on rafraîchit tout l'affichage
+            // On reconstruit TOUT l'affichage avec les nouvelles données
             renderCategories();
             renderAllObjects();
             renderKits();
@@ -287,7 +296,6 @@ async function openReservationModal(dateStr, groupIdToEdit = null) {
         }
     }
     
-	
 	const localDate = new Date(dateStr + 'T00:00:00');
     const title = (editingGroupId || editingCartKey) ? "Modifier la réservation pour le" : "Réserver du matériel pour le";
     document.getElementById('reservation-modal-title').textContent = `${title} ${localDate.toLocaleDateString('fr-FR', {weekday: 'long', day: 'numeric', month: 'long'})}`;

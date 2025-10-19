@@ -3379,3 +3379,76 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
 .file-drop-zone.file-selected svg {
     fill: var(--couleur-succes); /* L'icône passe aussi au vert */
 }
+
+/* =================================================================
+   34. STYLE POUR LA VISITE GUIDÉE (TUTORIEL)
+   ================================================================= */
+
+.tour-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    display: none; /* Caché par défaut */
+}
+
+.tour-tooltip {
+    position: absolute;
+    background-color: var(--fond-element);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--ombre-moyenne);
+    z-index: 10002;
+    width: 300px;
+    display: none;
+    border-top: 4px solid var(--couleur-principale);
+    color: var(--texte-principal); /* <-- AJOUTEZ CETTE LIGNE */
+}
+
+.tour-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--couleur-principale);
+    margin-bottom: 10px;
+}
+
+.tour-content {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.tour-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tour-btn-skip {
+    background: none;
+    border: none;
+    color: var(--texte-discret);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.tour-btn-next {
+    background-color: var(--couleur-principale);
+    color: var(--texte-inverse);
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* Classe pour l'élément en surbrillance */
+.tour-highlight {
+    position: relative; /* Nécessaire pour que z-index fonctionne */
+    z-index: 10001;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+    border-radius: 4px; /* Optionnel, pour arrondir les coins du "trou" */
+}

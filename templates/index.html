@@ -233,5 +233,17 @@
         </div>
     </div>
     {% include 'footer.html' %}
+	{% block scripts %}
+		<script src="{{ url_for('static', filename='modules/tour.js') }}" type="module"></script>
+		<script type="module">
+			// On importe la fonction startTour depuis le module
+			import { startTour } from "{{ url_for('static', filename='js/modules/tour.js') }}";
+
+			// Si le backend nous a dit de démarrer le tour, on le fait !
+			{% if start_tour %}
+				startTour();
+			{% endif %}
+		</script>
+	{% endblock %}
 </body>
 </html>

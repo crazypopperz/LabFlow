@@ -133,11 +133,19 @@ inventaire_bp = Blueprint(
 # ============================================================
 # LES FONCTIONS DE ROUTES SERONT COLLÉES ICI
 # ============================================================
+# Dans views/inventaire.py
+
 @inventaire_bp.route("/")
 @login_required
 def index():
     db = get_db()
     dashboard_data = {}
+
+    # --- DÉBUT DE LA LOGIQUE DU TUTORIEL ---
+    armoires_count = db.execute("SELECT COUNT(id) FROM armoires").fetchone()[0]
+    categories_count = db.execute("SELECT COUNT(id) FROM categories").fetchone()[0]
+    start_tour = (armoires_count == 0 and categories_count == 0)
+    # --- FIN DE LA LOGIQUE DU TUTORIEL ---
 
     if session.get('user_role') == 'admin':
         dashboard_data['stats'] = {
@@ -275,7 +283,8 @@ def index():
                            data=dashboard_data,
                            armoires=armoires,
                            categories=categories,
-                           now=datetime.now)
+                           now=datetime.now,
+                           start_tour=start_tour)
 
 @inventaire_bp.route("/inventaire")
 @login_required

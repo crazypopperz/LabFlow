@@ -62,7 +62,7 @@ if not app.debug:
     )
     app.logger.info('Logging configuré pour écrire dans %s', log_file_path)
 
-CLE_PRO_SECRETE = os.environ.get('GMLCL_PRO_KEY', 'valeur-par-defaut-si-non-definie')
+CLE_PRO_SECRETE = "LABO-PRO-2025-X@v14211825!S@cha14211825!Quentin14211825!"
 app.config['CLE_PRO_SECRETE'] = CLE_PRO_SECRETE
 
 

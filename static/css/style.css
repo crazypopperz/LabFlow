@@ -152,7 +152,6 @@ h4 {
 .dashboard-widget,
 .item-card,
 .admin-card,
-.details-card,
 .rapport-card,
 .content-card {
   background-color: var(--fond-element);
@@ -163,7 +162,6 @@ h4 {
   flex-direction: column;
 }
 .dashboard-widget,
-.details-card,
 .admin-card,
 .rapport-card,
 .content-card {
@@ -2070,149 +2068,6 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
   box-sizing: border-box;
 }
 
-/* =================================================================
-   16. PAGE DÉTAILS DE L'OBJET
-   ================================================================= */
-.details-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 30px;
-  align-items: stretch;
-}
-
-.details-card {
-  background-color: var(--fond-element);
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 8px;
-  padding: 25px;
-  box-shadow: var(--ombre-legere);
-  display: flex;
-  flex-direction: column;
-}
-
-.identity-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 25px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
-}
-
-.identity-image-wrapper {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.identity-image-thumbnail {
-  width: 120px;
-  height: 120px;
-  object-fit: contain;
-  border-radius: 8px;
-  border: 1px solid #f0f0f0;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.identity-image-preview {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  top: 0;
-  left: 130px; /* Se positionne à droite de la miniature */
-  width: 300px;
-  height: 300px;
-  object-fit: contain;
-  background-color: var(--fond-element);
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 8px;
-  box-shadow: var(--ombre-moyenne);
-  z-index: 10;
-  transition:
-    opacity 0.2s ease,
-    visibility 0.2s ease;
-  pointer-events: none;
-}
-
-.identity-image-wrapper:hover .identity-image-preview {
-  visibility: visible;
-  opacity: 1;
-}
-
-.identity-image-placeholder {
-  width: 120px;
-  height: 120px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-.identity-image-placeholder svg {
-  fill: #ccc;
-}
-
-.details-title {
-  margin: 0;
-  font-size: 1.8rem;
-}
-
-.details-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 30px 0;
-}
-
-.details-list li {
-  padding: 12px 5px;
-  border-bottom: 1px solid #f5f5f5;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.details-list li:last-child {
-  border-bottom: none;
-}
-
-.details-list li strong {
-  color: var(--texte-principal);
-}
-
-.details-actions {
-  margin-top: auto; /* Pousse le bouton vers le bas de la carte */
-  text-align: right;
-}
-
-.history-table-container {
-  max-height: 50vh; /* Hauteur maximale pour le défilement */
-  overflow-y: auto;
-}
-
-.history-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.history-table th {
-  text-align: left;
-  padding: 12px;
-  background-color: #f8f9fa;
-  border-bottom: 2px solid var(--couleur-bordure);
-  position: sticky; /* En-tête fixe lors du défilement */
-  top: 0;
-}
-
-.history-table td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
-}
-
-.history-table .timestamp {
-  font-size: 0.9rem;
-  color: var(--texte-discret);
-  white-space: nowrap;
-}
 
 /* =================================================================
    17. PAGE DE GESTION DES KITS
@@ -3636,19 +3491,20 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
 /* ============================================================ */
 
 .details-grid {
-    display: grid; /* On utilise Grid pour un meilleur contrôle */
+    display: grid;
     grid-template-columns: 300px 1fr; /* Colonne de gauche fixe, colonne de droite flexible */
-    gap: 24px; /* Espace entre les colonnes et les lignes */
-    align-items: start; /* Aligne les éléments en haut de leur cellule */
+    gap: 24px;
+    align-items: start;
 }
 
-/* La carte d'identité prend la première cellule */
-.details-grid > .details-card:first-child {
+/* La carte d'identité de l'objet (image + titre) */
+.details-grid > .details-card:nth-child(1) {
     grid-column: 1 / 2;
     grid-row: 1 / 2;
+    padding: 24px;
 }
 
-/* Le cadre d'infos prend la deuxième cellule */
+/* Le nouveau cadre pour les infos */
 .details-info-card {
     grid-column: 2 / 3;
     grid-row: 1 / 2;
@@ -3658,14 +3514,38 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
     padding: 24px;
 }
 
-/* La carte de l'historique prend toute la largeur sur la deuxième ligne */
-.details-grid > .details-card:last-child {
-    grid-column: 1 / 3; /* S'étend sur les deux colonnes */
+/* La carte de l'historique */
+.details-grid > .details-card:nth-child(3) {
+    grid-column: 1 / 3; /* Prend toute la largeur */
     grid-row: 2 / 3;
+    padding: 24px;
 }
 
+/* Styles internes qui étaient dans ton ancien code */
+.identity-header {
+    margin-bottom: 15px;
+}
+.details-title {
+    margin: 0;
+    font-size: 1.8rem;
+}
+.details-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.details-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.details-list li:last-child {
+    border-bottom: none;
+}
 .details-actions {
     display: flex;
-    justify-content: flex-end; /* Aligne le bouton à droite */
-    margin-top: 10px; /* Ajoute de l'espace au-dessus du bouton */
+    justify-content: flex-end;
+    margin-top: 20px;
 }

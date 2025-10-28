@@ -491,7 +491,7 @@ def voir_categorie(categorie_id):
 #=======================================================
 # ROUTE GESTION ALERTES TRAITEES
 #=======================================================
-@inventaire_bp.route("/api/maj_traite/<int:objet_id>", methods=["POST"])
+@inventaire_bp.route("/maj_traite/<int:objet_id>", methods=["POST"])
 @login_required
 def maj_traite(objet_id):
     etablissement_id = session['etablissement_id']
@@ -506,6 +506,27 @@ def maj_traite(objet_id):
     try:
         # On met à jour le statut "traité"
         objet.traite = 1 if data.get("traite") else 0
+        db.session.commit()
+        return jsonify(success=True)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
+
+@inventaire_bp.route("/maj_commande/<int:objet_id>", methods=["POST"])
+@login_required
+def maj_commande(objet_id):
+    etablissement_id = session['etablissement_id']
+    data = request.get_json()
+    
+    objet = db.session.get(Objet, objet_id)
+
+    # SÉCURITÉ : On vérifie que l'objet existe et appartient bien à l'établissement
+    if not objet or objet.etablissement_id != etablissement_id:
+        return jsonify(success=False, error="Objet non trouvé ou accès non autorisé."), 404
+
+    try:
+        # On met à jour le statut "en_commande"
+        objet.en_commande = 1 if data.get("en_commande") else 0
         db.session.commit()
         return jsonify(success=True)
     except Exception as e:

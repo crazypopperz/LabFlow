@@ -368,8 +368,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			
 			// On détermine la bonne URL et le bon corps de requête
 			const url = isCommande 
-				? `/inventaire/maj_commande/${checkbox.dataset.id}` 
-				: `/inventaire/api/maj_traite/${checkbox.dataset.id}`;
+				? `/maj_commande/${checkbox.dataset.id}` 
+				: `/maj_traite/${checkbox.dataset.id}`;
 				
 			const body = isCommande 
 				? { en_commande: checkbox.checked } 

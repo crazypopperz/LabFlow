@@ -59,8 +59,8 @@
 						<td><a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a></td>
 						<td class="texte-alerte"><strong>{{ quantite_disponible }}</strong></td>
 						<td>{{ objet.seuil }}</td>
-						<td>Catégorie #{{ objet.categorie_id }}</td>
-						<td>Armoire #{{ objet.armoire_id }}</td>
+						<td>Catégorie {{ objet.categorie_id }}</td>
+						<td>Armoire {{ objet.armoire_id }}</td>
 						
 						<td class="image-cell">
 							{% if objet.image_url %}

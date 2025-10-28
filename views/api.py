@@ -1,420 +1,222 @@
-# ============================================================
-# IMPORTS
-# ============================================================
+# Fichier: views/api.py (Version Finale Corrigée)
 
-# Imports depuis la bibliothèque standard
-import uuid
-import traceback
-from datetime import datetime, timedelta
+import os
+# DANS views/api.py
 import math
+from datetime import date, datetime, timedelta
+import requests
+from flask import Blueprint, jsonify, request, session, render_template
+from sqlalchemy import func
 
-# Imports depuis les bibliothèques tierces (Flask)
-from flask import (Blueprint, jsonify, request, flash, render_template, session, current_app)
+# NOUVEAUX IMPORTS
+from db import db, Objet, Reservation, Utilisateur, Kit, KitObjet, Categorie, Armoire
+from utils import login_required, admin_required
 
-# Imports depuis nos propres modules
-from db import get_db
-from utils import login_required, admin_required, enregistrer_action
-# On importera d'autres fonctions au besoin
-
-# ============================================================
-# CRÉATION DU BLUEPRINT API
-# ============================================================
 api_bp = Blueprint(
     'api', 
     __name__,
     url_prefix='/api'
 )
 
-# ============================================================
-# LES FONCTIONS DE ROUTES API SERONT COLLÉES ICI
-# ============================================================
-def get_disponibilite_objet(db, objet_id, debut_reservation_str, fin_reservation_str):
-    objet = db.execute("SELECT quantite_physique FROM objets WHERE id = ?", (objet_id,)).fetchone()
-    if not objet:
-        return 0
-    quantite_physique = objet['quantite_physique']
 
-    reservations_chevauchantes = db.execute(
-        """
-        SELECT SUM(quantite_reservee) as total_reserve
-        FROM reservations
-        WHERE objet_id = ?
-          AND fin_reservation > ?   -- Une réservation existante qui se termine après le début de notre créneau
-          AND debut_reservation < ?  -- ET qui commence avant la fin de notre créneau
-        """,
-        (objet_id, debut_reservation_str, fin_reservation_str)
-    ).fetchone()
-
-    total_reserve = reservations_chevauchantes['total_reserve'] if reservations_chevauchantes and reservations_chevauchantes['total_reserve'] else 0
-    
-    return quantite_physique - total_reserve
-
-
-@api_bp.route("/rechercher")
+# --- GESTION RECHERCHE IMAGES PEXELS ---
+@api_bp.route("/search-images")
 @login_required
-def api_rechercher():
+def search_pexels_images():
     query = request.args.get('q', '').strip()
-    if len(query) < 2:
-        return jsonify([])
-    db = get_db()
-    resultats = db.execute(
-        """SELECT o.id, o.nom, o.armoire_id, a.nom as armoire_nom,
-                  c.nom as categorie_nom
-           FROM objets o
-           JOIN armoires a ON o.armoire_id = a.id
-           JOIN categories c ON o.categorie_id = c.id
-           WHERE unaccent(LOWER(o.nom)) LIKE unaccent(LOWER(?))
-           LIMIT 10""", (f"%{query}%", )).fetchall()
-    return jsonify([dict(row) for row in resultats])
+    if not query:
+        return jsonify({"error": "Le terme de recherche est manquant."}), 400
+    api_key = os.environ.get('PEXELS_API_KEY')
+    if not api_key:
+        return jsonify({"error": "La clé d'API Pexels n'est pas configurée sur le serveur."}), 500
+    headers = {"Authorization": api_key}
+    url = f"https://api.pexels.com/v1/search?query={query}&per_page=15&locale=fr-FR"
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        images = [{"id": p["id"], "photographer": p["photographer"], "small_url": p["src"]["medium"], "large_url": p["src"]["large2x"]} for p in data.get("photos", [])]
+        return jsonify(images)
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Erreur de communication avec l'API Pexels: {e}"}), 503
 
-
+# --- AFFICHAGE DU CALENDRIER ---
 @api_bp.route("/reservations_par_mois/<int:year>/<int:month>")
 @login_required
 def api_reservations_par_mois(year, month):
-    db = get_db()
+    etablissement_id = session['etablissement_id']
 
-    start_date_str = f"{year}-{str(month).zfill(2)}-01 00:00:00"
+    # On calcule les dates de début et de fin du mois demandé
+    try:
+        start_date = datetime(year, month, 1)
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1)
+        else:
+            end_date = datetime(year, month + 1, 1)
+    except ValueError:
+        return jsonify({"error": "Date invalide"}), 400
 
-    if month == 12:
-        end_date_str = f"{year + 1}-01-01 00:00:00"
-    else:
-        end_date_str = f"{year}-{str(month + 1).zfill(2)}-01 00:00:00"
-
-    reservations = db.execute(
-        """
-        SELECT
-            DATE(r.debut_reservation) as jour_reservation,
-            r.groupe_id,
-            r.utilisateur_id,
-            u.nom_utilisateur
-        FROM reservations r
-        JOIN utilisateurs u ON r.utilisateur_id = u.id
-        WHERE r.debut_reservation >= ? AND r.debut_reservation < ?
-              AND r.groupe_id IS NOT NULL
-        GROUP BY jour_reservation, r.groupe_id
-        """, (start_date_str, end_date_str)).fetchall()
+    reservations = db.session.execute(
+        db.select(
+            func.date(Reservation.debut_reservation).label('jour_reservation'),
+            Reservation.groupe_id,
+            Reservation.utilisateur_id
+        )
+        .filter(
+            Reservation.etablissement_id == etablissement_id,
+            Reservation.debut_reservation >= start_date,
+            Reservation.debut_reservation < end_date,
+            Reservation.groupe_id != None
+        )
+        .group_by('jour_reservation', Reservation.groupe_id, Reservation.utilisateur_id)
+    ).mappings().all()
 
     results = {}
     for row in reservations:
-        date = row['jour_reservation']
-        if date not in results:
-            results[date] = []
-
-        results[date].append(
-            {'is_mine': row['utilisateur_id'] == session['user_id']})
+        date_str = row['jour_reservation'].strftime('%Y-%m-%d')
+        if date_str not in results:
+            results[date_str] = []
+        
+        results[date_str].append({
+            'is_mine': row['utilisateur_id'] == session['user_id']
+        })
+    
     return jsonify(results)
 
+# ============================================================
+# NOUVELLE FONCTION DE PAGINATION (SQLAlchemy)
+# ============================================================
+def get_paginated_objets(etablissement_id, page, sort_by='nom', direction='asc', search_query=None, armoire_id=None, categorie_id=None, etat=None):
+    items_per_page = 10 # NOTE: À remplacer par une lecture des paramètres de l'établissement
+    offset = (page - 1) * items_per_page
+    now = datetime.now()
 
-@api_bp.route("/reservation_details/<groupe_id>")
+    # Sous-requête pour calculer la quantité disponible
+    subquery = db.session.query(
+        Reservation.objet_id,
+        func.sum(Reservation.quantite_reservee).label('total_reserve')
+    ).filter(
+        Reservation.etablissement_id == etablissement_id,
+        Reservation.fin_reservation > now
+    ).group_by(Reservation.objet_id).subquery()
+
+    # Requête de base, FILTRÉE PAR ÉTABLISSEMENT
+    query = db.session.query(
+        Objet,
+        Armoire.nom.label('armoire_nom'),
+        Categorie.nom.label('categorie_nom'),
+        (Objet.quantite_physique - func.coalesce(subquery.c.total_reserve, 0)).label('quantite_disponible')
+    ).join(Armoire, Objet.armoire_id == Armoire.id)\
+     .join(Categorie, Objet.categorie_id == Categorie.id)\
+     .outerjoin(subquery, Objet.id == subquery.c.objet_id)\
+     .filter(Objet.etablissement_id == etablissement_id)
+
+    # Application des filtres
+    if search_query:
+        query = query.filter(Objet.nom.ilike(f"%{search_query}%"))
+    if armoire_id:
+        query = query.filter(Objet.armoire_id == armoire_id)
+    if categorie_id:
+        query = query.filter(Objet.categorie_id == categorie_id)
+    
+    # Comptage du total AVANT le tri et la pagination
+    total_items = query.count()
+    total_pages = math.ceil(total_items / items_per_page) if items_per_page > 0 else 0
+
+    # Tri
+    sort_map = {
+        'nom': Objet.nom, 'quantite': 'quantite_disponible', 'seuil': Objet.seuil,
+        'date_peremption': Objet.date_peremption, 'categorie': 'categorie_nom', 'armoire': 'armoire_nom'
+    }
+    sort_column = sort_map.get(sort_by, Objet.nom)
+    
+    if direction == 'desc':
+        query = query.order_by(db.desc(sort_column))
+    else:
+        query = query.order_by(db.asc(sort_column))
+
+    # Pagination finale
+    results = query.limit(items_per_page).offset(offset).all()
+    
+    # On transforme les résultats en une liste de dictionnaires que le template peut utiliser
+    objets = []
+    for row in results:
+        obj_dict = {c.name: getattr(row.Objet, c.name) for c in row.Objet.__table__.columns}
+        obj_dict['armoire'] = row.armoire_nom
+        obj_dict['categorie'] = row.categorie_nom
+        obj_dict['quantite_disponible'] = row.quantite_disponible
+        objets.append(obj_dict)
+
+    return objets, total_pages
+
+#===========================================================================
+# ROUTE TRI DYNAMIQUE TABLEAU INVENTAIRE
+#===========================================================================
+@api_bp.route("/inventaire/")
 @login_required
-def api_reservation_details(groupe_id):
-    db = get_db()
-    reservations = db.execute(
-        """
-        SELECT r.quantite_reservee, o.id as objet_id, o.nom as objet_nom, 
-               u.nom_utilisateur, r.utilisateur_id, r.kit_id, k.nom as kit_nom,
-               r.debut_reservation, r.fin_reservation
-        FROM reservations r
-        JOIN objets o ON r.objet_id = o.id
-        JOIN utilisateurs u ON r.utilisateur_id = u.id
-        LEFT JOIN kits k ON r.kit_id = k.id
-        WHERE r.groupe_id = ?
-        """, (groupe_id, )).fetchall()
+def api_inventaire():
+    etablissement_id = session['etablissement_id']
+    page = request.args.get('page', 1, type=int)
+    sort_by = request.args.get('sort_by', 'nom')
+    direction = request.args.get('direction', 'asc')
+    search_query = request.args.get('q', None)
+    armoire_id = request.args.get('armoire', None)
+    categorie_id = request.args.get('categorie', None)
+    etat = request.args.get('etat', None)
 
-    if not reservations:
-        return jsonify({'error': 'Réservation non trouvée'}), 404
+    objets, total_pages = get_paginated_objets(
+        etablissement_id, page, sort_by, direction, search_query, armoire_id, categorie_id, etat
+    )
 
-    details = {
-        'kits': {},
-        'objets_manuels': [],
-        'nom_utilisateur': reservations[0]['nom_utilisateur'],
-        'utilisateur_id': reservations[0]['utilisateur_id'],
-        'debut_reservation': reservations[0]['debut_reservation'],
-        'fin_reservation': reservations[0]['fin_reservation']
+    pagination = {
+        'page': page,
+        'total_pages': total_pages,
+        'endpoint': 'inventaire.inventaire'
     }
 
-    objets_manuels_bruts = [dict(r) for r in reservations if r['kit_id'] is None]
-    objets_kits_reserves = [r for r in reservations if r['kit_id'] is not None]
-
-    kits_comptes = {}
-    for r in objets_kits_reserves:
-        if r['kit_id'] not in kits_comptes:
-            kits_comptes[r['kit_id']] = {'nom': r['kit_nom'], 'objets_reserves': {}}
-        kits_comptes[r['kit_id']]['objets_reserves'][r['objet_id']] = r['quantite_reservee']
-
-    for kit_id, data in kits_comptes.items():
-        objets_base_du_kit = db.execute("SELECT objet_id, quantite FROM kit_objets WHERE kit_id = ?", (kit_id,)).fetchall()
-        if not objets_base_du_kit: continue
-        
-        id_objet_calcul, quantite_par_kit = next(((obj['objet_id'], obj['quantite']) for obj in objets_base_du_kit if obj['objet_id'] in data['objets_reserves']), (None, 0))
-
-        if id_objet_calcul and quantite_par_kit > 0:
-            quantite_reelle_reservee = data['objets_reserves'][id_objet_calcul]
-            nombre_de_kits = quantite_reelle_reservee // quantite_par_kit
-            details['kits'][str(kit_id)] = {'quantite': nombre_de_kits, 'nom': data['nom']}
-
-    objets_manuels_agreges = {}
-    for item in objets_manuels_bruts:
-        obj_id = item['objet_id']
-        nom = item['objet_nom'] 
-        quantite = item['quantite_reservee']
-        
-        if obj_id not in objets_manuels_agreges:
-            objets_manuels_agreges[obj_id] = {'nom': nom, 'quantite_reservee': 0}
-        objets_manuels_agreges[obj_id]['quantite_reservee'] += quantite
-
-    for obj_id, data in objets_manuels_agreges.items():
-        details['objets_manuels'].append({
-            'objet_id': obj_id,
-            'nom': data['nom'],
-            'quantite_reservee': data['quantite_reservee']
-        })
-
-    return jsonify(details)
-
-
-@api_bp.route("/reservation_data")
-@login_required
-def api_reservation_data():
-    db = get_db()
+    # On rend uniquement le "morceau" de template qui contient le tableau
+    html = render_template('_inventaire_content.html', 
+                           objets=objets, 
+                           pagination=pagination, 
+                           date_actuelle=datetime.now(), 
+                           sort_by=sort_by, 
+                           direction=direction, 
+                           session=session)
     
-    # --- 1. On récupère TOUS les paramètres de la requête ---
-    date_str = request.args.get('date')
-    heure_debut = request.args.get('heure_debut')
-    heure_fin = request.args.get('heure_fin')
-    
-    if not all([date_str, heure_debut, heure_fin]):
-        return jsonify({"error": "Paramètres de date ou d'heure manquants"}), 400
+    return jsonify(html=html)
 
-    debut_str = f"{date_str} {heure_debut}:00"
-    fin_str = f"{date_str} {heure_fin}:00"
-    
-    query = """
-        SELECT 
-            o.id, o.nom, c.nom as categorie, o.quantite_physique as quantite_totale,
-            (o.quantite_physique - COALESCE((
-                SELECT SUM(r.quantite_reservee) 
-                FROM reservations r 
-                WHERE r.objet_id = o.id 
-                  AND r.fin_reservation > ?
-                  AND r.debut_reservation < ?
-            ), 0)) as quantite_disponible
-        FROM objets o 
-        JOIN categories c ON o.categorie_id = c.id
-    """
-    params = [debut_str, fin_str]
-    
-    objets_bruts = db.execute(query, params).fetchall()
-    
-    grouped_objets = {}
-    objets_map = {}
-    for row in objets_bruts:
-        categorie_nom = row['categorie']
-        if categorie_nom not in grouped_objets:
-            grouped_objets[categorie_nom] = []
-        
-        obj_data = dict(row)
-        grouped_objets[categorie_nom].append(obj_data)
-        objets_map[row['id']] = obj_data
-
-    kits = db.execute("SELECT id, nom, description FROM kits ORDER BY nom").fetchall()
-    kits_details = []
-    for kit in kits:
-        objets_du_kit = db.execute("SELECT objet_id, quantite FROM kit_objets WHERE kit_id = ?", (kit['id'],)).fetchall()
-        
-        disponibilite_kit = 9999
-        if not objets_du_kit:
-            disponibilite_kit = 0
-        else:
-            for obj_in_kit in objets_du_kit:
-                objet_data = objets_map.get(obj_in_kit['objet_id'])
-                if not objet_data or obj_in_kit['quantite'] == 0:
-                    disponibilite_kit = 0
-                    break
-                kits_possibles = math.floor(objet_data['quantite_disponible'] / obj_in_kit['quantite'])
-                if kits_possibles < disponibilite_kit:
-                    disponibilite_kit = kits_possibles
-
-        kits_details.append({
-            'id': kit['id'],
-            'nom': kit['nom'],
-            'description': kit['description'],
-            'objets': [dict(o) for o in objets_du_kit],
-            'disponibilite': disponibilite_kit if disponibilite_kit != 9999 else 0
-        })
-
-    return jsonify({'objets': grouped_objets, 'kits': kits_details})
-
-@api_bp.route("/reserver", methods=["POST"])
-@login_required
-def api_reserver():
-    return jsonify(success=False, error="Cette route est obsolète."), 400
-
-
-@api_bp.route("/modifier_reservation", methods=["POST"])
-@login_required
-def api_modifier_reservation():
-    data = request.get_json()
-    groupe_id = data.get("groupe_id")
-    db = get_db()
-    
-    try:
-        # On utilise une transaction pour s'assurer que tout réussit ou tout échoue
-        db.execute("BEGIN")
-        
-        # Étape 1: Supprimer l'ancienne réservation
-        db.execute("DELETE FROM reservations WHERE groupe_id = ?", (groupe_id,))
-        
-        # Étape 2: Valider et insérer la nouvelle réservation comme un "mini-panier"
-        creneau_key = f"{data['date']}_{data['heure_debut']}_{data['heure_fin']}"
-        mini_cart = { creneau_key: data }
-        
-        response = api_valider_panier_interne(mini_cart, groupe_id_existant=groupe_id) 
-        
-        if response.get('success'):
-            db.commit()
-            flash("Réservation modifiée avec succès !", "success")
-            return jsonify(success=True)
-        else:
-            db.rollback() # Annule la suppression si la nouvelle réservation échoue
-            return jsonify(success=False, error=response.get('error', 'Erreur inconnue lors de la modification')), 400
-
-    except Exception as e:
-        db.rollback()
-        traceback.print_exc()
-        return jsonify(success=False, error=f"Une erreur interne est survenue : {e}"), 500
-
-def api_valider_panier_interne(cart_data, groupe_id_existant=None):
-    db = get_db()
-    user_id = session['user_id']
-
-    try:
-        # Étape 1 : Vérifier la disponibilité pour chaque créneau
-        for creneau_key, resa_details in cart_data.items():
-            debut_str = f"{resa_details['date']} {resa_details['heure_debut']}"
-            fin_str = f"{resa_details['date']} {resa_details['heure_fin']}"
-            
-            objets_requis_pour_creneau = {}
-            for kit_id, kit_data in resa_details.get('kits', {}).items():
-                objets_du_kit = db.execute("SELECT objet_id, quantite FROM kit_objets WHERE kit_id = ?", (kit_id,)).fetchall()
-                for obj_in_kit in objets_du_kit:
-                    objets_requis_pour_creneau[obj_in_kit['objet_id']] = objets_requis_pour_creneau.get(obj_in_kit['objet_id'], 0) + (obj_in_kit['quantite'] * kit_data.get('quantite', 0))
-            for obj_id, obj_data in resa_details.get('objets', {}).items():
-                objets_requis_pour_creneau[int(obj_id)] = objets_requis_pour_creneau.get(int(obj_id), 0) + obj_data.get('quantite', 0)
-
-            for obj_id, quantite_demandee in objets_requis_pour_creneau.items():
-                if quantite_demandee <= 0: continue
-                disponibilite_reelle = get_disponibilite_objet(db, obj_id, debut_str, fin_str)
-                objet_nom = db.execute("SELECT nom FROM objets WHERE id = ?", (obj_id,)).fetchone()['nom']
-                if disponibilite_reelle < quantite_demandee:
-                    return {'success': False, 'error': f"Stock insuffisant pour '{objet_nom}' sur le créneau {resa_details['heure_debut']}-{resa_details['heure_fin']} ({disponibilite_reelle} disponible(s))."}
-
-        # Étape 2 : Si tout est disponible, on insère les réservations
-        for creneau_key, resa_details in cart_data.items():
-            groupe_id = groupe_id_existant or str(uuid.uuid4())
-            debut_dt = datetime.strptime(f"{resa_details['date']} {resa_details['heure_debut']}", '%Y-%m-%d %H:%M')
-            fin_dt = datetime.strptime(f"{resa_details['date']} {resa_details['heure_fin']}", '%Y-%m-%d %H:%M')
-            
-            # --- LA CORRECTION EST ICI : On reconstruit la liste des objets à insérer ---
-            final_reservations = {}
-            for kit_id_str, kit_data in resa_details.get('kits', {}).items():
-                objets_du_kit = db.execute("SELECT objet_id, quantite FROM kit_objets WHERE kit_id = ?", (kit_id_str,)).fetchall()
-                for obj_in_kit in objets_du_kit:
-                    key = (obj_in_kit['objet_id'], int(kit_id_str))
-                    final_reservations[key] = final_reservations.get(key, 0) + (obj_in_kit['quantite'] * kit_data.get('quantite', 0))
-            for obj_id_str, obj_data in resa_details.get('objets', {}).items():
-                key = (int(obj_id_str), None)
-                final_reservations[key] = final_reservations.get(key, 0) + obj_data.get('quantite', 0)
-            # --- FIN DE LA CORRECTION ---
-
-            for (obj_id, kit_id), quantite_totale in final_reservations.items():
-                if quantite_totale > 0:
-                    db.execute(
-                        """INSERT INTO reservations (objet_id, quantite_reservee, debut_reservation, fin_reservation, utilisateur_id, groupe_id, kit_id)
-                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                        (obj_id, quantite_totale, debut_dt, fin_dt, user_id, groupe_id, kit_id))
-                    action = "Modification Réservation" if groupe_id_existant else "Réservation"
-                    enregistrer_action(obj_id, action, f"Quantité: {quantite_totale} pour le {debut_dt.strftime('%d/%m/%Y')}")
-        
-        # On ne fait pas de commit ici, on laisse la fonction appelante décider.
-        return {'success': True}
-    except Exception as e:
-        traceback.print_exc()
-        return {'success': False, 'error': f"Erreur interne: {e}"}
-
-@api_bp.route("/valider_panier", methods=["POST"])
-@login_required
-def api_valider_panier():
-    cart_data = request.get_json()
-    if not cart_data:
-        return jsonify(success=False, error="Le panier est vide."), 400
-
-    db = get_db()
-    try:
-        # On utilise une transaction pour s'assurer que l'ensemble du panier est validé ou rien du tout.
-        db.execute("BEGIN")
-        response = api_valider_panier_interne(cart_data)
-        
-        if response.get('success'):
-            db.commit()
-            flash("Toutes vos réservations ont été confirmées avec succès !", "success")
-            return jsonify(success=True)
-        else:
-            db.rollback()
-            return jsonify(success=False, error=response.get('error')), 400
-            
-    except Exception as e:
-        db.rollback()
-        traceback.print_exc()
-        return jsonify(success=False, error=f"Une erreur interne est survenue : {e}"), 500
-
-@api_bp.route("/supprimer_reservation", methods=["POST"])
-@login_required
-def api_supprimer_reservation():
-    data = request.get_json()
-    groupe_id = data.get("groupe_id")
-    db = get_db()
-    try:
-        reservation_info = db.execute("SELECT utilisateur_id FROM reservations WHERE groupe_id = ? LIMIT 1", (groupe_id, )).fetchone()
-        if not reservation_info:
-            return jsonify(success=False, error="Réservation non trouvée."), 404
-        if (session.get('user_role') != 'admin' and reservation_info['utilisateur_id'] != session['user_id']):
-            return jsonify(success=False, error="Vous n'avez pas la permission de supprimer cette réservation."), 403
-        
-        db.execute("DELETE FROM reservations WHERE groupe_id = ?", (groupe_id,))
-        db.commit()
-        
-        flash("La réservation a été annulée.", "success")
-        return jsonify(success=True)
-    except sqlite3.Error as e:
-        db.rollback()
-        return jsonify(success=False, error=str(e)), 500
-
-@api_bp.route("/suggestion_commande/<int:objet_id>")
+#===============================================
+# LOGIQUE DEPLACER OBJET DANS AUTRE ARMOIRE
+#===============================================
+@api_bp.route("/deplacer_objets", methods=['POST'])
 @admin_required
-def api_suggestion_commande(objet_id):
-    db = get_db()
+def deplacer_objets():
+    etablissement_id = session['etablissement_id']
+    data = request.get_json()
+    objet_ids = data.get('objet_ids')
+    destination_id = data.get('destination_id')
+    type_destination = data.get('type_destination')
 
-    date_limite = datetime.now() - timedelta(days=90)
+    if not all([objet_ids, destination_id, type_destination]):
+        return jsonify(success=False, error="Données manquantes."), 400
 
-    result = db.execute(
-        """
-        SELECT SUM(quantite_reservee)
-        FROM reservations
-        WHERE objet_id = ? AND debut_reservation >= ?
-        """, (objet_id, date_limite)).fetchone()
+    try:
+        field_to_update = 'categorie_id' if type_destination == 'categorie' else 'armoire_id'
 
-    consommation = result[0] if result and result[0] is not None else 0
-
-    suggestion = 0
-    if consommation > 0:
-        suggestion = math.ceil(consommation * 1.5)
-    else:
-        objet = db.execute("SELECT seuil FROM objets WHERE id = ?",
-                           (objet_id, )).fetchone()
-        if objet:
-            suggestion = objet['seuil'] * 2
-        else:
-            suggestion = 5
-
-    return jsonify(suggestion=suggestion, consommation=consommation)
+        # Requête de mise à jour en masse, plus efficace qu'une boucle
+        db.session.execute(
+            db.update(Objet)
+            .where(
+                Objet.id.in_(objet_ids),
+                Objet.etablissement_id == etablissement_id # Sécurité : on ne déplace que les objets de l'établissement
+            )
+            .values({field_to_update: destination_id})
+        )
+        db.session.commit()
+        
+        flash(f"{len(objet_ids)} objet(s) déplacé(s) avec succès.", "success")
+        return jsonify(success=True)
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500

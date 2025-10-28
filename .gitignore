@@ -29,3 +29,4 @@ instance/
 arborescence_complete.txt
 code_bundle_complet.txt
 Commande-Github.txt
+venv/

@@ -1,36 +1,28 @@
-import sqlite3
-import os
-from db import get_db
-from flask import current_app, session, flash, redirect, url_for, request, g
+# Fichier : utils.py (Version Finale et Définitive)
+
+from flask import session, flash, redirect, url_for, request
 from functools import wraps
 from datetime import datetime, timedelta
-from fpdf import FPDF
+from sqlalchemy.exc import SQLAlchemyError
 
+# On met TOUS les imports de DB ici, en haut du fichier
+from db import db, Utilisateur, Parametre, Objet, Reservation
+from sqlalchemy import func
+
+# -----------------------------------------------------------------------------
+# FONCTIONS DE VÉRIFICATION
+# -----------------------------------------------------------------------------
 def is_setup_needed(app):
-    """
-    Vérifie si l'application a besoin d'être configurée.
-    La configuration est considérée comme terminée s'il existe au moins un utilisateur admin.
-    """
-    db_path = app.config['DATABASE']
+    with app.app_context():
+        try:
+            admin_count = db.session.query(Utilisateur).filter_by(role='admin').count()
+            return admin_count == 0
+        except Exception:
+            return True
 
-    if not os.path.exists(db_path):
-        return True
-
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
-        cursor.execute("SELECT COUNT(*) FROM utilisateurs WHERE role = 'admin'")
-        admin_count = cursor.fetchone()[0]
-        
-        conn.close()
-        
-        return admin_count == 0
-
-    except sqlite3.OperationalError:
-        return True
-
-# --- DÉCORATEURS DE SÉCURITÉ ---
+# -----------------------------------------------------------------------------
+# DÉCORATEURS DE SÉCURITÉ
+# -----------------------------------------------------------------------------
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -49,59 +41,76 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def pro_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        db = get_db()
-        try:
-            licence_row = db.execute("SELECT valeur FROM parametres WHERE cle = ?", ('licence_statut', )).fetchone()
-            is_pro = licence_row and licence_row['valeur'] == 'PRO'
-        except sqlite3.Error:
-            is_pro = False
-        if not is_pro:
-            flash("Cette fonctionnalité est réservée à la version Pro.", "warning")
-            return redirect(url_for('inventaire.index'))
-        return f(*args, **kwargs)
-    return decorated_function
-
 def limit_objets_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        db = get_db()
-        licence_row = db.execute("SELECT valeur FROM parametres WHERE cle = ?", ('licence_statut', )).fetchone()
-        is_pro = licence_row and licence_row['valeur'] == 'PRO'
+        etablissement_id = session.get('etablissement_id')
+        if not etablissement_id:
+            flash("Session invalide. Veuillez vous reconnecter.", "error")
+            return redirect(url_for('auth.login'))
+
+        licence_param = db.session.execute(
+            db.select(Parametre).filter_by(cle='licence_statut', etablissement_id=etablissement_id)
+        ).scalar_one_or_none()
+
+        is_pro = licence_param and licence_param.valeur == 'PRO'
+        
         if not is_pro:
-            count = db.execute("SELECT COUNT(id) FROM objets").fetchone()[0]
+            count = db.session.query(Objet).filter_by(etablissement_id=etablissement_id).count()
             if count >= 50:
                 flash("La version gratuite est limitée à 50 objets. Passez à la version Pro pour en ajouter davantage.", "warning")
                 return redirect(request.referrer or url_for('inventaire.index'))
+        
         return f(*args, **kwargs)
     return decorated_function
 
-def get_alerte_info(db):
+# -----------------------------------------------------------------------------
+# LOGIQUE MÉTIER
+# -----------------------------------------------------------------------------
+def get_alerte_info():
+    """Calcule les alertes de stock et de péremption (Version Finale et Corrigée)."""
+    etablissement_id = session.get('etablissement_id')
+    if not etablissement_id:
+        return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0}
+
     try:
-        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        date_limite = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
-
-        query_stock = """
-            SELECT COUNT(*) FROM (
-            SELECT 
-                o.seuil,
-                (o.quantite_physique - COALESCE(SUM(r.quantite_reservee), 0)) as quantite_disponible
-            FROM objets o
-            LEFT JOIN reservations r ON o.id = r.objet_id AND r.fin_reservation > ?
-            WHERE o.en_commande = 0
-            GROUP BY o.id
-            HAVING quantite_disponible <= o.seuil
-            )
-        """
-        result_stock = db.execute(query_stock, (now_str,)).fetchone()
-        count_stock = result_stock[0] if result_stock else 0
-
-        query_peremption = "SELECT COUNT(*) FROM objets WHERE date_peremption IS NOT NULL AND date_peremption < ? AND traite = 0"
-        result_peremption = db.execute(query_peremption, (date_limite,)).fetchone()
-        count_peremption = result_peremption[0] if result_peremption else 0
+        now = datetime.now()
         
+        all_objets = db.session.execute(
+            db.select(Objet).filter_by(etablissement_id=etablissement_id)
+        ).scalars().all()
+
+        count_stock = 0
+        count_peremption = 0
+        date_limite_peremption = (now + timedelta(days=30)).date()
+
+        # LA CORRECTION EST ICI : On boucle sur la bonne variable "all_objets"
+        for objet in all_objets:
+            try:
+                # On calcule la disponibilité pour CET objet
+                total_reserve = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
+                    Reservation.objet_id == objet.id,
+                    Reservation.fin_reservation > now
+                ).scalar() or 0
+                
+                quantite_disponible = objet.quantite_physique - total_reserve
+                seuil_numeric = int(objet.seuil)
+                disponible_numeric = int(quantite_disponible)
+
+                # Alerte de stock
+                if objet.en_commande == 0 and disponible_numeric <= seuil_numeric:
+                    count_stock += 1
+                
+                # Alerte de péremption
+                if objet.date_peremption and objet.traite == 0:
+                    date_peremption_obj = datetime.strptime(objet.date_peremption, '%Y-%m-%d').date()
+                    if date_peremption_obj < date_limite_peremption:
+                        count_peremption += 1
+
+            except (ValueError, TypeError) as e:
+                current_app.logger.warning(f"Impossible de traiter l'objet ID {objet.id} pour les alertes. Erreur : {e}")
+                pass
+
         total_alertes = count_stock + count_peremption
         
         return {
@@ -110,37 +119,9 @@ def get_alerte_info(db):
             "alertes_total": total_alertes
         }
 
-    except (sqlite3.Error, TypeError) as e:
-        print(f"ERREUR dans get_alerte_info: {e}")
+    except SQLAlchemyError as e:
+        current_app.logger.error(f"ERREUR DB dans get_alerte_info: {e}")
         return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0}
-
-def get_items_per_page():
-    if 'items_per_page' not in g:
-        db = get_db()
-        param = db.execute("SELECT valeur FROM parametres WHERE cle = ?", ('items_per_page',)).fetchone()
-        g.items_per_page = int(param['valeur']) if param else 10
-    return g.items_per_page
-
-class PDFWithFooter(FPDF):
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Helvetica', 'I', 8)
-        self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='R')
-
-def enregistrer_action(objet_id, action, details=""):
-    if 'user_id' in session:
-        db = get_db()
-        try:
-            db.execute(
-                """INSERT INTO historique (objet_id, utilisateur_id, action,
-                   details, timestamp)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (objet_id, session['user_id'], action, details,
-                 datetime.now()))
-            db.commit()
-        except sqlite3.Error as e:
-            print(f"ERREUR LORS DE L'ENREGISTREMENT DE L'HISTORIQUE : {e}")
-            db.rollback()
 
 def annee_scolaire_format(year):
     if isinstance(year, int):

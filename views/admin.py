@@ -1,35 +1,22 @@
 # ============================================================
 # IMPORTS
 # ============================================================
-
-# Imports depuis la bibliothèque standard
 import hashlib
-import os
-from datetime import datetime, date, timedelta
+from datetime import datetime
 from io import BytesIO
-import sqlite3
-import shutil
-import re
-import tempfile
 
-# Imports depuis les bibliothèques tierces (Flask, etc.)
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, session, jsonify, send_file, current_app)
-from fpdf import FPDF, XPos, YPos
-from openpyxl import Workbook, load_workbook
-from openpyxl.comments import Comment
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+                   flash, session, jsonify, send_file)
+from openpyxl import Workbook
 from werkzeug.security import check_password_hash, generate_password_hash
-from werkzeug.utils import secure_filename
-from urllib.parse import urlparse
+from sqlalchemy.exc import IntegrityError
 
-# Imports depuis nos propres modules
-from db import get_db, get_all_armoires, get_all_categories
-from utils import admin_required, login_required, PDFWithFooter, annee_scolaire_format
-# On importera d'autres fonctions de utils au besoin
+# NOUVEAUX IMPORTS
+from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, Budget, Depense, Echeance, Etablissement
+from utils import admin_required, login_required, annee_scolaire_format
 
 # ============================================================
-# CRÉATION DU BLUEPRINT POUR L'ADMINISTRATION
+# CRÉATION DU BLUEPRINT
 # ============================================================
 admin_bp = Blueprint(
     'admin', 
@@ -44,14 +31,13 @@ admin_bp = Blueprint(
 @admin_bp.route("/")
 @admin_required
 def admin():
-    db = get_db()
-    armoires = get_all_armoires(db)
-    categories = get_all_categories(db)
-    return render_template("admin.html",
-                           armoires=armoires,
-                           categories=categories,
-                           now=datetime.now)
+    # NOTE : Cette page est simplifiée. La logique de licence et autres
+    # devra être réimplémentée ici avec SQLAlchemy.
+    return render_template("admin.html", now=datetime.now())
 
+
+
+'''
 @admin_bp.route("/importer", methods=['GET'])
 @admin_required
 def importer_page():
@@ -238,117 +224,88 @@ def importer_fichier():
         flash(f"Une erreur inattendue est survenue lors de la lecture du fichier : {e}", "error")
 
     return redirect(url_for('admin.importer_page'))
+'''
 
 #=== GESTION UTILISATEURS ===
 @admin_bp.route("/utilisateurs")
 @admin_required
 def gestion_utilisateurs():
-    db = get_db()
-    utilisateurs = db.execute(
-        "SELECT id, nom_utilisateur, role, email FROM utilisateurs "
-        "ORDER BY nom_utilisateur").fetchall()
-    armoires = get_all_armoires(db)
-    categories = get_all_categories(db)
-    icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>'
-    breadcrumbs = [
-    {'text': 'Panneau d\'Administration', 'endpoint': 'admin.admin','icon_svg': icon_svg},
-    {'text': 'Gestion Quotidienne'},
-    {'text': 'Gestion des Utilisateurs'} # Le dernier n'a pas besoin de lien
-    ]
+    etablissement_id = session['etablissement_id']
+    utilisateurs = db.session.execute(
+        db.select(Utilisateur)
+        .filter_by(etablissement_id=etablissement_id)
+        .order_by(Utilisateur.nom_utilisateur)
+    ).scalars().all()
+    
     return render_template("admin_utilisateurs.html",
                            utilisateurs=utilisateurs,
-                           breadcrumbs=breadcrumbs,
-                           armoires=armoires,
-                           categories=categories,
                            now=datetime.now)
 
-
-#=== MODIFIER EMAIL ===
 @admin_bp.route("/utilisateurs/modifier_email/<int:id_user>", methods=["POST"])
 @admin_required
 def modifier_email_utilisateur(id_user):
+    etablissement_id = session['etablissement_id']
     email = request.form.get('email', '').strip()
     if not email or '@' not in email:
         flash("Veuillez fournir une adresse e-mail valide.", "error")
         return redirect(url_for('admin.gestion_utilisateurs'))
 
-    db = get_db()
-    user = db.execute("SELECT nom_utilisateur FROM utilisateurs WHERE id = ?",
-                      (id_user, )).fetchone()
-    if not user:
+    user = db.session.get(Utilisateur, id_user)
+    if not user or user.etablissement_id != etablissement_id:
         flash("Utilisateur non trouvé.", "error")
         return redirect(url_for('admin.gestion_utilisateurs'))
 
     try:
-        db.execute("UPDATE utilisateurs SET email = ? WHERE id = ?",
-                   (email, id_user))
-        db.commit()
-        flash(
-            f"L'adresse e-mail pour '{user['nom_utilisateur']}' a été "
-            "mise à jour.", "success")
-    except sqlite3.Error as e:
-        db.rollback()
+        user.email = email
+        db.session.commit()
+        flash(f"L'adresse e-mail pour '{user.nom_utilisateur}' a été mise à jour.", "success")
+    except Exception as e:
+        db.session.rollback()
         flash(f"Erreur de base de données : {e}", "error")
 
     return redirect(url_for('admin.gestion_utilisateurs'))
 
-
-#=== SUPPRIMER UTILISATEUR ===
 @admin_bp.route("/utilisateurs/supprimer/<int:id_user>", methods=["POST"])
 @admin_required
 def supprimer_utilisateur(id_user):
     if id_user == session['user_id']:
         flash("Vous ne pouvez pas supprimer votre propre compte.", "error")
         return redirect(url_for('admin.gestion_utilisateurs'))
-    db = get_db()
-    user = db.execute("SELECT nom_utilisateur FROM utilisateurs WHERE id = ?",
-                      (id_user, )).fetchone()
-    if user:
-        db.execute("DELETE FROM utilisateurs WHERE id = ?", (id_user, ))
-        db.commit()
-        flash(f"L'utilisateur '{user['nom_utilisateur']}' a été supprimé.",
-              "success")
+    
+    etablissement_id = session['etablissement_id']
+    user = db.session.get(Utilisateur, id_user)
+    
+    if user and user.etablissement_id == etablissement_id:
+        try:
+            nom_user = user.nom_utilisateur
+            db.session.delete(user)
+            db.session.commit()
+            flash(f"L'utilisateur '{nom_user}' a été supprimé.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Erreur lors de la suppression : {e}", "error")
     else:
         flash("Utilisateur non trouvé.", "error")
+        
     return redirect(url_for('admin.gestion_utilisateurs'))
 
+# NOTE : Les fonctions promouvoir_utilisateur et reinitialiser_mdp
+# doivent être traduites de la même manière. Pour l'instant, on les neutralise.
 
-#=== PROMOUVOIR UTILISATEUR ===
 @admin_bp.route("/utilisateurs/promouvoir/<int:id_user>", methods=["POST"])
 @admin_required
 def promouvoir_utilisateur(id_user):
-    if id_user == session['user_id']:
-        flash("Action non autorisée sur votre propre compte.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
-    password = request.form.get('password')
-    db = get_db()
-    admin_actuel = db.execute(
-        "SELECT mot_de_passe FROM utilisateurs WHERE id = ?",
-        (session['user_id'], )).fetchone()
-    if not admin_actuel or not check_password_hash(
-            admin_actuel['mot_de_passe'], password):
-        flash(
-            "Mot de passe administrateur incorrect. "
-            "La passation de pouvoir a échoué.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
-    try:
-        db.execute("UPDATE utilisateurs SET role = 'admin' WHERE id = ?",
-                   (id_user, ))
-        db.execute("UPDATE utilisateurs SET role = 'utilisateur' WHERE id = ?",
-                   (session['user_id'], ))
-        db.commit()
-        flash(
-            "Passation de pouvoir réussie ! "
-            "Vous êtes maintenant un utilisateur standard.", "success")
-        return redirect(url_for('auth.logout'))
-    except sqlite3.Error as e:
-        db.rollback()
-        flash(f"Une erreur est survenue lors de la passation de pouvoir : {e}",
-              "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+    flash("Fonctionnalité en cours de migration.", "info")
+    return redirect(url_for('admin.gestion_utilisateurs'))
+
+@admin_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])
+@admin_required
+def reinitialiser_mdp(id_user):
+    flash("Fonctionnalité en cours de migration.", "info")
+    return redirect(url_for('admin.gestion_utilisateurs'))
 
 
-#=== REINITIALISER MDP ===
+'''
 @admin_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])
 @admin_required
 def reinitialiser_mdp(id_user):
@@ -1043,6 +1000,7 @@ def exporter_budget():
     
     flash("Format d'exportation non valide.", "error")
     return redirect(url_for('admin.budget'))
+'''
 
 #=======================================
 # GESTION DES ARMOIRES ET CATEGORIES
@@ -1050,91 +1008,140 @@ def exporter_budget():
 @admin_bp.route("/ajouter", methods=["POST"])
 @admin_required
 def ajouter():
+    etablissement_id = session['etablissement_id']
     type_objet = request.form.get("type")
     nom = request.form.get("nom", "").strip()
-    redirect_to = ("main.gestion_armoires"
-                   if type_objet == "armoire" else "main.gestion_categories")
+    
     if not nom:
         flash("Le nom ne peut pas être vide.", "error")
-        return redirect(url_for(redirect_to))
-    table_name = "armoires" if type_objet == "armoire" else "categories"
-    db = get_db()
+        return redirect(request.referrer)
+
+    Model = Armoire if type_objet == "armoire" else Categorie
+    
     try:
-        db.execute(f"INSERT INTO {table_name} (nom) VALUES (?)", (nom, ))
-        db.commit()
+        nouvel_element = Model(nom=nom, etablissement_id=etablissement_id)
+        db.session.add(nouvel_element)
+        db.session.commit()
         flash(f"L'élément '{nom}' a été créé.", "success")
-    except sqlite3.IntegrityError:
+    except IntegrityError:
+        db.session.rollback()
         flash(f"L'élément '{nom}' existe déjà.", "error")
+    
+    redirect_to = "main.gestion_armoires" if type_objet == "armoire" else "main.gestion_categories"
     return redirect(url_for(redirect_to))
+
 
 @admin_bp.route("/supprimer/<type_objet>/<int:id>", methods=["POST"])
 @admin_required
 def supprimer(type_objet, id):
-    db = get_db()
-    redirect_to = ("main.gestion_armoires"
-                   if type_objet == "armoire" else "main.gestion_categories")
+    etablissement_id = session['etablissement_id']
+    
     if type_objet == "armoire":
-        if db.execute("SELECT COUNT(id) FROM objets WHERE armoire_id = ?",
-                      (id, )).fetchone()[0] > 0:
-            flash(
-                "Impossible de supprimer. Cette armoire contient encore "
-                "des objets.", "error")
-            return redirect(url_for(redirect_to))
-    table_map = {"armoire": "armoires", "categorie": "categories"}
-    if type_objet in table_map:
-        table_name = table_map[type_objet]
-        nom_element = db.execute(f"SELECT nom FROM {table_name} WHERE id = ?",
-                                 (id, )).fetchone()
-        db.execute(f"DELETE FROM {table_name} WHERE id = ?", (id, ))
-        db.commit()
-        if nom_element:
-            flash(
-                f"L'élément '{nom_element['nom']}' a été supprimé avec succès.",
-                "success")
+        Model = Armoire
+        redirect_to = "main.gestion_armoires"
+    elif type_objet == "categorie":
+        Model = Categorie
+        redirect_to = "main.gestion_categories"
     else:
-        flash("Type d'élément à supprimer non valide.", "error")
+        flash("Type d'élément non valide.", "error")
+        return redirect(url_for('admin.admin'))
+
+    element = db.session.get(Model, id)
+
+    if not element or element.etablissement_id != etablissement_id:
+        flash("Élément non trouvé ou accès non autorisé.", "error")
+        return redirect(url_for(redirect_to))
+
+    # Vérification si l'élément est utilisé
+    if type_objet == "armoire":
+        count = db.session.query(Objet).filter_by(armoire_id=id, etablissement_id=etablissement_id).count()
+        if count > 0:
+            flash(f"Impossible de supprimer '{element.nom}' car elle contient encore {count} objet(s).", "error")
+            return redirect(url_for(redirect_to))
+    elif type_objet == "categorie":
+        count = db.session.query(Objet).filter_by(categorie_id=id, etablissement_id=etablissement_id).count()
+        if count > 0:
+            flash(f"Impossible de supprimer '{element.nom}' car elle contient encore {count} objet(s).", "error")
+            return redirect(url_for(redirect_to))
+
+    try:
+        nom_element = element.nom
+        db.session.delete(element)
+        db.session.commit()
+        flash(f"L'élément '{nom_element}' a été supprimé avec succès.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur est survenue : {e}", "error")
+    
     return redirect(url_for(redirect_to))
-                           
 
 @admin_bp.route("/modifier_armoire", methods=["POST"])
 @admin_required
 def modifier_armoire():
+    etablissement_id = session['etablissement_id']
     data = request.get_json()
-    armoire_id, nouveau_nom = data.get("id"), data.get("nom")
-    if not all([armoire_id, nouveau_nom, nouveau_nom.strip()]):
+    armoire_id = data.get("id")
+    nouveau_nom = data.get("nom", "").strip()
+
+    if not all([armoire_id, nouveau_nom]):
         return jsonify(success=False, error="Données invalides"), 400
-    db = get_db()
+
+    armoire = db.session.get(Armoire, armoire_id)
+
+    if not armoire or armoire.etablissement_id != etablissement_id:
+        return jsonify(success=False, error="Armoire non trouvée ou accès non autorisé."), 404
+
     try:
-        db.execute("UPDATE armoires SET nom = ? WHERE id = ?",
-                   (nouveau_nom.strip(), armoire_id))
-        db.commit()
-        return jsonify(success=True, nouveau_nom=nouveau_nom.strip())
-    except sqlite3.IntegrityError:
-        return jsonify(success=False,
-                       error="Ce nom d'armoire existe déjà."), 500
+        armoire.nom = nouveau_nom
+        db.session.commit()
+        return jsonify(success=True, nouveau_nom=nouveau_nom)
+    
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(success=False, error="Ce nom d'armoire existe déjà."), 409 # 409 Conflict
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
 
 
 @admin_bp.route("/modifier_categorie", methods=["POST"])
 @admin_required
 def modifier_categorie():
+    etablissement_id = session['etablissement_id']
     data = request.get_json()
-    categorie_id, nouveau_nom = data.get("id"), data.get("nom")
-    if not all([categorie_id, nouveau_nom, nouveau_nom.strip()]):
+    categorie_id = data.get("id")
+    nouveau_nom = data.get("nom", "").strip()
+
+    if not all([categorie_id, nouveau_nom]):
         return jsonify(success=False, error="Données invalides"), 400
-    db = get_db()
+
+    categorie = db.session.get(Categorie, categorie_id)
+
+    if not categorie or categorie.etablissement_id != etablissement_id:
+        return jsonify(success=False, error="Catégorie non trouvée ou accès non autorisé."), 404
+
     try:
-        db.execute("UPDATE categories SET nom = ? WHERE id = ?",
-                   (nouveau_nom.strip(), categorie_id))
-        db.commit()
-        return jsonify(success=True, nouveau_nom=nouveau_nom.strip())
-    except sqlite3.IntegrityError:
-        return jsonify(success=False,
-                       error="Ce nom de catégorie existe déjà."), 500
+        categorie.nom = nouveau_nom
+        db.session.commit()
+        return jsonify(success=True, nouveau_nom=nouveau_nom)
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(success=False, error="Ce nom de catégorie existe déjà."), 409
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
 
 
-#========================================
-# GESTION RAPPORTS ET EXPORTS
-#========================================
+
+
+
+
+
+
+
+
+'''
 @admin_bp.route("/rapports", methods=['GET'])
 @admin_required
 def rapports():
@@ -1992,3 +1999,21 @@ def generer_budget_excel(data, date_debut, date_fin):
     workbook.save(buffer)
     buffer.seek(0)
     return buffer
+'''
+
+@admin_bp.route("/debug/db-state")
+@admin_required
+def debug_db_state():
+    """Affiche l'état actuel de la base de données pour le débogage."""
+    current_etablissement_id = session.get('etablissement_id')
+    
+    # On récupère TOUS les objets, sans filtre, pour voir ce qu'il y a vraiment
+    all_objets = db.session.execute(db.select(Objet)).scalars().all()
+    
+    # On récupère tous les établissements
+    all_etablissements = db.session.execute(db.select(Etablissement)).scalars().all()
+
+    return render_template("debug_db_state.html",
+                           current_etablissement_id=current_etablissement_id,
+                           all_objets=all_objets,
+                           all_etablissements=all_etablissements)

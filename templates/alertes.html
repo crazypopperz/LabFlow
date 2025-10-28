@@ -51,34 +51,38 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for objet in objets_stock %}
-                        <tr class="{{ 'acquitte' if objet.en_commande }}">
-                            <td><a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a></td>
-                            <td class="texte-alerte"><strong>{{ objet.quantite_disponible }}</strong></td>
-                            <td>{{ objet.seuil }}</td>
-                            <td>{{ objet.categorie }}</td>
-                            <td>{{ objet.armoire }}</td>
-                            <td class="image-cell">
-                                {% if objet.image %}
-                                <div class="image-preview-wrapper">
-                                    <img src="{{ url_for('main.serve_image', filename=objet.image) }}" class="image-objet-thumbnail" alt="Image de {{ objet.nom }}">
-                                    <img src="{{ url_for('main.serve_image', filename=objet.image) }}" class="image-objet-preview" alt="Aperçu de {{ objet.nom }}">
-                                </div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <input type="checkbox" class="commande-checkbox" data-id="{{ objet.id }}" {% if objet.en_commande %}checked{% endif %} title="Marquer comme mis en commande">
-                            </td>
-							<td class="actions-cell">
-								<button class="btn-action btn-suggest" 
-										data-objet-id="{{ objet.id }}" 
-										data-objet-nom="{{ objet.nom }}"
-										title="Suggérer une quantité à commander">
-									Suggérer
-								</button>
-							</td>
-                        </tr>
-                    {% endfor %}
+                    {% for objet_row in objets_stock %}
+					{% set objet = objet_row[0] %}
+					{% set quantite_disponible = objet_row[1] %}
+
+					<tr class="{{ 'acquitte' if objet.en_commande }}">
+						<td><a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a></td>
+						<td class="texte-alerte"><strong>{{ quantite_disponible }}</strong></td>
+						<td>{{ objet.seuil }}</td>
+						<td>Catégorie #{{ objet.categorie_id }}</td>
+						<td>Armoire #{{ objet.armoire_id }}</td>
+						
+						<td class="image-cell">
+							{% if objet.image_url %}
+							<div class="image-preview-wrapper">
+								<img src="{{ objet.image_url }}" class="image-objet-thumbnail" alt="Image de {{ objet.nom }}">
+								<img src="{{ objet.image_url }}" class="image-objet-preview" alt="Aperçu de {{ objet.nom }}">
+							</div>
+							{% endif %}
+						</td>
+						<td>
+							<input type="checkbox" class="commande-checkbox" data-id="{{ objet.id }}" {% if objet.en_commande %}checked{% endif %} title="Marquer comme mis en commande">
+						</td>
+						<td class="actions-cell">
+							<button class="btn-action btn-suggest" 
+									data-objet-id="{{ objet.id }}" 
+									data-objet-nom="{{ objet.nom }}"
+									title="Suggérer une quantité à commander">
+								Suggérer
+							</button>
+						</td>
+					</tr>
+				{% endfor %}
                 </tbody>
             </table>
         {% else %}

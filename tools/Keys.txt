@@ -1,0 +1,2 @@
+SECRET_KEY='4d890aa022eeeec33f3aa0ab1c5dc5f71297eb39537372c8'
+GMLCL_PRO_KEY='X@vierN@welQuentinS@cha14211825!'

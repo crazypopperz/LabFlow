@@ -81,7 +81,7 @@
                         data-quantite="{{ objet.quantite_physique }}"
                         data-seuil="{{ objet.seuil }}"
                         data-date-peremption="{{ objet.date_peremption or '' }}"
-                        data-image-url="{{ url_for('serve_image', filename=objet.image) if objet.image else '' }}"
+                        data-image-url="{{ objet.image_url or '' }}"
                         data-modal-trigger="add-object-modal">
                     Modifier
                 </button>

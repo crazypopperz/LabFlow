@@ -40,37 +40,33 @@
                 </div>
                 <!-- COLONNE DE DROITE -->
                 <div class="form-column">
-                    <div class="form-group">
-                        <label for="image">Image (Optionnel)</label>
-                        <div class="file-drop-zone">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/></svg>
-                            <span class="file-msg">Glissez-déposez ou cliquez pour choisir une image</span>
-                            <input type="file" id="image" name="image" class="file-input">
-                        </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="fds_file">Fiche de Sécurité (Optionnel)</label>
-                        <div class="file-drop-zone">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-280h400v-80H280v80Zm0-160h400v-80H280v80Zm0-160h400v-80H280v80ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/></svg>
-                            <span class="file-msg">Glissez-déposez ou cliquez pour choisir un fichier</span>
-                            <input type="file" id="fds_file" name="fds_file" class="file-input">
-                        </div>
-                    </div>
+					<div class="form-group">
+						<label for="image_url">Image (Optionnel)</label>
+						<div class="input-with-button">
+							<input type="text" id="image_url" name="image_url" placeholder="Coller une URL ou chercher une image">
+							<button type="button" id="btn-search-pexels" class="btn-action btn-compact">Chercher</button>
+						</div>
+					</div>
 
-                    <div id="image-preview-container" style="display:none; text-align: center;">
-                        <img id="image-preview" src="" class="image-preview-modal" alt="Aperçu">
-                        <div>
-                            <input type="checkbox" id="supprimer_image" name="supprimer_image">
-                            <label for="supprimer_image">Supprimer l'image actuelle</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-cancel close-btn">Annuler</button>
-                <button type="submit" id="modal-submit-btn" class="btn-action">Enregistrer</button>
-            </div>
-        </form>
-    </div>
+					<div id="pexels-results" class="pexels-results-grid" style="display: none;">
+					</div>
+
+					<div class="form-group">
+						<label for="fds_url">Fiche de Sécurité (URL du PDF)</label>
+						<input type="text" id="fds_url" name="fds_url" placeholder="Coller l'URL de la FDS (site du fournisseur)">
+					</div>
+
+					<div id="image-preview-container" style="display:none; text-align: center;">
+						<img id="image-preview" src="" class="image-preview-modal" alt="Aperçu">
+					</div>
+
+				</div>
+			</div>
+			<div class="modal-actions">
+				<button type="button" class="btn-cancel close-btn">Annuler</button>
+				<button type="submit" id="modal-submit-btn" class="btn-action">Enregistrer</button>
+			</div>
+		</form>
+	</div>
 </div>

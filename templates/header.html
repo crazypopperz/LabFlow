@@ -1,9 +1,11 @@
 <header class="app-header blue-bg">
     <div class="header-container">
-        <div class="header-left">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
-            <h1><a href="{{ url_for('inventaire.index') }}">Gestion Matériel Labo Collège Lycée</a></h1>
-        </div>
+        <div class="header-title">
+			<a href="{{ url_for('inventaire.index') }}" class="header-title-link">
+				<h1>{{ nom_etablissement or 'Mon Espace' }}</h1>
+			</a>
+			<p class="brand-subtitle">LabFlow</p>
+		</div>
         <div class="header-right">
             <div class="search-container">
                 <div class="search-bar">
@@ -19,19 +21,20 @@
             </a>
 
             <!-- Icône 2 : Alertes de stock et de péremption -->
-            <a href="{{ url_for('main.alertes') }}" class="header-icon-link" title="Alertes de stock et de péremption">
-                <svg class="header-icon 
-                    {% if alertes_total > 3 %}
-                        alert-critical pulse-fast
-                    {% elif alertes_total > 0 %}
-                        alert-warning pulse
-                    {% else %}
-                        alert-ok
-                    {% endif %}" 
-                    xmlns="http://www.w3.org/2000/svg" height="28px" viewBox="0 0 24 24" width="28px">
-                    <path d="M12 23c1.1 0 1.99-.89 1.99-1.99h-3.98c0 1.1.89 1.99 1.99 1.99zm7-6v-6c0-3.35-2.36-6.15-5.5-6.83V1.5h-3v2.67C7.36 4.85 5 7.65 5 11v6l-2 2v1h18v-1l-2-2zm-6-1h-2v-2h2v2zm0-4h-2V8h2v4z"/>
-                </svg>
-            </a>
+            <a href="{{ url_for('main.alertes') }}" 
+			   id="alert-icon-link" 
+			   class="header-icon-link" 
+			   title="Alertes de stock et de péremption"
+			   data-alert-count="{{ alertes_total or 0 }}">  {# On s'assure qu'il y a toujours une valeur #}
+				
+				{# L'icône SVG est maintenant TOUJOURS affichée #}
+				<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-560q0-100 44.5-183.5T244-882l47 64q-60 44-95.5 111T160-560H80Zm720 0q0-80-35.5-147T669-818l47-64q75 55 119.5 138.5T880-560h-80ZM160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z"/></svg>
+				
+				{# La pastille avec le nombre n'est affichée QUE si le nombre est supérieur à zéro #}
+				{% if alertes_total and alertes_total > 0 %}
+					<span class="notification-badge">{{ alertes_total }}</span>
+				{% endif %}
+			</a>
 
             <div class="auth-section">
                 {% if session.user_id %}
@@ -50,7 +53,6 @@
 </header>
 
 <nav class="sub-nav">
-    {# --- CORRECTION : On ajoute les id pour le tutoriel --- #}
     <a href="{{ url_for('inventaire.inventaire') }}" id="btn-inventaire-complet" class="sub-nav-button">
         <svg xmlns="http://www.w3.org/2000/svg" class="sub-nav-icon" viewBox="0 -960 960 960"><path d="M360-200v-80h480v80H360Zm0-240v-80h480v80H360Zm0-240v-80h480v80H360ZM200-160q-33 0-56.5-23.5T120-240q0-33 23.5-56.5T200-320q33 0 56.5 23.5T280-240q0 33-23.5 56.5T200-160Zm0-240q-33 0-56.5-23.5T120-480q0-33 23.5-56.5T200-560q33 0 56.5 23.5T280-480q0 33-23.5 56.5T200-400Zm0-240q-33 0-56.5-23.5T120-720q0-33 23.5-56.5T200-800q33 0 56.5 23.5T280-720q0 33-23.5 56.5T200-640Z"/></svg>
         <span>Inventaire Complet</span>

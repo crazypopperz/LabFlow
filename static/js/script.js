@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // GESTIONNAIRE D'ÉVÉNEMENTS GLOBAL POUR TOUS LES CLICS
     // =================================================================
 	document.body.addEventListener('click', function(e) {
-
+		console.log("Clic détecté sur :", e.target);
         // --- Logique de la Section 1 (Pagination et Tri) ---
         if (dynamicContent) {
             const pageLink = e.target.closest('.page-link');
@@ -162,8 +162,10 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const trigger = e.target.closest('[data-modal-trigger]');
+		console.log("Élément déclencheur trouvé (trigger) :", trigger);
 		if (trigger) {
 			const modalId = trigger.dataset.modalTrigger;
+			console.log("Tentative d'ouverture de la modale avec l'ID :", modalId);
 			const modal = document.getElementById(modalId);
 			if (!modal) {
 				console.error(`Modale non trouvée avec l'ID : ${modalId}`);

@@ -23,36 +23,23 @@
         <div class="page-header">
             <div class="breadcrumb-nav">
                 <a href="{{ url_for('inventaire.inventaire') }}" class="breadcrumb-link">
-					<svg xmlns="http://www.w3.org/2000/svg" class="sub-nav-icon" viewBox="0 -960 960 960"><path d="M360-200v-80h480v80H360Zm0-240v-80h480v80H360Zm0-240v-80h480v80H360ZM200-160q-33 0-56.5-23.5T120-240q0-33 23.5-56.5T200-320q33 0 56.5 23.5T280-240q0 33-23.5 56.5T200-160Zm0-240q-33 0-56.5-23.5T120-480q0-33 23.5-56.5T200-560q33 0 56.5 23.5T280-480q0 33-23.5 56.5T200-400Zm0-240q-33 0-56.5-23.5T120-720q0-33 23.5-56.5T200-800q33 0 56.5 23.5T280-720q0 33-23.5 56.5T200-640Z"/></svg><span class="breadcrumb-text"> Inventaire</span>
-				</a>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="sub-nav-icon" viewBox="0 -960 960 960"><path d="M360-200v-80h480v80H360Zm0-240v-80h480v80H360Zm0-240v-80h480v80H360ZM200-160q-33 0-56.5-23.5T120-240q0-33 23.5-56.5T200-320q33 0 56.5 23.5T280-240q0 33-23.5 56.5T200-160Zm0-240q-33 0-56.5-23.5T120-480q0-33 23.5-56.5T200-560q33 0 56.5 23.5T280-480q0 33-23.5 56.5T200-400Zm0-240q-33 0-56.5-23.5T120-720q0-33 23.5-56.5T200-800q33 0 56.5 23.5T280-720q0 33-23.5 56.5T200-640Z"/></svg><span class="breadcrumb-text"> Inventaire</span>
+                </a>
                 <span class="breadcrumb-separator">/</span>
                 <span class="breadcrumb-current">{{ objet.nom }}</span>
             </div>
-            <div class="details-actions">
-					<button class="btn-action edit-objet-btn"
-						data-objet-id="{{ objet.id }}"
-						data-armoire-id="{{ objet.armoire_id }}"
-						data-categorie-id="{{ objet.categorie_id }}"
-						data-nom="{{ objet.nom }}"
-						data-quantite="{{ objet.quantite_physique }}"
-						data-seuil="{{ objet.seuil }}"
-						data-date-peremption="{{ objet.date_peremption or '' }}"
-						data-image-url="{{ objet.image_url or '' }}"
-						data-modal-trigger="add-object-modal">
-						Modifier l'objet
-					</button>
-			</div>
         </div>
 
         <div class="details-grid">
             <!-- CARTE 1 : IDENTITÉ (IMAGE + NOM) -->
             <div class="details-card">
-                <div class="identity-image-wrapper">
+                <div class="image-preview-wrapper">
                     {% if objet.image_url %}
-                        <img src="{{ objet.image_url }}" alt="Image de {{ objet.nom }}" class="identity-image">
+                        <img src="{{ objet.image_url }}" class="details-image-thumbnail" alt="Image de {{ objet.nom }}">
+                        <img src="{{ objet.image_url }}" class="details-image-preview" alt="Aperçu de {{ objet.nom }}">
                     {% else %}
                         <div class="identity-image-placeholder">
-                            <svg ...></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"/></svg>
                         </div>
                     {% endif %}
                 </div>
@@ -72,28 +59,36 @@
                     <li class="separator"></li>
                     <li>
                         <strong>Date de péremption :</strong>
-                        {% if objet.date_peremption %}
-                            {{ objet.date_peremption | strftime('%d/%m/%Y') }}
-                        {% else %}
-                            <span class="text-discret">Non spécifiée</span>
-                        {% endif %}
+                        {% if objet.date_peremption %}{{ objet.date_peremption | strftime('%d/%m/%Y') }}{% else %}<span class="text-discret">Non spécifiée</span>{% endif %}
                     </li>
                     <li>
                         <strong>Fiche de Sécurité :</strong>
-                        {% if objet.fds_url %}
-                            <a href="{{ objet.fds_url }}" target="_blank" class="link-external">Consulter</a>
-                        {% else %}
-                            <span class="text-discret">Aucune</span>
-                        {% endif %}
+                        {% if objet.fds_url %}<a href="{{ objet.fds_url }}" target="_blank" class="link-external">Consulter</a>{% else %}<span class="text-discret">Aucune</span>{% endif %}
                     </li>
                 </ul>
+                <div class="details-actions">
+                    <button class="btn-action"
+                            data-modal-trigger="add-object-modal"
+                            data-objet-id="{{ objet.id }}"
+                            data-nom="{{ objet.nom }}"
+                            data-quantite="{{ objet.quantite_physique }}"
+                            data-seuil="{{ objet.seuil }}"
+                            data-date-peremption="{{ objet.date_peremption or '' }}"
+                            data-armoire-id="{{ objet.armoire_id }}"
+                            data-categorie-id="{{ objet.categorie_id }}"
+                            data-image-url="{{ objet.image_url or '' }}"
+                            data-fds-url="{{ objet.fds_url or '' }}">
+                        Modifier l'objet
+                    </button>
+                </div>
             </div>
 
             <!-- CARTE 3 : HISTORIQUE -->
             <div class="details-card full-width-card">
                 <h3>Historique des actions</h3>
-                <div class="history-table-container">
-                    <table class="history-table">
+                {% if historique %}
+					<div class="history-table-container">
+						<table class="history-table">
 							<thead>
 								<tr>
 									<th>Date</th>
@@ -110,18 +105,19 @@
 									<td>{{ entree.nom_utilisateur }}</td>
 									<td>{{ entree.details }}</td>
 								</tr>
-								{% else %}
+								{% endfor %}
 								<tr>
 									<td colspan="4" class="text-discret" style="text-align: center; padding: 20px;">Aucun historique pour cet objet.</td>
 								</tr>
-								{% endfor %}
 							</tbody>
 						</table>
-                </div>
+					</div>
+				{% else %}
+				    <div class="widget-placeholder" style="padding: 20px 0;"><p>Aucun historique pour cet objet.</p></div>
+				{% endif %}
             </div>
         </div>
     </div>
-
     {% include 'footer.html' %}
     {% include '_modals.html' %}
 </body>

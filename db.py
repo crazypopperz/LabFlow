@@ -6,7 +6,7 @@ from flask.cli import with_appcontext
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (Integer, String, Float, Boolean, Date, DateTime, Text,
                         ForeignKey)
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # --- CONFIGURATION DE BASE DE SQLAlchemy ---
 class Base(DeclarativeBase):
@@ -37,6 +37,7 @@ class Armoire(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nom: Mapped[str] = mapped_column(String, nullable=False)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    objets: Mapped[list["Objet"]] = relationship(back_populates="armoire")
 
 class Budget(db.Model):
     __tablename__ = 'budgets'
@@ -51,6 +52,7 @@ class Categorie(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nom: Mapped[str] = mapped_column(String, nullable=False)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    objets: Mapped[list["Objet"]] = relationship(back_populates="categorie")
 
 class Fournisseur(db.Model):
     __tablename__ = 'fournisseurs'
@@ -101,6 +103,8 @@ class Objet(db.Model):
     image_url: Mapped[str] = mapped_column(String, nullable=True)
     fds_url: Mapped[str] = mapped_column(String, nullable=True)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    armoire: Mapped["Armoire"] = relationship(back_populates="objets")
+    categorie: Mapped["Categorie"] = relationship(back_populates="objets")
 
 class Historique(db.Model):
     __tablename__ = 'historique'

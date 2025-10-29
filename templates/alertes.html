@@ -59,8 +59,8 @@
 						<td><a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a></td>
 						<td class="texte-alerte"><strong>{{ quantite_disponible }}</strong></td>
 						<td>{{ objet.seuil }}</td>
-						<td>Catégorie {{ objet.categorie_id }}</td>
-						<td>Armoire {{ objet.armoire_id }}</td>
+						<td>{{ objet.categorie.nom }}</td>
+						<td>{{ objet.armoire.nom }}</td>
 						
 						<td class="image-cell">
 							{% if objet.image_url %}
@@ -130,8 +130,8 @@
                         </td>
                         {# === CORRECTION APPLIQUÉE ICI === #}
                         <td>{{ objet.quantite_disponible }}</td>
-                        <td>{{ objet.categorie }}</td>
-                        <td>{{ objet.armoire }}</td>
+                        <td>{{ objet.categorie.nom }}</td>
+                        <td>{{ objet.armoire.nom }}</td>
                         <td class="image-cell">
                             {% if objet.image %}
                             <div class="image-preview-wrapper">

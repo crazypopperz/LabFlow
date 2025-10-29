@@ -3,6 +3,7 @@ import os
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, send_from_directory, current_app)
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 # NOUVEAUX IMPORTS
 from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur
 from utils import login_required
@@ -125,6 +126,10 @@ def alertes():
     etablissement_id = session['etablissement_id']
     now = datetime.now()
 
+    options = [
+        joinedload(Objet.armoire),
+        joinedload(Objet.categorie)
+    ]
     # Sous-requête pour la quantité disponible (on la réutilise)
     subquery = db.session.query(
         Objet.id.label('objet_id'),
@@ -134,8 +139,9 @@ def alertes():
     ).filter(Objet.etablissement_id == etablissement_id).subquery()
 
     # Requête pour récupérer les objets en alerte de stock
-    objets_stock = db.session.query(Objet, subquery.c.quantite_disponible.label('quantite_disponible'))\
+    objets_stock_results = db.session.query(Objet, subquery.c.quantite_disponible.label('quantite_disponible'))\
         .join(subquery, Objet.id == subquery.c.objet_id)\
+        .options(*options)\
         .filter(
             Objet.etablissement_id == etablissement_id,
             subquery.c.quantite_disponible <= Objet.seuil
@@ -144,6 +150,7 @@ def alertes():
     # Requête pour récupérer les objets en alerte de péremption
     date_limite = (now + timedelta(days=30)).date()
     objets_peremption = db.session.query(Objet)\
+        .options(*options)\
         .filter(
             Objet.etablissement_id == etablissement_id,
             Objet.date_peremption != None,
@@ -152,7 +159,7 @@ def alertes():
         ).order_by(Objet.date_peremption.asc()).all()
     
     return render_template("alertes.html",
-                           objets_stock=objets_stock,
+                           objets_stock=objets_stock_results,
                            objets_peremption=objets_peremption,
                            date_actuelle=now,
                            now=now)

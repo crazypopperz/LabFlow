@@ -365,57 +365,27 @@ def voir_objet(objet_id):
 @login_required
 def voir_armoire(armoire_id):
     etablissement_id = session['etablissement_id']
-    now = datetime.now()
+    page = request.args.get('page', 1, type=int)
+    sort_by = request.args.get('sort_by', 'nom')
+    direction = request.args.get('direction', 'asc')
     
     armoire = db.session.get(Armoire, armoire_id)
-    
     if not armoire or armoire.etablissement_id != etablissement_id:
         flash("Armoire non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # --- Logique pour récupérer les objets (inchangée, elle est correcte) ---
-    subquery = db.session.query(
-        Reservation.objet_id,
-        func.sum(Reservation.quantite_reservee).label('total_reserve')
-    ).filter(
-        Reservation.etablissement_id == etablissement_id,
-        Reservation.fin_reservation > now
-    ).group_by(Reservation.objet_id).subquery()
-
-    results = db.session.execute(
-        db.select(
-            Objet,
-            (Objet.quantite_physique - func.coalesce(subquery.c.total_reserve, 0)).label('quantite_disponible')
-        )
-        .outerjoin(subquery, Objet.id == subquery.c.objet_id)
-        .filter(
-            Objet.armoire_id == armoire_id,
-            Objet.etablissement_id == etablissement_id
-        )
-        .order_by(Objet.nom)
-    ).all()
-
-    objets = []
-    for row in results:
-        obj = row.Objet
-        obj.quantite_disponible = row.quantite_disponible
-        objets.append(obj)
-
-    # --- DÉBUT DE LA NOUVELLE LOGIQUE ---
-    # On récupère la liste de TOUTES les autres armoires pour le menu déroulant
-    autres_armoires = db.session.execute(
-        db.select(Armoire)
-        .filter(
-            Armoire.etablissement_id == etablissement_id,
-            Armoire.id != armoire_id  # On exclut l'armoire actuelle
-        )
-        .order_by(Armoire.nom)
-    ).scalars().all()
-    # --- FIN DE LA NOUVELLE LOGIQUE ---
+    # ON RÉUTILISE LA FONCTION DE PAGINATION EN LUI PASSANT LE FILTRE
+    objets, total_pages = get_paginated_objets(
+        etablissement_id=etablissement_id, 
+        page=page, 
+        sort_by=sort_by, 
+        direction=direction,
+        armoire_id=armoire_id # <-- Le filtre clé !
+    )
 
     pagination = {
-        'page': 1,
-        'total_pages': 1,
+        'page': page,
+        'total_pages': total_pages,
         'endpoint': 'inventaire.voir_armoire',
         'armoire_id': armoire_id
     }
@@ -423,10 +393,9 @@ def voir_armoire(armoire_id):
     return render_template("armoire.html",
                            armoire=armoire,
                            objets=objets,
-                           autres_armoires=autres_armoires, # <-- On passe la nouvelle variable
                            pagination=pagination,
-                           sort_by='nom',
-                           direction='asc',
+                           sort_by=sort_by,
+                           direction=direction,
                            now=datetime.now())
 
 #==============================================================================
@@ -436,46 +405,27 @@ def voir_armoire(armoire_id):
 @login_required
 def voir_categorie(categorie_id):
     etablissement_id = session['etablissement_id']
-    now = datetime.now()
-    
+    page = request.args.get('page', 1, type=int)
+    sort_by = request.args.get('sort_by', 'nom')
+    direction = request.args.get('direction', 'asc')
+
     categorie = db.session.get(Categorie, categorie_id)
-    
     if not categorie or categorie.etablissement_id != etablissement_id:
         flash("Catégorie non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # --- DÉBUT DE LA CORRECTION (identique à voir_armoire) ---
-    subquery = db.session.query(
-        Reservation.objet_id,
-        func.sum(Reservation.quantite_reservee).label('total_reserve')
-    ).filter(
-        Reservation.etablissement_id == etablissement_id,
-        Reservation.fin_reservation > now
-    ).group_by(Reservation.objet_id).subquery()
-
-    results = db.session.execute(
-        db.select(
-            Objet,
-            (Objet.quantite_physique - func.coalesce(subquery.c.total_reserve, 0)).label('quantite_disponible')
-        )
-        .outerjoin(subquery, Objet.id == subquery.c.objet_id)
-        .filter(
-            Objet.categorie_id == categorie_id,
-            Objet.etablissement_id == etablissement_id
-        )
-        .order_by(Objet.nom)
-    ).all()
-
-    objets = []
-    for row in results:
-        obj = row.Objet
-        obj.quantite_disponible = row.quantite_disponible
-        objets.append(obj)
-    # --- FIN DE LA CORRECTION ---
+    # ON RÉUTILISE LA FONCTION DE PAGINATION EN LUI PASSANT LE FILTRE
+    objets, total_pages = get_paginated_objets(
+        etablissement_id=etablissement_id, 
+        page=page, 
+        sort_by=sort_by, 
+        direction=direction,
+        categorie_id=categorie_id # <-- Le filtre clé !
+    )
 
     pagination = {
-        'page': 1,
-        'total_pages': 1,
+        'page': page,
+        'total_pages': total_pages,
         'endpoint': 'inventaire.voir_categorie',
         'categorie_id': categorie_id
     }
@@ -484,8 +434,8 @@ def voir_categorie(categorie_id):
                            categorie=categorie,
                            objets=objets,
                            pagination=pagination,
-                           sort_by='nom',
-                           direction='asc',
+                           sort_by=sort_by,
+                           direction=direction,
                            now=datetime.now())
                            
 #=======================================================

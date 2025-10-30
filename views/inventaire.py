@@ -7,7 +7,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from sqlalchemy import func, or_
 
 # NOUVEAUX IMPORTS
-from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget
+from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget, Depense
 from utils import login_required, admin_required, limit_objets_required
 from .api import get_paginated_objets
 

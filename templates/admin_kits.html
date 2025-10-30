@@ -35,32 +35,33 @@
         </div>
 
         <div class="card-container management-page">
-            {% for kit in kits %}
-            <div class="item-card">
-                <div class="card-info">
-                    <a href="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}" class="card-title-link">
-                        <span class="card-title"><strong>{{ kit.nom }}</strong></span>
-                    </a>
-                    <span class="card-description">{{ kit.description }}</span>
-                    <span class="card-count">
-						{% if kit.count == 0 %}Aucun objet
-						{% elif kit.count == 1 %}1 objet
-						{% else %}{{ kit.count }} objets
+            {% for item in kits %}
+			<div class="item-card">
+				<div class="card-info">
+					<!-- On accède à l'objet Kit via item.Kit -->
+					<a href="{{ url_for('admin.modifier_kit', kit_id=item.Kit.id) }}" class="card-title-link">
+						<span class="card-title"><strong>{{ item.Kit.nom }}</strong></span>
+					</a>
+					<span class="card-description">{{ item.Kit.description }}</span>
+					<span class="card-count">
+						<!-- On accède au compte via item.count -->
+						{% if item.count == 0 %}Aucun objet
+						{% elif item.count == 1 %}1 objet
+						{% else %}{{ item.count }} objets
 						{% endif %}
 					</span>
-                </div>
-                <div class="card-actions">
-                    <a href="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}" title="Modifier le kit">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M167-120q-21 5-36.5-10.5T120-167l40-191 198 198-191 40Zm191-40L160-358l458-458q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L358-160Zm317-600L261-346l85 85 414-414-85-85Z"/></svg>
-                    </a>
-                    <button type="button" class="btn-danger btn-open-danger-modal"
-							data-action="{{ url_for('admin.supprimer_kit', kit_id=kit.id) }}"
-							data-message="Êtes-vous sûr de vouloir supprimer le kit '{{ kit.nom }}' ?">
+				</div>
+				<div class="card-actions">
+					<!-- Mêmes corrections ici -->
+					<a href="{{ url_for('admin.modifier_kit', kit_id=item.Kit.id) }}" title="Modifier le kit"><svg style="width:24px;height:24px" viewBox="0 0 24 24"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></a>
+					<button type="button" class="btn-danger btn-open-danger-modal"
+							data-action="{{ url_for('admin.supprimer_kit', kit_id=item.Kit.id) }}"
+							data-message="Êtes-vous sûr de vouloir supprimer le kit '{{ item.Kit.nom }}' ?">
 						Supprimer
 					</button>
-                </div>
-            </div>
-            {% else %}
+				</div>
+			</div>
+			{% else %}
                 <p>Aucun kit n'a été créé pour le moment.</p>
             {% endfor %}
         </div>

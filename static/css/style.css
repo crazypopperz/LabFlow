@@ -550,7 +550,9 @@ select {
   text-transform: capitalize;
 }
 
-/* --- Styles spécifiques pour le widget budget --- */
+/* =================================================================
+   6. PAGE DE GESTION BUDGÉTAIRE
+   ================================================================= */
 .budget-display {
   flex-grow: 1; /* Permet au conteneur de prendre toute la place disponible */
   display: flex;
@@ -583,8 +585,115 @@ select {
   color: var(--couleur-erreur);
 }
 
+.budget-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+.budget-summary-col .content-card {
+  position: -webkit-sticky; /* Pour la compatibilité avec les anciens navigateurs */
+    position: sticky;
+    top: 80px;
+}
+
+.stat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stat-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--couleur-bordure-legere);
+  font-size: 1.1rem;
+}
+
+.stat-list li.solde {
+  font-weight: bold;
+  font-size: 1.2rem;
+  border-top: 2px solid var(--texte-principal);
+  margin-top: 10px;
+}
+
+.stat-list .stat-value {
+  font-weight: bold;
+}
+
+.stat-list .positive {
+  color: var(--couleur-succes);
+}
+
+.stat-list .negative,
+.objet-table .negative {
+  color: var(--couleur-erreur);
+}
+
+.budget-actions {
+  margin-top: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.budget-details-col .table-container {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .budget-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.budget-summary-col {
+  display: flex;
+  flex-direction: column;
+  gap: 30px; /* Ajoute un espace de 30px entre les cartes enfants */
+}
+
+.budget-details-col .card-title-icon {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.budget-details-col .card-title-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* ou 15px */
+}
+
+.cloture-section {
+  margin-top: 15px;
+  border-top: 1px solid var(--couleur-bordure-legere);
+  padding-top: 15px;
+  text-align: center;
+}
+
+.cloture-section .btn-disabled {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.cloture-section .btn-disabled:hover {
+    /* On annule les effets de survol pour le bouton désactivé */
+    background-color: #e9ecef;
+    border-color: #ced4da;
+    color: #6c757d;
+    transform: none;
+    box-shadow: none;
+}
+
 /* =================================================================
-   6. PAGES DE GESTION (Armoires, Catégories, Admin)
+   7. PAGES DE GESTION (Armoires, Catégories, Admin)
    ================================================================= */
 .management-header {
   display: flex;
@@ -2580,116 +2689,6 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
 }
 
 /* =================================================================
-   24. PAGE DE GESTION BUDGÉTAIRE
-   ================================================================= */
-
-.budget-grid {
-  display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 30px;
-  align-items: start;
-}
-
-.budget-summary-col .content-card {
-  position: sticky;
-  top: 20px;
-}
-
-.stat-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.stat-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--couleur-bordure-legere);
-  font-size: 1.1rem;
-}
-
-.stat-list li.solde {
-  font-weight: bold;
-  font-size: 1.2rem;
-  border-top: 2px solid var(--texte-principal);
-  margin-top: 10px;
-}
-
-.stat-list .stat-value {
-  font-weight: bold;
-}
-
-.stat-list .positive {
-  color: var(--couleur-succes);
-}
-
-.stat-list .negative,
-.objet-table .negative {
-  color: var(--couleur-erreur);
-}
-
-.budget-actions {
-  margin-top: 25px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.budget-details-col .table-container {
-  max-height: 65vh;
-  overflow-y: auto;
-}
-
-@media (max-width: 900px) {
-  .budget-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.budget-summary-col {
-  display: flex;
-  flex-direction: column;
-  gap: 30px; /* Ajoute un espace de 30px entre les cartes enfants */
-}
-
-.budget-details-col .card-title-icon {
-  justify-content: space-between;
-  align-items: center;
-}
-
-.budget-details-col .card-title-main {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem; /* ou 15px */
-}
-
-.cloture-section {
-  margin-top: 15px;
-  border-top: 1px solid var(--couleur-bordure-legere);
-  padding-top: 15px;
-  text-align: center;
-}
-
-.cloture-section .btn-disabled {
-    background-color: #e9ecef;
-    border-color: #ced4da;
-    color: #6c757d;
-    cursor: not-allowed;
-    opacity: 0.65;
-}
-
-.cloture-section .btn-disabled:hover {
-    /* On annule les effets de survol pour le bouton désactivé */
-    background-color: #e9ecef;
-    border-color: #ced4da;
-    color: #6c757d;
-    transform: none;
-    box-shadow: none;
-}
-
-/* =================================================================
    25. VUE JOURNALIÈRE (NOUVELLE PRÉSENTATION EN LISTE)
    ================================================================= */
 
@@ -3735,4 +3734,13 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
 .details-card .image-preview-wrapper:hover .details-image-preview {
     visibility: visible;
     opacity: 1;
+}
+
+/* =================================================================
+   42. CORRECTIF SPÉCIFIQUE POUR L'EN-TÊTE DES PAGES DE GESTION
+   ================================================================= */
+.main-container > .management-header {
+    justify-content: space-between;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--couleur-bordure);
 }

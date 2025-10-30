@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 import requests
 from flask import Blueprint, jsonify, request, session, render_template
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 # NOUVEAUX IMPORTS
 from db import db, Objet, Reservation, Utilisateur, Kit, KitObjet, Categorie, Armoire
@@ -40,48 +41,6 @@ def search_pexels_images():
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"Erreur de communication avec l'API Pexels: {e}"}), 503
 
-# --- AFFICHAGE DU CALENDRIER ---
-@api_bp.route("/reservations_par_mois/<int:year>/<int:month>")
-@login_required
-def api_reservations_par_mois(year, month):
-    etablissement_id = session['etablissement_id']
-
-    # On calcule les dates de début et de fin du mois demandé
-    try:
-        start_date = datetime(year, month, 1)
-        if month == 12:
-            end_date = datetime(year + 1, 1, 1)
-        else:
-            end_date = datetime(year, month + 1, 1)
-    except ValueError:
-        return jsonify({"error": "Date invalide"}), 400
-
-    reservations = db.session.execute(
-        db.select(
-            func.date(Reservation.debut_reservation).label('jour_reservation'),
-            Reservation.groupe_id,
-            Reservation.utilisateur_id
-        )
-        .filter(
-            Reservation.etablissement_id == etablissement_id,
-            Reservation.debut_reservation >= start_date,
-            Reservation.debut_reservation < end_date,
-            Reservation.groupe_id != None
-        )
-        .group_by('jour_reservation', Reservation.groupe_id, Reservation.utilisateur_id)
-    ).mappings().all()
-
-    results = {}
-    for row in reservations:
-        date_str = row['jour_reservation'].strftime('%Y-%m-%d')
-        if date_str not in results:
-            results[date_str] = []
-        
-        results[date_str].append({
-            'is_mine': row['utilisateur_id'] == session['user_id']
-        })
-    
-    return jsonify(results)
 
 # ============================================================
 # NOUVELLE FONCTION DE PAGINATION (SQLAlchemy)
@@ -221,3 +180,134 @@ def deplacer_objets():
         db.session.rollback()
         return jsonify(success=False, error=str(e)), 500
 
+
+# ============================================================
+# === API POUR LE CALENDRIER MENSUEL ===
+# ============================================================
+@api_bp.route("/reservations_par_mois/<int:year>/<int:month>")
+@login_required
+def api_reservations_par_mois(year, month):
+    etablissement_id = session.get('etablissement_id')
+    if not etablissement_id:
+        return jsonify({"error": "Non autorisé"}), 403
+
+    try:
+        reservations = db.session.execute(
+            db.select(
+                func.strftime('%Y-%m-%d', Reservation.debut_reservation).label('jour'),
+                func.count(Reservation.id).label('count')
+            )
+            .filter(
+                Reservation.etablissement_id == etablissement_id,
+                func.strftime('%Y', Reservation.debut_reservation) == str(year),
+                func.strftime('%m', Reservation.debut_reservation) == f'{month:02d}'
+            )
+            .group_by('jour')
+        ).mappings().all()
+        reservations_par_jour = {r['jour']: [] for r in reservations}
+        
+        return jsonify(reservations_par_jour)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ========================================================================
+# MODALE DE RÉSERVATION
+# ========================================================================
+@api_bp.route("/reservation_data")
+@login_required
+def api_reservation_data():
+    etablissement_id = session.get('etablissement_id')
+    
+    # --- 1. Récupérer et valider les paramètres de la requête ---
+    date_str = request.args.get('date')
+    heure_debut_str = request.args.get('heure_debut')
+    heure_fin_str = request.args.get('heure_fin')
+
+    if not all([date_str, heure_debut_str, heure_fin_str]):
+        return jsonify({"error": "Paramètres manquants"}), 400
+
+    try:
+        debut_resa = datetime.strptime(f"{date_str} {heure_debut_str}", '%Y-%m-%d %H:%M')
+        fin_resa = datetime.strptime(f"{date_str} {heure_fin_str}", '%Y-%m-%d %H:%M')
+        if fin_resa <= debut_resa:
+            return jsonify({'objets': {}, 'kits': []}) # Si le créneau est invalide, on renvoie des données vides
+    except ValueError:
+        return jsonify({"error": "Format de date ou d'heure invalide"}), 400
+
+    # --- 2. Calculer les objets déjà réservés sur ce créneau ---
+    reservations_existantes = db.session.execute(
+        db.select(Reservation.objet_id, func.sum(Reservation.quantite_reservee).label('total_reserve'))
+        .filter(
+            Reservation.etablissement_id == etablissement_id,
+            Reservation.fin_reservation > debut_resa,
+            Reservation.debut_reservation < fin_resa
+        )
+        .group_by(Reservation.objet_id)
+    ).mappings().all()
+    
+    objets_reserves_map = {r['objet_id']: r['total_reserve'] for r in reservations_existantes}
+
+    # --- 3. Récupérer tous les objets et calculer leur disponibilité ---
+    tous_les_objets = db.session.execute(
+        db.select(Objet).filter_by(etablissement_id=etablissement_id).options(joinedload(Objet.categorie)).order_by(Objet.nom)
+    ).scalars().all()
+
+    objets_par_categorie = {}
+    objets_map = {} # On recrée ta map pour le calcul des kits
+    for objet in tous_les_objets:
+        quantite_reservee = objets_reserves_map.get(objet.id, 0)
+        quantite_disponible = objet.quantite_physique - quantite_reservee
+        
+        obj_data = {
+            'id': objet.id,
+            'nom': objet.nom,
+            'quantite_totale': objet.quantite_physique,
+            'quantite_disponible': max(0, quantite_disponible) # S'assurer de ne pas avoir de dispo négative
+        }
+        objets_map[objet.id] = obj_data # On stocke les données calculées
+
+        categorie_nom = objet.categorie.nom if objet.categorie else "Sans catégorie"
+        if categorie_nom not in objets_par_categorie:
+            objets_par_categorie[categorie_nom] = []
+        objets_par_categorie[categorie_nom].append(obj_data)
+
+    # --- 4. Récupérer tous les kits et calculer leur disponibilité (logique améliorée) ---
+    tous_les_kits = db.session.execute(
+        db.select(Kit).filter_by(etablissement_id=etablissement_id).options(joinedload(Kit.objets_assoc))
+    ).unique().scalars().all() # <-- CORRECTION ICI : Ajout de .unique()
+
+    kits_disponibles = []
+    for kit in tous_les_kits:
+        disponibilite_kit = float('inf') # On part d'un stock infini
+        if not kit.objets_assoc:
+            disponibilite_kit = 0
+        else:
+            for assoc in kit.objets_assoc:
+                objet_data = objets_map.get(assoc.objet_id)
+                
+                # Si un objet du kit n'existe plus ou que sa quantité est 0, le kit n'est pas dispo
+                if not objet_data or assoc.quantite == 0:
+                    disponibilite_kit = 0
+                    break
+                
+                # Calcule combien de "fois" cet objet peut satisfaire le besoin du kit
+                kits_possibles_pour_cet_objet = objet_data['quantite_disponible'] // assoc.quantite
+                
+                # La disponibilité du kit est celle de son composant le plus limitant
+                disponibilite_kit = min(disponibilite_kit, kits_possibles_pour_cet_objet)
+
+        kits_disponibles.append({
+            'id': kit.id,
+            'nom': kit.nom,
+            'description': kit.description,
+            'disponibilite': disponibilite_kit if disponibilite_kit != float('inf') else 0,
+            'objets': [{'objet_id': a.objet_id, 'quantite': a.quantite} for a in kit.objets_assoc]
+        })
+
+    # --- 5. Renvoyer la réponse complète ---
+    return jsonify({
+        'objets': objets_par_categorie,
+        'kits': kits_disponibles
+    })

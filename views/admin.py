@@ -2,7 +2,7 @@
 # IMPORTS
 # ============================================================
 import hashlib
-from datetime import datetime
+from datetime import date, datetime
 from io import BytesIO
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -10,9 +10,11 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from openpyxl import Workbook
 from werkzeug.security import check_password_hash, generate_password_hash
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 # NOUVEAUX IMPORTS
-from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, Budget, Depense, Echeance, Etablissement
+from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet,Budget, Depense, Echeance, Etablissement
 from utils import admin_required, login_required, annee_scolaire_format
 
 # ============================================================
@@ -25,982 +27,6 @@ admin_bp = Blueprint(
     url_prefix='/admin'
 )
 
-# ============================================================
-# LES FONCTIONS DE ROUTES ADMIN
-# ============================================================
-@admin_bp.route("/")
-@admin_required
-def admin():
-    # NOTE : Cette page est simplifiée. La logique de licence et autres
-    # devra être réimplémentée ici avec SQLAlchemy.
-    return render_template("admin.html", now=datetime.now())
-
-
-
-'''
-@admin_bp.route("/importer", methods=['GET'])
-@admin_required
-def importer_page():
-    db = get_db()
-    armoires = get_all_armoires(db)
-    categories = get_all_categories(db)
-    
-    breadcrumbs = [
-        ('Panneau d\'Administration', url_for('admin.admin')),
-        ('Importation en Masse', '#')
-    ]
-    
-    return render_template("admin_import.html", 
-                           breadcrumbs=breadcrumbs,
-                           armoires=armoires,
-                           categories=categories,
-                           now=datetime.now)
-
-#=== IMPORTATION FICHIER FICHIER EXCEL IMPORT MATERIEL ===
-@admin_bp.route("/telecharger_modele")
-@admin_required
-def telecharger_modele_excel():
-    workbook = Workbook()
-    sheet = workbook.active
-    sheet.title = "Inventaire à Importer"
-
-    headers = [
-        "Nom", "Quantité", "Seuil", "Armoire", "Catégorie", 
-        "Date Péremption", "Image (URL)"
-    ]
-    sheet.append(headers)
-
-    # --- DÉFINITION DES STYLES ---
-    header_font = Font(name='Calibri', bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
-    # NOUVEAU : On définit un alignement centré
-    center_alignment = Alignment(horizontal='center', vertical='center')
-    note_font = Font(name='Calibri', italic=True, color="808080")
-
-    # --- APPLICATION DES STYLES ---
-    for cell in sheet[1]:
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = center_alignment # On applique l'alignement centré
-
-    # --- AJUSTEMENT DES LARGEURS DE COLONNES (CORRIGÉ) ---
-    sheet.column_dimensions['A'].width = 40  # Nom
-    sheet.column_dimensions['B'].width = 15  # Quantité
-    sheet.column_dimensions['C'].width = 15  # Seuil
-    sheet.column_dimensions['D'].width = 25  # Armoire
-    sheet.column_dimensions['E'].width = 25  # Catégorie
-    sheet.column_dimensions['F'].width = 20  # Date Péremption
-    sheet.column_dimensions['G'].width = 50  # Image (URL)
-
-    date_header_cell = sheet['F1']
-    date_header_cell.comment = Comment("Le format de date doit être AAAA-MM-JJ.", "Note de format")
-
-    # --- GÉNÉRATION DU FICHIER ---
-    buffer = BytesIO()
-    workbook.save(buffer)
-    buffer.seek(0)
-
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name='modele_import_inventaire.xlsx',
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    
-@admin_bp.route("/importer", methods=['POST'])
-@admin_required
-def importer_fichier():
-    if 'fichier_excel' not in request.files:
-        flash("Aucun fichier sélectionné.", "error")
-        return redirect(url_for('admin.importer_page'))
-
-    fichier = request.files['fichier_excel']
-    if fichier.filename == '' or not fichier.filename.endswith('.xlsx'):
-        flash("Veuillez sélectionner un fichier Excel (.xlsx) valide.", "error")
-        return redirect(url_for('admin.importer_page'))
-
-    db = get_db()
-    errors = []
-    skipped_items = []
-    success_count = 0
-
-    existing_objects = {row['nom'].lower() for row in db.execute("SELECT nom FROM objets").fetchall()}
-    armoires_db = {a['nom'].lower(): a['id'] for a in get_all_armoires(db)}
-    categories_db = {c['nom'].lower(): c['id'] for c in get_all_categories(db)}
-
-    try:
-        workbook = load_workbook(fichier)
-        sheet = workbook.active
-        
-        db.execute("BEGIN")
-
-        for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            if all(cell is None for cell in row):
-                continue
-
-            if len(row) < 5:
-                errors.append(f"Ligne {i}: Manque de colonnes. Assurez-vous que les 5 premières colonnes sont présentes.")
-                continue
-
-            nom, quantite, seuil, armoire, categorie = (row[0], row[1], row[2], row[3], row[4])
-            date_peremption = row[5] if len(row) > 5 else None
-            image_url = row[6] if len(row) > 6 else None
-
-            if not all([nom, quantite, seuil, armoire, categorie]):
-                errors.append(f"Ligne {i}: Les champs Nom, Quantité, Seuil, Armoire et Catégorie sont obligatoires.")
-                continue
-
-            if str(nom).lower() in existing_objects:
-                skipped_items.append(nom)
-                continue
-
-            try:
-                quantite_int = int(quantite)
-                seuil_int = int(seuil)
-            except (ValueError, TypeError):
-                errors.append(f"Ligne {i}: La quantité et le seuil doivent être des nombres entiers.")
-                continue
-
-            armoire_id = armoires_db.get(str(armoire).lower())
-            if not armoire_id:
-                errors.append(f"Ligne {i}: L'armoire '{armoire}' n'existe pas.")
-                continue
-
-            categorie_id = categories_db.get(str(categorie).lower())
-            if not categorie_id:
-                errors.append(f"Ligne {i}: La catégorie '{categorie}' n'existe pas.")
-                continue
-            
-            date_peremption_db = None
-            if date_peremption:
-                try:
-                    if isinstance(date_peremption, datetime):
-                        date_peremption_db = date_peremption.strftime('%Y-%m-%d')
-                    else:
-                        date_peremption_db = datetime.strptime(str(date_peremption).split(' ')[0], '%Y-%m-%d').strftime('%Y-%m-%d')
-                except ValueError:
-                    errors.append(f"Ligne {i}: Le format de la date de péremption est invalide (doit être AAAA-MM-JJ).")
-                    continue
-            
-            image_url_db = None
-            if image_url:
-                image_url = str(image_url).strip()
-                valid_extensions = ('.jpg', '.jpeg', '.png', '.svg', '.webp')
-                
-                try:
-                    parsed_url = urlparse(image_url)
-                    path = parsed_url.path.lower()
-         
-                    if (parsed_url.scheme in ['http', 'https'] and 
-                        any(ext in path for ext in valid_extensions)):
-                        image_url_db = image_url
-                    else:
-                        errors.append(f"Ligne {i}: L'URL de l'image semble invalide. Elle doit être un lien internet complet (http/https) vers une image (.jpg, .png, etc.).")
-                        continue
-                except Exception:
-                    errors.append(f"Ligne {i}: L'URL de l'image n'a pas pu être analysée.")
-                    continue
-
-            db.execute(
-                """INSERT INTO objets (nom, quantite_physique, seuil, armoire_id, categorie_id, date_peremption, image_url)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (nom, quantite_int, seuil_int, armoire_id, categorie_id, date_peremption_db, image_url_db)
-            )
-            success_count += 1
-
-        if errors:
-            db.rollback()
-            for error in errors:
-                flash(error, "error")
-        else:
-            db.commit()
-            if success_count > 0:
-                flash(f"Importation réussie ! {success_count} nouvel/nouveaux objet(s) ajouté(s).", "success")
-            if skipped_items:
-                flash(f"Attention : {len(skipped_items)} objet(s) ont été ignoré(s) car ils existent déjà : {', '.join(skipped_items)}.", "warning")
-
-    except Exception as e:
-        db.rollback()
-        flash(f"Une erreur inattendue est survenue lors de la lecture du fichier : {e}", "error")
-
-    return redirect(url_for('admin.importer_page'))
-'''
-
-#=== GESTION UTILISATEURS ===
-@admin_bp.route("/utilisateurs")
-@admin_required
-def gestion_utilisateurs():
-    etablissement_id = session['etablissement_id']
-    utilisateurs = db.session.execute(
-        db.select(Utilisateur)
-        .filter_by(etablissement_id=etablissement_id)
-        .order_by(Utilisateur.nom_utilisateur)
-    ).scalars().all()
-    
-    return render_template("admin_utilisateurs.html",
-                           utilisateurs=utilisateurs,
-                           now=datetime.now)
-
-@admin_bp.route("/utilisateurs/modifier_email/<int:id_user>", methods=["POST"])
-@admin_required
-def modifier_email_utilisateur(id_user):
-    etablissement_id = session['etablissement_id']
-    email = request.form.get('email', '').strip()
-    if not email or '@' not in email:
-        flash("Veuillez fournir une adresse e-mail valide.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
-
-    user = db.session.get(Utilisateur, id_user)
-    if not user or user.etablissement_id != etablissement_id:
-        flash("Utilisateur non trouvé.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
-
-    try:
-        user.email = email
-        db.session.commit()
-        flash(f"L'adresse e-mail pour '{user.nom_utilisateur}' a été mise à jour.", "success")
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Erreur de base de données : {e}", "error")
-
-    return redirect(url_for('admin.gestion_utilisateurs'))
-
-@admin_bp.route("/utilisateurs/supprimer/<int:id_user>", methods=["POST"])
-@admin_required
-def supprimer_utilisateur(id_user):
-    if id_user == session['user_id']:
-        flash("Vous ne pouvez pas supprimer votre propre compte.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
-    
-    etablissement_id = session['etablissement_id']
-    user = db.session.get(Utilisateur, id_user)
-    
-    if user and user.etablissement_id == etablissement_id:
-        try:
-            nom_user = user.nom_utilisateur
-            db.session.delete(user)
-            db.session.commit()
-            flash(f"L'utilisateur '{nom_user}' a été supprimé.", "success")
-        except Exception as e:
-            db.session.rollback()
-            flash(f"Erreur lors de la suppression : {e}", "error")
-    else:
-        flash("Utilisateur non trouvé.", "error")
-        
-    return redirect(url_for('admin.gestion_utilisateurs'))
-
-# NOTE : Les fonctions promouvoir_utilisateur et reinitialiser_mdp
-# doivent être traduites de la même manière. Pour l'instant, on les neutralise.
-
-@admin_bp.route("/utilisateurs/promouvoir/<int:id_user>", methods=["POST"])
-@admin_required
-def promouvoir_utilisateur(id_user):
-    flash("Fonctionnalité en cours de migration.", "info")
-    return redirect(url_for('admin.gestion_utilisateurs'))
-
-@admin_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])
-@admin_required
-def reinitialiser_mdp(id_user):
-    flash("Fonctionnalité en cours de migration.", "info")
-    return redirect(url_for('admin.gestion_utilisateurs'))
-
-
-'''
-@admin_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])
-@admin_required
-def reinitialiser_mdp(id_user):
-    if id_user == session['user_id']:
-        flash(
-            "Vous ne pouvez pas réinitialiser votre propre mot de passe ici.",
-            "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
-    nouveau_mdp = request.form.get('nouveau_mot_de_passe')
-    if not nouveau_mdp or len(nouveau_mdp) < 4:
-        flash(
-            "Le nouveau mot de passe est requis et doit contenir "
-            "au moins 4 caractères.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
-    db = get_db()
-    user = db.execute("SELECT nom_utilisateur FROM utilisateurs WHERE id = ?",
-                      (id_user, )).fetchone()
-    if user:
-        try:
-            db.execute("UPDATE utilisateurs SET mot_de_passe = ? WHERE id = ?",
-                       (generate_password_hash(nouveau_mdp,
-                                               method='scrypt'), id_user))
-            db.commit()
-            flash(
-                f"Le mot de passe pour l'utilisateur "
-                f"'{user['nom_utilisateur']}' a été réinitialisé avec succès.",
-                "success")
-        except sqlite3.Error as e:
-            db.rollback()
-            flash(f"Erreur de base de données : {e}", "error")
-    else:
-        flash("Utilisateur non trouvé.", "error")
-    return redirect(url_for('admin.gestion_utilisateurs'))
-
-
-#===============================
-# GESTION KITS
-#===============================
-@admin_bp.route("/kits")
-@admin_required
-def gestion_kits():
-    db = get_db()
-    kits = db.execute("""
-        SELECT k.id, k.nom, k.description, COUNT(ko.id) as count
-        FROM kits k
-        LEFT JOIN kit_objets ko ON k.id = ko.kit_id
-        GROUP BY k.id, k.nom, k.description
-        ORDER BY k.nom
-        """).fetchall()
-    armoires = get_all_armoires(db)
-    categories = get_all_categories (db)
-    icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>'
-    breadcrumbs = [
-        {'text': 'Panneau d\'Administration', 'endpoint': 'admin.admin', 'icon_svg': icon_svg},
-        {'text': 'Gestion Quotidienne'},
-        {'text': 'Gestion des kits'}
-    ]
-    return render_template("admin_kits.html",
-                           kits=kits,
-                           breadcrumbs=breadcrumbs,
-                           armoires=armoires,
-                           categories=categories,
-                           now=datetime.now)
-
-
-#=== AJOUTER KIT ===
-@admin_bp.route("/kits/ajouter", methods=["POST"])
-@admin_required
-def ajouter_kit():
-    nom = request.form.get("nom", "").strip()
-    description = request.form.get("description", "").strip()
-    if not nom:
-        flash("Le nom du kit ne peut pas être vide.", "error")
-        return redirect(url_for('admin.gestion_kits'))
-
-    db = get_db()
-    try:
-        cursor = db.execute(
-            "INSERT INTO kits (nom, description) VALUES (?, ?)",
-            (nom, description))
-        db.commit()
-        new_kit_id = cursor.lastrowid
-        flash(
-            f"Le kit '{nom}' a été créé. "
-            "Vous pouvez maintenant y ajouter des objets.", "success")
-        return redirect(url_for('admin.modifier_kit', kit_id=new_kit_id))
-    except sqlite3.IntegrityError:
-        flash(f"Un kit avec le nom '{nom}' existe déjà.", "error")
-        return redirect(url_for('admin.gestion_kits'))
-
-
-#=== MODIFIER KIT ===
-@admin_bp.route("/kits/modifier/<int:kit_id>", methods=["GET", "POST"])
-@admin_required
-def modifier_kit(kit_id):
-    db = get_db()
-    kit = db.execute("SELECT id, nom, description FROM kits WHERE id = ?", (kit_id, )).fetchone()
-    if not kit:
-        flash("Kit non trouvé.", "error")
-        return redirect(url_for('admin.gestion_kits'))
-
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    if request.method == "POST":
-        objet_id_str = request.form.get("objet_id")
-        quantite_str = request.form.get("quantite")
-
-        if objet_id_str and quantite_str:
-            try:
-                objet_id = int(objet_id_str)
-                quantite = int(quantite_str)
-                stock_info = db.execute(
-                    f"""
-                    SELECT o.nom, (o.quantite_physique - COALESCE((SELECT SUM(r.quantite_reservee) FROM reservations r WHERE r.objet_id = o.id AND r.fin_reservation > '{now_str}'), 0)) as quantite_disponible
-                    FROM objets o WHERE o.id = ?
-                    """, (objet_id,)
-                ).fetchone()
-
-                if not stock_info:
-                    flash("Objet non trouvé.", "error")
-                    return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
-
-                if quantite > stock_info['quantite_disponible']:
-                    flash(f"Quantité invalide pour '{stock_info['nom']}'. Vous ne pouvez pas ajouter plus que le stock disponible ({stock_info['quantite_disponible']}).", "error")
-                    return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
-
-                existing = db.execute("SELECT id FROM kit_objets WHERE kit_id = ? AND objet_id = ?", (kit_id, objet_id)).fetchone()
-                if existing:
-                    db.execute("UPDATE kit_objets SET quantite = ? WHERE id = ?", (quantite, existing['id']))
-                else:
-                    db.execute("INSERT INTO kit_objets (kit_id, objet_id, quantite) VALUES (?, ?, ?)", (kit_id, objet_id, quantite))
-                db.commit()
-                flash(f"L'objet '{stock_info['nom']}' a été ajouté/mis à jour dans le kit.", "success")
-
-            except (ValueError, TypeError):
-                flash("Données invalides.", "error")
-            
-            return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
-
-        for key, value in request.form.items():
-            if key.startswith("quantite_"):
-                try:
-                    kit_objet_id = int(key.split("_")[1])
-                    new_quantite = int(value)
-
-                    objet_info = db.execute(
-                        f"""
-                        SELECT o.nom, o.id as objet_id, (o.quantite_physique - COALESCE((SELECT SUM(r.quantite_reservee) FROM reservations r WHERE r.objet_id = o.id AND r.fin_reservation > '{now_str}'), 0)) as quantite_disponible
-                        FROM kit_objets ko JOIN objets o ON ko.objet_id = o.id
-                        WHERE ko.id = ?
-                        """, (kit_objet_id,)
-                    ).fetchone()
-
-                    if not objet_info: continue
-
-                    if new_quantite > objet_info['quantite_disponible']:
-                         flash(f"Quantité invalide pour '{objet_info['nom']}'. Vous ne pouvez pas dépasser le stock disponible ({objet_info['quantite_disponible']}).", "error")
-                    else:
-                        db.execute("UPDATE kit_objets SET quantite = ? WHERE id = ?", (new_quantite, kit_objet_id))
-                        flash(f"Quantité pour '{objet_info['nom']}' mise à jour.", "success")
-                
-                except (ValueError, TypeError):
-                    flash("Une quantité fournie est invalide.", "error")
-        
-        db.commit()
-        return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
-
-    objets_in_kit = db.execute(
-        f"""
-        SELECT ko.id, o.nom, 
-               (o.quantite_physique - COALESCE((SELECT SUM(r.quantite_reservee) FROM reservations r WHERE r.objet_id = o.id AND r.fin_reservation > '{now_str}'), 0)) as stock_disponible, 
-               ko.quantite
-        FROM kit_objets ko
-        JOIN objets o ON ko.objet_id = o.id
-        WHERE ko.kit_id = ?
-        ORDER BY o.nom
-        """, (kit_id, )).fetchall()
-
-    objets_disponibles = db.execute(
-        f"""
-        SELECT id, nom, (quantite_physique - COALESCE((SELECT SUM(r.quantite_reservee) FROM reservations r WHERE r.objet_id = objets.id AND r.fin_reservation > '{now_str}'), 0)) as quantite_disponible 
-        FROM objets
-        WHERE id NOT IN (SELECT objet_id FROM kit_objets WHERE kit_id = ?)
-        ORDER BY nom
-        """, (kit_id, )).fetchall()
-
-    armoires = get_all_armoires (db)
-    categories = get_all_categories(db)
-    
-    breadcrumbs = [
-    {'text': 'Panneau d\'Administration', 'endpoint': 'admin.admin'},
-    {'text': 'Gestion des Kits', 'endpoint': 'admin.gestion_kits'},
-    {'text': kit['nom']}
-    ]
-
-    return render_template("admin_kit_modifier.html",
-                           kit=kit,
-                           breadcrumbs=breadcrumbs,
-                           objets_in_kit=objets_in_kit,
-                           objets_disponibles=objets_disponibles,
-                           armoires=armoires,
-                           categories=categories,
-                           now=datetime.now)
-
-
-#=== RETIRER OBJET DUN KIT ===
-@admin_bp.route("/kits/retirer_objet/<int:kit_objet_id>", methods=['GET', 'POST'])
-@admin_required
-def retirer_objet_kit(kit_objet_id):
-    db = get_db()
-    kit_objet = db.execute("SELECT kit_id FROM kit_objets WHERE id = ?",
-                           (kit_objet_id, )).fetchone()
-    if kit_objet:
-        kit_id = kit_objet['kit_id']
-        db.execute("DELETE FROM kit_objets WHERE id = ?", (kit_objet_id, ))
-        db.commit()
-        flash("Objet retiré du kit.", "success")
-        return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
-    flash("Erreur : objet du kit non trouvé.", "error")
-    return redirect(url_for('admin.gestion_kits'))
-
-
-#=== SUPPRIMER KIT ===
-@admin_bp.route("/kits/supprimer/<int:kit_id>", methods=["POST"])
-@admin_required
-def supprimer_kit(kit_id):
-    db = get_db()
-    kit = db.execute("SELECT nom FROM kits WHERE id = ?",
-                     (kit_id, )).fetchone()
-    if kit:
-        db.execute("DELETE FROM kits WHERE id = ?", (kit_id, ))
-        db.commit()
-        flash(f"Le kit '{kit['nom']}' a été supprimé.", "success")
-    else:
-        flash("Kit non trouvé.", "error")
-    return redirect(url_for('admin.gestion_kits'))
-    
-    
-#===================================
-# GESTION FOURNISSEURS 
-#===================================
-@admin_bp.route("/fournisseurs", methods=['GET', 'POST'])
-@admin_required
-def gestion_fournisseurs():
-    db = get_db()
-    if request.method == 'POST':
-        nom = request.form.get('nom', '').strip()
-        site_web = request.form.get('site_web', '').strip()
-        logo_name = None
-
-        if not nom:
-            flash("Le nom du fournisseur est obligatoire.", "error")
-            return redirect(url_for('admin.gestion_fournisseurs'))
-
-        if 'logo' in request.files:
-            logo = request.files['logo']
-            if logo and logo.filename != '':
-                filename = secure_filename(logo.filename)
-                upload_path = current_app.config['UPLOAD_FOLDER']
-                os.makedirs(upload_path, exist_ok=True)
-                logo.save(os.path.join(upload_path, filename))
-                logo_name = filename
-
-        try:
-            db.execute(
-                "INSERT INTO fournisseurs (nom, site_web, logo) "
-                "VALUES (?, ?, ?)", (nom, site_web or None, logo_name))
-            db.commit()
-            flash(f"Le fournisseur '{nom}' a été ajouté.", "success")
-        except sqlite3.IntegrityError:
-            flash(f"Un fournisseur avec le nom '{nom}' existe déjà.", "error")
-        except sqlite3.Error as e:
-            flash(f"Erreur de base de données : {e}", "error")
-        return redirect(url_for('admin.gestion_fournisseurs'))
-
-    fournisseurs = db.execute(
-        "SELECT * FROM fournisseurs ORDER BY nom").fetchall()
-    icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>'
-    breadcrumbs = [
-    {'text': 'Panneau d\'Administration', 'endpoint': 'admin.admin','icon_svg': icon_svg},
-    {'text': 'Gestion Quotidienne'},
-    {'text': 'Gestion des Fournisseurs', 'endpoint': 'admin.gestion_fournisseurs'}
-    ]
-    return render_template("admin_fournisseurs.html",
-                            breadcrumbs=breadcrumbs,
-                            fournisseurs=fournisseurs)
-
-
-@admin_bp.route("/fournisseurs/supprimer/<int:id>", methods=['POST'])
-@admin_required
-def supprimer_fournisseur(id):
-    db = get_db()
-    fournisseur = db.execute("SELECT logo, nom FROM fournisseurs WHERE id = ?",
-                             (id, )).fetchone()
-    if fournisseur:
-        if fournisseur['logo']:
-            try:
-                logo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], fournisseur['logo'])
-                if os.path.exists(logo_path):
-                    os.remove(logo_path)
-            except OSError:
-                pass
-
-        db.execute("DELETE FROM fournisseurs WHERE id = ?", (id, ))
-        db.commit()
-        flash(f"Le fournisseur '{fournisseur['nom']}' a été supprimé.",
-              "success")
-    else:
-        flash("Fournisseur non trouvé.", "error")
-    return redirect(url_for('admin.gestion_fournisseurs'))
-
-
-@admin_bp.route("/fournisseurs/modifier/<int:id>", methods=['POST'])
-@admin_required
-def modifier_fournisseur(id):
-    db = get_db()
-    fournisseur_avant = db.execute("SELECT * FROM fournisseurs WHERE id = ?",
-                                   (id, )).fetchone()
-    if not fournisseur_avant:
-        flash("Fournisseur non trouvé.", "error")
-        return redirect(url_for('admin.gestion_fournisseurs'))
-
-    nom = request.form.get('nom', '').strip()
-    site_web = request.form.get('site_web', '').strip()
-    logo_name = fournisseur_avant['logo']
-
-    upload_path = current_app.config['UPLOAD_FOLDER']
-
-    if not nom:
-        flash("Le nom du fournisseur est obligatoire.", "error")
-        return redirect(url_for('admin.gestion_fournisseurs'))
-
-    if request.form.get('supprimer_logo'):
-        if logo_name:
-            try:
-                logo_path = os.path.join(upload_path, logo_name)
-                if os.path.exists(logo_path):
-                    os.remove(logo_path)
-            except OSError:
-                pass
-        logo_name = None
-    elif 'logo' in request.files:
-        nouveau_logo = request.files['logo']
-        if nouveau_logo and nouveau_logo.filename != '':
-            if logo_name:
-                try:
-                    logo_path = os.path.join(upload_path, logo_name)
-                    if os.path.exists(logo_path):
-                        os.remove(logo_path)
-                except OSError:
-                    pass
-            filename = secure_filename(nouveau_logo.filename)
-            os.makedirs(upload_path, exist_ok=True)
-            nouveau_logo.save(os.path.join(upload_path, filename))
-            logo_name = filename
-
-    try:
-        db.execute(
-            "UPDATE fournisseurs SET nom = ?, site_web = ?, logo = ? "
-            "WHERE id = ?", (nom, site_web or None, logo_name, id))
-        db.commit()
-        flash(f"Le fournisseur '{nom}' a été mis à jour.", "success")
-    except sqlite3.IntegrityError:
-        flash(f"Un autre fournisseur avec le nom '{nom}' existe déjà.",
-              "error")
-    except sqlite3.Error as e:
-        flash(f"Erreur de base de données : {e}", "error")
-    
-    return redirect(url_for('admin.gestion_fournisseurs'))
-
-
-#==================================
-# GESTION DU BUDGET
-#==================================
-@admin_bp.route("/budget", methods=['GET'])
-@admin_required
-def budget():
-    db = get_db()
-    now = datetime.now()
-    annee_scolaire_actuelle = now.year if now.month >= 8 else now.year - 1
-
-    budgets_archives = db.execute(
-        "SELECT annee FROM budgets ORDER BY annee DESC").fetchall()
-
-    annee_a_afficher_str = request.args.get('annee', type=str)
-    
-    if annee_a_afficher_str:
-        annee_a_afficher = int(annee_a_afficher_str)
-    else:
-        annee_a_afficher = annee_scolaire_actuelle
-
-    budget_a_afficher = db.execute("SELECT * FROM budgets WHERE annee = ?",
-                                   (annee_a_afficher, )).fetchone()
-    if not budget_a_afficher and not budgets_archives:
-        try:
-            cursor = db.execute(
-                "INSERT INTO budgets (annee, montant_initial, cloture) VALUES (?, ?, 0)",
-                (annee_a_afficher, 0.0)
-            )
-            db.commit()
-            budget_id = cursor.lastrowid
-            budget_a_afficher = db.execute("SELECT * FROM budgets WHERE id = ?", (budget_id,)).fetchone()
-            budgets_archives = db.execute("SELECT annee FROM budgets ORDER BY annee DESC").fetchall()
-        except sqlite3.IntegrityError:
-            db.rollback()
-            budget_a_afficher = db.execute("SELECT * FROM budgets WHERE annee = ?", (annee_a_afficher,)).fetchone()
-
-    depenses = []
-    total_depenses = 0
-    solde = 0
-    cloture_autorisee = False
-
-    if budget_a_afficher:
-        depenses = db.execute(
-            """SELECT d.id, d.contenu, d.montant, d.date_depense,
-                      d.est_bon_achat, d.fournisseur_id, f.nom as fournisseur_nom
-               FROM depenses d
-               LEFT JOIN fournisseurs f ON d.fournisseur_id = f.id
-               WHERE d.budget_id = ?
-               ORDER BY d.date_depense DESC""",
-            (budget_a_afficher['id'], )).fetchall()
-
-        total_depenses_result = db.execute(
-            "SELECT SUM(montant) as total FROM depenses WHERE budget_id = ?",
-            (budget_a_afficher['id'], )).fetchone()
-        total_depenses = (total_depenses_result['total'] if total_depenses_result['total'] is not None else 0)
-        solde = budget_a_afficher['montant_initial'] - total_depenses
-        annee_fin_budget = budget_a_afficher['annee'] + 1
-        date_limite_cloture = date(annee_fin_budget, 6, 1)
-        if date.today() >= date_limite_cloture:
-            cloture_autorisee = True
-
-    budget_actuel_pour_modales = db.execute(
-        "SELECT * FROM budgets WHERE annee = ? AND cloture = 0",
-        (annee_scolaire_actuelle, )).fetchone()
-
-    annee_proposee_pour_creation = annee_scolaire_actuelle
-    if not budget_actuel_pour_modales:
-        derniere_annee_budget = db.execute("SELECT MAX(annee) as max_annee FROM budgets").fetchone()
-        if derniere_annee_budget and derniere_annee_budget['max_annee'] is not None:
-            annee_proposee_pour_creation = derniere_annee_budget['max_annee'] + 1
-        else:
-            annee_proposee_pour_creation = annee_scolaire_actuelle
-
-    fournisseurs = db.execute(
-        "SELECT id, nom FROM fournisseurs ORDER BY nom").fetchall()
-    icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>'
-    breadcrumbs = [
-    {'text': 'Panneau d\'Administration', 'endpoint': 'admin.admin','icon_svg': icon_svg},
-    {'text': 'Gestion Quotidienne'},
-    {'text': 'Gestion des Budget', 'endpoint': 'admin.budget'}
-    ]
-    return render_template(
-        "budget.html",
-        budget_affiche=budget_a_afficher,
-        breadcrumbs=breadcrumbs,
-        budget_actuel_pour_modales=budget_actuel_pour_modales,
-        annee_proposee_pour_creation=annee_proposee_pour_creation,
-        depenses=depenses,
-        total_depenses=total_depenses,
-        solde=solde,
-        fournisseurs=fournisseurs,
-        budgets_archives=budgets_archives,
-        annee_selectionnee=annee_a_afficher,
-        cloture_autorisee=cloture_autorisee,
-        now=datetime.now)
-
-
-@admin_bp.route("/budget/definir", methods=['POST'])
-@admin_required
-def definir_budget():
-    db = get_db()
-    montant = request.form.get('montant_initial')
-    annee = request.form.get('annee')
-
-    if not montant or not annee:
-        flash("L'année et le montant sont obligatoires.", "error")
-        return redirect(url_for('admin.budget'))
-
-    try:
-        montant_float = float(montant.replace(',', '.'))
-        annee_int = int(annee)
-
-        existing_budget = db.execute(
-            "SELECT id FROM budgets WHERE annee = ?", (annee_int,)
-        ).fetchone()
-        if existing_budget:
-            db.execute(
-                "UPDATE budgets SET montant_initial = ?, cloture = 0 WHERE id = ?",
-                (montant_float, existing_budget['id'])
-            )
-        else:
-            db.execute(
-                "INSERT INTO budgets (annee, montant_initial) VALUES (?, ?)",
-                (annee_int, montant_float)
-            )
-
-        db.commit()
-        flash(
-            f"Le budget pour l'année scolaire {annee_scolaire_format(annee_int)} a été défini à "
-            f"{montant_float:.2f} €.", "success"
-        )
-    except ValueError:
-        flash("Le montant ou l'année saisi(e) est invalide.", "error")
-    except sqlite3.Error as e:
-        db.rollback()
-        flash(f"Erreur de base de données : {e}", "error")
-
-    return redirect(url_for('admin.budget', annee=annee))
-
-
-@admin_bp.route("/budget/ajouter_depense", methods=['POST'])
-@admin_required
-def ajouter_depense():
-    db = get_db()
-    budget_id = request.form.get('budget_id')
-    fournisseur_id = request.form.get('fournisseur_id')
-    contenu = request.form.get('contenu', '').strip()
-    montant = request.form.get('montant')
-    date_depense = request.form.get('date_depense')
-    est_bon_achat = 1 if request.form.get('est_bon_achat') == 'on' else 0
-
-    if not all([budget_id, contenu, montant, date_depense]):
-        flash("Tous les champs sont obligatoires pour ajouter une dépense.",
-              "error")
-        return redirect(url_for('admin.budget'))
-
-    if est_bon_achat:
-        fournisseur_id = None
-    elif not fournisseur_id:
-        flash(
-            "Veuillez sélectionner un fournisseur ou cocher la case "
-            "'Bon d'achat'.", "error")
-        return redirect(url_for('admin.budget'))
-
-    try:
-        montant_float = float(montant.replace(',', '.'))
-        db.execute(
-            """INSERT INTO depenses (budget_id, fournisseur_id, contenu,
-               montant, date_depense, est_bon_achat)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (budget_id, fournisseur_id, contenu, montant_float, date_depense,
-             est_bon_achat))
-        db.commit()
-        flash("La dépense a été ajoutée avec succès.", "success")
-    except ValueError:
-        flash("Le montant saisi est invalide.", "error")
-    except sqlite3.Error as e:
-        db.rollback()
-        flash(f"Erreur de base de données : {e}", "error")
-
-    return redirect(url_for('admin.budget'))
-
-
-@admin_bp.route("/budget/modifier_depense/<int:id>", methods=['POST'])
-@admin_required
-def modifier_depense(id):
-    db = get_db()
-    depense = db.execute("SELECT id FROM depenses WHERE id = ?",
-                         (id, )).fetchone()
-    if not depense:
-        flash("Dépense non trouvée.", "error")
-        return redirect(url_for('admin.budget'))
-
-    fournisseur_id = request.form.get('fournisseur_id')
-    contenu = request.form.get('contenu', '').strip()
-    montant = request.form.get('montant')
-    date_depense = request.form.get('date_depense')
-    est_bon_achat = 1 if request.form.get('est_bon_achat') == 'on' else 0
-
-    if not all([contenu, montant, date_depense]):
-        flash("Les champs contenu, montant et date sont obligatoires.",
-              "error")
-        return redirect(request.referrer or url_for('admin.budget'))
-
-    if est_bon_achat:
-        fournisseur_id = None
-    elif not fournisseur_id:
-        flash(
-            "Veuillez sélectionner un fournisseur ou cocher la case "
-            "'Bon d'achat'.", "error")
-        return redirect(request.referrer or url_for('admin.budget'))
-
-    try:
-        montant_float = float(montant.replace(',', '.'))
-        db.execute(
-            """UPDATE depenses SET fournisseur_id = ?, contenu = ?,
-               montant = ?, date_depense = ?, est_bon_achat = ?
-               WHERE id = ?""", (fournisseur_id, contenu, montant_float,
-                                 date_depense, est_bon_achat, id))
-        db.commit()
-        flash("La dépense a été modifiée avec succès.", "success")
-    except ValueError:
-        flash("Le montant saisi est invalide.", "error")
-    except sqlite3.Error as e:
-        db.rollback()
-        flash(f"Erreur de base de données : {e}", "error")
-
-    return redirect(request.referrer or url_for('admin.budget'))
-
-
-@admin_bp.route("/budget/supprimer_depense/<int:id>", methods=['POST'])
-@admin_required
-def supprimer_depense(id):
-    db = get_db()
-    depense = db.execute("SELECT id FROM depenses WHERE id = ?",
-                         (id, )).fetchone()
-    if depense:
-        try:
-            db.execute("DELETE FROM depenses WHERE id = ?", (id, ))
-            db.commit()
-            flash("La dépense a été supprimée avec succès.", "success")
-        except sqlite3.Error as e:
-            db.rollback()
-            flash(f"Erreur de base de données : {e}", "error")
-    else:
-        flash("Dépense non trouvée.", "error")
-
-    return redirect(request.referrer or url_for('admin.budget'))
-
-
-@admin_bp.route("/budget/cloturer", methods=['POST'])
-@admin_required
-def cloturer_budget():
-    budget_id = request.form.get('budget_id')
-    db = get_db()
-    
-    budget = db.execute("SELECT * FROM budgets WHERE id = ?", (budget_id,)).fetchone()
-
-    if not budget:
-        flash("Budget non trouvé.", "error")
-        return redirect(url_for('admin.budget'))
-
-    # --- VÉRIFICATION DE SÉCURITÉ CÔTÉ SERVEUR ---
-    annee_fin_budget = budget['annee'] + 1
-    date_limite_cloture = date(annee_fin_budget, 6, 1)
-    if date.today() < date_limite_cloture:
-        flash(f"La clôture du budget {annee_scolaire_format(budget['annee'])} n'est autorisée qu'à partir du {date_limite_cloture.strftime('%d/%m/%Y')}.", "error")
-        return redirect(url_for('admin.budget', annee=budget['annee']))
-
-    if budget['cloture']:
-        flash(f"Le budget pour l'année scolaire {annee_scolaire_format(budget['annee'])} est déjà clôturé.", "warning")
-        return redirect(url_for('admin.budget'))
-
-    try:
-        db.execute("UPDATE budgets SET cloture = 1 WHERE id = ?", (budget_id,))
-        db.commit()
-        flash(f"Le budget pour l'année scolaire {annee_scolaire_format(budget['annee'])} a été clôturé avec succès.", "success")
-    except sqlite3.Error as e:
-        db.rollback()
-        flash(f"Erreur de base de données : {e}", "error")
-
-    return redirect(url_for('admin.budget'))
-
-@admin_bp.route("/exporter_budget")
-@admin_required
-def exporter_budget():
-    date_debut = request.args.get('date_debut')
-    date_fin = request.args.get('date_fin')
-    format_type = request.args.get('format')
-
-    if not all([date_debut, date_fin, format_type]):
-        flash("Tous les champs sont requis pour l'export.", "error")
-        return redirect(url_for('admin.budget'))
-
-    db = get_db()
-    depenses_data = db.execute("""
-        SELECT 
-            d.date_depense, 
-            d.contenu, 
-            d.montant, 
-            CASE 
-                WHEN d.est_bon_achat = 1 THEN 'Petit matériel bon achat' 
-                ELSE f.nom 
-            END as fournisseur_nom
-        FROM depenses d
-        LEFT JOIN fournisseurs f ON d.fournisseur_id = f.id
-        WHERE d.date_depense BETWEEN ? AND ?
-        ORDER BY d.date_depense ASC
-    """, (date_debut, date_fin)).fetchall()
-
-    if not depenses_data:
-        flash("Aucune dépense trouvée pour la période sélectionnée.", "warning")
-        return redirect(url_for('admin.budget'))
-
-    if format_type == 'pdf':
-        buffer = generer_budget_pdf(depenses_data, date_debut, date_fin)
-        return send_file(buffer, as_attachment=True, download_name='rapport_depenses.pdf', mimetype='application/pdf')
-    elif format_type == 'excel':
-        buffer = generer_budget_excel(depenses_data, date_debut, date_fin)
-        return send_file(buffer, as_attachment=True, download_name='rapport_depenses.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    
-    flash("Format d'exportation non valide.", "error")
-    return redirect(url_for('admin.budget'))
-'''
 
 #=======================================
 # GESTION DES ARMOIRES ET CATEGORIES
@@ -1133,6 +159,818 @@ def modifier_categorie():
         return jsonify(success=False, error=str(e)), 500
 
 
+# ============================================================
+# LES FONCTIONS DE ROUTES ADMIN
+# ============================================================
+@admin_bp.route("/")
+@admin_required
+def admin():
+    licence_info = {'is_pro': True, 'statut': 'Actif (SaaS)', 'instance_id': session.get('etablissement_id')}
+    return render_template("admin.html", now=datetime.now(), licence=licence_info)
+
+#==============================================================
+# GESTION UTILISATEURS
+#==============================================================
+@admin_bp.route("/utilisateurs")
+@admin_required
+def gestion_utilisateurs():
+    etablissement_id = session['etablissement_id']
+    utilisateurs = db.session.execute(
+        db.select(Utilisateur)
+        .filter_by(etablissement_id=etablissement_id)
+        .order_by(Utilisateur.nom_utilisateur)
+    ).scalars().all()
+
+    breadcrumbs = [
+        {'text': 'Panneau d\'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Gestion des Utilisateurs'}
+    ]
+    
+    return render_template("admin_utilisateurs.html",
+                           utilisateurs=utilisateurs,
+                           breadcrumbs=breadcrumbs,
+                           now=datetime.now)
+
+@admin_bp.route("/utilisateurs/modifier_email/<int:id_user>", methods=["POST"])
+@admin_required
+def modifier_email_utilisateur(id_user):
+    etablissement_id = session['etablissement_id']
+    email = request.form.get('email', '').strip()
+    if not email or '@' not in email:
+        flash("Veuillez fournir une adresse e-mail valide.", "error")
+        return redirect(url_for('admin.gestion_utilisateurs'))
+
+    user = db.session.get(Utilisateur, id_user)
+    if not user or user.etablissement_id != etablissement_id:
+        flash("Utilisateur non trouvé.", "error")
+        return redirect(url_for('admin.gestion_utilisateurs'))
+
+    try:
+        user.email = email
+        db.session.commit()
+        flash(f"L'adresse e-mail pour '{user.nom_utilisateur}' a été mise à jour.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erreur de base de données : {e}", "error")
+
+    return redirect(url_for('admin.gestion_utilisateurs'))
+
+@admin_bp.route("/utilisateurs/supprimer/<int:id_user>", methods=["POST"])
+@admin_required
+def supprimer_utilisateur(id_user):
+    if id_user == session['user_id']:
+        flash("Vous ne pouvez pas supprimer votre propre compte.", "error")
+        return redirect(url_for('admin.gestion_utilisateurs'))
+    
+    etablissement_id = session['etablissement_id']
+    user = db.session.get(Utilisateur, id_user)
+    
+    if user and user.etablissement_id == etablissement_id:
+        try:
+            nom_user = user.nom_utilisateur
+            db.session.delete(user)
+            db.session.commit()
+            flash(f"L'utilisateur '{nom_user}' a été supprimé.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Erreur lors de la suppression : {e}", "error")
+    else:
+        flash("Utilisateur non trouvé.", "error")
+        
+    return redirect(url_for('admin.gestion_utilisateurs'))
+
+#=== A REFACTORISER ENCORE ===
+@admin_bp.route("/utilisateurs/promouvoir/<int:id_user>", methods=["POST"])
+@admin_required
+def promouvoir_utilisateur(id_user):
+    flash("Fonctionnalité en cours de migration.", "info")
+    return redirect(url_for('admin.gestion_utilisateurs'))
+
+@admin_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])
+@admin_required
+def reinitialiser_mdp(id_user):
+    flash("Fonctionnalité en cours de migration.", "info")
+    return redirect(url_for('admin.gestion_utilisateurs'))
+#=== FIN DE LA PARTIE A REFACTORISER ===
+
+
+#=============================================================
+# GESTION DES KITS
+#=============================================================
+@admin_bp.route("/kits")
+@admin_required
+def gestion_kits():
+    etablissement_id = session['etablissement_id']
+    
+    # Traduction de ta requête en SQLAlchemy
+    kits_data = db.session.execute(
+        db.select(Kit, func.count(KitObjet.id).label('count'))
+        .outerjoin(KitObjet, Kit.id == KitObjet.kit_id)
+        .filter(Kit.etablissement_id == etablissement_id)
+        .group_by(Kit.id)
+        .order_by(Kit.nom)
+    ).mappings().all()
+
+    breadcrumbs = [
+        {'text': 'Panneau d\'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Gestion des Kits'}
+    ]
+    
+    return render_template("admin_kits.html",
+                           kits=kits_data,
+                           breadcrumbs=breadcrumbs)
+
+@admin_bp.route("/kits/ajouter", methods=["POST"])
+@admin_required
+def ajouter_kit():
+    etablissement_id = session['etablissement_id']
+    nom = request.form.get("nom", "").strip()
+    description = request.form.get("description", "").strip()
+
+    if not nom:
+        flash("Le nom du kit ne peut pas être vide.", "danger")
+        return redirect(url_for('admin.gestion_kits'))
+
+    try:
+        nouveau_kit = Kit(
+            nom=nom,
+            description=description,
+            etablissement_id=etablissement_id
+        )
+        db.session.add(nouveau_kit)
+        db.session.commit()
+        flash(f"Le kit '{nom}' a été créé. Vous pouvez maintenant y ajouter des objets.", "success")
+        # On redirige directement vers la page de modification
+        return redirect(url_for('admin.modifier_kit', kit_id=nouveau_kit.id))
+    except IntegrityError:
+        db.session.rollback()
+        flash(f"Un kit avec le nom '{nom}' existe déjà dans votre établissement.", "danger")
+        return redirect(url_for('admin.gestion_kits'))
+
+@admin_bp.route("/kits/modifier/<int:kit_id>", methods=["GET", "POST"])
+@admin_required
+def modifier_kit(kit_id):
+    etablissement_id = session['etablissement_id']
+    
+    kit = db.session.get(Kit, kit_id)
+    if not kit or kit.etablissement_id != etablissement_id:
+        flash("Kit non trouvé ou accès non autorisé.", "danger")
+        return redirect(url_for('admin.gestion_kits'))
+
+    if request.method == "POST":
+        # Logique pour ajouter un nouvel objet au kit
+        objet_id_str = request.form.get("objet_id")
+        if objet_id_str:
+            try:
+                objet_id = int(objet_id_str)
+                quantite = int(request.form.get("quantite", 1))
+
+                # Vérification que l'objet existe et appartient à l'établissement
+                objet_a_ajouter = db.session.get(Objet, objet_id)
+                if not objet_a_ajouter or objet_a_ajouter.etablissement_id != etablissement_id:
+                    flash("Objet non trouvé.", "danger")
+                    return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
+
+                # Vérification si l'objet est déjà dans le kit
+                association_existante = db.session.execute(
+                    db.select(KitObjet).filter_by(kit_id=kit.id, objet_id=objet_id)
+                ).scalar_one_or_none()
+
+                if association_existante:
+                    association_existante.quantite += quantite
+                    flash(f"Quantité de '{objet_a_ajouter.nom}' mise à jour dans le kit.", "success")
+                else:
+                    nouvelle_association = KitObjet(
+                        kit_id=kit.id,
+                        objet_id=objet_id,
+                        quantite=quantite,
+                        etablissement_id=etablissement_id
+                    )
+                    db.session.add(nouvelle_association)
+                    flash(f"L'objet '{objet_a_ajouter.nom}' a été ajouté au kit.", "success")
+                
+                db.session.commit()
+
+            except (ValueError, TypeError):
+                flash("Données invalides pour l'ajout d'objet.", "danger")
+        
+        # Logique pour mettre à jour les quantités des objets existants
+        else:
+            for key, value in request.form.items():
+                if key.startswith("quantite_"):
+                    try:
+                        kit_objet_id = int(key.split("_")[1])
+                        nouvelle_quantite = int(value)
+                        
+                        association = db.session.get(KitObjet, kit_objet_id)
+                        if association and association.kit_id == kit.id:
+                            if nouvelle_quantite > 0:
+                                association.quantite = nouvelle_quantite
+                            else: # Si la quantité est 0 ou moins, on supprime l'objet du kit
+                                db.session.delete(association)
+                    except (ValueError, TypeError):
+                        continue # On ignore les valeurs invalides
+            db.session.commit()
+            flash("Quantités mises à jour.", "success")
+
+        return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
+
+    # Logique pour l'affichage (GET)
+    objets_in_kit = db.session.execute(
+        db.select(KitObjet).filter_by(kit_id=kit.id).options(joinedload(KitObjet.objet))
+    ).scalars().all()
+
+    ids_objets_in_kit = [assoc.objet_id for assoc in objets_in_kit]
+
+    objets_disponibles = db.session.execute(
+        db.select(Objet)
+        .filter(Objet.etablissement_id == etablissement_id, ~Objet.id.in_(ids_objets_in_kit))
+        .order_by(Objet.nom)
+    ).scalars().all()
+
+    breadcrumbs = [
+        {'text': 'Panneau d\'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Gestion des Kits', 'url': url_for('admin.gestion_kits')},
+        {'text': kit.nom}
+    ]
+
+    return render_template("admin_kit_modifier.html",
+                           kit=kit,
+                           breadcrumbs=breadcrumbs,
+                           objets_in_kit=objets_in_kit,
+                           objets_disponibles=objets_disponibles)
+
+@admin_bp.route("/kits/retirer_objet/<int:kit_objet_id>", methods=["POST"])
+@admin_required
+def retirer_objet_kit(kit_objet_id):
+    etablissement_id = session['etablissement_id']
+    
+    association = db.session.get(KitObjet, kit_objet_id)
+    if association and association.etablissement_id == etablissement_id:
+        kit_id = association.kit_id
+        db.session.delete(association)
+        db.session.commit()
+        flash("Objet retiré du kit.", "success")
+        return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
+    
+    flash("Erreur : objet du kit non trouvé.", "danger")
+    return redirect(url_for('admin.gestion_kits'))
+
+@admin_bp.route("/kits/supprimer/<int:kit_id>", methods=["POST"])
+@admin_required
+def supprimer_kit(kit_id):
+    etablissement_id = session['etablissement_id']
+    
+    kit = db.session.get(Kit, kit_id)
+    if kit and kit.etablissement_id == etablissement_id:
+        nom_kit = kit.nom
+        db.session.delete(kit) # La cascade s'occupe de supprimer les KitObjet
+        db.session.commit()
+        flash(f"Le kit '{nom_kit}' a été supprimé.", "success")
+    else:
+        flash("Kit non trouvé.", "danger")
+        
+    return redirect(url_for('admin.gestion_kits'))
+
+#====================================================================
+# GESTION DES ECHEANCES
+#====================================================================
+@admin_bp.route("/echeances", methods=['GET'])
+@admin_required
+def gestion_echeances():
+    etablissement_id = session['etablissement_id']
+    
+    # On récupère toutes les échéances de l'établissement, triées par date
+    echeances = db.session.execute(
+        db.select(Echeance)
+        .filter_by(etablissement_id=etablissement_id)
+        .order_by(Echeance.date_echeance.asc())
+    ).scalars().all()
+
+    breadcrumbs = [
+        {'text': 'Panneau d\'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Gestion des Échéances'}
+    ]
+    
+    return render_template("admin_echeances.html",
+                           echeances=echeances,
+                           breadcrumbs=breadcrumbs,
+                           date_actuelle=date.today())
+
+@admin_bp.route("/echeances/ajouter", methods=['POST'])
+@admin_required
+def ajouter_echeance():
+    etablissement_id = session['etablissement_id']
+    intitule = request.form.get('intitule', '').strip()
+    date_echeance_str = request.form.get('date_echeance')
+    details = request.form.get('details', '').strip()
+
+    if not intitule or not date_echeance_str:
+        flash("L'intitulé et la date d'échéance sont obligatoires.", "danger")
+        return redirect(url_for('admin.gestion_echeances'))
+
+    try:
+        date_echeance = datetime.strptime(date_echeance_str, '%Y-%m-%d').date()
+        
+        nouvelle_echeance = Echeance(
+            intitule=intitule,
+            date_echeance=date_echeance,
+            details=details or None,
+            etablissement_id=etablissement_id
+        )
+        db.session.add(nouvelle_echeance)
+        db.session.commit()
+        flash("L'échéance a été ajoutée avec succès.", "success")
+    except ValueError:
+        flash("Le format de la date est invalide.", "danger")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+
+    return redirect(url_for('admin.gestion_echeances'))
+
+@admin_bp.route("/echeances/modifier/<int:id>", methods=['POST'])
+@admin_required
+def modifier_echeance(id):
+    etablissement_id = session['etablissement_id']
+    
+    echeance = db.session.get(Echeance, id)
+    if not echeance or echeance.etablissement_id != etablissement_id:
+        flash("Échéance non trouvée ou accès non autorisé.", "danger")
+        return redirect(url_for('admin.gestion_echeances'))
+
+    intitule = request.form.get('intitule', '').strip()
+    date_echeance_str = request.form.get('date_echeance')
+    details = request.form.get('details', '').strip()
+    traite = 1 if 'traite' in request.form else 0
+
+    if not intitule or not date_echeance_str:
+        flash("L'intitulé et la date d'échéance sont obligatoires.", "danger")
+        return redirect(url_for('admin.gestion_echeances'))
+
+    try:
+        echeance.intitule = intitule
+        echeance.date_echeance = datetime.strptime(date_echeance_str, '%Y-%m-%d').date()
+        echeance.details = details or None
+        echeance.traite = traite
+        
+        db.session.commit()
+        flash("L'échéance a été mise à jour.", "success")
+    except ValueError:
+        flash("Le format de la date est invalide.", "danger")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+
+    return redirect(url_for('admin.gestion_echeances'))
+
+@admin_bp.route("/echeances/supprimer/<int:id>", methods=['POST'])
+@admin_required
+def supprimer_echeance(id):
+    etablissement_id = session['etablissement_id']
+    
+    echeance = db.session.get(Echeance, id)
+    if not echeance or echeance.etablissement_id != etablissement_id:
+        flash("Échéance non trouvée ou accès non autorisé.", "danger")
+        return redirect(url_for('admin.gestion_echeances'))
+
+    try:
+        db.session.delete(echeance)
+        db.session.commit()
+        flash("L'échéance a été supprimée avec succès.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+
+    return redirect(url_for('admin.gestion_echeances'))
+
+
+#==============================================================
+# GESTION BUDGET
+#==============================================================
+@admin_bp.route("/budget", methods=['GET'])
+@admin_required
+def budget():
+    etablissement_id = session['etablissement_id']
+    now = datetime.now()
+    annee_scolaire_actuelle = now.year if now.month >= 8 else now.year - 1
+
+    # Récupère l'année demandée dans l'URL, sinon utilise l'année actuelle
+    try:
+        annee_selectionnee = int(request.args.get('annee', annee_scolaire_actuelle))
+    except (ValueError, TypeError):
+        annee_selectionnee = annee_scolaire_actuelle
+
+    # --- AMÉLIORATION : On récupère tous les budgets de l'établissement pour les archives ---
+    budgets_archives = db.session.execute(
+        db.select(Budget).filter_by(etablissement_id=etablissement_id).order_by(Budget.annee.desc())
+    ).scalars().all()
+
+    # --- TRADUCTION : On cherche le budget pour l'année sélectionnée et l'établissement courant ---
+    budget_affiche = db.session.execute(
+        db.select(Budget).filter_by(etablissement_id=etablissement_id, annee=annee_selectionnee)
+    ).scalar_one_or_none()
+
+    # --- AMÉLIORATION : Logique de création automatique de budget, version SQLAlchemy ---
+    # Si aucun budget n'existe pour cette année ET qu'aucun budget n'a jamais été créé,
+    # on en crée un vide pour guider l'utilisateur.
+    if not budget_affiche and not budgets_archives:
+        try:
+            budget_affiche = Budget(
+                annee=annee_selectionnee,
+                montant_initial=0.0,
+                etablissement_id=etablissement_id
+            )
+            db.session.add(budget_affiche)
+            db.session.commit()
+            # On doit le ré-ajouter à la liste des archives pour que le sélecteur s'affiche
+            budgets_archives.insert(0, budget_affiche)
+            flash(f"Aucun budget n'existait. Un budget vide pour l'année {annee_selectionnee}-{annee_selectionnee+1} a été initialisé.", "info")
+        except IntegrityError:
+            db.session.rollback() # Au cas où il y aurait une création concurrente
+            budget_affiche = db.session.execute(
+                db.select(Budget).filter_by(etablissement_id=etablissement_id, annee=annee_selectionnee)
+            ).scalar_one_or_none()
+
+
+    depenses = []
+    total_depenses = 0
+    solde = 0
+    cloture_autorisee = False
+
+    if budget_affiche:
+        # --- AMÉLIORATION : On utilise la relation pour obtenir les dépenses, c'est plus simple ---
+        # On trie en Python car la relation charge tous les objets liés
+        depenses = sorted(budget_affiche.depenses, key=lambda d: d.date_depense, reverse=True)
+        
+        # --- TRADUCTION : Calcul du total avec une requête SQLAlchemy ---
+        total_depenses_result = db.session.query(func.sum(Depense.montant)).filter(Depense.budget_id == budget_affiche.id).scalar()
+        total_depenses = total_depenses_result or 0
+        solde = budget_affiche.montant_initial - total_depenses
+        
+        # --- Logique de clôture (inchangée, elle était déjà correcte) ---
+        annee_fin_budget = budget_affiche.annee + 1
+        date_limite_cloture = date(annee_fin_budget, 6, 1)
+        if date.today() >= date_limite_cloture:
+            cloture_autorisee = True
+
+    # --- TRADUCTION : On cherche le budget actif (le plus récent non clôturé) pour les modales ---
+    budget_actuel_pour_modales = db.session.execute(
+        db.select(Budget).filter_by(etablissement_id=etablissement_id, cloture=False).order_by(Budget.annee.desc())
+    ).scalars().first()
+
+    # --- TRADUCTION : Logique pour proposer une nouvelle année de budget ---
+    annee_proposee_pour_creation = annee_scolaire_actuelle
+    if not budget_actuel_pour_modales and budgets_archives:
+        # S'il n'y a pas de budget actif mais qu'il y en a des archivés, on propose l'année suivante
+        derniere_annee = budgets_archives[0].annee # Le premier de la liste triée est le plus récent
+        annee_proposee_pour_creation = derniere_annee + 1
+
+    # --- TRADUCTION : On récupère les fournisseurs de l'établissement ---
+    fournisseurs = db.session.execute(
+        db.select(Fournisseur).filter_by(etablissement_id=etablissement_id).order_by(Fournisseur.nom)
+    ).scalars().all()
+    
+    breadcrumbs = [
+        {'text': 'Panneau d\'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Gestion Budgétaire'}
+    ]
+    # On passe toutes les données au template
+    return render_template(
+        "budget.html",
+        breadcrumbs=breadcrumbs,
+        budget_affiche=budget_affiche,
+        budget_actuel_pour_modales=budget_actuel_pour_modales,
+        annee_proposee_pour_creation=annee_proposee_pour_creation,
+        depenses=depenses,
+        total_depenses=total_depenses,
+        solde=solde,
+        fournisseurs=fournisseurs,
+        budgets_archives=budgets_archives,
+        annee_selectionnee=annee_selectionnee,
+        cloture_autorisee=cloture_autorisee,
+        now=now
+    )
+
+
+@admin_bp.route("/budget/definir", methods=['POST'])
+@admin_required
+def definir_budget():
+    etablissement_id = session['etablissement_id']
+    montant_str = request.form.get('montant_initial')
+    annee_str = request.form.get('annee')
+
+    # --- Validation des entrées ---
+    if not montant_str or not annee_str:
+        flash("L'année et le montant sont obligatoires.", "danger")
+        return redirect(url_for('admin.budget'))
+
+    try:
+        montant = float(montant_str.replace(',', '.'))
+        annee = int(annee_str)
+        if montant < 0 or annee < 2020:
+            raise ValueError("Valeurs invalides")
+    except ValueError:
+        flash("Le montant ou l'année saisi(e) est invalide.", "danger")
+        return redirect(url_for('admin.budget'))
+
+    # --- Logique SQLAlchemy ---
+    try:
+        budget_existant = db.session.execute(
+            db.select(Budget).filter_by(annee=annee, etablissement_id=etablissement_id)
+        ).scalar_one_or_none()
+
+        if budget_existant:
+            budget_existant.montant_initial = montant
+            budget_existant.cloture = False # Ré-ouvrir un budget si on le modifie
+            flash(f"Le budget pour l'année scolaire {annee}-{annee+1} a été mis à jour.", 'success')
+        else:
+            nouveau_budget = Budget(annee=annee, montant_initial=montant, etablissement_id=etablissement_id)
+            db.session.add(nouveau_budget)
+            flash(f"Le budget pour l'année scolaire {annee}-{annee+1} a été créé.", 'success')
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+
+    return redirect(url_for('admin.budget', annee=annee))
+
+
+@admin_bp.route("/budget/depense/ajouter", methods=['POST'])
+@admin_required
+def ajouter_depense():
+    etablissement_id = session['etablissement_id']
+    budget_id = request.form.get('budget_id')
+    contenu = request.form.get('contenu', '').strip()
+    montant_str = request.form.get('montant')
+    date_depense_str = request.form.get('date_depense')
+    est_bon_achat = 'est_bon_achat' in request.form
+    fournisseur_id = request.form.get('fournisseur_id')
+
+    # --- Validation des entrées ---
+    if not all([budget_id, contenu, montant_str, date_depense_str]):
+        flash("Tous les champs sont obligatoires pour ajouter une dépense.", "danger")
+        return redirect(request.referrer or url_for('admin.budget'))
+
+    if not est_bon_achat and not fournisseur_id:
+        flash("Veuillez sélectionner un fournisseur ou cocher la case 'Bon d'achat'.", "danger")
+        return redirect(request.referrer or url_for('admin.budget'))
+
+    try:
+        montant = float(montant_str.replace(',', '.'))
+        date_depense = datetime.strptime(date_depense_str, '%Y-%m-%d').date()
+        if montant <= 0: raise ValueError()
+    except (ValueError, TypeError):
+        flash("Le montant ou la date est invalide.", "danger")
+        return redirect(request.referrer or url_for('admin.budget'))
+
+    # --- Logique SQLAlchemy avec vérification de sécurité ---
+    budget = db.session.get(Budget, int(budget_id))
+    if not budget or budget.etablissement_id != etablissement_id or budget.cloture:
+        flash("Impossible d'ajouter une dépense : le budget est introuvable, n'appartient pas à votre établissement ou est clôturé.", 'danger')
+        return redirect(url_for('admin.budget'))
+
+    try:
+        nouvelle_depense = Depense(
+            date_depense=date_depense,
+            contenu=contenu,
+            montant=montant,
+            est_bon_achat=est_bon_achat,
+            fournisseur_id=int(fournisseur_id) if fournisseur_id and not est_bon_achat else None,
+            budget_id=budget.id,
+            etablissement_id=etablissement_id
+        )
+        db.session.add(nouvelle_depense)
+        db.session.commit()
+        flash("La dépense a été ajoutée avec succès.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+    
+    return redirect(request.referrer or url_for('admin.budget'))
+
+
+@admin_bp.route("/budget/depense/modifier/<int:id>", methods=['POST'])
+@admin_required
+def modifier_depense(id):
+    etablissement_id = session['etablissement_id']
+    
+    # --- Sécurité : On récupère la dépense et on vérifie qu'elle appartient bien à l'établissement ---
+    depense = db.session.get(Depense, id)
+    if not depense or depense.etablissement_id != etablissement_id:
+        flash("Dépense non trouvée ou accès non autorisé.", "danger")
+        return redirect(url_for('admin.budget'))
+
+    # --- Récupération et validation des données du formulaire ---
+    contenu = request.form.get('contenu', '').strip()
+    montant_str = request.form.get('montant')
+    date_depense_str = request.form.get('date_depense')
+    est_bon_achat = 'est_bon_achat' in request.form
+    fournisseur_id = request.form.get('fournisseur_id')
+
+    if not all([contenu, montant_str, date_depense_str]):
+        flash("Les champs contenu, montant et date sont obligatoires.", "danger")
+        return redirect(request.referrer or url_for('admin.budget'))
+    
+    try:
+        montant = float(montant_str.replace(',', '.'))
+        date_depense = datetime.strptime(date_depense_str, '%Y-%m-%d').date()
+        if montant <= 0: raise ValueError()
+    except (ValueError, TypeError):
+        flash("Le montant ou la date est invalide.", "danger")
+        return redirect(request.referrer or url_for('admin.budget'))
+
+    # --- Logique SQLAlchemy ---
+    try:
+        depense.montant = montant
+        depense.date_depense = date_depense
+        depense.contenu = contenu
+        depense.est_bon_achat = est_bon_achat
+        depense.fournisseur_id = int(fournisseur_id) if fournisseur_id and not est_bon_achat else None
+        
+        db.session.commit()
+        flash("La dépense a été modifiée avec succès.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+    
+    return redirect(request.referrer or url_for('admin.budget'))
+
+
+@admin_bp.route("/budget/depense/supprimer/<int:id>", methods=['POST'])
+@admin_required
+def supprimer_depense(id):
+    etablissement_id = session['etablissement_id']
+    
+    # --- Sécurité : On récupère la dépense et on vérifie qu'elle appartient bien à l'établissement ---
+    depense = db.session.get(Depense, id)
+    if depense and depense.etablissement_id == etablissement_id:
+        try:
+            db.session.delete(depense)
+            db.session.commit()
+            flash("La dépense a été supprimée avec succès.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Une erreur de base de données est survenue : {e}", "danger")
+    else:
+        flash("Dépense non trouvée ou accès non autorisé.", "danger")
+
+    return redirect(request.referrer or url_for('admin.budget'))
+
+
+@admin_bp.route("/budget/cloturer", methods=['POST'])
+@admin_required
+def cloturer_budget():
+    etablissement_id = session['etablissement_id']
+    budget_id = request.form.get('budget_id')
+
+    # --- Sécurité : On récupère le budget et on vérifie qu'il appartient bien à l'établissement ---
+    budget = db.session.get(Budget, int(budget_id))
+    if not budget or budget.etablissement_id != etablissement_id:
+        flash("Budget non trouvé ou accès non autorisé.", "danger")
+        return redirect(url_for('admin.budget'))
+
+    # --- Logique métier (inchangée) ---
+    annee_fin_budget = budget.annee + 1
+    date_limite_cloture = date(annee_fin_budget, 6, 1)
+    if date.today() < date_limite_cloture:
+        flash(f"La clôture n'est autorisée qu'à partir du {date_limite_cloture.strftime('%d/%m/%Y')}.", "danger")
+        return redirect(url_for('admin.budget', annee=budget.annee))
+
+    if budget.cloture:
+        flash(f"Le budget pour l'année scolaire {budget.annee}-{budget.annee+1} est déjà clôturé.", "warning")
+        return redirect(url_for('admin.budget'))
+
+    # --- Logique SQLAlchemy ---
+    try:
+        budget.cloture = True
+        db.session.commit()
+        flash(f"Le budget pour l'année scolaire {budget.annee}-{budget.annee+1} a été clôturé.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+    
+    return redirect(url_for('admin.budget'))
+
+
+# ============================================================
+#  GESTION DES FOURNISSEURS
+# ============================================================
+@admin_bp.route("/fournisseurs", methods=['GET'])
+@admin_required
+def gestion_fournisseurs():
+    etablissement_id = session['etablissement_id']
+    
+    # On récupère tous les fournisseurs de l'établissement.
+    # La jointure pour compter les dépenses est une bonne optimisation.
+    fournisseurs = db.session.execute(
+        db.select(Fournisseur, func.count(Depense.id).label('depenses_count'))
+        .outerjoin(Depense, Fournisseur.id == Depense.fournisseur_id)
+        .filter(Fournisseur.etablissement_id == etablissement_id)
+        .group_by(Fournisseur.id)
+        .order_by(Fournisseur.nom)
+    ).mappings().all()
+
+    breadcrumbs = [
+        {'text': 'Panneau d\'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Gestion des Fournisseurs'}
+    ]
+    
+    return render_template("admin_fournisseurs.html",
+                           fournisseurs=fournisseurs,
+                           breadcrumbs=breadcrumbs)
+
+@admin_bp.route("/fournisseurs/ajouter", methods=['POST'])
+@admin_required
+def ajouter_fournisseur():
+    etablissement_id = session['etablissement_id']
+    nom = request.form.get('nom', '').strip()
+    site_web = request.form.get('site_web', '').strip()
+    # NOUVELLE LOGIQUE : On récupère une URL pour le logo, pas un fichier.
+    logo_url = request.form.get('logo_url', '').strip()
+
+    if not nom:
+        flash("Le nom du fournisseur est obligatoire.", "danger")
+        return redirect(url_for('admin.gestion_fournisseurs'))
+
+    try:
+        nouveau_fournisseur = Fournisseur(
+            nom=nom,
+            site_web=site_web or None,
+            logo=logo_url or None, # Le champ 'logo' stocke maintenant une URL
+            etablissement_id=etablissement_id
+        )
+        db.session.add(nouveau_fournisseur)
+        db.session.commit()
+        flash(f"Le fournisseur '{nom}' a été ajouté avec succès.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(f"Un fournisseur avec le nom '{nom}' existe déjà.", "danger")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+
+    return redirect(url_for('admin.gestion_fournisseurs'))
+
+@admin_bp.route("/fournisseurs/modifier/<int:id>", methods=['POST'])
+@admin_required
+def modifier_fournisseur(id):
+    etablissement_id = session['etablissement_id']
+    
+    fournisseur = db.session.get(Fournisseur, id)
+    if not fournisseur or fournisseur.etablissement_id != etablissement_id:
+        flash("Fournisseur non trouvé ou accès non autorisé.", "danger")
+        return redirect(url_for('admin.gestion_fournisseurs'))
+
+    nom = request.form.get('nom', '').strip()
+    site_web = request.form.get('site_web', '').strip()
+    logo_url = request.form.get('logo_url', '').strip()
+
+    if not nom:
+        flash("Le nom du fournisseur ne peut pas être vide.", "danger")
+        return redirect(url_for('admin.gestion_fournisseurs'))
+
+    try:
+        fournisseur.nom = nom
+        fournisseur.site_web = site_web or None
+        fournisseur.logo = logo_url or None
+        db.session.commit()
+        flash(f"Le fournisseur '{nom}' a été mis à jour.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash(f"Un autre fournisseur avec le nom '{nom}' existe déjà.", "danger")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+
+    return redirect(url_for('admin.gestion_fournisseurs'))
+
+@admin_bp.route("/fournisseurs/supprimer/<int:id>", methods=['POST'])
+@admin_required
+def supprimer_fournisseur(id):
+    etablissement_id = session['etablissement_id']
+    
+    fournisseur = db.session.get(Fournisseur, id)
+    if not fournisseur or fournisseur.etablissement_id != etablissement_id:
+        flash("Fournisseur non trouvé ou accès non autorisé.", "danger")
+        return redirect(url_for('admin.gestion_fournisseurs'))
+
+    # On vérifie si le fournisseur est utilisé dans des dépenses
+    if fournisseur.depenses:
+        flash(f"Impossible de supprimer '{fournisseur.nom}' car il est associé à {len(fournisseur.depenses)} dépense(s).", "danger")
+        return redirect(url_for('admin.gestion_fournisseurs'))
+
+    try:
+        nom_fournisseur = fournisseur.nom
+        db.session.delete(fournisseur)
+        db.session.commit()
+        flash(f"Le fournisseur '{nom_fournisseur}' a été supprimé.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Une erreur de base de données est survenue : {e}", "danger")
+
+    return redirect(url_for('admin.gestion_fournisseurs'))
 
 
 
@@ -1140,8 +978,168 @@ def modifier_categorie():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ============================================================
+# === SECTIONS EN ATTENTE DE MIGRATION (PLACEHOLDERS) ===
+# ============================================================
+# Pour chaque route qui manquait, on crée une fonction vide qui
+# affiche un message et redirige vers le panel admin.
+# Cela permet à `url_for()` de fonctionner et à la page de se charger.
+
+@admin_bp.route("/importer")
+@admin_required
+def importer_page():
+    flash("L'importation en masse est en cours de migration.", "info")
+    return redirect(url_for('admin.admin'))
+
+@admin_bp.route("/rapports")
+@admin_required
+def rapports():
+    flash("La génération de rapports est en cours de migration.", "info")
+    return redirect(url_for('admin.admin'))
+
+@admin_bp.route("/exporter/<format>")
+@admin_required
+def exporter_inventaire(format):
+    flash("L'exportation de l'inventaire est en cours de migration.", "info")
+    return redirect(url_for('admin.admin'))
+
+@admin_bp.route("/activer_licence", methods=["POST"])
+@admin_required
+def activer_licence():
+    flash("La gestion de licence est en cours de migration.", "info")
+    return redirect(url_for('admin.admin'))
+
+# --- AJOUTE CE BLOC DE CODE ICI ---
+@admin_bp.route("/telecharger_db")
+@admin_required
+def telecharger_db():
+    flash("La sauvegarde de la base de données est en cours de migration.", "info")
+    return redirect(url_for('admin.admin'))
+
+@admin_bp.route("/importer_db", methods=["POST"])
+@admin_required
+def importer_db():
+    flash("L'importation de la base de données est en cours de migration.", "info")
+    return redirect(url_for('admin.admin'))
+# --- FIN DE L'AJOUT ---
+
+
+@admin_bp.route("/debug/db-state")
+@admin_required
+def debug_db_state():
+    """Affiche l'état actuel de la base de données pour le débogage."""
+    current_etablissement_id = session.get('etablissement_id')
+    
+    # On récupère TOUS les objets, sans filtre, pour voir ce qu'il y a vraiment
+    all_objets = db.session.execute(db.select(Objet)).scalars().all()
+    
+    # On récupère tous les établissements
+    all_etablissements = db.session.execute(db.select(Etablissement)).scalars().all()
+
+    return render_template("debug_db_state.html",
+                           current_etablissement_id=current_etablissement_id,
+                           all_objets=all_objets,
+                           all_etablissements=all_etablissements)
 
 '''
+@admin_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])
+@admin_required
+def reinitialiser_mdp(id_user):
+    if id_user == session['user_id']:
+        flash(
+            "Vous ne pouvez pas réinitialiser votre propre mot de passe ici.",
+            "error")
+        return redirect(url_for('admin.gestion_utilisateurs'))
+    nouveau_mdp = request.form.get('nouveau_mot_de_passe')
+    if not nouveau_mdp or len(nouveau_mdp) < 4:
+        flash(
+            "Le nouveau mot de passe est requis et doit contenir "
+            "au moins 4 caractères.", "error")
+        return redirect(url_for('admin.gestion_utilisateurs'))
+    db = get_db()
+    user = db.execute("SELECT nom_utilisateur FROM utilisateurs WHERE id = ?",
+                      (id_user, )).fetchone()
+    if user:
+        try:
+            db.execute("UPDATE utilisateurs SET mot_de_passe = ? WHERE id = ?",
+                       (generate_password_hash(nouveau_mdp,
+                                               method='scrypt'), id_user))
+            db.commit()
+            flash(
+                f"Le mot de passe pour l'utilisateur "
+                f"'{user['nom_utilisateur']}' a été réinitialisé avec succès.",
+                "success")
+        except sqlite3.Error as e:
+            db.rollback()
+            flash(f"Erreur de base de données : {e}", "error")
+    else:
+        flash("Utilisateur non trouvé.", "error")
+    return redirect(url_for('admin.gestion_utilisateurs'))
+
+
+#==================================
+# GESTION DU BUDGET
+#==================================
+@admin_bp.route("/exporter_budget")
+@admin_required
+def exporter_budget():
+    date_debut = request.args.get('date_debut')
+    date_fin = request.args.get('date_fin')
+    format_type = request.args.get('format')
+
+    if not all([date_debut, date_fin, format_type]):
+        flash("Tous les champs sont requis pour l'export.", "error")
+        return redirect(url_for('admin.budget'))
+
+    db = get_db()
+    depenses_data = db.execute("""
+        SELECT 
+            d.date_depense, 
+            d.contenu, 
+            d.montant, 
+            CASE 
+                WHEN d.est_bon_achat = 1 THEN 'Petit matériel bon achat' 
+                ELSE f.nom 
+            END as fournisseur_nom
+        FROM depenses d
+        LEFT JOIN fournisseurs f ON d.fournisseur_id = f.id
+        WHERE d.date_depense BETWEEN ? AND ?
+        ORDER BY d.date_depense ASC
+    """, (date_debut, date_fin)).fetchall()
+
+    if not depenses_data:
+        flash("Aucune dépense trouvée pour la période sélectionnée.", "warning")
+        return redirect(url_for('admin.budget'))
+
+    if format_type == 'pdf':
+        buffer = generer_budget_pdf(depenses_data, date_debut, date_fin)
+        return send_file(buffer, as_attachment=True, download_name='rapport_depenses.pdf', mimetype='application/pdf')
+    elif format_type == 'excel':
+        buffer = generer_budget_excel(depenses_data, date_debut, date_fin)
+        return send_file(buffer, as_attachment=True, download_name='rapport_depenses.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    
+    flash("Format d'exportation non valide.", "error")
+    return redirect(url_for('admin.budget'))
+
+#======================================================================
+# GESTION DES RAPPORTS (Exports)
+#======================================================================
 @admin_bp.route("/rapports", methods=['GET'])
 @admin_required
 def rapports():
@@ -1618,115 +1616,6 @@ def generer_inventaire_excel(data):
     buffer.seek(0)
     return buffer
 
-
-#===============================================
-# GESTION ECHEANCES
-#===============================================
-@admin_bp.route("/echeances")
-@admin_required
-def gestion_echeances():
-    db = get_db()
-    echeances_brutes = db.execute(
-        "SELECT * FROM echeances ORDER BY date_echeance ASC").fetchall()
-
-    icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/></svg>'
-    breadcrumbs = [
-        {'text': 'Panneau d\'Administration', 'endpoint': 'admin.admin', 'icon_svg': icon_svg},
-        {'text': 'Gestion Quotidienne'},
-        {'text': 'Gestion des Echéances', 'endpoint': 'admin.gestion_echeances'}
-        ]
-    echeances_converties = []
-    for echeance in echeances_brutes:
-        echeance_dict = dict(echeance)
-        echeance_dict['date_echeance'] = datetime.strptime(
-            echeance['date_echeance'], '%Y-%m-%d').date()
-        echeances_converties.append(echeance_dict)
-        
-    return render_template("admin_echeances.html",
-                           echeances=echeances_converties,
-                           breadcrumbs=breadcrumbs,
-                           date_actuelle=datetime.now().date(),
-                           url_ajout=url_for('admin.ajouter_echeance'))
-
-
-@admin_bp.route("/echeances/ajouter", methods=['POST'])
-@admin_required
-def ajouter_echeance():
-    intitule = request.form.get('intitule', '').strip()
-    date_echeance = request.form.get('date_echeance')
-    details = request.form.get('details', '').strip()
-
-    if not all([intitule, date_echeance]):
-        flash("L'intitulé et la date d'échéance sont obligatoires.", "error")
-        return redirect(url_for('admin.gestion_echeances'))
-
-    db = get_db()
-    try:
-        db.execute(
-            "INSERT INTO echeances (intitule, date_echeance, details) "
-            "VALUES (?, ?, ?)", (intitule, date_echeance, details or None))
-        db.commit()
-        flash("L'échéance a été ajoutée avec succès.", "success")
-    except sqlite3.Error as e:
-        db.rollback()
-        flash(f"Erreur de base de données : {e}", "error")
-
-    return redirect(url_for('admin.gestion_echeances'))
-
-
-@admin_bp.route("/echeances/modifier/<int:id>", methods=['POST'])
-@admin_required
-def modifier_echeance(id):
-    db = get_db()
-    echeance = db.execute("SELECT id FROM echeances WHERE id = ?",
-                          (id, )).fetchone()
-    if not echeance:
-        flash("Échéance non trouvée.", "error")
-        return redirect(url_for('admin.gestion_echeances'))
-
-    intitule = request.form.get('intitule', '').strip()
-    date_echeance = request.form.get('date_echeance')
-    details = request.form.get('details', '').strip()
-    traite = 1 if request.form.get('traite') == 'on' else 0
-
-    if not all([intitule, date_echeance]):
-        flash("L'intitulé et la date d'échéance sont obligatoires.", "error")
-        return redirect(url_for('admin.gestion_echeances'))
-
-    try:
-        db.execute(
-            "UPDATE echeances SET intitule = ?, date_echeance = ?, "
-            "details = ?, traite = ? WHERE id = ?",
-            (intitule, date_echeance, details or None, traite, id))
-        db.commit()
-        flash("L'échéance a été modifiée avec succès.", "success")
-    except sqlite3.Error as e:
-        db.rollback()
-        flash(f"Erreur de base de données : {e}", "error")
-
-    return redirect(url_for('admin.gestion_echeances'))
-
-
-@admin_bp.route("/echeances/supprimer/<int:id>", methods=['POST'])
-@admin_required
-def supprimer_echeance(id):
-    db = get_db()
-    echeance = db.execute("SELECT id FROM echeances WHERE id = ?",
-                          (id, )).fetchone()
-    if echeance:
-        try:
-            db.execute("DELETE FROM echeances WHERE id = ?", (id, ))
-            db.commit()
-            flash("L'échéance a été supprimée avec succès.", "success")
-        except sqlite3.Error as e:
-            db.rollback()
-            flash(f"Erreur de base de données : {e}", "error")
-    else:
-        flash("Échéance non trouvée.", "error")
-
-    return redirect(url_for('admin.gestion_echeances'))
-
-
 #=======================================
 # LICENCE
 #=======================================
@@ -1999,21 +1888,191 @@ def generer_budget_excel(data, date_debut, date_fin):
     workbook.save(buffer)
     buffer.seek(0)
     return buffer
-'''
 
-@admin_bp.route("/debug/db-state")
+@admin_bp.route("/importer", methods=['GET'])
 @admin_required
-def debug_db_state():
-    """Affiche l'état actuel de la base de données pour le débogage."""
-    current_etablissement_id = session.get('etablissement_id')
+def importer_page():
+    db = get_db()
+    armoires = get_all_armoires(db)
+    categories = get_all_categories(db)
     
-    # On récupère TOUS les objets, sans filtre, pour voir ce qu'il y a vraiment
-    all_objets = db.session.execute(db.select(Objet)).scalars().all()
+    breadcrumbs = [
+        ('Panneau d\'Administration', url_for('admin.admin')),
+        ('Importation en Masse', '#')
+    ]
     
-    # On récupère tous les établissements
-    all_etablissements = db.session.execute(db.select(Etablissement)).scalars().all()
+    return render_template("admin_import.html", 
+                           breadcrumbs=breadcrumbs,
+                           armoires=armoires,
+                           categories=categories,
+                           now=datetime.now)
 
-    return render_template("debug_db_state.html",
-                           current_etablissement_id=current_etablissement_id,
-                           all_objets=all_objets,
-                           all_etablissements=all_etablissements)
+#=== IMPORTATION FICHIER FICHIER EXCEL IMPORT MATERIEL ===
+@admin_bp.route("/telecharger_modele")
+@admin_required
+def telecharger_modele_excel():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Inventaire à Importer"
+
+    headers = [
+        "Nom", "Quantité", "Seuil", "Armoire", "Catégorie", 
+        "Date Péremption", "Image (URL)"
+    ]
+    sheet.append(headers)
+
+    # --- DÉFINITION DES STYLES ---
+    header_font = Font(name='Calibri', bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
+    # NOUVEAU : On définit un alignement centré
+    center_alignment = Alignment(horizontal='center', vertical='center')
+    note_font = Font(name='Calibri', italic=True, color="808080")
+
+    # --- APPLICATION DES STYLES ---
+    for cell in sheet[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_alignment # On applique l'alignement centré
+
+    # --- AJUSTEMENT DES LARGEURS DE COLONNES (CORRIGÉ) ---
+    sheet.column_dimensions['A'].width = 40  # Nom
+    sheet.column_dimensions['B'].width = 15  # Quantité
+    sheet.column_dimensions['C'].width = 15  # Seuil
+    sheet.column_dimensions['D'].width = 25  # Armoire
+    sheet.column_dimensions['E'].width = 25  # Catégorie
+    sheet.column_dimensions['F'].width = 20  # Date Péremption
+    sheet.column_dimensions['G'].width = 50  # Image (URL)
+
+    date_header_cell = sheet['F1']
+    date_header_cell.comment = Comment("Le format de date doit être AAAA-MM-JJ.", "Note de format")
+
+    # --- GÉNÉRATION DU FICHIER ---
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='modele_import_inventaire.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+@admin_bp.route("/importer", methods=['POST'])
+@admin_required
+def importer_fichier():
+    if 'fichier_excel' not in request.files:
+        flash("Aucun fichier sélectionné.", "error")
+        return redirect(url_for('admin.importer_page'))
+
+    fichier = request.files['fichier_excel']
+    if fichier.filename == '' or not fichier.filename.endswith('.xlsx'):
+        flash("Veuillez sélectionner un fichier Excel (.xlsx) valide.", "error")
+        return redirect(url_for('admin.importer_page'))
+
+    db = get_db()
+    errors = []
+    skipped_items = []
+    success_count = 0
+
+    existing_objects = {row['nom'].lower() for row in db.execute("SELECT nom FROM objets").fetchall()}
+    armoires_db = {a['nom'].lower(): a['id'] for a in get_all_armoires(db)}
+    categories_db = {c['nom'].lower(): c['id'] for c in get_all_categories(db)}
+
+    try:
+        workbook = load_workbook(fichier)
+        sheet = workbook.active
+        
+        db.execute("BEGIN")
+
+        for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+            if all(cell is None for cell in row):
+                continue
+
+            if len(row) < 5:
+                errors.append(f"Ligne {i}: Manque de colonnes. Assurez-vous que les 5 premières colonnes sont présentes.")
+                continue
+
+            nom, quantite, seuil, armoire, categorie = (row[0], row[1], row[2], row[3], row[4])
+            date_peremption = row[5] if len(row) > 5 else None
+            image_url = row[6] if len(row) > 6 else None
+
+            if not all([nom, quantite, seuil, armoire, categorie]):
+                errors.append(f"Ligne {i}: Les champs Nom, Quantité, Seuil, Armoire et Catégorie sont obligatoires.")
+                continue
+
+            if str(nom).lower() in existing_objects:
+                skipped_items.append(nom)
+                continue
+
+            try:
+                quantite_int = int(quantite)
+                seuil_int = int(seuil)
+            except (ValueError, TypeError):
+                errors.append(f"Ligne {i}: La quantité et le seuil doivent être des nombres entiers.")
+                continue
+
+            armoire_id = armoires_db.get(str(armoire).lower())
+            if not armoire_id:
+                errors.append(f"Ligne {i}: L'armoire '{armoire}' n'existe pas.")
+                continue
+
+            categorie_id = categories_db.get(str(categorie).lower())
+            if not categorie_id:
+                errors.append(f"Ligne {i}: La catégorie '{categorie}' n'existe pas.")
+                continue
+            
+            date_peremption_db = None
+            if date_peremption:
+                try:
+                    if isinstance(date_peremption, datetime):
+                        date_peremption_db = date_peremption.strftime('%Y-%m-%d')
+                    else:
+                        date_peremption_db = datetime.strptime(str(date_peremption).split(' ')[0], '%Y-%m-%d').strftime('%Y-%m-%d')
+                except ValueError:
+                    errors.append(f"Ligne {i}: Le format de la date de péremption est invalide (doit être AAAA-MM-JJ).")
+                    continue
+            
+            image_url_db = None
+            if image_url:
+                image_url = str(image_url).strip()
+                valid_extensions = ('.jpg', '.jpeg', '.png', '.svg', '.webp')
+                
+                try:
+                    parsed_url = urlparse(image_url)
+                    path = parsed_url.path.lower()
+         
+                    if (parsed_url.scheme in ['http', 'https'] and 
+                        any(ext in path for ext in valid_extensions)):
+                        image_url_db = image_url
+                    else:
+                        errors.append(f"Ligne {i}: L'URL de l'image semble invalide. Elle doit être un lien internet complet (http/https) vers une image (.jpg, .png, etc.).")
+                        continue
+                except Exception:
+                    errors.append(f"Ligne {i}: L'URL de l'image n'a pas pu être analysée.")
+                    continue
+
+            db.execute(
+                """INSERT INTO objets (nom, quantite_physique, seuil, armoire_id, categorie_id, date_peremption, image_url)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (nom, quantite_int, seuil_int, armoire_id, categorie_id, date_peremption_db, image_url_db)
+            )
+            success_count += 1
+
+        if errors:
+            db.rollback()
+            for error in errors:
+                flash(error, "error")
+        else:
+            db.commit()
+            if success_count > 0:
+                flash(f"Importation réussie ! {success_count} nouvel/nouveaux objet(s) ajouté(s).", "success")
+            if skipped_items:
+                flash(f"Attention : {len(skipped_items)} objet(s) ont été ignoré(s) car ils existent déjà : {', '.join(skipped_items)}.", "warning")
+
+    except Exception as e:
+        db.rollback()
+        flash(f"Une erreur inattendue est survenue lors de la lecture du fichier : {e}", "error")
+
+    return redirect(url_for('admin.importer_page'))
+'''

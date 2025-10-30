@@ -5,8 +5,9 @@ from datetime import date, datetime
 from flask.cli import with_appcontext
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (Integer, String, Float, Boolean, Date, DateTime, Text,
-                        ForeignKey)
+                        ForeignKey, UniqueConstraint)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from typing import List
 
 # --- CONFIGURATION DE BASE DE SQLAlchemy ---
 class Base(DeclarativeBase):
@@ -22,6 +23,13 @@ class Etablissement(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nom: Mapped[str] = mapped_column(String, nullable=False)
     ville: Mapped[str] = mapped_column(String, nullable=True)
+    utilisateurs: Mapped[List["Utilisateur"]] = relationship(back_populates="etablissement")
+    armoires: Mapped[List["Armoire"]] = relationship(back_populates="etablissement")
+    categories: Mapped[List["Categorie"]] = relationship(back_populates="etablissement")
+    objets: Mapped[List["Objet"]] = relationship(back_populates="etablissement")
+    fournisseurs: Mapped[List["Fournisseur"]] = relationship(back_populates="etablissement")
+    depenses: Mapped[List["Depense"]] = relationship(back_populates="etablissement")
+    budgets: Mapped[List["Budget"]] = relationship(back_populates="etablissement")
 
 class Utilisateur(db.Model):
     __tablename__ = 'utilisateurs'
@@ -31,6 +39,7 @@ class Utilisateur(db.Model):
     role: Mapped[str] = mapped_column(String, nullable=False, default='utilisateur')
     email: Mapped[str] = mapped_column(String, nullable=True)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    etablissement: Mapped["Etablissement"] = relationship(back_populates="utilisateurs")
 
 class Armoire(db.Model):
     __tablename__ = 'armoires'
@@ -38,6 +47,7 @@ class Armoire(db.Model):
     nom: Mapped[str] = mapped_column(String, nullable=False)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
     objets: Mapped[list["Objet"]] = relationship(back_populates="armoire")
+    etablissement: Mapped["Etablissement"] = relationship(back_populates="armoires") 
 
 class Budget(db.Model):
     __tablename__ = 'budgets'
@@ -46,6 +56,9 @@ class Budget(db.Model):
     montant_initial: Mapped[float] = mapped_column(Float, nullable=False)
     cloture: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    etablissement: Mapped["Etablissement"] = relationship(back_populates="budgets")
+    depenses: Mapped[List["Depense"]] = relationship(back_populates="budget", cascade="all, delete-orphan")
+    __table_args__ = (UniqueConstraint('annee', 'etablissement_id', name='_annee_etablissement_uc'),)
 
 class Categorie(db.Model):
     __tablename__ = 'categories'
@@ -53,14 +66,17 @@ class Categorie(db.Model):
     nom: Mapped[str] = mapped_column(String, nullable=False)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
     objets: Mapped[list["Objet"]] = relationship(back_populates="categorie")
+    etablissement: Mapped["Etablissement"] = relationship(back_populates="categories")
 
 class Fournisseur(db.Model):
     __tablename__ = 'fournisseurs'
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nom: Mapped[str] = mapped_column(String, nullable=False)
     site_web: Mapped[str] = mapped_column(String, nullable=True)
-    logo: Mapped[str] = mapped_column(String, nullable=True) # Note: Ce sera une URL maintenant
+    logo: Mapped[str] = mapped_column(String, nullable=True)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    etablissement: Mapped["Etablissement"] = relationship(back_populates="fournisseurs")
+    depenses: Mapped[List["Depense"]] = relationship(back_populates="fournisseur")
 
 class Depense(db.Model):
     __tablename__ = 'depenses'
@@ -70,8 +86,11 @@ class Depense(db.Model):
     contenu: Mapped[str] = mapped_column(Text, nullable=False)
     montant: Mapped[float] = mapped_column(Float, nullable=False)
     date_depense: Mapped[date] = mapped_column(Date, nullable=False)
-    est_bon_achat: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    est_bon_achat: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    etablissement: Mapped["Etablissement"] = relationship(back_populates="depenses")
+    budget: Mapped["Budget"] = relationship(back_populates="depenses")
+    fournisseur: Mapped["Fournisseur"] = relationship(back_populates="depenses")
 
 class Echeance(db.Model):
     __tablename__ = 'echeances'
@@ -88,6 +107,9 @@ class Kit(db.Model):
     nom: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    etablissement: Mapped["Etablissement"] = relationship()
+    objets_assoc: Mapped[List["KitObjet"]] = relationship(back_populates="kit", cascade="all, delete-orphan")
+    __table_args__ = (UniqueConstraint('nom', 'etablissement_id', name='_nom_kit_etablissement_uc'),)
 
 class Objet(db.Model):
     __tablename__ = 'objets'
@@ -105,6 +127,8 @@ class Objet(db.Model):
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
     armoire: Mapped["Armoire"] = relationship(back_populates="objets")
     categorie: Mapped["Categorie"] = relationship(back_populates="objets")
+    etablissement: Mapped["Etablissement"] = relationship(back_populates="objets")
+    kits_assoc: Mapped[List["KitObjet"]] = relationship(back_populates="objet", cascade="all, delete-orphan")
 
 class Historique(db.Model):
     __tablename__ = 'historique'
@@ -123,6 +147,8 @@ class KitObjet(db.Model):
     objet_id: Mapped[int] = mapped_column(Integer, ForeignKey('objets.id', ondelete='CASCADE'), nullable=False)
     quantite: Mapped[int] = mapped_column(Integer, nullable=False)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    kit: Mapped["Kit"] = relationship(back_populates="objets_assoc")
+    objet: Mapped["Objet"] = relationship(back_populates="kits_assoc")
 
 class Parametre(db.Model):
     __tablename__ = 'parametres'

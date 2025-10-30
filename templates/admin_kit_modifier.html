@@ -40,19 +40,20 @@
                     <table class="objet-table">
                         <thead><tr><th>Nom</th><th>Quantité dans le kit</th><th>Action</th></tr></thead>
                         <tbody>
-                        {% for objet in objets_in_kit %}
-                            <tr>
-                                <td>{{ objet.nom }} <span class="text-discret">({{ objet.stock_disponible }} en stock)</span></td>
-                                <td><input type="number" name="quantite_{{ objet.id }}" value="{{ objet.quantite }}" class="input-small" min="1" max="{{ objet.stock_disponible }}"></td>
-                                <td>
-									<button type="button" class="btn-danger btn-open-danger-modal"
-											data-action="{{ url_for('admin.retirer_objet_kit', kit_objet_id=objet.id) }}"
-											data-message="Êtes-vous sûr de vouloir retirer cet objet du kit ?">
+                        {% for assoc in objets_in_kit %}
+							<tr>
+								<!-- On accède à l'objet via assoc.objet -->
+								<td>{{ assoc.objet.nom }} <span class="text-discret">({{ assoc.objet.quantite_physique }} en stock)</span></td>
+								<td><input type="number" name="quantite_{{ assoc.id }}" value="{{ assoc.quantite }}" class="input-small" min="1"></td>
+								<td>
+									<button type="button" class="btn-action btn-danger btn-open-danger-modal"
+											data-action="{{ url_for('admin.retirer_objet_kit', kit_objet_id=assoc.id) }}"
+											data-message="Êtes-vous sûr de vouloir retirer '{{ assoc.objet.nom }}' de ce kit ?">
 										Retirer
 									</button>
-                                </td>
-                            </tr>
-                        {% endfor %}
+								</td>
+							</tr>
+						{% endfor %}
                         </tbody>
                     </table>
                     <div class="form-actions-right">
@@ -73,16 +74,16 @@
                         <thead><tr><th>Nom (Stock)</th><th>Quantité</th><th>Action</th></tr></thead>
                         <tbody>
                         {% for objet in objets_disponibles %}
-                            <tr>
-                                <td>{{ objet.nom }} <span class="text-discret">({{ objet.quantite_disponible }})</span></td>
-                                <form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
-								<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <input type="hidden" name="objet_id" value="{{ objet.id }}">
-                                    <td><input type="number" name="quantite" value="1" class="input-small" min="1" max="{{ objet.quantite }}"></td>
-                                    <td><button type="submit" class="btn-action btn-small" {% if objet.quantite == 0 %}disabled{% endif %}>Ajouter</button></td>
-                                </form>
-                            </tr>
-                        {% endfor %}
+							<tr>
+								<td>{{ objet.nom }} <span class="text-discret">({{ objet.quantite_physique }})</span></td>
+								<form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
+									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+									<input type="hidden" name="objet_id" value="{{ objet.id }}">
+									<td><input type="number" name="quantite" value="1" class="input-small" min="1" max="{{ objet.quantite_physique }}"></td>
+									<td><button type="submit" class="btn-action btn-small" {% if objet.quantite_physique == 0 %}disabled{% endif %}>Ajouter</button></td>
+								</form>
+							</tr>
+						{% endfor %}
                         </tbody>
                     </table>
                 </div>

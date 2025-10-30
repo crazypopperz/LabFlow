@@ -244,8 +244,16 @@ document.addEventListener("DOMContentLoaded", function () {
 				form.querySelector('#email').value = trigger.dataset.formEmail;
 			}
 			if (modalId === 'edit-fournisseur-modal') {
-				form.querySelector('#edit_nom').value = trigger.dataset.formNom || '';
-				form.querySelector('#edit_site_web').value = trigger.dataset.formSite_web || '';
+				const form = modal.querySelector('#edit-fournisseur-form');
+				const id = trigger.dataset.id;
+				
+				// On construit l'URL de l'action dynamiquement
+				form.action = `/admin/fournisseurs/modifier/${id}`;
+				
+				// On pré-remplit les champs en utilisant les bons noms de dataset
+				form.querySelector('#edit_nom').value = trigger.dataset.nom;
+				form.querySelector('#edit_site_web').value = trigger.dataset.siteWeb;
+				form.querySelector('#edit_logo_url').value = trigger.dataset.logoUrl; // La correction est ici (logoUrl au lieu de logo_url)
 			}
 			if (modalId === 'delete-user-modal') {
 				const username = trigger.dataset.formUsername;
@@ -259,6 +267,25 @@ document.addEventListener("DOMContentLoaded", function () {
 				form.querySelector('#annee').value = trigger.dataset.formAnnee || new Date().getFullYear();
 				form.querySelector('#montant_initial').value = trigger.dataset.formMontantInitial || '0.00';
 			}
+			if (modalId === 'depense-modal') {
+                // On réinitialise le formulaire à chaque ouverture pour éviter les anciennes données
+                const form = modal.querySelector('form');
+                if (form) {
+                    form.reset(); // Vide tous les champs
+                }
+
+                // On s'assure que la date est bien celle du jour
+                const dateInput = modal.querySelector('#date_depense');
+                if (dateInput) {
+                    dateInput.value = new Date().toISOString().split('T')[0];
+                }
+
+                // On s'assure que le sélecteur de fournisseur est bien activé au départ
+                const fournisseurSelect = modal.querySelector('#fournisseur_id');
+                if (fournisseurSelect) {
+                    fournisseurSelect.disabled = false;
+                }
+            }
 			if (modalId === 'edit-depense-modal') {
 				const depenseId = trigger.dataset.depenseId;
 				form.action = `/admin/budget/modifier_depense/${depenseId}`;

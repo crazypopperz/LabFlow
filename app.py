@@ -1,5 +1,3 @@
-# Fichier: app.py (Version Finale et Propre)
-
 # -----------------------------------------------------------------------------
 # 1. IMPORTS
 # -----------------------------------------------------------------------------
@@ -10,7 +8,7 @@ from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
 
 # On importe l'objet db et les modèles nécessaires pour le context_processor
-from db import db, Parametre, Armoire, Categorie
+from db import db, Parametre, Armoire, Categorie, init_app as init_db_app
 from utils import get_alerte_info, is_setup_needed
 from views.auth import auth_bp
 from views.inventaire import inventaire_bp
@@ -40,7 +38,7 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # --- INITIALISATION DES EXTENSIONS ---
-    db.init_app(app) # On initialise SQLAlchemy avec l'app
+    init_db_app(app)
     CSRFProtect(app)
 
     # --- ENREGISTREMENT DES BLUEPRINTS ---

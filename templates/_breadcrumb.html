@@ -1,25 +1,15 @@
 {% if breadcrumbs %}
-<nav class="breadcrumb-nav" aria-label="Fil d'Ariane">
+<nav class="breadcrumb-container" aria-label="Fil d'Ariane">
     {% for item in breadcrumbs %}
-        
         {% if not loop.first %}
-            <!-- On affiche un séparateur avant chaque élément, sauf le premier -->
-            <span class="breadcrumb-separator">›</span>
+            <span class="breadcrumb-separator">&rsaquo;</span>
         {% endif %}
-
+        
         {% if loop.last or not item.url %}
-            <!-- Si c'est le dernier élément OU s'il n'a pas d'URL, on affiche du texte simple -->
             <span class="breadcrumb-current">{{ item.text }}</span>
         {% else %}
-            <!-- Sinon, on crée un lien complet -->
-            <a href="{{ item.url }}" class="breadcrumb-link">
-                {% if item.icon_svg %}
-                    <span class="breadcrumb-icon">{{ item.icon_svg|safe }}</span>
-                {% endif %}
-                <span class="breadcrumb-text">{{ item.text }}</span>
-            </a>
+            <a href="{{ item.url }}" class="breadcrumb-link">{{ item.text }}</a>
         {% endif %}
-
     {% endfor %}
 </nav>
 {% endif %}

@@ -1,106 +1,239 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Gestion des Armoires</title>
-    <!-- LIGNE AJOUTÉE : Rendre le jeton CSRF disponible pour JavaScript -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-</head>
-<body>
-    {% include 'header.html' %}
-    <div class="main-container">
+{% extends "base.html" %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+{% block title %}Gestion des Armoires - LabFlow{% endblock %}
 
-        <div class="management-header">
-            <h2 class="page-title">
-                <svg xmlns="http://www.w3.org/2000/svg" class="page-title-icon" viewBox="0 -960 960 960"><path d="M360-440q-17 0-28.5-11.5T320-480q0-17 11.5-28.5T360-520q17 0 28.5 11.5T400-480q0 17-11.5 28.5T360-440Zm240 0q-17 0-28.5-11.5T560-480q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480q0 17-11.5 28.5T600-440ZM120-120v-80h40v-560q0-33 23.5-56.5T240-840h480q33 0 56.5 23.5T800-760v560h40v80H120Zm120-80h200v-560H240v560Zm280 0h200v-560H520v560Zm-40-320Z"/></svg>
-                <span>Gestion des Armoires</span>
-            </h2>
-        </div>
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
 
+    <!-- En-tête de page -->
+    <div class="management-header">
+        <h2 class="page-title">
+            <svg xmlns="http://www.w3.org/2000/svg" class="page-title-icon" viewBox="0 -960 960 960" fill="currentColor">
+                <path d="M360-440q-17 0-28.5-11.5T320-480q0-17 11.5-28.5T360-520q17 0 28.5 11.5T400-480q0 17-11.5 28.5T360-440Zm240 0q-17 0-28.5-11.5T560-480q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480q0 17-11.5 28.5T600-440ZM120-120v-80h40v-560q0-33 23.5-56.5T240-840h480q33 0 56.5 23.5T800-760v560h40v80H120Zm120-80h200v-560H240v560Zm280 0h200v-560H520v560Zm-40-320Z"/>
+            </svg>
+            <span>Gestion des Armoires</span>
+        </h2>
         {% if session.user_role == 'admin' %}
-		<div class="page-actions-container">
-            <form action="{{ url_for('admin.ajouter') }}" method="post" class="add-inline-form">
-			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="type" value="armoire">
-                <input type="text" name="nom" placeholder="Nom de la nouvelle armoire..." required>
-                <button type="submit" title="Ajouter">+</button>
-            </form>
+        <div class="page-actions-container">
+            <button type="button" 
+                    class="btn btn-primary" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#addArmoireModal"
+                    aria-label="Ajouter une nouvelle armoire">
+                <i class="bi bi-plus-circle-fill me-2"></i> 
+                Ajouter une armoire
+            </button>
         </div>
-		{% endif %}
+        {% endif %}
+    </div>
 
-        <div class="card-container management-page">
-                        {% for armoire in armoires %}
-            <div class="item-card">
+    <!-- Liste des armoires ou état vide -->
+    {% if armoires %}
+        <div class="card-container management-page" role="list">
+            {% for armoire in armoires %}
+            <article class="item-card" data-armoire-id="{{ armoire.id }}" role="listitem">
+                <!-- Vue normale -->
                 <div class="card-info">
-                    <a href="{{ url_for('inventaire.voir_armoire', armoire_id=armoire.id) }}" class="card-title-link">
+                    <a href="{{ url_for('inventaire.voir_armoire', armoire_id=armoire.id) }}" 
+                       class="card-title-link"
+                       aria-label="Voir le contenu de {{ armoire.nom }}">
                         <span class="card-title">{{ armoire.nom }}</span>
                     </a>
-                    <span class="card-count">
-						{% if armoire.count == 0 %}Aucun objet
-						{% elif armoire.count == 1 %}1 objet
-						{% else %}{{ armoire.count }} objets
-						{% endif %}
-					</span>
-                </div>
-                <div class="edit-mode" style="display: none;">
-                    <input type="text" value="{{ armoire.nom }}" class="edit-input">
-                    <button class="save-btn" data-id="{{ armoire.id }}" title="Enregistrer">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
-                    </button>
-                    <button class="cancel-btn" title="Annuler">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
-                    </button>
-                </div>
-                <div class="card-actions">
-                    <a href="{{ url_for('inventaire.voir_armoire', armoire_id=armoire.id) }}" title="Voir le contenu">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M260-320q47 0 91.5 10.5T440-278v-394q-41-24-87-36t-93-12q-36 0-71.5 7T120-692v396q35-12 69.5-18t70.5-6Zm260 42q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59ZM280-494Z"/></svg>
-                    </a>
-                    {% if session.user_role == 'admin' %}
-                    <span class="edit-btn" title="Modifier le nom">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M167-120q-21 5-36.5-10.5T120-167l40-191 198 198-191 40Zm191-40L160-358l458-458q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L358-160Zm317-600L261-346l85 85 414-414-85-85Z"/></svg>
+                    <span class="card-count" aria-label="Nombre d'objets">
+                        {% if armoire.count == 0 %}
+                            Aucun objet
+                        {% elif armoire.count == 1 %}
+                            1 objet
+                        {% else %}
+                            {{ armoire.count }} objets
+                        {% endif %}
                     </span>
-                    <form action="{{ url_for('admin.supprimer', type_objet='armoire', id=armoire.id) }}" method="post" class="delete-form-interactive" data-item-type="armoire" data-item-name="{{ armoire.nom }}">
-					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="delete-btn" title="Supprimer">
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
+                </div>
+
+                <!-- Mode édition (masqué par défaut) -->
+                <div class="edit-mode" style="display: none;">
+                    <input type="text" 
+                           value="{{ armoire.nom }}" 
+                           class="edit-input"
+                           aria-label="Modifier le nom de l'armoire"
+                           maxlength="100">
+                    <button type="button" 
+                            class="save-btn" 
+                            data-id="{{ armoire.id }}" 
+                            title="Enregistrer les modifications"
+                            aria-label="Enregistrer">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+                        </svg>
+                    </button>
+                    <button type="button" 
+                            class="cancel-btn" 
+                            title="Annuler les modifications"
+                            aria-label="Annuler">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Actions -->
+                <div class="card-actions">
+                    <a href="{{ url_for('inventaire.voir_armoire', armoire_id=armoire.id) }}" 
+                       class="action-btn" 
+                       title="Voir le contenu de {{ armoire.nom }}"
+                       aria-label="Voir le contenu">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="M260-320q47 0 91.5 10.5T440-278v-394q-41-24-87-36t-93-12q-36 0-71.5 7T120-692v396q35-12 69.5-18t70.5-6Zm260 42q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59ZM280-494Z"/>
+                        </svg>
+                    </a>
+                    
+                    {% if session.user_role == 'admin' %}
+                    <button type="button" 
+                            class="action-btn edit-btn" 
+                            title="Modifier le nom de {{ armoire.nom }}"
+                            aria-label="Modifier le nom">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="M167-120q-21 5-36.5-10.5T120-167l40-191 198 198-191 40Zm191-40L160-358l458-458q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L358-160Zm317-600L261-346l85 85 414-414-85-85Z"/>
+                        </svg>
+                    </button>
+                    
+                    <form action="{{ url_for('admin.supprimer', type_objet='armoire', id=armoire.id) }}" 
+                          method="post" 
+                          class="delete-form-interactive" 
+                          data-item-type="armoire" 
+                          data-item-name="{{ armoire.nom }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="button" 
+                                class="action-btn delete-btn" 
+                                title="Supprimer {{ armoire.nom }}"
+                                aria-label="Supprimer l'armoire">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                            </svg>
                         </button>
                     </form>
                     {% endif %}
                 </div>
-            </div>
-            {% else %}
-                <p>Aucune armoire n'a été créée pour le moment.</p>
+            </article>
             {% endfor %}
         </div>
-    </div>
 
-    {% include '_modale_danger.html' %}
-	{% include 'footer.html' %}
-
-    {% if session.user_role == 'admin' %}
-    <div id="reassign-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h3 id="modal-title">Déplacer les objets</h3>
-            <p id="modal-description">Avant de supprimer cet élément, veuillez réassigner les objets qu'il contient :</p>
-            <div id="modal-objects-list" class="modal-objects-list"></div>
-            <div class="modal-actions">
-                <button id="modal-cancel-btn" class="btn-secondary">Annuler</button>
-                <button id="modal-confirm-btn" class="btn-primary">Valider et Supprimer</button>
+    {% else %}
+        <!-- État vide -->
+        <div class="empty-state-container" role="status">
+            <div class="empty-state-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M360-440q-17 0-28.5-11.5T320-480q0-17 11.5-28.5T360-520q17 0 28.5 11.5T400-480q0 17-11.5 28.5T360-440Zm240 0q-17 0-28.5-11.5T560-480q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480q0 17-11.5 28.5T600-440ZM120-120v-80h40v-560q0-33 23.5-56.5T240-840h480q33 0 56.5 23.5T800-760v560h40v80H120Zm120-80h200v-560H240v560Zm280 0h200v-560H520v560Zm-40-320Z"/>
+                </svg>
             </div>
+            <h3>Aucune armoire n'a été créée</h3>
+            <p>Commencez par ajouter votre première armoire pour organiser votre matériel.</p>
+            {% if session.user_role == 'admin' %}
+            <button type="button" 
+                    class="btn btn-primary mt-3" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#addArmoireModal"
+                    aria-label="Ajouter la première armoire">
+                Ajouter la première armoire
+            </button>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modale d'ajout d'armoire (Bootstrap 5) -->
+<div class="modal fade" 
+     id="addArmoireModal" 
+     tabindex="-1" 
+     aria-labelledby="addArmoireModalLabel" 
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addArmoireModalLabel">
+                    <i class="bi bi-folder-plus me-2"></i>
+                    Ajouter une nouvelle armoire
+                </h5>
+                <button type="button" 
+                        class="btn-close" 
+                        data-bs-dismiss="modal" 
+                        aria-label="Fermer"></button>
+            </div>
+            <form action="{{ url_for('admin.ajouter') }}" 
+                  method="post" 
+                  id="addArmoireForm"
+                  novalidate>
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="type" value="armoire">
+                    
+                    <div class="mb-3">
+                        <label for="nomArmoire" class="form-label">
+                            Nom de l'armoire <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="nomArmoire" 
+                               name="nom" 
+                               placeholder="Ex: Armoire Chimie A"
+                               required 
+                               maxlength="100"
+                               autocomplete="off"
+                               aria-describedby="nomArmoireHelp">
+                        <div id="nomArmoireHelp" class="form-text">
+                            Choisissez un nom descriptif pour identifier facilement cette armoire.
+                        </div>
+                        <div class="invalid-feedback">
+                            Veuillez entrer un nom pour l'armoire.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" 
+                            class="btn btn-secondary" 
+                            data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Ajouter l'armoire
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-    {% endif %}
-</body>
-</html>
+</div>
+
+<!-- Modale de danger pour suppression -->
+{% include '_modale_danger.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Validation du formulaire d'ajout
+(function() {
+    'use strict';
+    const form = document.getElementById('addArmoireForm');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+        
+        // Réinitialiser la validation quand on ferme la modale
+        const modal = document.getElementById('addArmoireModal');
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                form.classList.remove('was-validated');
+                form.reset();
+            });
+        }
+    }
+})();
+</script>
+{% endblock %}

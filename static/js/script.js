@@ -1,6 +1,26 @@
 // =================================================================
 // FONCTION GLOBALE POUR AFFICHER LA MODALE D'INFORMATION
 // =================================================================
+function updateCartIcon() {
+    const badge = document.getElementById('cart-count-badge');
+    if (!badge) return;
+    
+    const cart = JSON.parse(sessionStorage.getItem('reservationCart')) || {};
+    const cartCount = Object.keys(cart).length;
+    
+    if (cartCount > 0) {
+        // Formatage du nombre (99+ si > 99)
+        badge.textContent = cartCount > 99 ? '99+' : cartCount;
+        
+        // Ajout de classes CSS selon la quantité
+        badge.classList.toggle('large', cartCount > 99);
+        
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
 function showInfoModal(title, message) {
     const modal = document.getElementById('info-modal');
     if (modal) {
@@ -18,7 +38,7 @@ function showInfoModal(title, message) {
 // POINT D'ENTRÉE UNIQUE : TOUT LE CODE EST DANS CE BLOC
 // =================================================================
 document.addEventListener("DOMContentLoaded", function () {
-
+	updateCartIcon();
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
     // =================================================================
@@ -35,16 +55,12 @@ document.addEventListener("DOMContentLoaded", function () {
 		function fetchDynamicContent(page = 1, sortBy = null, direction = null) {
 			const currentSortBy = sortBy || dynamicContent.dataset.sortBy || 'nom';
 			const currentDirection = direction || dynamicContent.dataset.direction || 'asc';
-			
-			// --- DÉBUT DE LA CORRECTION ---
-			// On crée un objet pour gérer tous les paramètres de l'URL
 			const params = new URLSearchParams({
 				page: page,
 				sort_by: currentSortBy,
 				direction: currentDirection
 			});
 
-			// On ajoute les filtres s'ils ont une valeur
 			if (searchInput && searchInput.value) {
 				params.set('q', searchInput.value);
 			}
@@ -58,7 +74,6 @@ document.addEventListener("DOMContentLoaded", function () {
 				params.set('etat', etatFilter.value);
 			}
 
-			// On construit l'URL finale avec TOUS les paramètres
 			const apiUrl = `/api/inventaire/?${params.toString()}`;
 
 			fetch(apiUrl)
@@ -86,18 +101,20 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 	
 	// =================================================================
-    // GESTIONNAIRE D'ÉVÉNEMENTS GLOBAL POUR TOUS LES CLICS
+    // SECTION 2 : GESTIONNAIRE D'ÉVÉNEMENTS GLOBAL POUR TOUS LES CLICS
     // =================================================================
 	document.body.addEventListener('click', function(e) {
-		console.log("Clic détecté sur :", e.target);
-        // --- Logique de la Section 1 (Pagination et Tri) ---
-        if (dynamicContent) {
+		
+        // --- Logique pour le contenu dynamique (Pagination & Tri) ---
+        const dynamicContentContainer = e.target.closest('#dynamic-content');
+        if (dynamicContentContainer) {
             const pageLink = e.target.closest('.page-link');
 			if (pageLink) {
 				e.preventDefault();
 				const url = new URL(pageLink.href);
 				const page = url.searchParams.get('page');
 				if (page) fetchDynamicContent(page);
+                return; // On arrête le traitement ici
 			}
 			
 			const sortLink = e.target.closest('.sortable a');
@@ -106,66 +123,104 @@ document.addEventListener("DOMContentLoaded", function () {
 				const url = new URL(sortLink.href);
 				const sortBy = url.searchParams.get('sort_by');
 				const direction = url.searchParams.get('direction');
-				fetchDynamicContent(1, sortBy, direction);
+				if (sortBy && direction) fetchDynamicContent(1, sortBy, direction);
+                return; // On arrête le traitement ici
 			}
         }
 
-        // --- Logique de la Section 4 (Édition des cartes) ---
-        const editBtn = e.target.closest('.edit-btn');
-        if (editBtn) {
-            const card = editBtn.closest('.item-card');
-            card.querySelector('.card-info').style.display = 'none';
-            card.querySelector('.card-actions').style.display = 'none';
-            card.querySelector('.edit-mode').style.display = 'flex';
-            card.querySelector('.edit-input').focus();
-        }
+        // --- DÉBUT DE LA CORRECTION POUR LA MODALE DE DANGER ---
+        const openModalButton = e.target.closest('.btn-open-danger-modal, .delete-btn, .btn-delete-objet');
+		if (openModalButton) {
+			e.preventDefault();
 
-        const saveBtn = e.target.closest('.save-btn');
-        if (saveBtn) {
-            const card = saveBtn.closest('.item-card');
-            const input = card.querySelector('.edit-input');
-            const isArmoiresPage = window.location.pathname.includes('gestion_armoires');
-            const fetchURL = isArmoiresPage ? '/admin/modifier_armoire' : '/admin/modifier_categorie';
+            const dangerModalElement = document.getElementById('dangerModal');
+            if (!dangerModalElement) {
+                console.error("L'élément de la modale de danger (#dangerModal) est introuvable.");
+                return;
+            }
+            
+            // On utilise la méthode Bootstrap pour éviter les conflits
+            const dangerModal = bootstrap.Modal.getOrCreateInstance(dangerModalElement);
 
-            fetch(fetchURL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ id: saveBtn.dataset.id, nom: input.value })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    card.querySelector('.card-title').textContent = data.nouveau_nom;
-                    card.querySelector('.cancel-btn').click();
-                } else {
-                    showInfoModal('Erreur', data.error);
-                }
-            });
-        }
+			const modalText = dangerModalElement.querySelector('#dangerModalText');
+			const modalForm = dangerModalElement.querySelector('#dangerModalForm');
 
-        const cancelBtn = e.target.closest('.cancel-btn');
-        if (cancelBtn) {
-            const card = cancelBtn.closest('.item-card');
-            card.querySelector('.edit-mode').style.display = 'none';
-            card.querySelector('.card-info').style.display = '';
-            card.querySelector('.card-actions').style.display = '';
-            card.querySelector('.edit-input').value = card.querySelector('.card-title').textContent.trim();
-        }
+            let message = "Êtes-vous sûr de vouloir effectuer cette action ?";
+			let actionUrl = "#";
 
-        // --- Logique de la Section 5 (Gestion des modales) ---
-        const closeBtn = e.target.closest('.modal-overlay .close-btn, .modal-overlay .btn-cancel');
-        const overlay = e.target.closest('.modal-overlay');
-        if (closeBtn || (overlay && e.target === overlay)) {
-            const modalToClose = e.target.closest('.modal-overlay');
-            if (modalToClose) modalToClose.style.display = 'none';
-            return;
-        }
+			if (openModalButton.matches('.btn-delete-objet')) {
+				const form = openModalButton.closest('form');
+				message = `Êtes-vous sûr de vouloir supprimer l'objet <strong>'${openModalButton.dataset.objetNom}'</strong> ?<br>Cette action est irréversible.`;
+				actionUrl = form ? form.action : '#';
+			} else if (openModalButton.matches('.delete-btn')) {
+				const form = openModalButton.closest('.delete-form-interactive');
+				const itemName = form.dataset.itemName || 'cet élément';
+				message = `Êtes-vous sûr de vouloir supprimer l'élément "${itemName}" ? Cette action est définitive.`;
+				actionUrl = form ? form.action : '#';
+			}
+			
+			if (modalText) modalText.innerHTML = message;
+			if (modalForm) modalForm.action = actionUrl;
+			
+            dangerModal.show();
+            return; // On arrête le traitement ici
+		}
 
-        const trigger = e.target.closest('[data-modal-trigger]');
-		console.log("Élément déclencheur trouvé (trigger) :", trigger);
+		const editBtn = e.target.closest('.edit-btn');
+		if (editBtn) {
+			const card = editBtn.closest('.item-card');
+			card.querySelector('.card-info').style.display = 'none';
+			card.querySelector('.card-actions').style.display = 'none';
+			card.querySelector('.edit-mode').style.display = 'flex';
+			card.querySelector('.edit-input').focus();
+		}
+
+		const saveBtn = e.target.closest('.save-btn');
+		if (saveBtn) {
+			const card = saveBtn.closest('.item-card');
+			const input = card.querySelector('.edit-input');
+			const isArmoiresPage = window.location.pathname.includes('gestion_armoires');
+			const fetchURL = isArmoiresPage ? '/admin/modifier_armoire' : '/admin/modifier_categorie';
+
+			fetch(fetchURL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+				body: JSON.stringify({ id: saveBtn.dataset.id, nom: input.value })
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					card.querySelector('.card-title').textContent = data.nouveau_nom;
+					card.querySelector('.cancel-btn').click();
+				} else {
+					showInfoModal('Erreur', data.error);
+				}
+			});
+		}
+
+		const cancelBtn = e.target.closest('.cancel-btn');
+		if (cancelBtn) {
+			const card = cancelBtn.closest('.item-card');
+			card.querySelector('.edit-mode').style.display = 'none';
+			card.querySelector('.card-info').style.display = '';
+			card.querySelector('.card-actions').style.display = '';
+			card.querySelector('.edit-input').value = card.querySelector('.card-title').textContent.trim();
+		}
+
+		const closeBtn = e.target.closest('.modal-overlay .close-btn, .modal-overlay .btn-cancel');
+		const overlay = e.target.closest('.modal-overlay');
+		if (closeBtn || (overlay && e.target === overlay)) {
+			const modalToClose = e.target.closest('.modal-overlay');
+			if (modalToClose) modalToClose.style.display = 'none';
+			return;
+		}
+
+		const trigger = e.target.closest('[data-modal-trigger]');
 		if (trigger) {
+			console.log("Élément déclencheur trouvé (trigger) :", trigger);
 			const modalId = trigger.dataset.modalTrigger;
 			console.log("Tentative d'ouverture de la modale avec l'ID :", modalId);
+
 			const modal = document.getElementById(modalId);
 			if (!modal) {
 				console.error(`Modale non trouvée avec l'ID : ${modalId}`);
@@ -247,13 +302,10 @@ document.addEventListener("DOMContentLoaded", function () {
 				const form = modal.querySelector('#edit-fournisseur-form');
 				const id = trigger.dataset.id;
 				
-				// On construit l'URL de l'action dynamiquement
 				form.action = `/admin/fournisseurs/modifier/${id}`;
-				
-				// On pré-remplit les champs en utilisant les bons noms de dataset
 				form.querySelector('#edit_nom').value = trigger.dataset.nom;
 				form.querySelector('#edit_site_web').value = trigger.dataset.siteWeb;
-				form.querySelector('#edit_logo_url').value = trigger.dataset.logoUrl; // La correction est ici (logoUrl au lieu de logo_url)
+				form.querySelector('#edit_logo_url').value = trigger.dataset.logoUrl;
 			}
 			if (modalId === 'delete-user-modal') {
 				const username = trigger.dataset.formUsername;
@@ -268,24 +320,21 @@ document.addEventListener("DOMContentLoaded", function () {
 				form.querySelector('#montant_initial').value = trigger.dataset.formMontantInitial || '0.00';
 			}
 			if (modalId === 'depense-modal') {
-                // On réinitialise le formulaire à chaque ouverture pour éviter les anciennes données
-                const form = modal.querySelector('form');
-                if (form) {
-                    form.reset(); // Vide tous les champs
-                }
+				const form = modal.querySelector('form');
+				if (form) {
+					form.reset();
+				}
 
-                // On s'assure que la date est bien celle du jour
-                const dateInput = modal.querySelector('#date_depense');
-                if (dateInput) {
-                    dateInput.value = new Date().toISOString().split('T')[0];
-                }
+				const dateInput = modal.querySelector('#date_depense');
+				if (dateInput) {
+					dateInput.value = new Date().toISOString().split('T')[0];
+				}
 
-                // On s'assure que le sélecteur de fournisseur est bien activé au départ
-                const fournisseurSelect = modal.querySelector('#fournisseur_id');
-                if (fournisseurSelect) {
-                    fournisseurSelect.disabled = false;
-                }
-            }
+				const fournisseurSelect = modal.querySelector('#fournisseur_id');
+				if (fournisseurSelect) {
+					fournisseurSelect.disabled = false;
+				}
+			}
 			if (modalId === 'edit-depense-modal') {
 				const depenseId = trigger.dataset.depenseId;
 				form.action = `/admin/budget/modifier_depense/${depenseId}`;
@@ -325,37 +374,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		}
 
-        // --- Logique de la Section 14 (Confirmation de suppression) ---
-        const openModalButton = e.target.closest('.btn-open-danger-modal, .delete-btn, .btn-delete-objet');
-		if (openModalButton) {
-			e.preventDefault();
-			const modal = document.getElementById('danger-modal');
-			if (!modal) return;
-			let message = "Êtes-vous sûr de vouloir effectuer cette action ?";
-			let actionUrl = "#";
-			if (openModalButton.matches('.btn-open-danger-modal')) {
-				message = openModalButton.dataset.message;
-				actionUrl = openModalButton.dataset.action;
-			} else if (openModalButton.matches('.btn-delete-objet')) {
-				const form = openModalButton.closest('form');
-				message = `Êtes-vous sûr de vouloir supprimer l'objet <strong>'${openModalButton.dataset.objetNom}'</strong> ?<br>Cette action est irréversible.`;
-				actionUrl = form.action;
-			} else if (openModalButton.matches('.delete-btn')) {
-				const form = openModalButton.closest('.delete-form-interactive');
-				const itemName = form.dataset.itemName || 'cet élément';
-				const itemType = form.dataset.itemType || 'élément';
-				message = `Êtes-vous sûr de vouloir supprimer ${itemType === 'armoire' ? "l'armoire" : "la catégorie"} "${itemName}" ? Cette action est définitive.`;
-				actionUrl = form.action;
-			}
-			const modalText = modal.querySelector('#danger-modal-text');
-			const modalForm = modal.querySelector('#danger-modal-form');
-			if (modalText) modalText.innerHTML = message;
-			if (modalForm) modalForm.action = actionUrl;
-			modal.style.display = 'flex';
-		}
-		
-		// --- Logique de la Section 15 (Copie de l'ID) ---
-        const instanceIdCode = e.target.closest('#instance-id-code');
+		const instanceIdCode = e.target.closest('#instance-id-code');
 		if (instanceIdCode) {
 			navigator.clipboard.writeText(instanceIdCode.textContent)
 			.then(() => {
@@ -369,8 +388,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			});
 		}
 
-        // --- Logique de la Section 18 (Clôture de budget) ---
-        const clotureBtn = e.target.closest('#cloture-budget-btn');
+		const clotureBtn = e.target.closest('#cloture-budget-btn');
 		if (clotureBtn) {
 			const form = document.getElementById('cloture-budget-form');
 			const modal = document.getElementById('cloture-budget-modal');
@@ -382,20 +400,14 @@ document.addEventListener("DOMContentLoaded", function () {
 				modal.style.display = 'flex';
 			}
 		}
-    });
-	
+	});
 	// =================================================================
-	// GESTIONNAIRES D'ÉVÉNEMENTS NON-CLIC (input, change, submit)
+	// SECTION 3 : GESTIONNAIRES D'ÉVÉNEMENTS NON-CLIC (input, change, submit)
 	// =================================================================
-
-    // --- Section 2 (Cases à cocher) ---
 	document.body.addEventListener('change', function(e) {
-		// On vérifie si l'élément cliqué est une de nos cases à cocher
 		if (e.target.matches('.commande-checkbox, .traite-checkbox')) {
 			const checkbox = e.target;
 			const isCommande = checkbox.matches('.commande-checkbox');
-			
-			// On détermine la bonne URL et le bon corps de requête
 			const url = isCommande 
 				? `/maj_commande/${checkbox.dataset.id}` 
 				: `/maj_traite/${checkbox.dataset.id}`;
@@ -404,107 +416,108 @@ document.addEventListener("DOMContentLoaded", function () {
 				? { en_commande: checkbox.checked } 
 				: { traite: checkbox.checked };
 
-			// On lance l'appel à l'API
 			fetch(url, {
 				method: "POST",
 				headers: { 
 					"Content-Type": "application/json",
-					"X-CSRFToken": csrfToken // Assure-toi que csrfToken est défini en haut de ton script
+					"X-CSRFToken": csrfToken
 				},
 				body: JSON.stringify(body)
 			})
 			.then(response => {
-				// Première étape : on vérifie si la communication a réussi
 				if (!response.ok) {
 					throw new Error('La réponse du serveur n\'est pas valide.');
 				}
-				// Si c'est bon, on lit la réponse JSON
 				return response.json();
 			})
 			.then(data => {
-				// Deuxième étape : on analyse la réponse JSON
 				if (data.success) {
-					// Si le serveur confirme le succès, on met à jour l'interface
 					checkbox.closest('tr').classList.toggle('acquitte', checkbox.checked);
 				} else {
-					// Si le serveur signale une erreur, on affiche un message et on annule le changement
 					showInfoModal("Erreur", data.error || "Une erreur est survenue.");
 					checkbox.checked = !checkbox.checked;
 				}
 			})
 			.catch(error => {
-				// Cette partie s'exécute si la communication a échoué (pas de réseau, erreur 500, etc.)
 				console.error('Erreur Fetch:', error);
 				showInfoModal("Erreur de Communication", "Impossible de contacter le serveur.");
-				checkbox.checked = !checkbox.checked; // On annule le changement
+				checkbox.checked = !checkbox.checked;
 			});
 		}
 	});
 
-    // --- Section 3 (Recherche globale) ---
+	// =======================================================================
+	// SECTION 4 : RECHERCHE GLOBALE
+	// =======================================================================
     const globalSearchInput = document.getElementById("recherche-objet");
     const resultsContainer = document.getElementById("search-results-container");
-    if (globalSearchInput) {
+
+    if (globalSearchInput && resultsContainer) {
         let searchTimeoutHeader;
         globalSearchInput.addEventListener("input", function () {
             const query = this.value.trim();
             clearTimeout(searchTimeoutHeader);
-            if(resultsContainer) {
-                resultsContainer.innerHTML = '';
-                resultsContainer.style.display = 'none';
-            }
+            
+            resultsContainer.innerHTML = '';
+            resultsContainer.style.display = 'none';
+            
             if (query.length < 2) return;
+
             searchTimeoutHeader = setTimeout(() => {
                 fetch(`/api/rechercher?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if(resultsContainer) {
-                        resultsContainer.innerHTML = '';
-                        if (data.length > 0) {
-                            const list = document.createElement('ul');
-                            list.className = 'search-results-list';
-                            data.forEach(item => {
-                                const li = document.createElement('li');
-                                const a = document.createElement('a');
-                                a.href = `/objet/${item.id}`;
-                                const nameSpan = document.createElement('span');
-                                nameSpan.textContent = item.nom;
-                                const contextSmall = document.createElement('small');
-                                contextSmall.className = 'search-result-context';
-                                contextSmall.textContent = `Armoire: ${item.armoire_nom} / Catégorie: ${item.categorie_nom}`;
-                                a.appendChild(nameSpan);
-                                a.appendChild(contextSmall);
-                                li.appendChild(a);
-                                list.appendChild(li);
-                            });
-                            resultsContainer.appendChild(list);
-                            resultsContainer.style.display = 'block';
-                        } else {
-                            resultsContainer.innerHTML = '<div style="padding: 10px; color: #6c7a89;">Aucun résultat trouvé.</div>';
-                            resultsContainer.style.display = 'block';
-                        }
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur réseau.');
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    resultsContainer.innerHTML = '';
+                    if (data.length > 0) {
+                        const list = document.createElement('ul');
+                        list.className = 'search-results-list';
+                        data.forEach(item => {
+                            const li = document.createElement('li');
+                            const a = document.createElement('a');
+                            a.href = `/objet/${item.id}`;
+                            
+                            const nameSpan = document.createElement('span');
+                            nameSpan.textContent = item.nom;
+                            
+                            const contextSmall = document.createElement('small');
+                            contextSmall.className = 'search-result-context';
+                            contextSmall.textContent = `Armoire: ${item.armoire_nom} / Catégorie: ${item.categorie_nom}`;
+                            
+                            a.appendChild(nameSpan);
+                            a.appendChild(contextSmall);
+                            li.appendChild(a);
+                            list.appendChild(li);
+                        });
+                        resultsContainer.appendChild(list);
+                    } else {
+                        // LE MESSAGE QUE VOUS VOULEZ
+                        resultsContainer.innerHTML = '<div class="search-no-results">Cet objet n\'existe pas dans la base.</div>';
+                    }
+                    resultsContainer.style.display = 'block';
                 })
                 .catch(error => {
                     console.error("Erreur de recherche:", error);
-                    if(resultsContainer) {
-                        resultsContainer.innerHTML = '<div style="padding: 10px; color: #dc3545;">Erreur de recherche.</div>';
-                        resultsContainer.style.display = 'block';
-                    }
+                    resultsContainer.innerHTML = '<div class="search-error">Erreur de recherche.</div>';
+                    resultsContainer.style.display = 'block';
                 });
             }, 300);
         });
-    }
-	
-    // --- Section 6 (Disparition des messages flash) ---
-    document.querySelectorAll('.flash').forEach(function (flashMessage) {
-        setTimeout(() => {
-            flashMessage.style.opacity = '0';
-            setTimeout(() => { flashMessage.remove(); }, 500);
-        }, 5000);
-    });
 
-    // --- Section 7 (Déplacement en masse) ---
+        document.addEventListener('click', (e) => {
+            if (!resultsContainer.contains(e.target) && e.target !== globalSearchInput) {
+                resultsContainer.style.display = 'none';
+            }
+        });
+    }
+
+    // =====================================================================
+	// SECTION 5 : GESTION DEPLACEMENT EN MASSE
+	// =====================================================================
     const selectAllCheckbox = document.getElementById('select-all-checkbox');
 	if (selectAllCheckbox) {
 		const objetCheckboxes = document.querySelectorAll('.objet-checkbox');
@@ -565,22 +578,22 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 	
 	// =================================================================
-	// SECTION : ANIMATION DE LA CLOCHE D'ALERTE
+	// SECTION 6 : ANIMATION DE LA CLOCHE D'ALERTE
 	// =================================================================
 	const alertIcon = document.getElementById('alert-icon-link');
 	if (alertIcon) {
-		// On lit le nombre d'alertes depuis l'attribut data-*
 		const alertCount = parseInt(alertIcon.dataset.alertCount, 10);
 
-		// On ajoute les classes en fonction du nombre
-		if (alertCount > 5) { // Seuil pour l'alerte "haute" (rouge + animation)
+		if (alertCount > 3) {
 			alertIcon.classList.add('has-alerts-high');
-		} else if (alertCount > 0) { // Seuil pour l'alerte "moyenne" (orange)
+		} else if (alertCount > 0) {
 			alertIcon.classList.add('has-alerts-medium');
 		}
 	}
 
-    // --- Section 9 (Filtre de kit) ---
+    // ==================================================================
+	// SECTION 7 : FILTRE DE kit
+	// ==================================================================
     const kitObjetSearch = document.getElementById('kit-objet-search');
     if (kitObjetSearch) {
         const availableObjectsTable = document.getElementById('available-objects-table');
@@ -594,7 +607,9 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // --- Section 10 (Rapports) ---
+    // ===================================================================
+	// SECTION 8 : Rapports
+	// ===================================================================
     const formRapportsGrid = document.querySelector('.form-rapports-grid');
     if (formRapportsGrid) {
         const dateDebutInput = formRapportsGrid.querySelector('#date_debut');
@@ -609,7 +624,9 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // --- Section 12 (Export budget) ---
+    // ===================================================================
+	// SECTION 9 : EXPORT DU BUDGET
+	// ===================================================================
     const dateDebutExport = document.getElementById('date_debut_export');
     if (dateDebutExport) {
         const dateFinExport = document.getElementById('date_fin_export');
@@ -629,7 +646,9 @@ document.addEventListener("DOMContentLoaded", function () {
         updateExportLinks();
     }
 
-    // --- Section 13 (Modale dépense) ---
+    // ====================================================================
+	// SECTION 10 : MODALE DES DEPENSES
+	// ====================================================================
     const depenseModal = document.getElementById('depense-modal');
     if (depenseModal) {
         const bonAchatCheckbox = depenseModal.querySelector('#est_bon_achat');
@@ -649,7 +668,9 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // --- Section 16 (Page Admin) ---
+    // =======================================================================
+	// SECTION 11 : FONCTIONS ADMIN DB LICENCE GEST UTILISATEUR
+	// =======================================================================
 	const importDbInput = document.getElementById('fichier-db');
 	if (importDbInput) {
 		importDbInput.addEventListener('change', function () {
@@ -679,7 +700,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	}
 
-    // --- Section 17 (Upload logo) ---
+    // =======================================================================
+	// SECTION 12 : UPLOAD LOGO
+	// =======================================================================
     const editLogoInput = document.getElementById('edit_logo');
     if (editLogoInput) {
         const editLogoFilename = document.getElementById('edit-logo-filename');
@@ -690,7 +713,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 	// =================================================================
-	// LOGIQUE POUR LA RECHERCHE D'IMAGES PEXELS
+	// SECTION 13 : LOGIQUE POUR LA RECHERCHE D'IMAGES PEXELS
 	// =================================================================
     function setupPexelsSearch() {
         const pexelsSearchButton = document.getElementById('btn-search-pexels');
@@ -753,8 +776,106 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
+	
+	// =================================================================
+	// NOUVELLE SECTION : GESTION DE LA MODALE D'AJOUT/MODIFICATION D'OBJET
+	// =================================================================
+	const addObjectModalElement = document.getElementById('addObjectModal');
+	if (addObjectModalElement) {
+		addObjectModalElement.addEventListener('show.bs.modal', function (event) {
+			const button = event.relatedTarget; // Le bouton qui a ouvert la modale
+			
+			// Sécurité : vérifier que le bouton existe bien
+			if (!button) {
+				console.error("Aucun bouton déclencheur trouvé pour la modale");
+				return;
+			}
+			
+			const form = addObjectModalElement.querySelector('form');
+			const modalTitle = addObjectModalElement.querySelector('.modal-title');
+			const submitBtn = form.querySelector('button[type="submit"]');
+			const imagePreviewContainer = addObjectModalElement.querySelector('#image-preview-container');
+			const imagePreview = imagePreviewContainer?.querySelector('img');
+			
+			// On vérifie si on est en mode "Modification"
+			const objetId = button.dataset.objetId;
+			
+			if (objetId) {
+				// --- MODE MODIFICATION ---
+				console.log("Mode MODIFICATION - Objet ID:", objetId);
+				
+				modalTitle.textContent = "Modifier l'objet";
+				form.action = `/modifier_objet/${objetId}`;
+				
+				// Pré-remplissage des champs avec validation
+				const fields = {
+					'nom': button.dataset.nom,
+					'quantite': button.dataset.quantite,
+					'seuil': button.dataset.seuil,
+					'date_peremption': button.dataset.datePeremption,
+					'armoire_id': button.dataset.armoireId,
+					'categorie_id': button.dataset.categorieId,
+					'image_url': button.dataset.imageUrl,
+					'fds_url': button.dataset.fdsUrl
+				};
+				
+				// Remplissage sécurisé de tous les champs
+				for (const [fieldId, value] of Object.entries(fields)) {
+					const input = form.querySelector(`#${fieldId}`);
+					if (input) {
+						input.value = value || '';
+					} else {
+						console.warn(`Champ #${fieldId} introuvable dans le formulaire`);
+					}
+				}
+				
+				// Gestion de l'aperçu d'image
+				const imageUrl = button.dataset.imageUrl;
+				if (imageUrl && imagePreview && imagePreviewContainer) {
+					imagePreview.src = imageUrl;
+					imagePreviewContainer.style.display = 'block';
+				} else if (imagePreviewContainer) {
+					imagePreviewContainer.style.display = 'none';
+				}
+				
+				// Bouton de soumission
+				if (submitBtn) {
+					submitBtn.textContent = 'Mettre à jour';
+					submitBtn.className = 'btn btn-primary'; // Optionnel : changer le style
+				}
+				
+			} else {
+				// --- MODE AJOUT ---
+				console.log("Mode AJOUT - Nouveau objet");
+				
+				modalTitle.textContent = "Ajouter un nouvel objet";
+				
+				// URL d'ajout depuis data-attribute ou URL par défaut
+				form.action = document.body.dataset.addUrl || '/ajouter_objet';
+				
+				// Réinitialisation complète du formulaire
+				form.reset();
+				
+				// Masquer l'aperçu d'image
+				if (imagePreviewContainer) {
+					imagePreviewContainer.style.display = 'none';
+				}
+				
+				// Bouton de soumission
+				if (submitBtn) {
+					submitBtn.textContent = 'Enregistrer l\'objet';
+					submitBtn.className = 'btn btn-success'; // Optionnel : changer le style
+				}
+			}
+			
+			// Initialisation de la recherche Pexels
+			if (typeof setupPexelsSearch === 'function') {
+				setupPexelsSearch();
+			} else {
+				console.warn("setupPexelsSearch n'est pas définie");
+			}
+		});
+	}
 
-    // On appelle la fonction une première fois au cas où.
     setupPexelsSearch();
-
 });

@@ -1,330 +1,173 @@
 /* =================================================================
-   1. DÉCLARATION DES VARIABLES DE STYLE (LA PALETTE DU SITE)
+   1. FONDATIONS : VARIABLES, RESET & TYPOGRAPHIE
    ================================================================= */
 :root {
-  /* Couleurs principales */
   --couleur-principale: #1f3b73;
   --couleur-secondaire: #01257d;
   --couleur-accent: #a7d3f2;
-
-  /* Couleurs de texte */
   --texte-principal: #2c3e50;
   --texte-inverse: #ffffff;
   --texte-lien: var(--couleur-principale);
   --texte-discret: #6c7a89;
-
-  /* Couleurs de fond */
-  --fond-page: #f4f4f4;
+  --fond-page: #f8f9fa;
   --fond-element: #ffffff;
-  --fond-table-pair: #f0f4f8;
-  --fond-survol: #e2eaff;
-
-  /* Couleurs d'état (alertes, succès) */
   --couleur-succes: #28a745;
   --couleur-erreur: #dc3545;
-  --couleur-actif: #baff39;
-  --couleur-avertissement: #f57f17;
-  --couleur-avertissement-fond: #fff3cd; /* Fond jaune pâle */
-  --couleur-avertissement-texte: #856404; /* Texte brun foncé pour un contraste élevé */
-  --couleur-avertissement-bordure: #ffeeba; /* Bordure assortie */
-  --couleur-bouton-hover: #1a242f;
-
-  /* Bordures et ombres */
-  --couleur-bordure: #ccc;
-  --couleur-bordure-legere: #e9ecef;
-  --couleur-bordure-focus: var(--couleur-principale);
-  --ombre-legere: 0 2px 5px rgba(0, 0, 0, 0.05);
-  --ombre-moyenne: 0 4px 10px rgba(0, 0, 0, 0.1);
-
-  /* Couleurs pour la péremption */
-  --couleur-perime-fond: #ffebee;
-  --couleur-perime-texte: #c62828;
-  --couleur-bientot-fond: #fff8e1;
-  --couleur-bientot-texte: #f57f17;
-
-  /* Couleurs pour le statut de stock */
-  --couleur-stock-bas-texte: #b58600;
-  --couleur-ok-texte: #28a745;
+  --couleur-avertissement: #ffc107;
+  --couleur-bordure: #dee2e6;
+  --ombre-legere: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --ombre-moyenne: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* =================================================================
-   2. STYLES DE BASE ET MISE EN PAGE GÉNÉRALE
-   ================================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
-  font-family: Arial, sans-serif;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background-color: var(--fond-page);
   color: var(--texte-principal);
-  margin: 0;
 }
-.main-container {
-  padding: 30px;
-  max-width: 1800px;
-  margin: 0 auto;
-}
+
 a {
   color: var(--texte-lien);
   text-decoration: none;
 }
-h1,
-h2,
-h3,
-h4 {
-  color: var(--couleur-principale);
-}
-.page-title {
-  color: var(--couleur-principale);
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 30px; /* Règle globale restaurée */
-}
-.page-title-icon {
-  width: 32px;
-  height: 32px;
-  fill: currentColor !important; /* L'icône prendra la couleur de son parent (.page-title) */
-  flex-shrink: 0;
-}
 
-.text-discret {
-  color: var(--texte-discret);
-  font-size: 0.9rem;
+/* =================================================================
+   2. MISE EN PAGE GLOBALE
+   ================================================================= */
+.main-content {
+    padding: 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
 }
 
 /* =================================================================
-   3. COMPOSANTS RÉUTILISABLES (Boutons, Cartes, Formulaires)
+   3. HEADER & NAVIGATION
    ================================================================= */
 
-/* --- Boutons Unifiés --- */
-
-.btn-action {
-  padding: 10px 20px;
-  border-radius: 6px;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-weight: 500;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  background-color: #e9ecef;
-  color: #333333;
-  border: 1px solid #adb5bd;
-}
-.btn-action:hover {
-  background-color: var(--couleur-actif);
-  color: #333333;
-  border-color: #a8e032;
-  transform: translateY(-2px);
-  box-shadow: var(--ombre-moyenne);
-}
-
-/* --- Style pour les boutons secondaires --- */
-.objet-table .btn-action {
-  padding: 4px 12px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.btn-icon-only {
-  padding: 6px;
-  width: 40px;
-  height: 40px;
-  box-sizing: border-box;
-}
-
-.btn-icon-only svg {
-  width: 28px !important;
-  height: 28px !important;
-  fill: #333333;
-  transition: fill 0.2s ease-in-out;
-}
-
-.btn-icon-only:hover svg {
-  fill: #333333;
-}
-
-/* --- Cartes --- */
-.dashboard-widget,
-.item-card,
-.admin-card,
-.rapport-card,
-.content-card {
-  background-color: var(--fond-element);
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 8px;
-  box-shadow: var(--ombre-legere);
-  display: flex;
-  flex-direction: column;
-}
-.dashboard-widget,
-.admin-card,
-.rapport-card,
-.content-card {
-  padding: 20px 25px;
-}
-.item-card {
-  padding: 15px;
-  flex-direction: row;
-  align-items: center;
-  transition:
-    box-shadow 0.3s ease,
-    transform 0.3s ease;
-}
-.item-card:hover {
-  box-shadow: var(--ombre-moyenne);
-  transform: translateY(-2px);
-}
-
-/* --- Formulaires --- */
-.form-group {
-  margin-bottom: 1.5rem;
-}
-.form-group:last-child {
-  margin-bottom: 0;
-}
-input[type="text"],
-input[type="number"],
-input[type="password"],
-input[type="email"],
-input[type="date"],
-select,
-input[type="search"] {
-  padding: 8px 12px;
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-color: white;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='10'%20height='10'%3E%3Cpolygon%20points='0,0%2010,0%205,7'%20fill='%23666'%2F%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 10px;
-  padding-right: 30px;
-}
-
-/* =================================================================
-   4. HEADER ET NAVIGATION
-   ================================================================= */
 .app-header {
   background-color: var(--couleur-principale);
-  color: var(--texte-inverse);
-  padding: 15px 30px;
-}
-.app-header h1,
-.app-header h1 a,
-.app-header a {
-  color: var(--texte-inverse);
+  padding: 0.75rem 2rem;
 }
 .header-container {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
-  align-items: center;
-  max-width: 1800px;
-  margin: 0 auto;
 }
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+.header-brand a { text-decoration: none; }
+.header-brand h1 { margin: 0; font-size: 1.5rem; color: var(--texte-inverse); }
+.brand-subtitle {
+    margin-top: 2px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    color: var(--texte-inverse);
 }
-.header-left h1 {
-  margin: 0;
-  font-size: 24px;
+.header-right { display: flex; align-items: center; gap: 1.25rem; }
+
+.search-container { position: relative; display: flex; align-items: center; }
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    width: 18px;
+    height: 18px;
+    fill: #8a9bbf;
 }
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-.logo {
-  height: 96px;
-}
-.search-bar input {
-  padding: 6px 12px;
+.search-container input {
+  padding: 0.5rem 1rem 0.5rem 2.5rem;
   border-radius: 20px;
-  border: 1px solid var(--couleur-bordure);
-  width: 250px;
+  border: 1px solid #4a6a9f;
+  width: 280px;
   background-color: #152952;
   color: var(--texte-inverse);
 }
-.search-bar input::placeholder {
-  color: var(--couleur-bordure);
+
+.header-icon-link {
+    color: var(--texte-inverse);
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: background-color 0.2s;
 }
-.cart-icon {
-  height: 28px;
-  width: auto;
+.header-icon-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
-.pulse {
-  animation: pulse 2s infinite;
+.header-icon-link svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
 }
-.pulse-fast {
-  animation: pulse 1s infinite;
+
+.notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: var(--couleur-erreur);
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--couleur-principale);
 }
+
+.header-icon.alert-ok { fill: var(--texte-inverse); opacity: 0.7; }
+.header-icon.alert-warning { fill: #f57f17; }
+.header-icon.alert-critical { fill: #dc3545; }
+
 @keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.5);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
+.pulse { animation: pulse 2s infinite; }
+.pulse-fast { animation: pulse 1s infinite; }
 
 .auth-section {
   display: flex;
   align-items: center;
-  gap: 15px;
-  border-left: 1px solid #4a6a9f;
-  padding-left: 20px;
-}
-.welcome-message {
-  font-weight: 500;
-  color: var(--couleur-accent);
-}
-.auth-link {
+  gap: 1rem;
   color: var(--texte-inverse);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
 }
-.auth-link:hover {
-  color: var(--couleur-accent);
+.auth-section .btn-outline-light {
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 0.85rem;
 }
 
 .sub-nav {
-  background-color: var(--couleur-bordure-legere);
-  padding: 10px 30px;
-  border-bottom: 1px solid #dee2e6;
+  background-color: var(--fond-element);
+  padding: 0.75rem 2rem;
+  border-bottom: 1px solid var(--couleur-bordure);
   display: flex;
-  gap: 15px;
+  gap: 1.5rem;
   justify-content: center;
 }
 .sub-nav-button {
-  background-color: var(--fond-element);
+  background-color: #f8f9fa;
   color: var(--texte-principal);
-  padding: 8px 15px;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
-  text-decoration: none;
   font-weight: 500;
-  border: 1px solid #ccc;
+  border: 1px solid var(--couleur-bordure);
   transition: all 0.2s ease;
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 .sub-nav-button:hover {
+    background-color: #e9ecef;
+	text-decoration: none;
+}
+.sub-nav-button.active {
   background-color: var(--couleur-principale);
   color: var(--texte-inverse);
   border-color: var(--couleur-principale);
@@ -335,188 +178,66 @@ select {
   fill: currentColor;
 }
 
-.search-container {
-  position: relative;
-}
-#search-results-container {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background-color: var(--fond-element);
-  border: 1px solid var(--couleur-bordure);
-  border-top: none;
-  border-radius: 0 0 6px 6px;
-  box-shadow: var(--ombre-moyenne);
-  z-index: 10000;
-  max-height: 300px;
-  overflow-y: auto;
-  display: none;
-}
-.search-results-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.search-results-list li a {
-  display: block;
-  padding: 10px 15px;
-  color: var(--texte-principal);
-  text-decoration: none;
-  transition: background-color 0.2s;
-}
-.search-results-list li a:hover {
-  background-color: var(--fond-survol);
-}
-.search-results-list li a span {
-  font-weight: 500;
-}
-.search-result-context {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--texte-discret);
-  margin-top: 2px;
-}
 
-/* --- Style UNIFIÉ pour les icônes du header --- */
-.header-icon-link {
-  position: relative;
+/* =================================================================
+   4. EN-TÊTE DE PAGE & FIL D'ARIANE
+   ================================================================= */
+.page-header {
+    margin-bottom: 1.5rem;
+}
+.breadcrumb-container {
+    margin-bottom: 0.75rem;
+}
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--texte-inverse);
-  padding: 5px;
-  border-radius: 50%;
-  transition: background-color 0.2s ease;
+  gap: 0.75rem;
 }
-.header-icon-link:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.header-icon {
-  width: 28px;
-  height: 28px;
-  fill: currentColor; /* Pour le SVG */
-}
-
-.cart-icon-link:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.cart-count-badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  background-color: var(--couleur-succes);
-  color: var(--texte-inverse);
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 0.7rem;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--couleur-principale);
-}
-
-/* --- Style pour l'icône d'alertes (cloche) --- */
-.header-icon.alert-ok {
-  fill: #e3e3e3; /* Couleur par défaut (gris) */
-  opacity: 0.7;
-}
-.header-icon.alert-warning {
-  fill: #f57f17; /* Couleur orange pour les alertes modérées */
-}
-.header-icon.alert-critical {
-  fill: #dc3545; /* Couleur rouge pour les alertes critiques */
-}
+.page-title-icon { width: 28px; height: 28px; fill: var(--couleur-principale); }
 
 /* =================================================================
    5. TABLEAU DE BORD (DASHBOARD)
    ================================================================= */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+.dashboard-widget {
+  background-color: var(--fond-element);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: 8px;
+  box-shadow: var(--ombre-legere);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .widget-header {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid var(--couleur-bordure-legere);
-  margin-bottom: 15px;
-}
-.widget-icon {
-  width: 28px;
-  height: 28px;
-  fill: var(--couleur-principale);
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--couleur-principale);
+  color: var(--texte-inverse);
 }
 .widget-header h3 {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
+  color: inherit;
+}
+.widget-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }
 .widget-content {
+  padding: 1.25rem;
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-}
-.widget-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.dashboard-list-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-radius: 6px;
-  transition: background-color 0.2s ease;
-}
-.dashboard-list-item:hover {
-  background-color: var(--fond-table-pair);
-}
-.item-main-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.item-title {
-  font-weight: 500;
-  color: var(--texte-principal);
-}
-.item-subtitle {
-  font-size: 0.8rem;
-  color: var(--texte-discret);
-}
-.stat-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--couleur-bordure-legere);
-}
-.stat-item:last-child {
-  border-bottom: none;
-}
-.stat-value {
-  font-weight: bold;
-  font-size: 1.1rem;
-  color: var(--couleur-principale);
-}
-.widget-subtitle {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--texte-discret);
-  margin: 0 0 10px 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--couleur-bordure-legere);
 }
 .widget-placeholder {
   flex-grow: 1;
@@ -526,532 +247,96 @@ select {
   align-items: center;
   text-align: center;
   color: var(--texte-discret);
-  padding: 20px;
-}
-.widget-placeholder .btn-action {
-  margin-top: 15px;
 }
 .widget-footer {
   margin-top: auto;
-  padding-top: 20px;
-  display: flex;
-  justify-content: center;
+  padding: 0 1.25rem 1.25rem;
 }
-.widget-footer .btn-action {
-  width: 100%;
-}
-.action-tag-small {
-  padding: 3px 8px;
-  font-size: 0.75rem;
-  border-radius: 4px;
-  background-color: #e9ecef;
-  color: #495057;
-  font-weight: bold;
-  text-transform: capitalize;
-}
-
-/* =================================================================
-   6. PAGE DE GESTION BUDGÉTAIRE
-   ================================================================= */
-.budget-display {
-  flex-grow: 1; /* Permet au conteneur de prendre toute la place disponible */
-  display: flex;
-  flex-direction: column;
-  justify-content: center; /* Centre verticalement */
-  align-items: center; /* Centre horizontalement */
-  text-align: center;
-  padding: 20px 0; /* Ajoute un peu d'espace vertical */
-}
-
-.budget-label {
-  font-size: 1.1rem;
-  color: var(--texte-discret);
-  font-weight: 500;
-  margin-bottom: 10px;
-}
-
-.budget-value {
-  font-size: 2.5rem; /* Taille de police beaucoup plus grande */
-  font-weight: bold;
-  letter-spacing: -1px; /* Resserre légèrement les chiffres */
-}
-
-/* On utilise les classes 'positive' et 'negative' que nous avons déjà pour le budget */
-.budget-value.positive {
-  color: var(--couleur-succes);
-}
-
-.budget-value.negative {
-  color: var(--couleur-erreur);
-}
-
-.budget-grid {
-  display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 30px;
-  align-items: start;
-}
-
-.budget-summary-col .content-card {
-  position: -webkit-sticky; /* Pour la compatibilité avec les anciens navigateurs */
-    position: sticky;
-    top: 80px;
-}
-
-.stat-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.stat-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--couleur-bordure-legere);
-  font-size: 1.1rem;
-}
-
-.stat-list li.solde {
-  font-weight: bold;
-  font-size: 1.2rem;
-  border-top: 2px solid var(--texte-principal);
-  margin-top: 10px;
-}
-
-.stat-list .stat-value {
-  font-weight: bold;
-}
-
-.stat-list .positive {
-  color: var(--couleur-succes);
-}
-
-.stat-list .negative,
-.objet-table .negative {
-  color: var(--couleur-erreur);
-}
-
-.budget-actions {
-  margin-top: 25px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.budget-details-col .table-container {
-  max-height: 65vh;
-  overflow-y: auto;
-}
-
-@media (max-width: 900px) {
-  .budget-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.budget-summary-col {
-  display: flex;
-  flex-direction: column;
-  gap: 30px; /* Ajoute un espace de 30px entre les cartes enfants */
-}
-
-.budget-details-col .card-title-icon {
-  justify-content: space-between;
-  align-items: center;
-}
-
-.budget-details-col .card-title-main {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem; /* ou 15px */
-}
-
-.cloture-section {
-  margin-top: 15px;
-  border-top: 1px solid var(--couleur-bordure-legere);
-  padding-top: 15px;
-  text-align: center;
-}
-
-.cloture-section .btn-disabled {
+.btn-widget {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
     background-color: #e9ecef;
-    border-color: #ced4da;
-    color: #6c757d;
-    cursor: not-allowed;
-    opacity: 0.65;
+    color: var(--texte-principal);
+    border: 1px solid #ced4da;
 }
-
-.cloture-section .btn-disabled:hover {
-    /* On annule les effets de survol pour le bouton désactivé */
-    background-color: #e9ecef;
-    border-color: #ced4da;
-    color: #6c757d;
-    transform: none;
-    box-shadow: none;
+.btn-widget:hover {
+    background-color: var(--couleur-principale);
+    color: var(--texte-inverse);
+    border-color: var(--couleur-principale);
+    transform: translateY(-2px);
+    box-shadow: var(--ombre-legere);
 }
 
 /* =================================================================
-   7. PAGES DE GESTION (Armoires, Catégories, Admin)
+   6. TABLEAUX
    ================================================================= */
-.management-header {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.page-actions-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 20px;
-}
-.add-inline-form {
-  display: flex;
-  gap: 8px;
-  margin: 0;
-}
-.add-inline-form input[type="text"] {
-  flex-grow: 1;
-  margin: 0;
-}
-.add-inline-form button {
-  padding: 5px 12px;
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-.card-container.management-page {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-}
-.card-info {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  flex-grow: 1;
-  margin-right: 10px;
-}
-.card-title {
-  font-weight: 500;
-}
-.card-count {
-  font-size: 0.85rem;
-  color: var(--texte-discret);
-}
-.card-actions {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-.card-actions a,
-.card-actions .edit-btn {
-  text-decoration: none;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-.card-actions a:hover,
-.card-actions .edit-btn:hover {
-  transform: scale(1.2);
-}
-.card-actions a svg,
-.card-actions .edit-btn svg,
-.card-actions .delete-btn svg {
-  width: 22px;
-  height: 22px;
-  fill: var(--texte-principal);
-  transition: fill 0.2s ease;
-}
-.card-actions a:hover svg,
-.card-actions .edit-btn:hover svg,
-.card-actions .delete-btn:hover svg {
-  fill: var(--couleur-principale);
-}
-.edit-mode {
-  display: none;
-  align-items: center;
-  gap: 5px;
-  width: 100%;
-}
-.edit-input {
-  flex-grow: 1;
-}
-.save-btn,
-.cancel-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-.save-btn svg {
-  fill: var(--couleur-succes);
-}
-.cancel-btn svg {
-  fill: var(--couleur-erreur);
-}
-.delete-form-interactive {
-  display: inline;
-}
-.delete-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-
-/* --- SECTION FILTRES (CORRIGÉE) --- */
-.filtres-section {
-  margin-bottom: 20px;
-  padding: 15px 20px;
-  background-color: var(--fond-element);
-  border: 1px solid var(--couleur-bordure-legere);
-  border-radius: 8px;
-  box-shadow: var(--ombre-legere);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 20px;
-  justify-content: center;
-}
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.filtres-section .search-form {
-  display: contents;
-}
-.filtres-section label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-}
-.filtres-section label svg {
-  width: 20px;
-  height: 20px;
-  fill: var(--texte-principal);
-}
-
-.objet-table td.actions-cell {
-  text-align: center;
-  vertical-align: middle;
-}
-
-.objet-table td.actions-cell > * {
-  margin: 0 8px; /* Applique un espacement horizontal */
-}
-
-.form-in-cell {
-  display: inline-block; /* Permet au formulaire d'être centré comme du texte */
-  margin: 0;
-  padding: 0;
-}
-
-/* --- Style pour les icônes dans les en-têtes de section --- */
-.management-header-icon {
-  width: 28px;
-  height: 28px;
-  fill: var(--couleur-principale);
-  flex-shrink: 0; /* Empêche l'icône de se déformer */
-}
-
-/* =================================================================
-   7. TABLEAUX
-   ================================================================= */
-.table-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  margin-top: 20px;
-}
-/* Règle spécifique pour annuler la marge du titre dans ce contexte */
-.table-header .page-title {
-  margin-bottom: 0;
-}
 .objet-table {
   width: 100%;
   border-collapse: collapse;
   background-color: var(--fond-element);
-  box-shadow: var(--ombre-legere);
-}
-.objet-table th {
-  background-color: #eee;
-  font-weight: bold;
-  text-align: center;
-  padding: 12px;
-}
-.objet-table th.sortable {
-  cursor: pointer;
-}
-.objet-table td {
-  border: 1px solid var(--couleur-bordure);
-  padding: 8px 12px;
-  text-align: center;
-  transition: background-color 0.3s;
-  vertical-align: middle;
-}
-
-body:not(.page-admin-utilisateurs) .objet-table td:first-child {
-  text-align: left;
-}
-.objet-table tr:nth-child(even) {
-  background-color: var(--fond-table-pair);
-}
-.objet-table tr:hover td {
-  background-color: var(--fond-survol);
-}
-
-.role-tag {
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.role-tag.role-admin {
-  background-color: #6e6e6e;
-  color: #ffffff;
-}
-.role-tag.role-utilisateur {
-  background-color: var(--couleur-actif);
-  color: #333333;
-}
-
-.image-cell {
-  width: 80px;
-  position: relative;
-  vertical-align: middle;
-}
-
-.image-objet-thumbnail {
-  width: 50px;
-  height: 50px;
-  object-fit: contain;
-  border-radius: 4px;
-  border: 1px solid var(--couleur-bordure);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-  cursor: pointer;
-  background-color: #fff;
-}
-.image-objet-thumbnail:hover {
-  transform: scale(1.1);
-  box-shadow: var(--ombre-moyenne);
-}
-.image-objet-preview {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  bottom: 50%;
-  left: 90px;
-  transform: translateY(50%);
-  width: 200px;
-  height: 200px;
-  object-fit: contain;
-  background-color: var(--fond-element);
   border: 1px solid var(--couleur-bordure);
   border-radius: 8px;
-  box-shadow: var(--ombre-moyenne);
-  z-index: 10;
-  transition:
-    opacity 0.2s ease,
-    visibility 0.2s ease;
-  pointer-events: none;
-}
-.image-cell:hover .image-objet-preview {
-  visibility: visible;
-  opacity: 1;
-}
-
-.texte-perime {
-  color: var(--couleur-perime-texte);
-  font-weight: bold;
-}
-.texte-perime-bientot {
-  color: var(--couleur-bientot-texte);
-  font-weight: bold;
-}
-.texte-perime svg,
-.texte-perime-bientot svg,
-.texte-alerte svg,
-.texte-ok svg {
-  width: 24px;
-  height: 24px;
-  vertical-align: middle;
-  fill: currentColor;
-}
-
-.texte-ok svg {
-	fill: #28a745;
-}
-
-.texte-alerte svg{
-	fill: #FF6D2D;
-}
-
-.objet-table tr.row-perime td {
-  background-color: var(--couleur-perime-fond) !important;
-}
-.objet-table tr.row-perime-bientot td {
-  background-color: var(--couleur-bientot-fond) !important;
-}
-.objet-table tr.acquitte td {
-  background-color: #f5f5f5 !important;
-  color: #9e9e9e;
-  text-decoration: line-through;
-}
-.objet-table tr.acquitte .image-objet {
-  opacity: 0.5;
-}
-
-@keyframes highlight-fade {
-  0% {
-    background-color: #fff3cd;
-  }
-  100% {
-    background-color: transparent;
-  }
-}
-.highlight td {
-  animation: highlight-fade 3s ease-out forwards;
+  overflow: hidden;
+  box-shadow: var(--ombre-legere);
+  font-size: 0.9rem;
 }
 
 .objet-table th {
-  background-color: #eee;
-  font-weight: bold;
-  text-align: center;
-  padding: 12px;
+  background-color: #f8f9fa;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--texte-discret);
+  border-bottom: 2px solid var(--couleur-bordure);
+  white-space: nowrap;
+}
+
+.objet-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--couleur-bordure);
+  vertical-align: middle; /* IMPORTANT : toutes les cellules alignées au milieu */
+}
+
+.objet-table tbody tr:last-child td { border-bottom: none; }
+.objet-table tbody tr:hover { background-color: #f1f3f5; }
+
+/* --- Styles pour les en-têtes de colonne triables --- */
+.objet-table th.sortable {
+  cursor: pointer;
   position: relative;
 }
 .objet-table th.sortable a {
-  color: var(--texte-principal);
+  color: inherit;
   text-decoration: none;
   display: block;
 }
-.objet-table th.sortable a:hover {
-  color: var(--couleur-principale);
+.objet-table th.sortable:hover {
+    background-color: #e9ecef;
 }
 .objet-table th.th-sort-asc a,
 .objet-table th.th-sort-desc a {
   color: var(--couleur-principale);
-  font-weight: bold;
 }
 .objet-table th.sortable::after {
   content: "";
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  margin-left: 8px;
-  background-repeat: no-repeat;
-  background-position: center;
+  width: 1em;
+  height: 1em;
+  margin-left: 0.5rem;
+  vertical-align: middle;
   opacity: 0.4;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 512'%3E%3Cpath fill='%236c7a89' d='M41 288h238c21.4 0 32.1 25.9 17 41L177 448c-9.4 9.4-24.6 9.4-33.9 0L24 329c-15.1-15.1-4.4-41 17-41zm255-105L177 64c-9.4-9.4-24.6-9.4-33.9 0L24 183c-15.1 15.1-4.4 41 17 41h238c21.4 0 32.1-25.9 17-41z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
 }
 .objet-table th.th-sort-asc::after {
   opacity: 1;
@@ -1062,2174 +347,1417 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 512'%3E%3Cpath fill='%231F3B73' d='M41 288h238c21.4 0 32.1 25.9 17 41L177 448c-9.4 9.4-24.6 9.4-33.9 0L24 329c-15.1-15.1-4.4-41 17-41z'/%3E%3C/svg%3E");
 }
 
-.checkbox-column {
-  width: 40px;
+/* --- Styles pour la colonne "Image" --- */
+.image-cell {
+  width: 60px;
   text-align: center;
-  vertical-align: middle;
-  padding: 0; /* Optionnel, pour un meilleur centrage */
+  padding: 0.5rem !important; /* CORRECTION : padding réduit pour la colonne image */
 }
 
-.checkbox-column input[type="checkbox"] {
-  display: block; /* Nécessaire pour que les marges automatiques fonctionnent */
-  margin: 0 auto; /* Centre horizontalement */
+.image-preview-wrapper {
+    position: relative;
+    display: inline-block; /* CORRECTION : inline-block pour éviter les problèmes de layout */
+    width: 40px;
+    height: 40px;
+    vertical-align: middle; /* CORRECTION : alignement vertical */
 }
 
-/* =================================================================
-   8. FENÊTRES MODALES (Pop-ups)
-   ================================================================= */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-.modal-content {
-  background-color: var(--fond-element);
-  padding: 0;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  width: 90%;
-  max-width: 700px; /* Augmentons la taille pour ce formulaire complexe */
-  margin: auto; /* Ajout crucial pour le centrage vertical */
-  max-height: 90vh; /* Empêche la modale d'être plus haute que l'écran */
-  display: flex; /* Ajout pour que le contenu interne se comporte bien */
-  flex-direction: column;
-}
-
-.modal-content.modal-large {
-  max-width: 800px;
-}
-
-.modal-form .form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px 30px; /* Espace vertical de 20px, horizontal de 30px */
-  align-items: start; /* Aligne les colonnes en haut */
-}
-
-.modal-form .form-column {
-  display: flex;
-  flex-direction: column;
-  gap: 15px; /* Espace entre les champs d'une même colonne */
-}
-
-.modal-form .form-column label {
-  margin-bottom: -5px; /* Règle par défaut pour les champs de saisie */
-}
-
-/* Règle spécifique pour les labels suivis d'un .form-group (nos drop-zones) */
-.modal-form .form-column .form-group > label {
-  margin-bottom: 5px;
-}
-
-#image-preview-container {
-  margin-top: auto; /* Pousse l'aperçu en bas de la colonne */
-  padding-top: 15px;
-}
-
-.image-preview-modal {
-  max-height: 120px;
-  max-width: 100%;
-  object-fit: contain;
-  margin-bottom: 10px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 25px;
-  border-bottom: 1px solid #e9ecef;
-}
-.modal-title-with-icon {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  color: var(--couleur-principale);
-  font-size: 1.2rem;
-}
-.modal-icon {
-  height: 24px;
-  width: 24px;
-}
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 2rem;
-  font-weight: 300;
-  color: var(--texte-discret);
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-}
-.close-btn:hover {
-  color: var(--texte-principal);
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-.form-column {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-.form-column label {
-  font-weight: 500;
-  font-size: 0.9rem;
-  margin-bottom: -10px;
-}
-
-.modal-form {
-  padding: 25px;
-  margin: 0;
-
-  /* Propriétés de Flexbox pour l'agencement interne */
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-
-  /* Propriétés pour la gestion de la hauteur et du défilement */
-  overflow-y: auto;
-  flex-grow: 1;
-}
-
-.modal-form input,
-.modal-form select {
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 10px;
-  font-size: 1rem;
-}
-.custom-file-input {
-  color: var(--texte-discret);
-}
-.custom-file-input::file-selector-button {
-  margin-right: 10px;
-  border: 1px solid var(--couleur-bordure);
-  padding: 8px 12px;
+.image-objet-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
   border-radius: 4px;
-  background-color: #e9ecef;
+  border: 1px solid var(--couleur-bordure);
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-.custom-file-input::file-selector-button:hover {
-  background-color: #dde2e6;
-}
-.modal-objects-list {
-  padding: 25px;
-  max-height: 40vh;
-  overflow-y: auto;
-}
-.modal-object-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-}
-.modal-object-item span {
-  margin-right: 15px;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 15px 25px;
-  border-top: 1px solid #e9ecef;
-  background-color: #f8f9fa;
+  display: block; /* CORRECTION : block pour éviter les espaces inline */
 }
 
-.modal-actions .btn-cancel {
-  /* Style du bouton Annuler */
-  padding: 10px 20px;
-  border-radius: 6px;
-  text-decoration: none;
-  display: inline-flex;
+/* CORRECTION : Style pour le placeholder */
+.table-image-placeholder {
+  width: 40px;
+  height: 40px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-weight: 500;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-
-  /* Style par défaut */
-  background-color: var(--fond-element);
-  color: var(--texte-discret);
+  background-color: #f0f0f0;
+  border-radius: 4px;
   border: 1px solid var(--couleur-bordure);
 }
 
-.modal-actions .btn-cancel:hover {
-  /* Style au survol */
-  background-color: var(--couleur-perime-fond);
-  color: var(--couleur-erreur);
-  border-color: var(--couleur-erreur);
-  transform: none; /* On annule l'effet de "saut" pour un bouton secondaire */
-  box-shadow: none;
+.table-image-placeholder svg {
+  fill: #999;
 }
 
-/* =================================================================
-   9. MESSAGES FLASH ET FOOTER
-   ================================================================= */
-.flash-messages {
-  margin-bottom: 20px;
-  position: relative;
-}
-.flash {
-  padding: 15px;
-  border-radius: 5px;
-  color: var(--texte-inverse);
-  font-weight: bold;
-  margin-bottom: 10px;
-  transition:
-    opacity 0.5s ease,
-    transform 0.5s ease,
-    margin-bottom 0.5s ease,
-    padding 0.5s ease,
-    height 0.5s ease;
-}
-.flash.success {
-  background-color: var(--couleur-succes);
-}
-.flash.error {
-  background-color: var(--couleur-erreur);
-}
-.flash.warning {
-  background-color: var(--couleur-avertissement-fond);
-  color: var(--couleur-avertissement-texte);
-  border: 1px solid var(--couleur-avertissement-bordure);
+.image-objet-preview {
+  visibility: hidden;
+  opacity: 0;
+  position: fixed !important; /* CORRECTION : !important pour s'assurer qu'il ne perturbe pas le layout */
+  width: 250px;
+  height: 250px;
+  object-fit: contain;
+  background-color: var(--fond-element);
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10010;
+  transition: opacity 0.2s ease;
+  pointer-events: none; /* CORRECTION : ne bloque pas les interactions */
+  padding: 4px;
 }
 
-.site-footer {
-    background-color: var(--couleur-secondaire);
-    color: var(--texte-inverse);
-    padding: 40px 30px 20px;
-    margin-top: 50px;
-    font-size: 14px;
+.image-preview-wrapper:hover .image-objet-preview {
+  visibility: visible;
+  opacity: 1;
 }
-.footer-content {
-    display: flex;
-    justify-content: space-around;
-    align-items: stretch; /* NOUVEAU : Assure que toutes les colonnes ont la même hauteur */
-    flex-wrap: wrap;
-    max-width: 1800px;
-    margin: 0 auto;
-    gap: 20px; /* Espace entre les colonnes */
-}
-.footer-section {
-    display: flex;
-    flex-direction: column;
-    text-align: center;
-    flex-basis: 200px;
-    flex-grow: 1;
-    padding: 0 20px; /* NOUVEAU : Ajoute de l'air à l'intérieur des colonnes */
-    border-left: 1px solid #4a6a9f; /* NOUVEAU : Le séparateur vertical ! */
-}
-.footer-section:first-child {
-    border-left: none; /* NOUVEAU : On ne met pas de séparateur avant la première colonne */
-}
-.footer-title {
-    display: flex;
+
+/* SUPPRIMÉ : .image-cell:hover .image-objet-preview car géré par JS */
+
+/* --- Styles pour la colonne "État" --- */
+.texte-perime, .texte-perime-bientot, .texte-alerte, .texte-ok {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 15px; /* MODIFIÉ : Plus d'espace sous le titre */
+    gap: 0.5rem;
+    font-weight: 600;
 }
-.footer-title h4 {
+
+.texte-perime { color: #c62828; }
+.texte-perime-bientot { color: #f57f17; }
+.texte-alerte { color: #b58600; }
+.texte-ok { color: #28a745; }
+.texte-perime svg, .texte-perime-bientot svg, .texte-alerte svg, .texte-ok svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/* --- Styles pour la colonne "Actions" --- */
+.actions-cell {
+    text-align: right;
+    white-space: nowrap;
+    /* CORRECTION : Retrait du display: flex qui causait le décalage */
+}
+
+.actions-cell .form-in-cell {
     margin: 0;
-    font-size: 1rem; /* MODIFIÉ : Titre légèrement plus grand */
-    font-weight: 500;
-    color: var(--texte-inverse); /* Assure que le titre est bien blanc */
-}
-.footer-section .icon-svg {
-    width: 20px; /* Taille d'icône cohérente */
-    height: 20px;
-    fill: var(--couleur-accent); /* NOUVEAU : Icônes plus claires pour contraster */
-    flex-shrink: 0;
-}
-.footer-section p {
-    margin: 0 0 5px 0; /* Espace sous chaque ligne de texte */
-    line-height: 1.6;
-    font-size: 0.85rem; /* MODIFIÉ : Texte de contenu légèrement plus petit */
-    color: rgba(255, 255, 255, 0.8); /* NOUVEAU : Texte légèrement moins blanc que le titre */
-}
-.footer-section a {
-    color: rgba(255, 255, 255, 0.8); /* NOUVEAU : Couleur de lien cohérente */
-    text-decoration: none;
-    transition: color 0.2s;
-}
-.footer-section a:hover {
-    color: var(--texte-inverse); /* Le lien redevient blanc au survol */
-    text-decoration: underline;
-}
-.license-icons {
-    margin-top: 10px;
-}
-.cc-license-full {
-    width: 102px;
-    height: auto;
-    opacity: 0.85;
-    transition: opacity 0.2s;
-}
-.cc-license-full:hover {
-    opacity: 1;
-}
-.footer-bottom {
-    text-align: center;
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid #4a6a9f;
-    font-size: 13px;
-    color: var(--couleur-bordure);
-}
-
-/* =================================================================
-   10. PAGE D'ADMINISTRATION ET STYLES DE BOUTONS D'ACTION
-   ================================================================= */
-.management-header {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin-bottom: 20px;
-}
-.admin-header-icon {
-  width: 32px;
-  height: 32px;
-  fill: var(--couleur-principale);
-  margin-right: 15px;
-}
-
-.admin-section-group {
-    border: 1px solid var(--couleur-accent); /* La fine bordure bleue */
-    border-radius: 8px;
-    padding: 25px;
-    margin-bottom: 30px;
-    background-color: rgba(255, 255, 255, 0.5);
-}
-
-.admin-section-group .management-header {
-    margin-top: 0;
-    padding-left: 5px;
-}
-
-.admin-sections {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 25px;
-}
-
-.admin-card {
-    background-color: var(--fond-element);
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 25px;
-    display: flex;
-    flex-direction: column;
-    transition: box-shadow 0.2s ease-in-out;
-}
-
-.admin-card:hover {
-    box-shadow: var(--ombre-moyenne);
-}
-
-.admin-card .card-header {
-    border-bottom: none;
     padding: 0;
-    margin: 0;
+    display: inline-block; /* CORRECTION : inline-block au lieu de inline-flex */
+    vertical-align: middle;
 }
 
-.admin-card h4 {
-    margin: 0 0 10px 0;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--couleur-bordure-legere);
-    font-size: 1.1rem;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.actions-cell .btn {
+    min-width: 90px;
+    margin: 0 0.25rem;
+    vertical-align: middle; /* CORRECTION : alignement vertical */
+}
+
+/* Bouton Modifier */
+.actions-cell .btn-outline-primary {
+    border-color: var(--couleur-principale);
     color: var(--texte-principal);
 }
-
-.admin-card-icon {
-    width: 20px;
-    height: 20px;
-    fill: var(--texte-discret);
-    flex-shrink: 0;
-}
-
-.admin-card p {
-    flex-grow: 1;
-    margin: 15px 0;
-    font-size: 0.9rem;
-    color: var(--texte-discret);
-    line-height: 1.6;
-}
-
-.admin-card .admin-actions {
-    margin-top: auto;
-}
-
-.admin-card .btn-full-width {
-    width: 100%;
-    background-color: #f0f0f0;
-    border-color: #ddd;
-    color: #333;
-    font-weight: 500;
-}
-
-.admin-card .btn-full-width:hover {
+.actions-cell .btn-outline-primary:hover {
     background-color: var(--couleur-principale);
     border-color: var(--couleur-principale);
     color: var(--texte-inverse);
+}
+
+/* Bouton Supprimer */
+.actions-cell .btn-outline-danger {
+    border-color: #a50000;
+    color: var(--texte-principal);
+}
+
+.actions-cell .btn-outline-danger:hover {
+    background-color: #a50000;
+    border-color: #a50000;
+    color: var(--texte-inverse);
+}
+
+/* --- Styles pour la colonne "Checkbox" --- */
+.checkbox-column {
+  width: 40px;
+  text-align: center;
+  padding: 0.5rem !important;
+}
+
+
+/* =================================================================
+   7. CALENDRIER DE RÉSERVATION - VERSION MODERNE
+   ================================================================= */
+
+/* Container principal */
+#calendrier-container {
+    background: var(--fond-element);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* En-tête du calendrier */
+.calendrier-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--couleur-bordure);
+}
+
+.calendrier-header h3 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--texte-principal);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Navigation mois (si vous avez des boutons précédent/suivant) */
+.calendrier-nav {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.calendrier-nav .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    background: var(--couleur-principale);
+    color: white;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(31, 59, 115, 0.2);
+    text-decoration: none;
+}
+
+.calendrier-nav .btn:hover {
+    background: #163a6e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(31, 59, 115, 0.3);
+}
+
+.calendrier-nav .current-month {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--texte-principal);
+    min-width: 220px;
+    text-align: center;
+    text-transform: capitalize;
+}
+
+/* Grille du calendrier */
+.calendrier-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background-color: var(--couleur-bordure);
+    border: 1px solid var(--couleur-bordure);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* En-têtes des jours de la semaine */
+.day-name {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    font-weight: 700;
+    text-align: center;
+    padding: 1rem 0;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--texte-principal);
+    border-bottom: 2px solid var(--couleur-principale);
+}
+
+/* Cellules des jours */
+.day-cell {
+    background-color: white;
+    padding: 0.75rem;
+    min-height: 120px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+/* Effet hover pour les jours réservables */
+a.day-cell.can-reserve:hover {
+    background: linear-gradient(135deg, rgba(31, 59, 115, 0.08) 0%, rgba(31, 59, 115, 0.03) 100%);
+    transform: scale(1.02);
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Numéro du jour */
+.day-number {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--texte-principal);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+/* Jour actuel (today) */
+.day-cell.today {
+    background: rgba(31, 59, 115, 0.05);
+    border: 2px solid var(--couleur-principale);
+}
+
+.day-cell.today .day-number {
+    background-color: var(--couleur-principale);
+    color: white;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(31, 59, 115, 0.3);
+}
+
+/* Jours d'autres mois (grayed out) */
+.day-cell.other-month {
+    background-color: #f8f9fa;
+    opacity: 0.5;
+}
+
+.day-cell.other-month .day-number {
+    color: var(--texte-discret);
+    font-weight: 400;
+}
+
+/* Jours passés (non réservables) */
+.day-cell.past-day {
+    background-color: #f8f9fa;
+    color: #adb5bd;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.day-cell.past-day:hover {
+    transform: none;
+    box-shadow: none;
+    background-color: #f8f9fa;
+}
+
+.day-cell.past-day .day-number {
+    color: #adb5bd;
+}
+
+/* Jours avec activité/réservation */
+.day-cell.has-activity {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.08) 0%, rgba(40, 167, 69, 0.03) 100%);
+}
+
+.activity-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--couleur-succes, #28a745);
+    border-radius: 50%;
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 0 2px white, 0 0 0 3px var(--couleur-succes, #28a745);
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { 
+        transform: translateX(-50%) scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: translateX(-50%) scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+/* Jours complets (si applicable) */
+.day-cell.full {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.08) 0%, rgba(220, 53, 69, 0.03) 100%);
+    cursor: not-allowed;
+    position: relative;
+}
+
+.day-cell.full::after {
+    content: 'COMPLET';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--couleur-erreur, #dc3545);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+}
+
+.day-cell.full:hover {
     transform: none;
     box-shadow: none;
 }
 
-.admin-actions {
-  margin-top: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  margin-top: 20px;
-  align-items: center
+/* Week-end styling (optionnel) */
+.day-cell.weekend {
+    background: rgba(255, 193, 7, 0.03);
 }
 
-.warning {
-  background-color: #fff3cd;
-  border-left: 5px solid #ffeeba;
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
+/* Contenu supplémentaire dans les cellules */
+.day-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
 }
 
-.warning {
-  background-color: #fff3cd;
-  border-left: 5px solid #ffeeba;
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
+.day-event {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(31, 59, 115, 0.1);
+    border-left: 3px solid var(--couleur-principale);
+    border-radius: 3px;
+    color: var(--texte-principal);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.info-box {
+/* Formulaire inline dans les cellules (si utilisé) */
+.form-in-cell {
+    display: inline-block;
+    margin: 0;
+}
+
+/* Légende du calendrier */
+.calendrier-legend {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--couleur-bordure);
+}
+
+.legend-item {
     display: flex;
     align-items: center;
-    gap: 15px;
-    padding: 15px 20px;
-    margin-bottom: 30px; /* Espace avant la première section */
-    border-radius: 8px;
-    
-    /* Utilisation de vos variables de couleur pour un look cohérent */
-    background-color: var(--couleur-avertissement-fond);
-    border: 1px solid var(--couleur-avertissement-bordure);
-    color: var(--couleur-avertissement-texte);
-}
-
-.info-box-icon {
-    width: 20px;  /* Taille réduite comme demandé */
-    height: 20px;
-    fill: currentColor; /* L'icône prend la couleur du texte (brun foncé) */
-    flex-shrink: 0; /* Empêche l'icône de se déformer */
-}
-
-.info-box p {
-    margin: 0; /* Annule la marge par défaut du paragraphe */
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-
-.btn-admin,
-.objet-table .actions-cell .btn-secondary {
-  padding: 10px 20px;
-  border-radius: 6px;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-weight: 500;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  background-color: #e9ecef;
-  color: #333333;
-  border: 1px solid #adb5bd;
-}
-
-.btn-admin:hover,
-.objet-table .actions-cell .btn-secondary:hover {
-  background-color: var(--couleur-actif);
-  color: #333333;
-  border-color: #a8e032;
-  transform: translateY(-2px);
-  box-shadow: var(--ombre-moyenne);
-}
-
-.objet-table .actions-cell .btn-admin,
-.objet-table .actions-cell .btn-secondary {
-  padding: 4px 12px;
-  font-size: 0.8rem;
-  font-weight: bold;
-}
-
-.export-actions {
-  justify-content: space-between;
-}
-.export-actions .btn-admin {
-  flex-grow: 1;
-  max-width: 48%;
-}
-
-.import-form {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.input-file-admin {
-  width: 0.1px;
-  height: 0.1px;
-  opacity: 0;
-  overflow: hidden;
-  position: absolute;
-  z-index: -1;
-}
-.input-file-admin + label {
-  margin: 0;
-}
-
-.db-actions {
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-.admin-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  margin-top: auto; /* Pousse les actions en bas de la carte */
-  padding-top: 20px; /* Ajoute de l'espace au-dessus des boutons */
-  align-items: center;
-}
-
-/* Nouvelle classe pour les boutons qui doivent prendre toute la largeur */
-.admin-actions .btn-action:only-child {
-    width: 100%;
-}
-
-/* =================================================================
-   11. PAGE DE CONNEXION
-   ================================================================= */
-.login-form {
-  max-width: 500px;
-  margin: 40px auto;
-  padding: 30px 40px;
-  background-color: var(--fond-element);
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 8px;
-  box-shadow: var(--ombre-moyenne);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.login-form h2 {
-  text-align: center;
-  margin-top: 0;
-}
-.form-subtitle {
-  text-align: center;
-  margin-top: -15px;
-  color: var(--texte-discret);
-}
-.login-form label {
-  font-weight: 500;
-  margin-bottom: -10px;
-}
-.login-form input[type="password"],
-.login-form input[type="text"] {
-  padding: 12px;
-  font-size: 1rem;
-  border-radius: 6px;
-}
-.btn-full-width {
-  width: 100%;
-  padding: 12px;
-  font-size: 1.1rem;
-  margin-top: 10px;
-}
-.form-switch-link {
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-.setup-form {
-    max-width: 500px;
-    margin: 40px auto;
-    padding: 30px 40px;
-    background-color: var(--fond-element);
-    border: 1px solid var(--couleur-bordure);
-    border-radius: 8px;
-    box-shadow: var(--ombre-moyenne);
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.setup-form label {
-    display: block; /* Force le label à prendre sa propre ligne */
-    font-weight: 500;
-    margin-bottom: 8px; /* Ajoute un espace propre sous le label */
-}
-
-.setup-form input[type="password"],
-.setup-form input[type="text"],
-.setup-form input[type="email"] {
-    width: 100%; /* Fait en sorte que le champ prenne toute la largeur */
-    box-sizing: border-box; /* Important pour que le padding ne casse pas la largeur */
-    padding: 12px;
-    font-size: 1rem;
-    border-radius: 6px;
-}
-
-/* =================================================================
-   12. PAGINATION
-   ================================================================= */
-.pagination {
-  display: flex;
-  justify-content: center;
-  list-style: none;
-  padding: 0;
-  margin-top: 40px;
-}
-.page-item {
-  margin: 0 4px;
-}
-.page-link {
-  display: block;
-  padding: 8px 16px;
-  color: var(--couleur-principale);
-  background-color: var(--fond-element);
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-.page-item a.page-link:hover {
-  background-color: #e9ecef;
-  border-color: #dee2e6;
-}
-.page-item.active .page-link {
-  background-color: var(--couleur-principale);
-  color: var(--texte-inverse);
-  border-color: var(--couleur-principale);
-  font-weight: bold;
-}
-.page-item.disabled .page-link {
-  color: #6c757d;
-  pointer-events: none;
-  background-color: #e9ecef;
-}
-
-/* =================================================================
-   13. NAVIGATION PAR FIL D'ARIANE (BREADCRUMB)
-   ================================================================= */
-.breadcrumb-nav {
-  display: flex;
-  align-items: center;
-  padding-bottom: 15px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e9ecef;
-  font-size: 1rem;
-}
-.breadcrumb-link {
-  color: var(--couleur-principale);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.breadcrumb-link:hover {
-  color: var(--couleur-bouton-hover);
-}
-.breadcrumb-link:hover .breadcrumb-text {
-  text-decoration: underline;
-}
-.breadcrumb-icon svg {
-  width: 22px;
-  height: 22px;
-  fill: currentColor;
-  vertical-align: middle;
-  margin-bottom: 2px;
-}
-.breadcrumb-separator {
-  margin: 0 12px;
-  color: var(--couleur-bordure);
-}
-.breadcrumb-current {
-  font-weight: bold;
-  color: var(--texte-principal);
-}
-
-/* =================================================================
-   14. ACTIONS DE MASSE
-   ================================================================= */
-.bulk-action-container {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #e9ecef;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-/* =================================================================
-   15. CALENDRIER ET MODALE DE RÉSERVATION
-   ================================================================= */
-#calendrier-container {
-  background-color: var(--fond-element);
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: var(--ombre-legere);
-}
-.calendrier-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-.calendrier-header h3 {
-  margin: 0;
-  color: var(--texte-principal);
-  font-size: 1.5rem;
-}
-.calendrier-header button {
-  background-color: var(--couleur-principale);
-  color: var(--texte-inverse);
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.calendrier-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-}
-.day-name {
-  font-weight: bold;
-  text-align: center;
-  padding: 10px 0;
-  color: var(--texte-discret);
-}
-.day-cell {
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 10px;
-  min-height: 100px;
-  transition: background-color 0.2s ease;
-  position: relative;
-}
-.day-cell.can-reserve {
-  cursor: pointer;
-}
-.day-cell.can-reserve:hover {
-  background-color: var(--fond-survol);
-}
-.day-cell.other-month {
-  color: #adb5bd;
-  background-color: #f8f9fa;
-  cursor: default;
-}
-.day-cell.today .day-number {
-  background-color: var(--couleur-principale);
-  color: var(--texte-inverse);
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.day-number {
-  font-size: 1rem;
-  font-weight: 500;
-}
-.day-reservations {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.reservation-tag {
-  font-size: 0.8rem;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  line-height: 1.2;
-  width: 100%;
-  box-sizing: border-box;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.reservation-tag.tag-mine {
-  background-color: var(--couleur-accent);
-  color: var(--couleur-principale);
-  font-weight: bold;
-}
-.reservation-tag.tag-other {
-  background-color: #e9ecef;
-  color: var(--texte-discret);
-}
-.modal-content.modal-xlarge {
-  max-width: 900px;
-  height: 70vh;
-  display: flex;
-  flex-direction: column;
-}
-.modal-body-split {
-  display: flex;
-  flex-grow: 1;
-  overflow: hidden;
-}
-.modal-sidebar {
-  flex: 0 0 200px;
-  background-color: #f8f9fa;
-  border-right: 1px solid #dee2e6;
-  padding: 15px;
-  overflow-y: auto;
-}
-.modal-main-content {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.category-button {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 5px;
-  border: 1px solid #dee2e6;
-  background-color: var(--fond-element);
-  color: var(--texte-principal);
-  text-align: left;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-}
-.category-button.active,
-.category-button:hover {
-  background-color: var(--couleur-principale);
-  color: var(--texte-inverse);
-  border-color: var(--couleur-principale);
-}
-.category-cart-count {
-  background-color: var(--couleur-succes);
-  color: var(--texte-inverse);
-  font-size: 0.75rem;
-  font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 10px;
-  min-width: 10px;
-  text-align: center;
-  display: none;
-}
-.modal-search-bar {
-  padding: 15px;
-  border-bottom: 1px solid #dee2e6;
-}
-.modal-search-bar input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 6px;
-  box-sizing: border-box;
-}
-.reservation-list {
-  padding: 15px;
-  flex-grow: 1;
-  overflow-y: auto;
-}
-.reservation-categorie-header {
-  margin-top: 10px;
-  margin-bottom: 10px;
-  padding-bottom: 5px;
-  border-bottom: 2px solid var(--couleur-principale);
-}
-.reservation-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #e9ecef;
-}
-.reservation-item:last-child {
-  border-bottom: none;
-}
-.reservation-info {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-}
-.reservation-nom {
-  font-weight: 500;
-}
-.reservation-dispo {
-  font-size: 0.8rem;
-  color: var(--texte-discret);
-}
-.reservation-input {
-  width: 130px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.reservation-input input {
-  width: 100%;
-  box-sizing: border-box;
-  text-align: center;
-  padding: 8px;
-}
-.quantity-stepper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 4px;
-  width: 90px;
-  margin: 0 auto;
-}
-.quantity-btn {
-  background-color: #f0f0f0;
-  color: var(--texte-principal);
-  border: none;
-  width: 28px;
-  height: 28px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  cursor: pointer;
-  line-height: 1;
-}
-.quantity-btn:hover {
-  background-color: #e0e0e0;
-}
-.quantity-value {
-  font-weight: 500;
-  padding: 0 5px;
-}
-.summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  background-color: var(--fond-table-pair);
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-.summary-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.summary-actions button {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0 5px;
-  color: var(--texte-principal);
-}
-
-.stock-epuise-text {
-  color: var(--texte-discret);
-  font-style: italic;
-  font-size: 0.9rem;
-}
-.reserved-text {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--texte-discret);
-  margin-bottom: 4px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-/* Styles pour la section de réservation de kits */
-.kit-reservation-section {
-  padding: 15px 20px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
-}
-.kit-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 5px;
-}
-#kit-select {
-  flex-grow: 1;
-}
-#kit-availability-info {
-  font-style: italic;
-  white-space: nowrap;
-}
-
-/* Styles pour la modale de confirmation avec kits */
-.summary-subtitle {
-  font-size: 1.1rem;
-  color: var(--couleur-principale);
-  margin-top: 20px;
-  margin-bottom: 10px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid #e9ecef;
-}
-.summary-subtitle:first-of-type {
-  margin-top: 0;
-}
-
-.summary-kit-item {
-  background-color: var(--fond-element);
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  margin-bottom: 15px;
-  padding: 15px;
-}
-
-.summary-kit-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-}
-
-.summary-kit-name {
-  font-size: 1.1rem;
-}
-
-.summary-kit-content {
-  list-style: none;
-  padding-left: 20px;
-  margin: 10px 0 0 0;
-  font-size: 0.9rem;
-  color: var(--texte-discret);
-}
-
-.summary-kit-content li {
-  padding: 2px 0;
-}
-
-.activity-dot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--couleur-principale);
-  border-radius: 50%;
-  margin: 5px auto 0; /* Un peu de marge en haut et centré horizontalement */
-}
-
-.time-selector-container {
-  display: flex;
-  gap: 20px;
-  align-items: flex-end;
-  padding: 15px 25px;
-  border-bottom: 1px solid var(--couleur-bordure-legere);
-  background-color: #f8f9fa;
-}
-
-.time-selector-container .form-group {
-  margin-bottom: 0;
-  flex: 1;
-}
-
-.time-selector-container label {
-  font-weight: 500;
-  font-size: 0.9rem;
-  display: block;
-  margin-bottom: 5px;
-}
-
-.time-selector-container select {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-
-/* =================================================================
-   17. PAGE DE GESTION DES KITS
-   ================================================================= */
-.card-description {
-  font-size: 0.9rem;
-  color: var(--texte-discret);
-  margin-top: 4px;
-  font-style: italic;
-}
-
-.kit-editor-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
-  align-items: flex-start;
-}
-
-.input-small {
-  width: 60px;
-  padding: 5px;
-  text-align: center;
-}
-
-.btn-small {
-  padding: 5px 10px;
-  font-size: 0.8rem;
-}
-
-.form-actions-right {
-  text-align: right;
-  margin-top: 20px;
-}
-
-#add-kit-modal textarea {
-  width: 100%;
-  padding: 10px;
-  font-family: Arial, sans-serif;
-  font-size: 1rem;
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 4px;
-  box-sizing: border-box;
-  margin-top: 10px;
-  resize: vertical;
-}
-
-/* =================================================================
-   18. MODALE DE RÉSERVATION À 3 COLONNES
-   ================================================================= */
-
-.modal-content.modal-xxlarge {
-  max-width: 1200px; /* Largeur augmentée */
-  height: 80vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-body-split-3col {
-  display: grid;
-  grid-template-columns: 200px 1fr 300px; /* 3 colonnes: Catégories | Objets | Kits */
-  flex-grow: 1;
-  overflow: hidden;
-}
-
-#modal-kits-sidebar {
-  border-left: 1px solid #dee2e6;
-  padding: 15px;
-  overflow-y: auto;
-  background-color: #f8f9fa;
-}
-
-#modal-kits-sidebar h4 {
-  margin-top: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.kits-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.kit-item {
-  background-color: var(--fond-element);
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 6px;
-  padding: 10px;
-}
-
-.kit-item-header {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.kit-item-description {
-  font-size: 0.85rem;
-  color: var(--texte-discret);
-  margin-bottom: 10px;
-}
-
-.kit-item-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.kit-availability {
-  font-size: 0.7rem;
-  font-style: italic;
-}
-
-/* =================================================================
-   19. STYLE DE LA PAGE RAPPORTS
-   ================================================================= */
-
-.form-rapports-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  align-items: start;
-}
-
-.rapports-config-col {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.rapport-card {
-  background-color: #f8f9fa; /* Fond blanc cassé */
-  border: 1px solid #dee2e6; /* Bordure fine légèrement plus foncée */
-  box-shadow: var(--ombre-legere); /* Ombre légère */
-  padding: 25px;
-  border-radius: 8px;
-}
-
-.card-title-icon {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 1.5rem;
-  color: var(--texte-principal);
-}
-
-.card-title-svg {
-  width: 24px;
-  height: 24px;
-  fill: var(--texte-principal);
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-subtitle {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--texte-discret);
-  margin: 0 0 0.75rem 0;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  text-align: left;
-}
-
-.form-group-inline {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  align-items: end;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Boutons segmentés */
-.segmented-control {
-  display: flex;
-  width: 100%;
-  gap: 0.5rem;
-}
-
-.segmented-control label,
-.segmented-label {
-  flex: 1;
-  text-align: center;
-  padding: 0.6rem 1rem;
-  cursor: pointer;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: all 0.2s ease-in-out;
-  background-color: #e9ecef;
-  color: #495057;
-  border: 1px solid #ced4da;
-}
-
-.segmented-control input[type="radio"] {
-  display: none;
-}
-
-.segmented-control input[type="radio"]:checked + label {
-  background-color: var(--couleur-actif);
-  color: #333333;
-  border-color: #a8e032;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-}
-
-.btn-icon-left {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.btn-icon {
-  width: 18px;
-  height: 18px;
-  stroke: currentColor;
-}
-
-/* Spécificité pour les boutons d'export */
-.export-control label {
-  padding: 0.75rem 1rem; /* Un peu plus grands */
-}
-
-/* On applique un effet de survol qui assombrit légèrement le bouton */
-.export-control label:hover {
-  background-color: #d1d5db; /* Un gris légèrement plus foncé */
-  border-color: #adb5bd;
-}
-
-/* On change la couleur de l'icône au survol pour un meilleur feedback */
-.export-control label:hover .btn-icon {
-  stroke: #343a40;
-}
-
-/* Colonne de droite : Aperçu */
-.rapports-preview-col .content-card {
-  background-color: #f8f9fa; /* Fond blanc cassé, identique à .rapport-card */
-  border: 1px solid #dee2e6;
-  box-shadow: var(--ombre-legere);
-  padding: 25px; /* Ajout du padding interne */
-}
-
-.history-preview-item {
-  background-color: #ffffff; /* Fond blanc pur pour chaque item */
-  border-radius: 8px;
-  padding: 0.75rem 1rem; /* Padding vertical réduit */
-  border: 1px solid #e0e0e0;
-  color: var(--texte-principal);
-}
-
-.history-preview-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.history-preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.history-preview-date,
-.history-preview-time {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
-  color: var(--texte-discret);
-}
-
-.history-preview-icon {
-  width: 16px;
-  height: 16px;
-  fill: var(--texte-discret);
-}
-
-.history-preview-body {
-  margin-bottom: 0.75rem;
-}
-
-.history-preview-action {
-  display: block;
-  font-weight: 600;
-  color: var(--couleur-principale);
-  margin-bottom: 0.25rem;
-}
-
-.history-preview-object {
-  display: block;
-}
-
-.history-preview-footer {
-  text-align: right;
-  font-size: 0.8rem;
-  font-style: italic;
-  color: var(--texte-discret);
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-  .form-rapports-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* =================================================================
-   20. STYLES POUR MODALE DE DANGER
-   ================================================================= */
-
-.modal-content.modal-danger {
-  border-top: 5px solid var(--couleur-erreur);
-}
-
-.modal-content.modal-danger .modal-header {
-  color: var(--couleur-erreur);
-}
-
-.modal-content.modal-danger .modal-icon {
-  fill: var(--couleur-erreur);
-}
-
-.modal-danger-content {
-  padding: 15px 25px;
-  line-height: 1.6;
-}
-
-.modal-danger-content p {
-  margin: 0 0 15px 0;
-}
-
-.modal-danger-content input[type="text"] {
-  width: 100%;
-  box-sizing: border-box;
-  border-color: var(--couleur-bordure);
-  transition: border-color 0.2s;
-}
-
-.modal-danger-content input[type="text"]:focus {
-  border-color: var(--couleur-erreur);
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
-}
-
-.delete-error-msg {
-  color: var(--couleur-erreur);
-  font-weight: bold;
-  font-size: 0.85rem;
-  display: block;
-  margin-top: 5px;
-  height: 1em; /* Réserve l'espace pour éviter les sauts de page */
-}
-
-.btn-danger {
-  background-color: var(--couleur-erreur);
-  color: var(--texte-inverse);
-  border-color: var(--couleur-erreur);
-}
-
-.btn-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
-  color: var(--texte-inverse);
-}
-
-.btn-danger {
-  background-color: var(--couleur-erreur);
-  color: var(--texte-inverse);
-  border-color: var(--couleur-erreur);
-}
-
-.btn-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
-  color: var(--texte-inverse);
-}
-
-/* =================================================================
-   21. AMÉLIORATION MODALE DE CRÉATION DE KIT
-   ================================================================= */
-
-.modal-form .form-group {
-  margin-bottom: 0; /* On supprime l'ancienne marge pour éviter les conflits */
-}
-
-.modal-form label {
-  display: block;
-  font-weight: 500;
-  margin-bottom: 8px; /* Espace de 8px entre le label et son champ de saisie */
-  color: var(--texte-principal);
-}
-
-.modal-form input[type="text"],
-.modal-form textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid var(--couleur-bordure);
-  border-radius: 4px;
-  font-size: 0.9rem;
-  font-family: Arial, sans-serif;
-}
-
-/* =================================================================
-   22. STYLE POUR LES ZONES DE DÉPÔT DE FICHIERS (DROP ZONE)
-   ================================================================= */
-
-.file-drop-zone {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  border: 2px dashed var(--couleur-bordure);
-  border-radius: 8px;
-  background-color: #f9fafb;
-  color: var(--texte-discret);
-  cursor: pointer;
-  transition:
-    border-color 0.2s,
-    background-color 0.2s;
-}
-
-.file-drop-zone:hover,
-.file-drop-zone.is-dragover {
-  border-color: var(--couleur-principale);
-  background-color: var(--fond-survol);
-}
-
-.file-drop-zone svg {
-  width: 32px;
-  height: 32px;
-  fill: currentColor;
-  margin-bottom: 10px;
-  opacity: 0.6;
-}
-
-.file-drop-zone .file-msg {
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.file-drop-zone .file-input {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-/* =================================================================
-   23. STYLE POUR LES CARTES FOURNISSEURS
-   ================================================================= */
-
-.fournisseur-card-link {
-  text-decoration: none;
-  color: inherit;
-}
-
-.fournisseur-card {
-  flex-direction: row;
-  align-items: center;
-  gap: 20px;
-}
-
-.fournisseur-logo {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.fournisseur-logo-placeholder {
-  width: 80px;
-  height: 80px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--fond-table-pair);
-  border-radius: 4px;
-}
-
-.fournisseur-logo-placeholder svg {
-  width: 40px;
-  height: 40px;
-  fill: var(--couleur-bordure);
-}
-
-.fournisseur-card .card-info {
-    min-width: 0;
-}
-
-/* Cette règle applique la césure des mots longs à la description. */
-.fournisseur-card .card-description {
-    overflow-wrap: break-word;
-    word-break: break-word;
-}
-
-/* =================================================================
-   25. VUE JOURNALIÈRE (NOUVELLE PRÉSENTATION EN LISTE)
-   ================================================================= */
-
-/* On supprime l'ancienne grille à positionnement absolu */
-.hourly-grid, .reservations-container, .reservation-block {
-    position: static; /* Annule le positionnement absolu */
-    height: auto;
-    top: auto;
-    left: auto;
-}
-
-.daily-schedule {
-    display: flex;
-    flex-direction: column;
-}
-
-.schedule-slot {
-    display: flex;
-    min-height: 60px;
-    border-top: 1px solid var(--couleur-bordure-legere);
-}
-
-.schedule-slot:first-child {
-    border-top: none;
-}
-
-.schedule-slot .time-label {
-    width: 60px;
-    padding: 10px 5px;
-    text-align: right;
+    gap: 0.5rem;
+    font-size: 0.875rem;
     color: var(--texte-discret);
-    font-size: 0.8rem;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
     flex-shrink: 0;
-    border-right: 1px solid var(--couleur-bordure-legere);
 }
 
-.events-container {
-    flex-grow: 1;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+.legend-dot.today { 
+    background: var(--couleur-principale); 
 }
 
-.event-block {
-    background-color: var(--couleur-accent);
-    color: var(--couleur-principale);
-    border-left: 4px solid var(--couleur-principale);
-    border-radius: 4px;
-    padding: 8px 12px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: box-shadow 0.2s ease;
+.legend-dot.available { 
+    background: white;
+    border: 2px solid var(--couleur-bordure); 
 }
 
-.event-block:hover {
-    box-shadow: var(--ombre-moyenne);
+.legend-dot.reserved { 
+    background: var(--couleur-succes, #28a745); 
 }
 
-.event-time {
-    font-weight: bold;
-    margin-bottom: 4px;
+.legend-dot.full { 
+    background: var(--couleur-erreur, #dc3545); 
 }
 
-.event-user {
-    font-size: 0.85rem;
+.legend-dot.past { 
+    background: #f8f9fa;
+    border: 2px solid #dee2e6; 
 }
 
-/* Style spécifique pour les blocs de continuation */
-.event-block.continuation {
-    background-color: #e9ecef; /* Fond plus discret */
-    border-left-color: #adb5bd; /* Bordure grise */
-    color: var(--texte-discret);
+/* Responsive Design */
+@media (max-width: 1024px) {
+    #calendrier-container {
+        padding: 1.5rem;
+    }
+    
+    .calendrier-header h3 {
+        font-size: 1.5rem;
+    }
+    
+    .calendrier-nav .current-month {
+        font-size: 1.25rem;
+        min-width: 180px;
+    }
 }
 
-.no-event-placeholder {
-    min-height: 20px; 
+@media (max-width: 768px) {
+    #calendrier-container {
+        padding: 1rem;
+        border-radius: 8px;
+    }
+    
+    .calendrier-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .calendrier-grid {
+        gap: 0;
+    }
+    
+    .day-name {
+        padding: 0.75rem 0;
+        font-size: 0.75rem;
+    }
+    
+    .day-cell {
+        min-height: 80px;
+        padding: 0.5rem 0.25rem;
+    }
+    
+    .day-number {
+        font-size: 0.95rem;
+    }
+    
+    .day-cell.today .day-number {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+    }
+    
+    .day-event {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.3rem;
+    }
+    
+    .calendrier-nav {
+        gap: 1rem;
+    }
+    
+    .calendrier-nav .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .calendrier-legend {
+        gap: 1rem;
+        font-size: 0.75rem;
+    }
+    
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+    }
 }
 
-.kit-content-history {
-    font-size: 0.8rem;
-    color: var(--texte-discret);
-    padding-left: 10px;
-    margin-top: 2px;
-    display: block;
-    font-style: italic; /* Ajout de cette ligne pour mettre le texte en italique */
+@media (max-width: 480px) {
+    .day-cell {
+        min-height: 60px;
+        padding: 0.25rem;
+    }
+    
+    .day-number {
+        font-size: 0.85rem;
+    }
+    
+    .day-cell.today .day-number {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .activity-dot {
+        width: 6px;
+        height: 6px;
+        bottom: 6px;
+    }
+    
+    .day-event {
+        display: none; /* Masquer les événements sur très petits écrans */
+    }
 }
 
-/* =================================================================
-   26. EN-TÊTE DE PAGE AVEC ACTIONS (VUE JOURNALIÈRE)
-   ================================================================= */
+/* États de chargement (optionnel) */
+.calendrier-grid.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
 
+.calendrier-grid.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    border: 4px solid var(--couleur-bordure);
+    border-top-color: var(--couleur-principale);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+
+/* VUE JOURNALIERE REPENSEE */
+/* En-tête avec split layout */
 .management-header-split {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--couleur-bordure);
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .management-header-split .page-title {
-  margin-bottom: 0; /* Annule la marge par défaut quand il est dans ce conteneur */
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--texte-principal);
 }
 
-/* =================================================================
-   27. TOOLTIP GLOBAL DE RÉSERVATION (SOLUTION FINALE ET STABLE)
-   ================================================================= */
-
-#reservation-tooltip {
-  position: fixed; /* Se positionne par rapport à la fenêtre, pas un parent */
-  z-index: 10000;
-
-  /* Visibilité contrôlée par JS via la classe .visible */
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 0.2s ease,
-    visibility 0.2s ease;
-
-  /* Style de la boîte */
-  background-color: var(--texte-principal);
-  color: var(--texte-inverse);
-  padding: 12px 15px;
-  border-radius: 8px;
-  box-shadow: var(--ombre-moyenne);
-  min-width: 300px;
-  max-width: 350px; /* Ajout d'une largeur max pour la cohérence */
+.management-header-split .page-title svg {
+    width: 32px;
+    height: 32px;
+    fill: var(--couleur-principale);
 }
 
-#reservation-tooltip.visible {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+.management-header-split .page-actions {
+    display: flex;
+    gap: 0.75rem;
 }
 
-/* La flèche */
-#reservation-tooltip::after {
-  content: "";
-  position: absolute;
-  left: 50%; /* Centrée horizontalement par défaut */
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border: 8px solid transparent;
-}
-
-/* Flèche quand le tooltip est EN DESSOUS (elle pointe vers le haut) */
-#reservation-tooltip.tooltip-on-bottom::after {
-  bottom: 100%; /* Se colle en haut du tooltip */
-  border-bottom-color: var(--texte-principal);
-}
-
-/* Flèche quand le tooltip est AU DESSUS (elle pointe vers le bas) */
-#reservation-tooltip.tooltip-on-top::after {
-  top: 100%; /* Se colle en bas du tooltip */
-  border-top-color: var(--texte-principal);
-}
-
-/* Styles internes (inchangés) */
-.tooltip-header {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #555;
-}
-.tooltip-title {
-  font-weight: 300;
-  font-size: 1rem;
-}
-.tooltip-title strong {
-  font-weight: 600;
-}
-.tooltip-buttons {
-  display: flex;
-  gap: 8px;
-}
-.tooltip-list {
-  margin: 0;
-  padding: 0 0 0 18px;
-  list-style-type: disc;
-}
-.tooltip-list li {
-  margin-bottom: 5px;
-}
-.tooltip-list li:last-child {
-  margin-bottom: 0;
-}
-.btn-edit-resa,
-.btn-delete-resa {
-  border: none;
-  border-radius: 5px;
-  padding: 5px 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.btn-edit-resa {
-  background-color: #3498db;
-  color: white;
-}
-.btn-edit-resa:hover {
-  background-color: #5dade2;
-  transform: scale(1.05);
-}
-.btn-delete-resa {
-  background-color: #e74c3c;
-  color: white;
-}
-.btn-delete-resa:hover {
-  background-color: #f1948a;
-  transform: scale(1.05);
-}
-
-/* --- Styles pour la page Panier --- */
-.summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid var(--couleur-bordure-legere);
-}
-.summary-item:last-child {
-  border-bottom: none;
-}
-.summary-item-details {
-  flex-grow: 1;
-}
-.summary-item-details p {
-  margin-top: 0;
-}
-.summary-item .summary-actions {
-  flex-shrink: 0;
-  margin-left: 20px;
-}
-/* On s'assure que le bouton danger a le bon style */
-.btn-danger {
-  background-color: var(--couleur-erreur);
-  color: var(--texte-inverse);
-  border-color: var(--couleur-erreur);
-}
-.btn-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
-  color: var(--texte-inverse);
-}
-
-.fc-day-past-clicked {
-    background-color: #ffebee !important; /* Un rouge très léger */
-    transition: background-color 0.3s ease;
-}
-
-/* =================================================================
-   28 - AMÉLIORATION DE LA PAGE DE SETUP
-   ================================================================= */
-.setup-form-container {
-    max-width: 550px;
-    margin: 40px auto;
-    background-color: var(--fond-element);
+/* Bouton d'action principal */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, var(--couleur-principale) 0%, #163a6e 100%);
+    color: white;
+    border: none;
     border-radius: 8px;
-    box-shadow: var(--ombre-moyenne);
-    border-top: 5px solid var(--couleur-principale);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(31, 59, 115, 0.25);
+    position: relative;
+    overflow: hidden;
 }
 
-.setup-form {
-    padding: 30px 40px 40px;
+.btn-action::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-action:hover::before {
+    left: 100%;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(31, 59, 115, 0.35);
+}
+
+.btn-action:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(31, 59, 115, 0.3);
+}
+
+/* Card container pour le contenu */
+.content-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 2rem;
+    overflow: hidden;
+}
+
+/* Planning journalier */
+.daily-schedule {
     display: flex;
     flex-direction: column;
-    gap: 15px; /* Espace réduit entre les groupes */
+    gap: 0;
+    position: relative;
 }
 
-.setup-header {
-    text-align: center;
-    margin-bottom: 15px;
+/* Ligne d'heure */
+.schedule-slot {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    min-height: 80px;
+    border-bottom: 1px solid #e9ecef;
+    position: relative;
+    transition: background-color 0.2s;
 }
 
-.setup-logo {
-    width: 100px;
-    height: auto;
-    margin-bottom: 10px;
+.schedule-slot:last-child {
+    border-bottom: none;
 }
 
-.setup-header h1 {
-    font-size: 1.5rem;
-    margin: 0 0 5px 0;
+.schedule-slot:hover {
+    background-color: rgba(31, 59, 115, 0.02);
 }
 
-.setup-form .form-subtitle {
-    margin-top: 0;
+/* Label de l'heure */
+.time-label {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1rem 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--texte-discret);
+    border-right: 2px solid var(--couleur-bordure);
+    background: linear-gradient(to right, #f8f9fa 0%, white 100%);
 }
 
-.setup-form label {
-    display: block;
-    font-weight: 500;
-    margin-bottom: 8px;
+/* Container des événements */
+.events-container {
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: relative;
 }
 
-.setup-form input[type="password"],
-.setup-form input[type="text"],
-.setup-form input[type="email"] {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 12px;
+/* Placeholder quand pas d'événement */
+.no-event-placeholder {
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--texte-discret);
+    font-size: 0.85rem;
+    font-style: italic;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.schedule-slot:hover .no-event-placeholder {
+    opacity: 0.5;
+}
+
+.no-event-placeholder::after {
+    content: 'Aucune réservation';
+}
+
+/* Bloc d'événement/réservation */
+.event-block {
+    background: linear-gradient(135deg, rgba(31, 59, 115, 0.95) 0%, rgba(31, 59, 115, 0.85) 100%);
+    border-left: 4px solid var(--couleur-principale);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(31, 59, 115, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.event-block::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.event-block:hover::before {
+    opacity: 1;
+}
+
+.event-block:hover {
+    transform: translateX(5px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(31, 59, 115, 0.3);
+    border-left-width: 6px;
+}
+
+/* Événement qui continue d'une heure précédente */
+.event-block.continuation {
+    background: linear-gradient(135deg, rgba(31, 59, 115, 0.7) 0%, rgba(31, 59, 115, 0.6) 100%);
+    border-left-style: dashed;
+    opacity: 0.9;
+}
+
+.event-block.continuation:hover {
+    opacity: 1;
+}
+
+/* Heure de l'événement */
+.event-time {
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.event-time::before {
+    content: '🕐';
     font-size: 1rem;
 }
 
-.password-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+/* Utilisateur de la réservation */
+.event-user {
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-/* --- Infobulle (Tooltip) en pur CSS --- */
-.tooltip-container {
-    position: relative;
-    display: inline-block;
-    margin-left: 5px;
+.event-user::before {
+    content: '👤';
+    font-size: 1rem;
 }
 
-.tooltip-trigger {
-    width: 16px;
-    height: 16px;
-    fill: var(--couleur-bordure);
-    vertical-align: middle;
-    cursor: help;
+/* Variantes de couleur pour différents types d'événements */
+.event-block[data-type="lab"] {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.95) 0%, rgba(40, 167, 69, 0.85) 100%);
+    border-left-color: var(--couleur-succes, #28a745);
 }
 
-.tooltip-text {
-    visibility: hidden;
-    width: 280px;
-    background-color: var(--texte-principal);
-    color: var(--texte-inverse);
-    text-align: left;
-    border-radius: 6px;
-    padding: 10px;
-    position: absolute;
-    z-index: 1;
-    bottom: 125%;
-    left: 50%;
-    margin-left: -140px; /* Moitié de la largeur */
+.event-block[data-type="meeting"] {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.95) 0%, rgba(255, 193, 7, 0.85) 100%);
+    border-left-color: #ffc107;
+    color: #333;
+}
+
+.event-block[data-type="maintenance"] {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.95) 0%, rgba(220, 53, 69, 0.85) 100%);
+    border-left-color: var(--couleur-erreur, #dc3545);
+}
+
+/* Tooltip personnalisé */
+.tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    pointer-events: none;
     opacity: 0;
     transition: opacity 0.3s;
-    font-weight: normal;
-    font-size: 0.8rem;
-    line-height: 1.5;
+    z-index: 10000;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    max-width: 300px;
 }
 
-.tooltip-text::after {
-    content: "";
+.tooltip.show {
+    opacity: 1;
+}
+
+.tooltip::after {
+    content: '';
     position: absolute;
     top: 100%;
     left: 50%;
     margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: var(--texte-principal) transparent transparent transparent;
+    border: 5px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.9);
 }
 
-.tooltip-container:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-}
-
-.setup-form .form-subtitle {
-    text-align: center;
-    margin-bottom: 10px; /* Ajoute un peu d'espace avant le premier champ */
-}
-
-.setup-form .form-group label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-/* =================================================================
-   29. AMÉLIORATION DES FORMULAIRES DE FICHIERS ET CASES À COCHER
-   ================================================================= */
-
-.file-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.file-input-hidden {
-    width: 0.1px;
-    height: 0.1px;
-    opacity: 0;
-    overflow: hidden;
+/* Indicateur de ligne de temps actuelle */
+.current-time-indicator {
     position: absolute;
-    z-index: -1;
+    left: 80px;
+    right: 0;
+    height: 2px;
+    background: var(--couleur-erreur, #dc3545);
+    z-index: 100;
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
+    animation: pulse-line 2s infinite;
 }
 
-.checkbox-group {
+.current-time-indicator::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: -4px;
+    width: 10px;
+    height: 10px;
+    background: var(--couleur-erreur, #dc3545);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.7);
+}
+
+@keyframes pulse-line {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* État vide (aucune réservation sur la journée) */
+.daily-schedule:empty::after {
+    content: 'Aucune réservation pour cette journée';
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-top: 15px;
+    justify-content: center;
+    min-height: 400px;
+    color: var(--texte-discret);
+    font-size: 1.125rem;
+    font-style: italic;
 }
 
-.checkbox-group input[type="checkbox"] {
-    /* On retire les styles par défaut pour un meilleur contrôle */
-    -webkit-appearance: none;
-    appearance: none;
-    background-color: var(--fond-element);
-    margin: 0;
-
-    /* Dimensions de la case */
-    width: 1.15em;
-    height: 1.15em;
-    border: 1px solid var(--couleur-bordure);
-    border-radius: 4px;
+/* Responsive Design */
+@media (max-width: 768px) {
+    .management-header-split {
+        flex-direction: column;
+        align-items: flex-start;
+    }
     
-    /* Positionnement de la coche */
-    display: grid;
-    place-content: center;
-    cursor: pointer;
+    .management-header-split .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .management-header-split .page-title svg {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .content-card {
+        padding: 1rem;
+        border-radius: 8px;
+    }
+    
+    .schedule-slot {
+        grid-template-columns: 60px 1fr;
+        min-height: 60px;
+    }
+    
+    .time-label {
+        font-size: 0.75rem;
+        padding: 0.75rem 0.25rem;
+    }
+    
+    .events-container {
+        padding: 0.25rem;
+    }
+    
+    .event-block {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .event-time {
+        font-size: 0.75rem;
+    }
+    
+    .event-user {
+        font-size: 0.85rem;
+    }
+    
+    .btn-action {
+        width: 100%;
+        justify-content: center;
+        padding: 0.75rem 1rem;
+    }
 }
 
-.checkbox-group input[type="checkbox"]::before {
-    content: "";
-    width: 0.65em;
-    height: 0.65em;
-    transform: scale(0);
-    transition: 120ms transform ease-in-out;
-    box-shadow: inset 1em 1em var(--couleur-principale);
-    /* Crée la coche avec un clip-path */
-    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+@media (max-width: 480px) {
+    .schedule-slot {
+        grid-template-columns: 50px 1fr;
+    }
+    
+    .time-label {
+        font-size: 0.7rem;
+    }
+    
+    .event-time::before,
+    .event-user::before {
+        display: none;
+    }
 }
 
-.checkbox-group input[type="checkbox"]:checked::before {
-    transform: scale(1);
+/* Animation d'entrée pour les événements */
+@keyframes slideInEvent {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
-.checkbox-group label {
-    margin: 0;
-    font-weight: normal;
-    cursor: pointer;
+.event-block {
+    animation: slideInEvent 0.3s ease-out;
 }
 
-/* =================================================================
-   30. STYLE POUR LE CALENDRIER (Vue Mensuelle Personnalisée)
-   ================================================================= */
+.event-block:nth-child(1) { animation-delay: 0.05s; }
+.event-block:nth-child(2) { animation-delay: 0.1s; }
+.event-block:nth-child(3) { animation-delay: 0.15s; }
+.event-block:nth-child(4) { animation-delay: 0.2s; }
 
-/* Style pour les jours passés qui ne sont pas cliquables */
-.day-cell.past-day {
-    background-color: #f5f5f5; /* Un fond gris très clair, subtil */
-    cursor: not-allowed;      /* Le curseur "interdit" indique qu'on ne peut pas cliquer */
+/* Dark mode support (optionnel) */
+@media (prefers-color-scheme: dark) {
+    .content-card {
+        background: #1e1e1e;
+    }
+    
+    .schedule-slot {
+        border-bottom-color: #333;
+    }
+    
+    .time-label {
+        background: linear-gradient(to right, #252525 0%, #1e1e1e 100%);
+        border-right-color: #333;
+    }
+    
+    .schedule-slot:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
 }
 
-/* On grise aussi le numéro du jour pour la cohérence */
-.day-cell.past-day .day-number {
-    color: #b0b0b0;
-}
 
-/* On grise le point d'activité s'il y en a un sur un jour passé */
-.day-cell.past-day .activity-dot {
-    background-color: #dcdcdc;
-}
+//* ===================================================================
+   8. ICÔNE DU PANIER AVEC PASTILLE DE NOTIFICATION
+   =================================================================== */
 
-/* Style pour les jours cliquables (aujourd'hui et futurs) */
-.day-cell.can-reserve {
-    cursor: pointer;
-}
-
-/* Effet de survol pour montrer clairement qu'une case est interactive */
-.day-cell.can-reserve:hover {
-    background-color: #e3f2fd; /* Un bleu très léger, déjà utilisé dans le thème */
-    border: 1px solid #90caf9; /* Une bordure bleue pour renforcer l'effet */
-}
-
-/* =================================================================
-   31. STYLE POUR LA MODALE D'AVERTISSEMENT
-   ================================================================= */
-
-.modal-content.modal-warning {
-  border-top: 5px solid var(--couleur-avertissement);
-}
-
-.modal-content.modal-warning .modal-header {
-  color: var(--couleur-avertissement);
-}
-
-.modal-content.modal-warning .modal-icon {
-  fill: var(--couleur-avertissement);
-}
-
-/* =================================================================
-   32. STYLES POUR LES BOUTONS D'ACTION SPÉCIFIQUES (Ex: Retirer/Supprimer)
-   ================================================================= */
-
-/* On cible les boutons qui ont la classe .btn-danger */
-.btn-danger {
-    /* On réutilise le style de base des boutons d'action */
-    padding: 10px 20px;
-    border-radius: 6px;
-    text-decoration: none;
+.header-icon-link {
+    position: relative; /* Important pour le positionnement absolu de la pastille */
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    font-weight: 500;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    
-    /* On applique les couleurs de danger que tu as définies */
-    background-color: var(--couleur-erreur);
-    color: var(--texte-inverse);
-    border: 1px solid var(--couleur-erreur);
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
 }
 
-.btn-danger:hover {
-    background-color: #c82333; /* Une version un peu plus foncée du rouge au survol */
-    border-color: #bd2130;
-    transform: translateY(-2px);
-    box-shadow: var(--ombre-moyenne);
+.header-icon-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
+
+.header-icon {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+/* Pastille de compteur du panier */
+.cart-count-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    
+    /* Style de la pastille */
+    background: linear-gradient(135deg, #ff4757, #ff6348);
+    color: white;
+    
+    /* Taille et forme */
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    
+    /* Centrage du texte */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Typographie */
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0 5px;
+    
+    /* Bordure pour contraste */
+    border: 2px solid var(--couleur-principale);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    
+    /* Animation d'apparition */
+    animation: badgePop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Animation d'apparition de la pastille */
+@keyframes badgePop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Animation de pulsation (optionnel, pour attirer l'attention) */
+.cart-count-badge.pulse {
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 3px 8px rgba(255, 71, 87, 0.6);
+    }
+}
+
+/* Pour les nombres à 2 chiffres ou plus */
+.cart-count-badge[data-count="10"],
+.cart-count-badge[data-count="11"],
+.cart-count-badge[data-count="12"],
+.cart-count-badge[data-count="13"],
+.cart-count-badge[data-count="14"],
+.cart-count-badge[data-count="15"],
+.cart-count-badge[data-count="16"],
+.cart-count-badge[data-count="17"],
+.cart-count-badge[data-count="18"],
+.cart-count-badge[data-count="19"] {
+    min-width: 22px;
+    font-size: 10px;
+}
+
+/* Si vous avez plus de 99 items (improbable mais sécurité) */
+.cart-count-badge.large {
+    min-width: 24px;
+    font-size: 9px;
+    padding: 0 4px;
+}
+
+/* Responsive : ajustements pour mobile */
+@media (max-width: 768px) {
+    .cart-count-badge {
+        top: 0;
+        right: 0;
+        min-width: 16px;
+        height: 16px;
+        font-size: 10px;
+        border-width: 1.5px;
+    }
+}
+
+/* Variante : pastille avec effet "nouveau" (optionnel) */
+.cart-count-badge.new::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 6px;
+    height: 6px;
+    background: #2ecc71;
+    border-radius: 50%;
+    border: 1px solid #2c3e50;
+    animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
 
 /* =================================================================
-   33. STYLE POUR LE RETOUR VISUEL DE L'UPLOAD
+   9. SYSTÈME DE MODALES (100% BOOTSTRAP)
    ================================================================= */
 
-.file-drop-zone.file-selected {
-    border-color: var(--couleur-succes); /* La bordure devient verte */
-    background-color: #f0fff4; /* Un fond vert très pâle pour un effet subtil */
+/* --- 8.1 Améliorations globales pour les modales Bootstrap --- */
+.modal-content {
+    border: none;
+    border-radius: 12px;
+}
+.modal-header {
+    border-bottom: none;
+}
+.modal-footer {
+    background-color: #f8f9fa;
 }
 
-.file-drop-zone.file-selected .file-msg {
-    color: var(--couleur-succes); /* Le texte devient également vert */
+/* --- 8.2 Styles pour la modale d'ajout d'objet --- */
+.modal-dialog.modal-xl .modal-header {
+    background-color: var(--couleur-principale);
+    color: var(--texte-inverse);
+}
+.modal-dialog.modal-xl .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+.modal-dialog.modal-xl .modal-form {
+  padding: 2rem;
 }
 
-.file-drop-zone.file-selected svg {
-    fill: var(--couleur-succes); /* L'icône passe aussi au vert */
+/* --- 8.3 Styles pour la modale de danger --- */
+/* Bootstrap gère déjà la plupart des styles. On peut juste affiner si besoin. */
+#dangerModal .modal-header {
+    background-color: var(--couleur-erreur);
+}
+
+/* --- 8.3 Styles communs aux en-têtes de TOUTES les modales --- */
+.modal-header .modal-title-with-icon, .modal-header .modal-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.modal-header .close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+.modal-header .close-btn:hover { opacity: 1; }
+
+/* --- 8.4 Styles communs aux pieds de page de TOUTES les modales --- */
+.modal-footer .btn, .modal-actions .btn {
+    font-weight: 500;
+    border-radius: 6px;
+    padding: 0.6rem 1.2rem;
+}
+
+/* --- 8.5 Styles spécifiques à la modale d'ajout d'objet --- */
+.modal-dialog.modal-xl .modal-form {
+  padding: 2rem;
+  background-color: var(--fond-element);
+}
+.modal-dialog.modal-xl .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 2rem;
+  align-items: start;
+}
+.modal-dialog.modal-xl .form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.modal-dialog.modal-xl .form-group { margin-bottom: 0; }
+.modal-dialog.modal-xl .form-group label {
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+.modal-dialog.modal-xl .form-group input, .modal-dialog.modal-xl .form-group select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+  border-radius: 6px;
+}
+.modal-dialog.modal-xl .form-help-text {
+    font-size: 0.8rem;
+    color: var(--texte-discret);
+    margin-top: 0.25rem;
+}
+
+/* --- 8.6 Styles pour la recherche Pexels dans la modale d'objet --- */
+.modal-dialog.modal-xl .input-with-button { display: flex; gap: 0.5rem; }
+.modal-dialog.modal-xl .input-with-button input { flex-grow: 1; }
+.modal-dialog.modal-xl .pexels-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    border: 1px solid var(--couleur-bordure);
+    border-radius: 6px;
+}
+.modal-dialog.modal-xl .pexels-image {
+    width: 100%;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* --- 8.7 Styles specifiques à la modale danger --- */
+#danger-modal .modal-header {
+    background-color: var(--couleur-erreur);
+}
+
+
+/* =================================================================
+   10. PAGE D'INVENTAIRE & FILTRES
+   ================================================================= */
+
+.filtres-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  background-color: var(--fond-element);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: 8px;
+  box-shadow: var(--ombre-legere);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filter-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--texte-principal);
+}
+
+.filter-icon {
+  width: 20px;
+  height: 20px;
+  fill: var(--texte-discret);
+}
+
+.filter-group input, .filter-group select {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    min-width: 180px;
+}
+
+.btn-reset {
+    color: var(--texte-discret);
+    font-weight: 500;
+    text-decoration: underline;
+}
+.btn-reset:hover {
+    color: var(--couleur-principale);
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+.table-header .page-title {
+    margin: 0;
+}
+
+
+/* =================================================================
+   11. FOOTER PRINCIPAL DU SITE (RESTAURÉ)
+   ================================================================= */
+.site-footer {
+    background-color: var(--couleur-secondaire);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 3rem 2rem 1.5rem;
+    margin-top: 3rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.footer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #4a6a9f;
+}
+
+.footer-section {
+    text-align: center;
+    border-left: 1px solid #4a6a9f;
+    padding: 0 1rem;
+}
+
+.footer-section:first-child {
+    border-left: none;
+}
+
+.footer-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.footer-title h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--texte-inverse);
+}
+
+.footer-section .icon-svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--couleur-accent);
+}
+
+.footer-section p {
+    margin: 0 0 0.5rem 0;
+}
+
+.footer-section a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-section a:hover {
+    color: var(--texte-inverse);
+    text-decoration: underline;
+}
+
+.license-icons {
+    margin-top: 0.75rem;
+}
+
+.footer-bottom {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.8rem;
+    color: var(--texte-discret);
 }
 
 /* =================================================================
-   34. STYLE POUR LA VISITE GUIDÉE (TUTORIEL)
+   12. VISITE GUIDÉE (TUTORIEL)
    ================================================================= */
 
 .tour-overlay {
@@ -3246,27 +1774,27 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
 .tour-tooltip {
     position: absolute;
     background-color: var(--fond-element);
-    padding: 20px;
+    padding: 1.5rem;
     border-radius: 8px;
     box-shadow: var(--ombre-moyenne);
     z-index: 10002;
-    width: 300px;
-    display: none;
+    width: 320px;
+    display: none; /* Caché par défaut */
     border-top: 4px solid var(--couleur-principale);
-    color: var(--texte-principal); /* <-- AJOUTEZ CETTE LIGNE */
 }
 
 .tour-title {
     font-size: 1.2rem;
-    font-weight: bold;
+    font-weight: 600;
     color: var(--couleur-principale);
-    margin-bottom: 10px;
+    margin: 0 0 0.75rem 0;
 }
 
 .tour-content {
     font-size: 0.9rem;
     line-height: 1.6;
-    margin-bottom: 20px;
+    margin-bottom: 1.5rem;
+    color: var(--texte-principal);
 }
 
 .tour-actions {
@@ -3281,466 +1809,708 @@ body:not(.page-admin-utilisateurs) .objet-table td:first-child {
     color: var(--texte-discret);
     cursor: pointer;
     font-weight: 500;
+    padding: 0;
+}
+.tour-btn-skip:hover {
+    text-decoration: underline;
 }
 
 .tour-btn-next {
     background-color: var(--couleur-principale);
     color: var(--texte-inverse);
     border: none;
-    padding: 8px 15px;
+    padding: 0.6rem 1.2rem;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 500;
 }
+.tour-btn-next:hover {
+    background-color: var(--couleur-secondaire);
+}
 
 /* Classe pour l'élément en surbrillance */
 .tour-highlight {
-    position: relative; /* Nécessaire pour que z-index fonctionne */
+    position: relative;
     z-index: 10001;
+    /* Astuce pour créer le "trou" dans le fond noir */
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
-    border-radius: 4px; /* Optionnel, pour arrondir les coins du "trou" */
-}
-
-/* ============================================================ */
-/* 35. STYLES POUR LES INFO-BULLES (TOOLTIPS) */
-/* ============================================================ */
-
-.label-with-tooltip {
-    display: flex;
-    align-items: center;
-    gap: 8px; /* Espace entre le label et l'icône */
-}
-
-.tooltip {
-    position: relative;
-    display: inline-block;
-    cursor: help;
-}
-
-.tooltip .tooltip-icon {
-    width: 16px;
-    height: 16px;
-    fill: #6c757d; /* Couleur grise discrète pour l'icône */
-}
-
-.tooltip .tooltip-text {
-    visibility: hidden; /* Caché par défaut */
-    width: 250px;
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 8px;
-    
-    /* Positionnement de l'info-bulle */
-    position: absolute;
-    z-index: 1;
-    bottom: 125%; /* Au-dessus de l'icône */
-    left: 50%;
-    margin-left: -125px; /* Pour centrer (la moitié de la largeur) */
-    
-    /* Effet de fondu */
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-/* Petite flèche en dessous de l'info-bulle */
-.tooltip .tooltip-text::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: #333 transparent transparent transparent;
-}
-
-/* Afficher l'info-bulle au survol */
-.tooltip:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-}
-
-/* ============================================================ */
-/* 36. STYLE DU SOUS-TITRE DE LA MARQUE (LabFlow) */
-/* ============================================================ */
-
-.brand-subtitle {
-    /* On utilise la police Poppins que nous avons importée.
-       Si elle n'est pas disponible, le navigateur utilisera une police sans-serif par défaut. */
-    font-family: 'Poppins', sans-serif;
-
-    /* On le met en majuscules pour un look plus affirmé. */
-    text-transform: uppercase;
-
-    /* C'est la touche "pro" : on aère les lettres. */
-    letter-spacing: 1.5px;
-
-    /* On choisit une taille plus petite que le titre principal. */
-    font-size: 0.9rem;
-
-    /* On s'assure qu'il n'est pas en gras. */
-    font-weight: 400;
-
-    /* On utilise un gris foncé bleuté, plus doux que le noir pur. */
-    color: #ffffff;
-
-    /* On réduit l'opacité pour le rendre un peu plus discret que le titre. */
-    opacity: 0.7;
-
-    /* On retire les marges par défaut du paragraphe pour le rapprocher du titre. */
-    margin: -5px 0 0 0;
-    padding: 0;
-}
-
-/* ============================================================ */
-/* 37. STYLES POUR L'INTÉGRATION PEXELS */
-/* ============================================================ */
-
-.input-with-button {
-    display: flex;
-    gap: 8px;
-}
-
-.input-with-button input {
-    flex-grow: 1; /* L'input prend toute la place disponible */
-}
-
-.pexels-results-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 8px;
-    margin-top: 10px;
-    max-height: 220px; /* Limite la hauteur pour ne pas étirer la modale */
-    overflow-y: auto; /* Ajoute une barre de défilement si nécessaire */
-    padding: 5px;
-    border: 1px solid #ddd;
     border-radius: 4px;
-}
-
-.pexels-image {
-    width: 100%;
-    height: 80px;
-    object-fit: cover; /* S'assure que l'image remplit l'espace sans se déformer */
-    border-radius: 4px;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.pexels-image:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-/* ============================================================ */
-/* 38. STYLES POUR L'ICÔNE D'ALERTE ET SA PASTILLE */
-/* ============================================================ */
-
-/* Positionnement relatif pour la pastille */
-.header-icon-link {
-    position: relative;
-}
-
-/* Style de la pastille de notification */
-.notification-badge {
-    position: absolute;
-    top: -5px;
-    right: -8px;
-    background-color: #E53E3E; /* Rouge vif */
-    color: white;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    border: 2px solid var(--header-bg-color); /* Pour la faire ressortir du fond */
-}
-
-/* Définition de l'animation de secousse */
-@keyframes bell-shake {
-    0% { transform: rotate(0); }
-    15% { transform: rotate(12deg); }
-    30% { transform: rotate(-12deg); }
-    45% { transform: rotate(8deg); }
-    60% { transform: rotate(-8deg); }
-    75% { transform: rotate(4deg); }
-    90% { transform: rotate(-4deg); }
-    100% { transform: rotate(0); }
-}
-
-/* Application des styles en fonction des classes JS */
-.has-alerts-medium .widget-icon {
-    fill: #DD6B20; /* Orange */
-}
-
-.has-alerts-high .widget-icon {
-    fill: #C53030; /* Rouge */
-    animation: bell-shake 0.8s cubic-bezier(.36,.07,.19,.97) both;
-    animation-iteration-count: 3; /* L'animation se joue 3 fois */
-}
-
-/* ============================================================ */
-/* 39. STYLE FINAL ET DÉFINITIF POUR objet_details.html */
-/* ============================================================ */
-
-.details-grid {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 24px;
-    align-items: start;
-}
-
-/* Style commun à toutes les cartes de cette page */
-.details-grid .details-card {
-    background-color: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-/* CARTE 1 : IDENTITÉ (image + titre) */
-.details-grid > .details-card:nth-child(1) {
-    grid-column: 1 / 2;
-    grid-row: 1 / 2;
-    text-align: center;
-}
-
-/* CARTE 2 : INFORMATIONS (liste + bouton) */
-.details-grid > .details-card:nth-child(2) {
-    grid-column: 2 / 3;
-    grid-row: 1 / 2;
-    display: flex;
-    flex-direction: column;
-}
-
-/* CARTE 3 : HISTORIQUE */
-.details-grid > .details-card.full-width-card {
-    grid-column: 1 / 3;
-    grid-row: 2 / 3;
-}
-
-/* --- Styles pour la carte d'identité --- */
-.details-image-thumbnail {
-    width: 100%;
-    height: auto;
-	aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    cursor: pointer;
-}
-
-.details-image-preview {
-    visibility: hidden;
-    opacity: 0;
-    position: absolute;
-    top: 50%;
-    left: 110%;
-    transform: translateY(-50%);
-    width: 300px;
-    height: 300px;
-    object-fit: contain;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    z-index: 10;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-}
-
-.identity-image-placeholder {
-	width: 100%;
-	height: 100%;
-	aspect-ratio: 1 /1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
-	border-radius: 8px;
-}
-
-.identity-image-placeholder svg {
-    width: 64px;
-    height: 64px;
-    fill: #cbd5e1; /* Gris clair */
-}
-
-.details-title {
-    margin: 0;
-    font-size: 1.5rem;
-}
-
-/* --- Styles pour la carte d'infos --- */
-.details-card h3 {
-    margin-top: 0;
-    margin-bottom: 16px;
-    font-size: 1.2rem;
-}
-.details-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    flex-grow: 1;
-}
-.details-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #f1f5f9;
-}
-.details-list li:last-child { border-bottom: none; }
-.details-list li strong { color: #4a5568; }
-.details-list li.separator { height: 1px; background-color: #e2e8f0; margin: 8px 0; padding: 0; border: none; }
-
-.details-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 20px;
-}
-
-/* ============================================================ */
-/* 40. AMÉLIORATIONS POUR LE TABLEAU D'INVENTAIRE */
-/* ============================================================ */
-
-/* On réduit la hauteur globale des cellules du tableau */
-.objet-table td {
-    padding: 4px 12px; /* Padding vertical réduit */
-}
-
-/* On s'assure que la cellule de l'image est bien centrée verticalement */
-.objet-table .image-cell {
-    vertical-align: middle;
-}
-
-/* Style pour la miniature de l'image */
-.image-objet-thumbnail {
-    width: 40px;  /* Taille réduite */
-    height: 40px;
-    object-fit: cover; /* On utilise 'cover' pour mieux remplir l'espace */
-    border-radius: 4px;
-    border: 1px solid var(--couleur-bordure-legere);
-}
-
-/* Style pour le nouveau placeholder SVG dans le tableau */
-.table-image-placeholder {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f8fafc;
-    border-radius: 4px;
-    border: 1px solid #e2e8f0;
-}
-
-.table-image-placeholder svg {
-    width: 20px;
-    height: 20px;
-    fill: #cbd5e1; /* Gris clair */
-}
-
-/* ============================================================ */
-/* 41. SECTION FINALE : GESTION DES APERÇUS D'IMAGE (CORRIGÉ) */
-/* ============================================================ */
-
-/* --- 1. Style pour l'aperçu DANS LE TABLEAU D'INVENTAIRE --- */
-
-.objet-table .image-preview-wrapper {
-    display: flex; /* Utilise flex pour un centrage parfait */
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    position: relative; /* Important pour l'aperçu au survol */
-}
-
-.objet-table .image-objet-thumbnail {
-    width: 40px;
-    height: 40px;
-    object-fit: cover;
-    border-radius: 4px;
-    border: 1px solid var(--couleur-bordure-legere);
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.objet-table .image-objet-preview {
-    visibility: hidden;
-    opacity: 0;
-    position: absolute;
-    bottom: 50%;
-    left: 60px; /* Se positionne à droite de la miniature */
-    transform: translateY(50%);
-    width: 200px;
-    height: 200px;
-    object-fit: contain;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: var(--ombre-moyenne);
-    z-index: 10;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-}
-
-.objet-table .image-preview-wrapper:hover .image-objet-preview {
-    visibility: visible;
-    opacity: 1;
-}
-
-
-/* --- 2. Style pour l'aperçu SUR LA PAGE DE DÉTAILS DE L'OBJET --- */
-
-.details-card .image-preview-wrapper {
-    width: 100%;
-    max-width: 200px;
-    margin: 0 auto 16px auto;
-    position: relative;
-}
-
-.details-card .details-image-thumbnail {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    cursor: pointer;
-}
-
-.details-card .details-image-preview {
-    visibility: hidden;
-    opacity: 0;
-    position: absolute;
-    top: 50%;
-    left: 110%;
-    transform: translateY(-50%);
-    width: 300px; /* L'aperçu est plus grand ici */
-    height: 300px;
-    object-fit: contain;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    z-index: 10;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-}
-
-.details-card .image-preview-wrapper:hover .details-image-preview {
-    visibility: visible;
-    opacity: 1;
 }
 
 /* =================================================================
-   42. CORRECTIF SPÉCIFIQUE POUR L'EN-TÊTE DES PAGES DE GESTION
+   13. PAGE DE CONNEXION (DESIGN "GLASS")
    ================================================================= */
-.main-container > .management-header {
-    justify-content: space-between;
-    padding-bottom: 15px;
+
+.login-page-body {
+    background-color: var(--fond-page);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.login-form-container {
+    width: 100%;
+    max-width: 420px;
+    padding: 2.5rem;
+    border-radius: 12px;
+    background: rgba(230, 230, 230, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: var(--ombre-moyenne);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--texte-principal);
+}
+.login-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1.5rem;
+    background: #f1f3f5;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.login-icon-wrapper svg {
+    width: 32px;
+    height: 32px;
+    fill: var(--couleur-principale);
+}
+.login-header h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 600;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.input-group { position: relative; }
+.input-icon {
+    position: absolute;
+    top: 50%;
+    left: 1rem;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    fill: var(--texte-discret);
+}
+.input-group input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 3rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--couleur-bordure);
+    background: var(--fond-element);
+    color: var(--texte-principal);
+}
+.input-group input:focus {
+    outline: none;
+    border-color: var(--couleur-principale);
+    box-shadow: 0 0 0 3px rgba(31, 59, 115, 0.1);
+}
+
+.btn-login {
+    width: 100%;
+    padding: 0.9rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    background-color: var(--couleur-principale);
+    color: var(--texte-inverse);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.form-switch-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+.form-switch-link a {
+    color: var(--couleur-principale);
+    font-weight: 500;
+}
+
+/* =================================================================
+   14. PAGE DE CONFIGURATION (SETUP)
+   ================================================================= */
+
+.setup-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 100vh;
+    align-items: center;
+}
+.setup-illustration {
+    background-color: #e9ecef;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.setup-illustration img { max-width: 70%; height: auto; }
+.setup-form-wrapper { padding: 2rem 4rem; }
+.setup-header { text-align: left; margin-bottom: 2rem; }
+.setup-header h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--texte-principal);
+    margin: 0;
+}
+.setup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.password-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+
+/* =================================================================
+   15. PAGE DE PROFIL
+   ================================================================= */
+
+.profile-page-container {
+    display: flex;
+    justify-content: center;
+    padding-top: 2rem; /* Un peu d'espace en haut */
+}
+
+.profile-form-wrapper {
+    width: 100%;
+    max-width: 500px; /* Un peu plus large pour le confort */
+    background-color: var(--fond-element);
+    border-radius: 8px;
+    box-shadow: var(--ombre-legere);
+    border: 1px solid var(--couleur-bordure);
+    overflow: hidden;
+}
+
+.profile-header {
+    text-align: center;
+    padding: 1.5rem;
     border-bottom: 1px solid var(--couleur-bordure);
+}
+
+.profile-header h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.profile-form {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+
+/* =================================================================
+   16. ÉTAT VIDE & MODALES SIMPLES
+   ================================================================= */
+
+.empty-state-container {
+    text-align: center;
+    padding: 4rem 2rem;
+    background-color: var(--fond-element);
+    border: 1px dashed var(--couleur-bordure);
+    border-radius: 8px;
+    margin-top: 2rem;
+}
+
+.empty-state-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1.5rem;
+    background-color: #f1f3f5;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-state-icon svg {
+    width: 32px;
+    height: 32px;
+    fill: var(--couleur-principale);
+}
+
+.empty-state-container h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--texte-principal);
+    margin: 0 0 0.5rem 0;
+}
+
+.empty-state-container p {
+    color: var(--texte-discret);
+    max-width: 400px;
+    margin: 0 auto 1.5rem;
+}
+
+/* =================================================================
+   17. PAGES DE GESTION (ARMOIRES, CATÉGORIES)
+   ================================================================= */
+
+.management-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--couleur-bordure);
+}
+.management-header .page-title {
+    margin: 0;
+}
+
+.add-inline-form {
+  display: flex;
+  gap: 0.5rem;
+}
+.add-inline-form input {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    width: 250px;
+}
+.add-inline-form button {
+    background-color: var(--couleur-principale);
+    color: var(--texte-inverse);
+    border: none;
+    border-radius: 6px;
+    width: 38px;
+    height: 38px;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.card-container.management-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.item-card {
+  background-color: var(--fond-element);
+  border: 1px solid var(--couleur-bordure);
+  border-radius: 8px;
+  box-shadow: var(--ombre-legere);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.item-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--ombre-moyenne);
+}
+
+.card-info {
+  flex-grow: 1;
+}
+.card-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--texte-principal);
+  margin-bottom: 0.25rem;
+  display: block;
+}
+.card-count {
+  font-size: 0.85rem;
+  color: var(--texte-discret);
+  display: block;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.card-actions a, .card-actions .edit-btn, .card-actions .delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%; /* Boutons ronds */
+    background-color: var(--fond-element);
+    border: 1px solid var(--couleur-bordure);
+    color: var(--texte-discret);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.card-actions a:hover, .card-actions .edit-btn:hover, .card-actions .delete-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-actions a[title="Voir le contenu"]:hover {
+    background-color: rgba(31, 59, 115, 0.1);
+    border-color: var(--couleur-principale);
+    color: var(--couleur-principale);
+}
+
+.card-actions .edit-btn:hover {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-color: var(--couleur-succes);
+    color: var(--couleur-succes);
+}
+
+.card-actions .delete-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: var(--couleur-erreur);
+    color: var(--couleur-erreur);
+}
+
+.card-actions svg {
+	width: 18px;
+    height: 18px;
+    fill: currentColor;
+    transition: transform 0.3s;
+}
+
+.card-actions a:hover svg,
+.card-actions .edit-btn:hover svg,
+.card-actions .delete-btn:hover svg {
+    transform: scale(1.1);
+}
+
+/* Animation de pulsation pour le bouton supprimer */
+.card-actions .delete-btn:hover {
+    animation: pulse-danger 0.6s infinite;
+}
+
+@keyframes pulse-danger {
+    0%, 100% { box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2); }
+    50% { box-shadow: 0 4px 16px rgba(220, 53, 69, 0.4); }
+}
+
+.empty-state-text {
+    text-align: center;
+    padding: 3rem;
+    color: var(--texte-discret);
+    font-style: italic;
+}
+
+.edit-mode {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+.edit-input {
+  flex-grow: 1;
+}
+.save-btn, .cancel-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.save-btn svg, .cancel-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--texte-discret);
+    transition: all 0.2s ease;
+}
+
+.save-btn:hover svg {
+    fill: var(--couleur-succes);/
+    transform: scale(1.2); 
+}
+.cancel-btn:hover svg {
+    fill: var(--couleur-erreur); 
+    transform: scale(1.2); 
+}
+
+/* =================================================================
+   18. SURCHARGE DES STYLES BOOTSTRAP (MODALES & FORMULAIRES)
+   ================================================================= */
+
+/* On rend les modales un peu plus élégantes */
+.modal-content {
+    border: none;
+    border-radius: 12px;
+}
+.modal-header {
+    background-color: var(--couleur-principale);
+    color: var(--texte-inverse);
+    border-bottom: none;
+}
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%); /* Rend la croix blanche */
+}
+.modal-footer {
+    background-color: #f8f9fa;
+}
+
+/* On affine l'apparence des champs de formulaire Bootstrap */
+.form-control, .form-select {
+    font-size: 0.95rem;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--couleur-principale);
+    box-shadow: 0 0 0 3px rgba(31, 59, 115, 0.15);
+}
+
+/* On affine l'apparence des boutons Bootstrap */
+.modal-footer .btn {
+    font-weight: 500;
+    border-radius: 6px;
+    padding: 0.6rem 1.2rem;
+}
+
+
+/* =================================================================
+   19. PAGE PANIER DE RÉSERVATION
+   ================================================================= */
+
+.cart-page-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.cart-items-container {
+    padding: 0;
+    min-height: 300px;
+}
+
+/* État panier vide */
+.empty-cart-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.empty-cart-icon {
+    width: 80px;
+    height: 80px;
+    fill: #adb5bd;
+    margin-bottom: 24px;
+    opacity: 0.5;
+}
+
+.empty-cart-state h3 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #495057;
+    margin: 0 0 12px 0;
+}
+
+.empty-cart-state p {
+    font-size: 16px;
+    color: #6c757d;
+    margin: 0 0 32px 0;
+    max-width: 400px;
+}
+
+/* Items du panier */
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 24px;
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+    animation: slideIn 0.3s ease;
+}
+
+.summary-item:hover {
+    background: #f8f9fa;
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-item-details {
+    flex: 1;
+}
+
+.summary-item-details > p {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.summary-item-details > p strong {
+    color: var(--couleur-principale);
+}
+
+.summary-subtitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 16px 0 8px 0;
+}
+
+.summary-item-details ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.summary-item-details li {
+    padding: 6px 0;
+    color: #495057;
+    font-size: 15px;
+}
+
+.summary-item-details li strong {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Actions des items */
+.summary-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-action.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-action.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-action.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-action.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Barre d'actions du panier */
+.cart-actions-bar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 16px;
+    padding: 24px;
+    background: white;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn-outline-danger {
+    background: white;
+    color: #dc3545;
+    border: 2px solid #dc3545;
+}
+
+.btn-outline-danger:hover {
+    background: #dc3545;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.btn-lg {
+    padding: 14px 28px;
+    font-size: 16px;
+}
+
+/* Animation d'apparition des items */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .cart-actions-bar {
+        flex-direction: column;
+        gap: 12px;
+    }
+	
+	.cart-actions-bar .btn-outline-danger {
+		background: white;
+		color: #dc3545;
+		border: 2px solid #dc3545;
+	}
+	
+	.cart-actions-bar .btn-outline-danger:hover {
+		background: #dc3545;
+		color: white;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+	}
+    
+    .summary-item {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .summary-actions {
+        flex-direction: row;
+        width: 100%;
+    }
+    
+    .summary-actions .btn-action {
+        flex: 1;
+    }
+    
+    .empty-cart-state {
+        padding: 40px 20px;
+    }
+    
+    .empty-cart-icon {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .empty-cart-state h3 {
+        font-size: 20px;
+    }
 }

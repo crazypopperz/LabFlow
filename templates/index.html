@@ -1,28 +1,21 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Tableau de Bord - Gestion Matériel</title>
-	<link rel="icon" href="{{ url_for('static', filename='icons/favicon.ico') }}" type="image/x-icon">
+{% extends "base.html" %}
+
+{% block title %}Tableau de Bord - LabFlow{% endblock %}
+
+{% block head_styles %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-</head>
-<body data-add-url="{{ url_for('inventaire.ajouter_objet') }}" data-icon-url="{{ url_for('static', filename='icons/ajout.png') }}">
-    {% include 'header.html' %}
-    <div class="main-container">
+{% endblock %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+{% block content %}
+
+    <div class="main-container" data-add-url="{{ url_for('inventaire.ajouter_objet') }}" data-icon-url="{{ url_for('static', filename='icons/ajout.png') }}">
+
+        <!-- ============================================================ -->
+        <!-- MODIFICATION : Le bloc "messages flash" a été supprimé d'ici. -->
+        <!-- Il est maintenant géré par base.html pour s'afficher en "toast". -->
+        <!-- ============================================================ -->
 
         <div class="page-header">
             <h2 class="page-title">
@@ -31,16 +24,12 @@
             </h2>
         </div>
 
-        <!-- ============================================================ -->
-        <!-- DÉBUT DE LA GRILLE DU DASHBOARD -->
-        <!-- ============================================================ -->
         <div class="dashboard-grid">
 
             <!-- Widget Suivi Budgétaire -->
 			<div class="dashboard-widget">
 				<div class="widget-header">
-					<svg class="widget-icon" ...></svg>
-					<h3>Suivi Budgétaire</h3>
+					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M640-520q17 0 28.5-11.5T680-560q0-17-11.5-28.5T640-600q-17 0-28.5 11.5T600-560q0 17 11.5 28.5T640-520Zm-320-80h200v-80H320v80ZM180-120q-34-114-67-227.5T80-580q0-92 64-156t156-64h200q29-38 70.5-59t89.5-21q25 0 42.5 17.5T720-820q0 6-1.5 12t-3.5 11q-4 11-7.5 22.5T702-751l91 91h87v279l-113 37-67 224H480v-80h-80v80H180Zm60-80h80v-80h240v80h80l62-206 98-33v-141h-40L620-720q0-20 2.5-38.5T630-796q-29 8-51 27.5T547-720H300q-58 0-99 41t-41 99q0 98 27 191.5T240-200Zm240-298Z"/></svg><h3>Suivi Budgétaire</h3>
 				</div>
 				<div class="widget-content">
 					{% if data.solde_budget is not none %}
@@ -50,26 +39,25 @@
 								{{ "%.2f"|format(data.solde_budget) }} €
 							</span>
 						</div>
-						<div class="widget-footer">
-							{# Le lien ici est probablement encore cassé, on le laisse commenté #}
-							{# <a href="{{ url_for('main.voir_budget') }}" class="btn-action">Consulter le budget</a> #}
-						</div>
 					{% else %}
 						<div class="widget-placeholder">
 							<p>Aucun budget n'a été défini pour l'année en cours.</p>
-							{% if session.user_role == 'admin' %}
-								{# Le lien ici est probablement encore cassé, on le laisse commenté #}
-								{# <a href="{{ url_for('admin.budget') }}" class="btn-action">Définir le budget</a> #}
-							{% endif %}
 						</div>
 					{% endif %}
 				</div>
+                <div class="widget-footer">
+                    {% if data.solde_budget is not none %}
+                        <a href="{{ url_for('admin.budget') }}" class="btn-widget">Consulter le budget</a>
+                    {% elif session.user_role == 'admin' %}
+                        <a href="{{ url_for('admin.budget') }}" class="btn-widget">Définir le budget</a>
+                    {% endif %}
+                </div>
 			</div>
 
-			<!-- WIDGET PROCHAINES ÉCHÉANCES (MAINTENANT VISIBLE) -->
+			<!-- WIDGET PROCHAINES ÉCHÉANCES -->
 			<div class="dashboard-widget">
 				<div class="widget-header">
-					<svg class="widget-icon" ...></svg>
+					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-160 0q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480q17 0 28.5 11.5T360-440q0 17-11.5 28.5T320-400Zm320 0q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-160 0q-17 0-28.5-11.5T280-280q0-17 11.5-28.5T320-320q17 0 28.5 11.5T360-280q0 17-11.5 28.5T320-240Zm320 0q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z"/></svg>
 					<h3>Prochaines Échéances</h3>
 				</div>
 				<div class="widget-content">
@@ -91,19 +79,17 @@
 						{% endfor %}
 					</ul>
 				</div>
-				{% if session.user_role == 'admin' %}
 				<div class="widget-footer">
-					{# Le lien ici est probablement encore cassé, on le laisse commenté #}
-					{# <a href="{{ url_for('admin.gestion_echeances') }}" class="btn-action">Gérer toutes les échéances</a> #}
+				    {% if session.user_role == 'admin' %}
+					    <a href="{{ url_for('admin.gestion_echeances') }}" class="btn-widget">Gérer toutes les échéances</a>
+				    {% endif %}
 				</div>
-				{% endif %}
 			</div>
 			
 			<!-- Widget Mes Réservations -->
 			<div class="dashboard-widget">
 				<div class="widget-header">
-					<svg class="widget-icon" ...></svg>
-					<h3>Mes Prochaines Réservations</h3>
+					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M582-298 440-440v-200h80v167l118 118-56 57ZM440-720v-80h80v80h-80Zm280 280v-80h80v80h-80ZM440-160v-80h80v80h-80ZM160-440v-80h80v80h-80ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg><h3>Mes Prochaines Réservations</h3>
 				</div>
 				<div class="widget-content">
 					{% if data.reservations %}
@@ -113,17 +99,18 @@
 								<div class="item-main-info">
 									<span class="item-title">{{ resa.debut_reservation|strftime_fr('%A %d %B à %Hh%M') }} ({{ resa.item_count }} article{% if resa.item_count > 1 %}s{% endif %})</span>
 								</div>
-								<a href="{{ url_for('main.vue_jour', date_str=resa.debut_reservation|strftime('%Y-%m-%d')) }}" class="btn-action">Voir</a>
 							</li>
 						{% endfor %}
 						</ul>
 					{% else %}
 						<div class="widget-placeholder">
 							<p>Vous n'avez aucune réservation à venir.</p>
-							<a href="{{ url_for('main.calendrier') }}" class="btn-action">Réserver du matériel</a>
 						</div>
 					{% endif %}
 				</div>
+                <div class="widget-footer">
+                    <a href="{{ url_for('main.calendrier') }}" class="btn-widget">Réserver du matériel</a>
+                </div>
 			</div>
 			
 			<!-- WIDGET FOURNISSEURS -->
@@ -135,16 +122,17 @@
                 <div class="widget-content">
                     <div class="widget-placeholder">
                         <p>Consultez la liste de nos fournisseurs référencés.</p>
-                        <a href="{{ url_for('main.voir_fournisseurs') }}" class="btn-action">Voir les fournisseurs</a>
                     </div>
+                </div>
+                <div class="widget-footer">
+                    <a href="{{ url_for('admin.gestion_fournisseurs') }}" class="btn-widget">Voir les fournisseurs</a>
                 </div>
             </div>
 
 			<!-- Widget Mon Historique Récent -->
 			<div class="dashboard-widget">
 				<div class="widget-header">
-					<svg class="widget-icon" ...></svg>
-					<h3>Mon Historique Récent</h3>
+					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M160-200v-440 440-15 15Zm0 80q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720h160v-80q0-33 23.5-56.5T400-880h160q33 0 56.5 23.5T640-800v80h160q33 0 56.5 23.5T880-640v171q-18-13-38-22.5T800-508v-132H160v440h283q3 21 9 41t15 39H160Zm240-600h160v-80H400v80ZM720-40q-83 0-141.5-58.5T520-240q0-83 58.5-141.5T720-440q83 0 141.5 58.5T920-240q0 83-58.5 141.5T720-40Zm20-208v-112h-40v128l86 86 28-28-74-74Z"/></svg><h3>Mon Historique Récent</h3>
 				</div>
 				<div class="widget-content">
 					{% if data.historique_recent %}
@@ -153,13 +141,7 @@
 							<li class="dashboard-list-item">
 								<div class="item-main-info">
 									{% if action.type == 'reservation' %}
-										{% for kit in action.kits %}
-											<span class="item-title"><strong>{{ kit.nom }}</strong></span>
-											<small class="kit-content-history">{{ kit.contenu|join(', ') }}</small>
-										{% endfor %}
-										{% if action.objets_manuels %}
-											<span class="item-title">{{ action.objets_manuels|join(', ') }}</span>
-										{% endif %}
+                                        <span class="item-title">Réservation effectuée</span>
 									{% else %}
 										<span class="item-title">{{ action.details }}</span>
 									{% endif %}
@@ -175,6 +157,7 @@
 						</div>
 					{% endif %}
 				</div>
+                <div class="widget-footer"></div> <!-- Footer vide pour l'alignement -->
 			</div>
 
 			<!-- WIDGET NOUVEAUTÉS & CONTACT -->
@@ -199,12 +182,11 @@
                             <p>Aucun objet ajouté ou réapprovisionné dans les dernières 24h.</p>
                         </div>
                     {% endif %}
-                    <div class="widget-footer">
-                        <a href="mailto:{{ data.admin_contact }}" class="btn-action">
-                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm320-280L160-640v400h640v-400L480-440Zm0-80 320-200H160l320 200ZM160-640v-80l320 200 320-200v80L480-440 160-640Z"/></svg>
-                            <span>Contacter l'admin</span>
-                        </a>
-                    </div>
+                </div>
+                <div class="widget-footer">
+                    <a href="mailto:{{ data.admin_contact }}" class="btn-widget">
+                        <span>Contacter l'admin</span>
+                    </a>
                 </div>
             </div>
 
@@ -230,30 +212,23 @@
 							<span class="stat-value">{{ data.stats.reservations_actives }}</span>
 						</li>
 					</ul>
-					<div class="widget-footer">
-						<a href="{{ url_for('admin.admin') }}" class="btn-action">Panel Admin</a>
-					</div>
+				</div>
+				<div class="widget-footer">
+					<a href="{{ url_for('admin.admin') }}" class="btn-widget">Panel Admin</a>
 				</div>
 			</div>
 			{% endif %}
 
-            {# --- Les autres widgets restent commentés pour l'instant --- #}
-
         </div>
-        <!-- ============================================================ -->
-        <!-- FIN DE LA GRILLE DU DASHBOARD -->
-        <!-- ============================================================ -->
-
     </div>
-    {% include 'footer.html' %}
-	{% block scripts %}
-		<script src="{{ url_for('static', filename='modules/tour.js') }}" type="module"></script>
-		<script type="module">
-			import { startTour } from "{{ url_for('static', filename='js/modules/tour.js') }}";
-			{% if start_tour %}
-				startTour();
-			{% endif %}
-		</script>
-	{% endblock %}
-</body>
-</html>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/modules/tour.js') }}" type="module"></script>
+    <script type="module">
+        import { startTour } from "{{ url_for('static', filename='js/modules/tour.js') }}";
+        {% if start_tour %}
+            startTour();
+        {% endif %}
+    </script>
+{% endblock %}

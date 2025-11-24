@@ -1,102 +1,102 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const calendrierContainer = document.getElementById('calendrier-container');
-    if (!calendrierContainer)
-        return;
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('calendrier-container');
+    if (!container) return;
 
-    const prevMonthBtn = document.getElementById('prev-month-btn');
-    const nextMonthBtn = document.getElementById('next-month-btn');
-    const currentMonthYear = document.getElementById('current-month-year');
-    const calendrierGrid = calendrierContainer.querySelector('.calendrier-grid');
+    const monthYearElement = container.querySelector('#current-month-year');
+    const gridElement = container.querySelector('.calendrier-grid');
+    const prevBtn = container.querySelector('#prev-month-btn');
+    const nextBtn = container.querySelector('#next-month-btn');
 
     let currentDate = new Date();
-    currentDate.setDate(1);
 
-    async function renderCalendrier() {
-        const year = currentDate.getFullYear();
-        // En JavaScript, les mois sont de 0 à 11. On ajoute 1 pour l'API.
-        const month = currentDate.getMonth() + 1;
-
-        const response = await fetch(`/api/reservations_par_mois/${year}/${month}`);
-        const monthlyReservations = await response.json();
-
-        calendrierGrid.innerHTML = '';
-
-        const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-        dayNames.forEach(name => {
-            const dayNameCell = document.createElement('div');
-            dayNameCell.className = 'day-name';
-            dayNameCell.textContent = name;
-            calendrierGrid.appendChild(dayNameCell);
-        });
-
-        currentMonthYear.textContent = new Date(year, month - 1).toLocaleDateString('fr-FR', {
-            month: 'long',
-            year: 'numeric'
-        });
-
-        const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
-        const daysInMonth = new Date(year, month, 0).getDate();
-        const dayOffset = (firstDayOfMonth === 0) ? 6 : firstDayOfMonth - 1;
-
-        for (let i = 0; i < dayOffset; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.className = 'day-cell other-month';
-            calendrierGrid.appendChild(emptyCell);
-        }
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // On ignore l'heure pour la comparaison
-
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const date = new Date(dateStr + "T00:00:00");
-            
-            const isPast = date < today;
-            const isToday = date.getTime() === today.getTime();
-
-            const dayCell = document.createElement('div');
-            dayCell.className = 'day-cell';
-            
-            if (isPast) {
-                dayCell.classList.add('past-day');
-            } else {
-                dayCell.classList.add('can-reserve');
-            }
-            
-            if (isToday) {
-                dayCell.classList.add('today');
-            }
-
-            dayCell.dataset.date = dateStr;
-
-            let cellHTML = `<div class="day-number">${day}</div><div class="day-reservations"></div>`;
-            if (monthlyReservations[dateStr] && monthlyReservations[dateStr].length > 0) {
-                cellHTML += '<div class="activity-dot"></div>';
-            }
-            dayCell.innerHTML = cellHTML;
-            calendrierGrid.appendChild(dayCell);
+    async function fetchReservations(year, month) {
+        try {
+            const response = await fetch(`/api/reservations_par_mois/${year}/${month + 1}`);
+            if (!response.ok) throw new Error('Erreur réseau.');
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            return {};
         }
     }
 
-    calendrierGrid.addEventListener('click', function (e) {
-        const dayCell = e.target.closest('.day-cell.can-reserve');
+    async function renderCalendar(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth();
 
-        if (dayCell) {
-            const dateStr = dayCell.dataset.date;
-            if (dateStr) {
-                window.location.href = `/jour/${dateStr}`;
-            }
+        monthYearElement.textContent = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        gridElement.innerHTML = '';
+
+        const joursSemaine = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+        joursSemaine.forEach(jour => {
+            const dayHeader = document.createElement('div');
+            // CORRECTION : Utilise la classe de votre CSS
+            dayHeader.className = 'day-name'; 
+            dayHeader.textContent = jour;
+            gridElement.appendChild(dayHeader);
+        });
+
+        const firstDayOfMonth = new Date(year, month, 1);
+        const lastDayOfMonth = new Date(year, month + 1, 0);
+        const daysInMonth = lastDayOfMonth.getDate();
+        let dayOfWeek = firstDayOfMonth.getDay();
+        dayOfWeek = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+
+        for (let i = 0; i < dayOfWeek; i++) {
+            const emptyCell = document.createElement('div');
+            // CORRECTION : Utilise la classe de votre CSS
+            emptyCell.className = 'day-cell other-month'; 
+            gridElement.appendChild(emptyCell);
         }
-    });
 
-    prevMonthBtn.addEventListener('click', () => {
+        const reservations = await fetchReservations(year, month);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayCell = document.createElement('a');
+            // CORRECTION : Utilise les classes de votre CSS
+            dayCell.className = 'day-cell'; 
+
+            const currentDateInLoop = new Date(year, month, day);
+            currentDateInLoop.setHours(0, 0, 0, 0);
+
+            if (currentDateInLoop.getTime() === today.getTime()) {
+                dayCell.classList.add('today');
+            }
+
+            if (currentDateInLoop < today) {
+                dayCell.classList.add('past-day');
+            } else {
+                dayCell.classList.add('can-reserve');
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                dayCell.href = `/jour/${dateStr}`;
+            }
+
+            // CORRECTION : Utilise la classe de votre CSS
+            dayCell.innerHTML = `<div class="day-number">${day}</div>`; 
+
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            if (reservations[dateKey]) {
+                const dot = document.createElement('div');
+                // CORRECTION : Utilise la classe de votre CSS
+                dot.className = 'activity-dot'; 
+                dayCell.appendChild(dot);
+            }
+            
+            gridElement.appendChild(dayCell);
+        }
+    }
+
+    prevBtn.addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendrier();
-    });
-    nextMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendrier();
+        renderCalendar(currentDate);
     });
 
-    renderCalendrier();
+    nextBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar(currentDate);
+    });
+
+    renderCalendar(currentDate);
 });

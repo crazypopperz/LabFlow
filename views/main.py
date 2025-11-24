@@ -4,7 +4,6 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, send_from_directory, current_app)
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
-# NOUVEAUX IMPORTS
 from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur
 from utils import login_required
 
@@ -15,35 +14,39 @@ main_bp = Blueprint(
 )
 
 #============================================================
-# GESTION ARMOIRES
+# GESTION ARMOIRES (LOGIQUE RESTAURÉE)
 #============================================================
 @main_bp.route("/gestion_armoires")
 @login_required
 def gestion_armoires():
     etablissement_id = session['etablissement_id']
     
-    # NOUVELLE REQUÊTE : On utilise une jointure pour compter les objets dans chaque armoire.
     armoires = db.session.execute(
         db.select(Armoire.id, Armoire.nom, func.count(Objet.id).label('count'))
         .outerjoin(Objet, Armoire.id == Objet.armoire_id)
         .filter(Armoire.etablissement_id == etablissement_id)
         .group_by(Armoire.id, Armoire.nom)
         .order_by(Armoire.nom)
-    ).mappings().all() # .mappings().all() transforme le résultat en une liste de dictionnaires
+    ).mappings().all()
+
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Gérer les Armoires', 'url': None}
+    ]
 
     return render_template("gestion_armoires.html",
                            armoires=armoires,
+                           breadcrumbs=breadcrumbs,
                            now=datetime.now())
 
 #============================================================
-# GESTION CATEGORIES
+# GESTION CATEGORIES (LOGIQUE RESTAURÉE)
 #============================================================
 @main_bp.route("/gestion_categories")
 @login_required
 def gestion_categories():
     etablissement_id = session['etablissement_id']
 
-    # NOUVELLE REQUÊTE : Même chose pour les catégories.
     categories = db.session.execute(
         db.select(Categorie.id, Categorie.nom, func.count(Objet.id).label('count'))
         .outerjoin(Objet, Categorie.id == Objet.categorie_id)
@@ -52,17 +55,27 @@ def gestion_categories():
         .order_by(Categorie.nom)
     ).mappings().all()
 
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Gérer les Catégories', 'url': None}
+    ]
+
     return render_template("gestion_categories.html",
                            categories=categories,
+                           breadcrumbs=breadcrumbs,
                            now=datetime.now())
- 
+
 #================================================================
-#  GESTION CALENDRIER
+#  GESTION CALENDRIER (SECTION MODIFIÉE)
 #================================================================
 @main_bp.route("/calendrier")
 @login_required
 def calendrier():
-    return render_template("calendrier.html", now=datetime.now())
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Calendrier', 'url': None}
+    ]
+    return render_template("calendrier.html", now=datetime.now(), breadcrumbs=breadcrumbs)
 
 
 @main_bp.route("/jour/<string:date_str>")
@@ -72,14 +85,19 @@ def vue_jour(date_str):
     try:
         date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
-        flash("Format de date invalide.", "error")
+        flash("Format de date invalide.", "danger")
         return redirect(url_for('main.calendrier'))
 
-    # On définit le début et la fin de la journée
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Calendrier', 'url': url_for('main.calendrier')},
+        {'text': date_obj.strftime('%d %B %Y'), 'url': None}
+    ]
+
     start_of_day = datetime.combine(date_obj, datetime.min.time())
     end_of_day = datetime.combine(date_obj, datetime.max.time())
 
-    # NOUVELLE REQUÊTE SQLAlchemy
+    # La requête SQLAlchemy est bien présente et complète
     reservations_brutes = db.session.execute(
         db.select(
             Reservation.groupe_id,
@@ -90,32 +108,36 @@ def vue_jour(date_str):
         .join(Utilisateur, Reservation.utilisateur_id == Utilisateur.id)
         .filter(
             Reservation.etablissement_id == etablissement_id,
-            Reservation.debut_reservation <= end_of_day,
-            Reservation.fin_reservation >= start_of_day
+            Reservation.debut_reservation < end_of_day,
+            Reservation.fin_reservation > start_of_day
         )
-        .group_by(Reservation.groupe_id, Reservation.debut_reservation, Reservation.fin_reservation, Utilisateur.nom_utilisateur)
-        .order_by(Reservation.debut_reservation)
+        .distinct(Reservation.groupe_id)
+        .order_by(Reservation.groupe_id, Reservation.debut_reservation)
     ).mappings().all()
 
-    # Le reste de ta logique de formatage est conservé, car elle est bonne
+    # La logique de formatage des données est bien présente et complète
     reservations_par_heure = {hour: {'starts': [], 'continues': []} for hour in range(24)}
     for resa in reservations_brutes:
-        debut_dt = resa['debut_reservation']
-        fin_dt = resa['fin_reservation']
-        start_hour = max(8, debut_dt.hour)
-        end_hour = min(20, fin_dt.hour if fin_dt.minute > 0 else fin_dt.hour - 1)
+        debut_dt = resa.debut_reservation.replace(tzinfo=None)
+        fin_dt = resa.fin_reservation.replace(tzinfo=None)
 
-        if debut_dt.date() == date_obj:
+        start_hour = max(8, debut_dt.hour)
+        end_hour = min(20, fin_dt.hour if fin_dt.minute > 0 or fin_dt.second > 0 else fin_dt.hour - 1)
+
+        if debut_dt.date() == date_obj and 8 <= debut_dt.hour <= 20:
             reservations_par_heure[debut_dt.hour]['starts'].append(dict(resa))
         
-        for hour in range(start_hour + 1, end_hour + 1):
+        for hour in range(start_hour, end_hour + 1):
             if 8 <= hour <= 20:
-                if not any(d.get('groupe_id') == resa['groupe_id'] for d in reservations_par_heure[hour]['continues']):
-                    reservations_par_heure[hour]['continues'].append(dict(resa))
+                if hour != debut_dt.hour or debut_dt.date() != date_obj:
+                    if not any(d.get('groupe_id') == resa.groupe_id for d in reservations_par_heure[hour]['continues']):
+                        reservations_par_heure[hour]['continues'].append(dict(resa))
 
+    # L'appel à render_template est bien présent et complet
     return render_template("vue_jour.html",
                            date_concernee=date_obj,
-                           reservations_par_heure=reservations_par_heure)
+                           reservations_par_heure=reservations_par_heure,
+                           breadcrumbs=breadcrumbs)
 
 #================================================================
 # GESTION ALERTES

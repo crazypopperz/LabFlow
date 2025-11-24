@@ -32,3 +32,4 @@ WTForms
 psycopg2-binary
 gunicorn
 requests
+python-dotenv

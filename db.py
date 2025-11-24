@@ -168,6 +168,8 @@ class Reservation(db.Model):
     groupe_id: Mapped[str] = mapped_column(String, nullable=True)
     kit_id: Mapped[int] = mapped_column(Integer, ForeignKey('kits.id'), nullable=True)
     etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    objet: Mapped["Objet"] = relationship()
+    kit: Mapped["Kit"] = relationship()
 
 # --- FONCTIONS D'INITIALISATION ---
 def init_app(app):

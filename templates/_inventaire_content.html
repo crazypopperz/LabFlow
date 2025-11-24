@@ -70,27 +70,31 @@
                 {% endif %}
             </td>
             {% if session.user_id %}
-            <td class="actions-cell">
-                <button class="btn-action edit-objet-btn"
-                        data-objet-id="{{ objet.id }}"
-                        data-armoire-id="{{ objet.armoire_id }}"
-                        data-categorie-id="{{ objet.categorie_id }}"
-                        data-nom="{{ objet.nom }}"
-                        data-quantite="{{ objet.quantite_physique }}"
-                        data-seuil="{{ objet.seuil }}"
-                        data-date-peremption="{{ objet.date_peremption or '' }}"
-                        data-image-url="{{ objet.image_url or '' }}"
-                        data-modal-trigger="add-object-modal">
-                    Modifier
-                </button>
-                {% if session.user_role == 'admin' %}
-                <form class="form-in-cell" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post">
+			<td class="actions-cell">
+				<button class="btn btn-sm btn-outline-primary edit-objet-btn"
+						data-objet-id="{{ objet.id }}"
+						data-armoire-id="{{ objet.armoire_id }}"
+						data-categorie-id="{{ objet.categorie_id }}"
+						data-nom="{{ objet.nom }}"
+						data-quantite="{{ objet.quantite_physique }}"
+						data-seuil="{{ objet.seuil }}"
+						data-date-peremption="{{ objet.date_peremption or '' }}"
+						data-image-url="{{ objet.image_url or '' }}"
+						data-bs-toggle="modal" data-bs-target="#addObjectModal">
+					Modifier
+				</button>
+				
+				{% if session.user_role == 'admin' %}
+				<form class="form-in-cell" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post">
 					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<button type="button" class="btn-action btn-danger btn-delete-objet" data-objet-nom="{{ objet.nom }}">Supprimer</button>
+					<!-- CORRECTION : On s'assure que le type est "button" -->
+					<button type="button" class="btn btn-sm btn-outline-danger btn-delete-objet" data-objet-nom="{{ objet.nom }}">
+						Supprimer
+					</button>
 				</form>
 				{% endif %}
-            </td>
-            {% endif %}
+			</td>
+			{% endif %}
         </tr>
         {% endfor %}
     </tbody>

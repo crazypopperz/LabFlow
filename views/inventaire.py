@@ -1,5 +1,3 @@
-# Fichier: views/inventaire.py (Version Finale et Fonctionnelle)
-
 import math
 from datetime import datetime, timedelta
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -374,13 +372,12 @@ def voir_armoire(armoire_id):
         flash("Armoire non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # ON RÉUTILISE LA FONCTION DE PAGINATION EN LUI PASSANT LE FILTRE
     objets, total_pages = get_paginated_objets(
         etablissement_id=etablissement_id, 
         page=page, 
         sort_by=sort_by, 
         direction=direction,
-        armoire_id=armoire_id # <-- Le filtre clé !
+        armoire_id=armoire_id
     )
 
     pagination = {
@@ -390,12 +387,23 @@ def voir_armoire(armoire_id):
         'armoire_id': armoire_id
     }
 
+    # --- AJOUT : Récupérer la liste des autres armoires pour la liste déroulante ---
+    autres_armoires = db.session.execute(
+        db.select(Armoire)
+        .filter(
+            Armoire.etablissement_id == etablissement_id,
+            Armoire.id != armoire_id  # On exclut l'armoire actuelle
+        )
+        .order_by(Armoire.nom)
+    ).scalars().all()
+
     return render_template("armoire.html",
                            armoire=armoire,
                            objets=objets,
                            pagination=pagination,
                            sort_by=sort_by,
                            direction=direction,
+                           autres_armoires=autres_armoires, # <-- On passe la liste au template
                            now=datetime.now())
 
 #==============================================================================
@@ -414,13 +422,12 @@ def voir_categorie(categorie_id):
         flash("Catégorie non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # ON RÉUTILISE LA FONCTION DE PAGINATION EN LUI PASSANT LE FILTRE
     objets, total_pages = get_paginated_objets(
         etablissement_id=etablissement_id, 
         page=page, 
         sort_by=sort_by, 
         direction=direction,
-        categorie_id=categorie_id # <-- Le filtre clé !
+        categorie_id=categorie_id
     )
 
     pagination = {
@@ -430,12 +437,23 @@ def voir_categorie(categorie_id):
         'categorie_id': categorie_id
     }
 
+    # --- AJOUT : Récupérer la liste des autres catégories pour la liste déroulante ---
+    categories_list = db.session.execute(
+        db.select(Categorie)
+        .filter(
+            Categorie.etablissement_id == etablissement_id,
+            Categorie.id != categorie_id # On exclut la catégorie actuelle
+        )
+        .order_by(Categorie.nom)
+    ).scalars().all()
+
     return render_template("categorie.html",
                            categorie=categorie,
                            objets=objets,
                            pagination=pagination,
                            sort_by=sort_by,
                            direction=direction,
+                           categories_list=categories_list, # <-- On passe la liste au template
                            now=datetime.now())
                            
 #=======================================================

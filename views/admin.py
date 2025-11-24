@@ -4,7 +4,6 @@
 import hashlib
 from datetime import date, datetime
 from io import BytesIO
-
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, jsonify, send_file)
 from openpyxl import Workbook
@@ -12,13 +11,11 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
-
-# NOUVEAUX IMPORTS
 from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet,Budget, Depense, Echeance, Etablissement
 from utils import admin_required, login_required, annee_scolaire_format
 
 # ============================================================
-# CRÉATION DU BLUEPRINT
+# CRÉATION DU BLUEPRINT ADMIN
 # ============================================================
 admin_bp = Blueprint(
     'admin', 
@@ -78,7 +75,6 @@ def supprimer(type_objet, id):
         flash("Élément non trouvé ou accès non autorisé.", "error")
         return redirect(url_for(redirect_to))
 
-    # Vérification si l'élément est utilisé
     if type_objet == "armoire":
         count = db.session.query(Objet).filter_by(armoire_id=id, etablissement_id=etablissement_id).count()
         if count > 0:
@@ -100,6 +96,7 @@ def supprimer(type_objet, id):
         flash(f"Une erreur est survenue : {e}", "error")
     
     return redirect(url_for(redirect_to))
+
 
 @admin_bp.route("/modifier_armoire", methods=["POST"])
 @admin_required
@@ -159,14 +156,16 @@ def modifier_categorie():
         return jsonify(success=False, error=str(e)), 500
 
 
+
 # ============================================================
-# LES FONCTIONS DE ROUTES ADMIN
+# ROUTE ADMIN
 # ============================================================
 @admin_bp.route("/")
 @admin_required
 def admin():
     licence_info = {'is_pro': True, 'statut': 'Actif (SaaS)', 'instance_id': session.get('etablissement_id')}
     return render_template("admin.html", now=datetime.now(), licence=licence_info)
+
 
 #==============================================================
 # GESTION UTILISATEURS
@@ -190,6 +189,7 @@ def gestion_utilisateurs():
                            utilisateurs=utilisateurs,
                            breadcrumbs=breadcrumbs,
                            now=datetime.now)
+
 
 @admin_bp.route("/utilisateurs/modifier_email/<int:id_user>", methods=["POST"])
 @admin_required
@@ -215,6 +215,7 @@ def modifier_email_utilisateur(id_user):
 
     return redirect(url_for('admin.gestion_utilisateurs'))
 
+
 @admin_bp.route("/utilisateurs/supprimer/<int:id_user>", methods=["POST"])
 @admin_required
 def supprimer_utilisateur(id_user):
@@ -239,7 +240,10 @@ def supprimer_utilisateur(id_user):
         
     return redirect(url_for('admin.gestion_utilisateurs'))
 
-#=== A REFACTORISER ENCORE ===
+
+#=============================================================
+#=== GESTION UTLISATEURS / A REFACTORISER ENCORE ===
+#============================================================
 @admin_bp.route("/utilisateurs/promouvoir/<int:id_user>", methods=["POST"])
 @admin_required
 def promouvoir_utilisateur(id_user):
@@ -262,7 +266,6 @@ def reinitialiser_mdp(id_user):
 def gestion_kits():
     etablissement_id = session['etablissement_id']
     
-    # Traduction de ta requête en SQLAlchemy
     kits_data = db.session.execute(
         db.select(Kit, func.count(KitObjet.id).label('count'))
         .outerjoin(KitObjet, Kit.id == KitObjet.kit_id)
@@ -279,6 +282,7 @@ def gestion_kits():
     return render_template("admin_kits.html",
                            kits=kits_data,
                            breadcrumbs=breadcrumbs)
+
 
 @admin_bp.route("/kits/ajouter", methods=["POST"])
 @admin_required
@@ -307,6 +311,7 @@ def ajouter_kit():
         flash(f"Un kit avec le nom '{nom}' existe déjà dans votre établissement.", "danger")
         return redirect(url_for('admin.gestion_kits'))
 
+
 @admin_bp.route("/kits/modifier/<int:kit_id>", methods=["GET", "POST"])
 @admin_required
 def modifier_kit(kit_id):
@@ -318,20 +323,17 @@ def modifier_kit(kit_id):
         return redirect(url_for('admin.gestion_kits'))
 
     if request.method == "POST":
-        # Logique pour ajouter un nouvel objet au kit
         objet_id_str = request.form.get("objet_id")
         if objet_id_str:
             try:
                 objet_id = int(objet_id_str)
                 quantite = int(request.form.get("quantite", 1))
 
-                # Vérification que l'objet existe et appartient à l'établissement
                 objet_a_ajouter = db.session.get(Objet, objet_id)
                 if not objet_a_ajouter or objet_a_ajouter.etablissement_id != etablissement_id:
                     flash("Objet non trouvé.", "danger")
                     return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
 
-                # Vérification si l'objet est déjà dans le kit
                 association_existante = db.session.execute(
                     db.select(KitObjet).filter_by(kit_id=kit.id, objet_id=objet_id)
                 ).scalar_one_or_none()
@@ -354,7 +356,6 @@ def modifier_kit(kit_id):
             except (ValueError, TypeError):
                 flash("Données invalides pour l'ajout d'objet.", "danger")
         
-        # Logique pour mettre à jour les quantités des objets existants
         else:
             for key, value in request.form.items():
                 if key.startswith("quantite_"):
@@ -366,16 +367,15 @@ def modifier_kit(kit_id):
                         if association and association.kit_id == kit.id:
                             if nouvelle_quantite > 0:
                                 association.quantite = nouvelle_quantite
-                            else: # Si la quantité est 0 ou moins, on supprime l'objet du kit
+                            else:
                                 db.session.delete(association)
                     except (ValueError, TypeError):
-                        continue # On ignore les valeurs invalides
+                        continue
             db.session.commit()
             flash("Quantités mises à jour.", "success")
 
         return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
 
-    # Logique pour l'affichage (GET)
     objets_in_kit = db.session.execute(
         db.select(KitObjet).filter_by(kit_id=kit.id).options(joinedload(KitObjet.objet))
     ).scalars().all()
@@ -400,6 +400,7 @@ def modifier_kit(kit_id):
                            objets_in_kit=objets_in_kit,
                            objets_disponibles=objets_disponibles)
 
+
 @admin_bp.route("/kits/retirer_objet/<int:kit_objet_id>", methods=["POST"])
 @admin_required
 def retirer_objet_kit(kit_objet_id):
@@ -415,6 +416,7 @@ def retirer_objet_kit(kit_objet_id):
     
     flash("Erreur : objet du kit non trouvé.", "danger")
     return redirect(url_for('admin.gestion_kits'))
+
 
 @admin_bp.route("/kits/supprimer/<int:kit_id>", methods=["POST"])
 @admin_required
@@ -432,6 +434,8 @@ def supprimer_kit(kit_id):
         
     return redirect(url_for('admin.gestion_kits'))
 
+
+
 #====================================================================
 # GESTION DES ECHEANCES
 #====================================================================
@@ -440,7 +444,6 @@ def supprimer_kit(kit_id):
 def gestion_echeances():
     etablissement_id = session['etablissement_id']
     
-    # On récupère toutes les échéances de l'établissement, triées par date
     echeances = db.session.execute(
         db.select(Echeance)
         .filter_by(etablissement_id=etablissement_id)
@@ -456,6 +459,7 @@ def gestion_echeances():
                            echeances=echeances,
                            breadcrumbs=breadcrumbs,
                            date_actuelle=date.today())
+
 
 @admin_bp.route("/echeances/ajouter", methods=['POST'])
 @admin_required
@@ -488,6 +492,7 @@ def ajouter_echeance():
         flash(f"Une erreur de base de données est survenue : {e}", "danger")
 
     return redirect(url_for('admin.gestion_echeances'))
+
 
 @admin_bp.route("/echeances/modifier/<int:id>", methods=['POST'])
 @admin_required
@@ -524,6 +529,7 @@ def modifier_echeance(id):
 
     return redirect(url_for('admin.gestion_echeances'))
 
+
 @admin_bp.route("/echeances/supprimer/<int:id>", methods=['POST'])
 @admin_required
 def supprimer_echeance(id):
@@ -545,6 +551,7 @@ def supprimer_echeance(id):
     return redirect(url_for('admin.gestion_echeances'))
 
 
+
 #==============================================================
 # GESTION BUDGET
 #==============================================================
@@ -555,25 +562,19 @@ def budget():
     now = datetime.now()
     annee_scolaire_actuelle = now.year if now.month >= 8 else now.year - 1
 
-    # Récupère l'année demandée dans l'URL, sinon utilise l'année actuelle
     try:
         annee_selectionnee = int(request.args.get('annee', annee_scolaire_actuelle))
     except (ValueError, TypeError):
         annee_selectionnee = annee_scolaire_actuelle
 
-    # --- AMÉLIORATION : On récupère tous les budgets de l'établissement pour les archives ---
     budgets_archives = db.session.execute(
         db.select(Budget).filter_by(etablissement_id=etablissement_id).order_by(Budget.annee.desc())
     ).scalars().all()
 
-    # --- TRADUCTION : On cherche le budget pour l'année sélectionnée et l'établissement courant ---
     budget_affiche = db.session.execute(
         db.select(Budget).filter_by(etablissement_id=etablissement_id, annee=annee_selectionnee)
     ).scalar_one_or_none()
 
-    # --- AMÉLIORATION : Logique de création automatique de budget, version SQLAlchemy ---
-    # Si aucun budget n'existe pour cette année ET qu'aucun budget n'a jamais été créé,
-    # on en crée un vide pour guider l'utilisateur.
     if not budget_affiche and not budgets_archives:
         try:
             budget_affiche = Budget(
@@ -583,15 +584,13 @@ def budget():
             )
             db.session.add(budget_affiche)
             db.session.commit()
-            # On doit le ré-ajouter à la liste des archives pour que le sélecteur s'affiche
             budgets_archives.insert(0, budget_affiche)
             flash(f"Aucun budget n'existait. Un budget vide pour l'année {annee_selectionnee}-{annee_selectionnee+1} a été initialisé.", "info")
         except IntegrityError:
-            db.session.rollback() # Au cas où il y aurait une création concurrente
+            db.session.rollback()
             budget_affiche = db.session.execute(
                 db.select(Budget).filter_by(etablissement_id=etablissement_id, annee=annee_selectionnee)
             ).scalar_one_or_none()
-
 
     depenses = []
     total_depenses = 0
@@ -599,34 +598,26 @@ def budget():
     cloture_autorisee = False
 
     if budget_affiche:
-        # --- AMÉLIORATION : On utilise la relation pour obtenir les dépenses, c'est plus simple ---
-        # On trie en Python car la relation charge tous les objets liés
         depenses = sorted(budget_affiche.depenses, key=lambda d: d.date_depense, reverse=True)
         
-        # --- TRADUCTION : Calcul du total avec une requête SQLAlchemy ---
         total_depenses_result = db.session.query(func.sum(Depense.montant)).filter(Depense.budget_id == budget_affiche.id).scalar()
         total_depenses = total_depenses_result or 0
         solde = budget_affiche.montant_initial - total_depenses
         
-        # --- Logique de clôture (inchangée, elle était déjà correcte) ---
         annee_fin_budget = budget_affiche.annee + 1
         date_limite_cloture = date(annee_fin_budget, 6, 1)
         if date.today() >= date_limite_cloture:
             cloture_autorisee = True
 
-    # --- TRADUCTION : On cherche le budget actif (le plus récent non clôturé) pour les modales ---
     budget_actuel_pour_modales = db.session.execute(
         db.select(Budget).filter_by(etablissement_id=etablissement_id, cloture=False).order_by(Budget.annee.desc())
     ).scalars().first()
 
-    # --- TRADUCTION : Logique pour proposer une nouvelle année de budget ---
     annee_proposee_pour_creation = annee_scolaire_actuelle
     if not budget_actuel_pour_modales and budgets_archives:
-        # S'il n'y a pas de budget actif mais qu'il y en a des archivés, on propose l'année suivante
-        derniere_annee = budgets_archives[0].annee # Le premier de la liste triée est le plus récent
+        derniere_annee = budgets_archives[0].annee
         annee_proposee_pour_creation = derniere_annee + 1
 
-    # --- TRADUCTION : On récupère les fournisseurs de l'établissement ---
     fournisseurs = db.session.execute(
         db.select(Fournisseur).filter_by(etablissement_id=etablissement_id).order_by(Fournisseur.nom)
     ).scalars().all()
@@ -635,7 +626,6 @@ def budget():
         {'text': 'Panneau d\'Administration', 'url': url_for('admin.admin')},
         {'text': 'Gestion Budgétaire'}
     ]
-    # On passe toutes les données au template
     return render_template(
         "budget.html",
         breadcrumbs=breadcrumbs,
@@ -660,7 +650,6 @@ def definir_budget():
     montant_str = request.form.get('montant_initial')
     annee_str = request.form.get('annee')
 
-    # --- Validation des entrées ---
     if not montant_str or not annee_str:
         flash("L'année et le montant sont obligatoires.", "danger")
         return redirect(url_for('admin.budget'))
@@ -674,7 +663,6 @@ def definir_budget():
         flash("Le montant ou l'année saisi(e) est invalide.", "danger")
         return redirect(url_for('admin.budget'))
 
-    # --- Logique SQLAlchemy ---
     try:
         budget_existant = db.session.execute(
             db.select(Budget).filter_by(annee=annee, etablissement_id=etablissement_id)
@@ -682,7 +670,7 @@ def definir_budget():
 
         if budget_existant:
             budget_existant.montant_initial = montant
-            budget_existant.cloture = False # Ré-ouvrir un budget si on le modifie
+            budget_existant.cloture = False
             flash(f"Le budget pour l'année scolaire {annee}-{annee+1} a été mis à jour.", 'success')
         else:
             nouveau_budget = Budget(annee=annee, montant_initial=montant, etablissement_id=etablissement_id)
@@ -708,7 +696,6 @@ def ajouter_depense():
     est_bon_achat = 'est_bon_achat' in request.form
     fournisseur_id = request.form.get('fournisseur_id')
 
-    # --- Validation des entrées ---
     if not all([budget_id, contenu, montant_str, date_depense_str]):
         flash("Tous les champs sont obligatoires pour ajouter une dépense.", "danger")
         return redirect(request.referrer or url_for('admin.budget'))
@@ -725,7 +712,6 @@ def ajouter_depense():
         flash("Le montant ou la date est invalide.", "danger")
         return redirect(request.referrer or url_for('admin.budget'))
 
-    # --- Logique SQLAlchemy avec vérification de sécurité ---
     budget = db.session.get(Budget, int(budget_id))
     if not budget or budget.etablissement_id != etablissement_id or budget.cloture:
         flash("Impossible d'ajouter une dépense : le budget est introuvable, n'appartient pas à votre établissement ou est clôturé.", 'danger')
@@ -756,13 +742,11 @@ def ajouter_depense():
 def modifier_depense(id):
     etablissement_id = session['etablissement_id']
     
-    # --- Sécurité : On récupère la dépense et on vérifie qu'elle appartient bien à l'établissement ---
     depense = db.session.get(Depense, id)
     if not depense or depense.etablissement_id != etablissement_id:
         flash("Dépense non trouvée ou accès non autorisé.", "danger")
         return redirect(url_for('admin.budget'))
 
-    # --- Récupération et validation des données du formulaire ---
     contenu = request.form.get('contenu', '').strip()
     montant_str = request.form.get('montant')
     date_depense_str = request.form.get('date_depense')
@@ -781,7 +765,6 @@ def modifier_depense(id):
         flash("Le montant ou la date est invalide.", "danger")
         return redirect(request.referrer or url_for('admin.budget'))
 
-    # --- Logique SQLAlchemy ---
     try:
         depense.montant = montant
         depense.date_depense = date_depense
@@ -803,7 +786,6 @@ def modifier_depense(id):
 def supprimer_depense(id):
     etablissement_id = session['etablissement_id']
     
-    # --- Sécurité : On récupère la dépense et on vérifie qu'elle appartient bien à l'établissement ---
     depense = db.session.get(Depense, id)
     if depense and depense.etablissement_id == etablissement_id:
         try:
@@ -825,13 +807,11 @@ def cloturer_budget():
     etablissement_id = session['etablissement_id']
     budget_id = request.form.get('budget_id')
 
-    # --- Sécurité : On récupère le budget et on vérifie qu'il appartient bien à l'établissement ---
     budget = db.session.get(Budget, int(budget_id))
     if not budget or budget.etablissement_id != etablissement_id:
         flash("Budget non trouvé ou accès non autorisé.", "danger")
         return redirect(url_for('admin.budget'))
 
-    # --- Logique métier (inchangée) ---
     annee_fin_budget = budget.annee + 1
     date_limite_cloture = date(annee_fin_budget, 6, 1)
     if date.today() < date_limite_cloture:
@@ -842,7 +822,6 @@ def cloturer_budget():
         flash(f"Le budget pour l'année scolaire {budget.annee}-{budget.annee+1} est déjà clôturé.", "warning")
         return redirect(url_for('admin.budget'))
 
-    # --- Logique SQLAlchemy ---
     try:
         budget.cloture = True
         db.session.commit()
@@ -854,6 +833,7 @@ def cloturer_budget():
     return redirect(url_for('admin.budget'))
 
 
+
 # ============================================================
 #  GESTION DES FOURNISSEURS
 # ============================================================
@@ -862,8 +842,6 @@ def cloturer_budget():
 def gestion_fournisseurs():
     etablissement_id = session['etablissement_id']
     
-    # On récupère tous les fournisseurs de l'établissement.
-    # La jointure pour compter les dépenses est une bonne optimisation.
     fournisseurs = db.session.execute(
         db.select(Fournisseur, func.count(Depense.id).label('depenses_count'))
         .outerjoin(Depense, Fournisseur.id == Depense.fournisseur_id)
@@ -881,13 +859,13 @@ def gestion_fournisseurs():
                            fournisseurs=fournisseurs,
                            breadcrumbs=breadcrumbs)
 
+
 @admin_bp.route("/fournisseurs/ajouter", methods=['POST'])
 @admin_required
 def ajouter_fournisseur():
     etablissement_id = session['etablissement_id']
     nom = request.form.get('nom', '').strip()
     site_web = request.form.get('site_web', '').strip()
-    # NOUVELLE LOGIQUE : On récupère une URL pour le logo, pas un fichier.
     logo_url = request.form.get('logo_url', '').strip()
 
     if not nom:
@@ -898,7 +876,7 @@ def ajouter_fournisseur():
         nouveau_fournisseur = Fournisseur(
             nom=nom,
             site_web=site_web or None,
-            logo=logo_url or None, # Le champ 'logo' stocke maintenant une URL
+            logo=logo_url or None,
             etablissement_id=etablissement_id
         )
         db.session.add(nouveau_fournisseur)
@@ -912,6 +890,7 @@ def ajouter_fournisseur():
         flash(f"Une erreur de base de données est survenue : {e}", "danger")
 
     return redirect(url_for('admin.gestion_fournisseurs'))
+
 
 @admin_bp.route("/fournisseurs/modifier/<int:id>", methods=['POST'])
 @admin_required
@@ -946,6 +925,7 @@ def modifier_fournisseur(id):
 
     return redirect(url_for('admin.gestion_fournisseurs'))
 
+
 @admin_bp.route("/fournisseurs/supprimer/<int:id>", methods=['POST'])
 @admin_required
 def supprimer_fournisseur(id):
@@ -956,7 +936,6 @@ def supprimer_fournisseur(id):
         flash("Fournisseur non trouvé ou accès non autorisé.", "danger")
         return redirect(url_for('admin.gestion_fournisseurs'))
 
-    # On vérifie si le fournisseur est utilisé dans des dépenses
     if fournisseur.depenses:
         flash(f"Impossible de supprimer '{fournisseur.nom}' car il est associé à {len(fournisseur.depenses)} dépense(s).", "danger")
         return redirect(url_for('admin.gestion_fournisseurs'))
@@ -971,14 +950,6 @@ def supprimer_fournisseur(id):
         flash(f"Une erreur de base de données est survenue : {e}", "danger")
 
     return redirect(url_for('admin.gestion_fournisseurs'))
-
-
-
-
-
-
-
-
 
 
 
@@ -1056,6 +1027,14 @@ def debug_db_state():
                            current_etablissement_id=current_etablissement_id,
                            all_objets=all_objets,
                            all_etablissements=all_etablissements)
+
+
+
+
+
+
+
+
 
 '''
 @admin_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])

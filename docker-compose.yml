@@ -3,9 +3,9 @@ services:
     image: postgres:13
     restart: always
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=gestionlabo_db
+      - POSTGRES_USER=crazypopperz
+      - POSTGRES_PASSWORD=Xav-Docker-Desktop-2025
+      - POSTGRES_DB=labflow_db
     ports:
       - "5432:5432"
     volumes:

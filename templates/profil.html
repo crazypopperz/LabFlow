@@ -1,40 +1,35 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Mon Profil</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    {% include 'header.html' %}
-    <div class="main-container">
+{% extends "base.html" %}
 
-        <form action="{{ url_for('auth.profil') }}" method="post" class="login-form">
-		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <h2>Mon Profil</h2>
-            <p class="form-subtitle">Mettez à jour votre mot de passe ici.</p>
+{% block title %}Mon Profil - LabFlow{% endblock %}
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }}" style="margin: 0; margin-bottom: 10px;">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+{% block content %}
+    <div class="profile-page-container">
+        <div class="profile-form-wrapper">
+            <div class="profile-header">
+                <h2>Mon Profil</h2>
+                <p class="form-subtitle">Mettez à jour votre mot de passe ici.</p>
+            </div>
 
-            <label for="ancien_mot_de_passe">Ancien mot de passe</label>
-            <input type="password" id="ancien_mot_de_passe" name="ancien_mot_de_passe" required>
+            <form action="{{ url_for('auth.profil') }}" method="post" class="profile-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-group">
+                    <label for="ancien_mot_de_passe">Ancien mot de passe</label>
+                    <input type="password" id="ancien_mot_de_passe" name="ancien_mot_de_passe" required>
+                </div>
 
-            <label for="nouveau_mot_de_passe">Nouveau mot de passe</label>
-            <input type="password" id="nouveau_mot_de_passe" name="nouveau_mot_de_passe" required>
+                <div class="form-group">
+                    <label for="nouveau_mot_de_passe">Nouveau mot de passe</label>
+                    <input type="password" id="nouveau_mot_de_passe" name="nouveau_mot_de_passe" required>
+                </div>
 
-            <label for="confirmation_mot_de_passe">Confirmez le nouveau mot de passe</label>
-            <input type="password" id="confirmation_mot_de_passe" name="confirmation_mot_de_passe" required>
+                <div class="form-group">
+                    <label for="confirmation_mot_de_passe">Confirmez le nouveau mot de passe</label>
+                    <input type="password" id="confirmation_mot_de_passe" name="confirmation_mot_de_passe" required>
+                </div>
 
-            <button type="submit" class="btn-primary btn-full-width">Mettre à jour le mot de passe</button>
-        </form>
-
+                <button type="submit" class="btn-full-width">Mettre à jour le mot de passe</button>
+            </form>
+        </div>
     </div>
-    {% include 'footer.html' %}
-</body>
-</html>
+{% endblock %}

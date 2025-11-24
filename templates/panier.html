@@ -1,34 +1,92 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Mon Panier de Réservation</title>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='js/modules/cart-summary.js') }}" defer></script>
-</head>
-<body>
-    {% include 'header.html' %}
-    <div class="main-container">
+{% extends "base.html" %}
+{% block title %}Mon Panier de Réservation - LabFlow{% endblock %}
 
-        <div class="page-title">
-            <svg class="page-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.21 9l-4.38-6.56c-.19-.28-.51-.42-.83-.42-.32 0-.64.14-.83.43L6.79 9H2c-.55 0-1 .45-1 1 0 .09.01.18.04.27l2.54 9.27c.23.84 1 1.46 1.92 1.46h13c.92 0 1.69-.62 1.93-1.46l2.54-9.27L23 10c0-.55-.45-1-1-1h-4.79zM9 9l3-4.4L15 9H9zm10 12H5.04c-.47 0-.85-.34-.96-.81L1.92 11h1.95l.63 2.27c.22.81 1.01 1.32 1.87 1.22.87-.1 1.46-.8 1.32-1.67L6.85 11h10.3l-1.14 4.82c-.14.87.45 1.67 1.32 1.67.86.1 1.65-.42 1.87-1.22L19.96 11h1.92l-2.16 9.19c-.11.47-.5.81-.97.81z"/></svg>
-            <span>Mon Panier de Réservation</span>
-        </div>
-
-        <div class="content-card">
-            <div id="cart-summary-list">
-                <!-- Le contenu du panier sera généré ici par JavaScript -->
-            </div>
-            <div id="cart-actions" class="modal-actions" style="display: none;">
-                 <button id="clear-cart-btn" class="btn-action btn-danger">Vider le panier</button>
-                 <button id="confirm-cart-btn" class="btn-action">Confirmer les réservations</button>
-            </div>
-        </div>
-
+{% block content %}
+<div class="main-container">
+    
+    <div class="page-title">
+        <svg class="page-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M17.21 9l-4.38-6.56c-.19-.28-.51-.42-.83-.42-.32 0-.64.14-.83.43L6.79 9H2c-.55 0-1 .45-1 1 0 .09.01.18.04.27l2.54 9.27c.23.84 1 1.46 1.92 1.46h13c.92 0 1.69-.62 1.93-1.46l2.54-9.27L23 10c0-.55-.45-1-1-1h-4.79zM9 9l3-4.4L15 9H9zm10 12H5.04c-.47 0-.85-.34-.96-.81L1.92 11h1.95l.63 2.27c.22.81 1.01 1.32 1.87 1.22.87-.1 1.46-.8 1.32-1.67L6.85 11h10.3l-1.14 4.82c-.14.87.45 1.67 1.32 1.67.86.1 1.65-.42 1.87-1.22L19.96 11h1.92l-2.16 9.19c-.11.47-.5.81-.97.81z"/>
+        </svg>
+        <span>Mon Panier de Réservation</span>
     </div>
-	{% include '_modals.html' %}
-    {% include 'footer.html' %}
-</body>
-</html>
+
+    <!-- Card principale du panier -->
+    <div class="content-card">
+        
+        <!-- Zone du contenu du panier -->
+        <div id="cart-summary-list" class="cart-items-container">
+            <!-- Contenu injecté par JS -->
+        </div>
+
+        <!-- Message panier vide (affiché par défaut, masqué par JS si items) -->
+        <div id="empty-cart-message" class="empty-cart-state">
+            <svg class="empty-cart-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+            </svg>
+            <h3>Votre panier est vide</h3>
+            <p>Ajoutez des réservations depuis le calendrier pour les voir apparaître ici.</p>
+            <a href="{{ url_for('main.calendrier') }}" class="btn-action btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Aller au calendrier
+            </a>
+        </div>
+
+        <!-- Actions du panier (visible uniquement si items) -->
+        <div id="cart-actions" class="cart-actions-bar" style="display: none;">
+            <button id="clear-cart-btn" class="btn-action btn-outline-danger">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Vider le panier
+            </button>
+            <button id="confirm-cart-btn" class="btn-action btn-primary btn-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Confirmer les réservations
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/modules/cart-summary.js') }}" type="module"></script>
+<script>
+// Gestion de l'affichage du message "panier vide"
+document.addEventListener('DOMContentLoaded', function() {
+    const cartList = document.getElementById('cart-summary-list');
+    const emptyMessage = document.getElementById('empty-cart-message');
+    const cartActions = document.getElementById('cart-actions');
+    
+    // Observer pour détecter les changements dans le panier
+    const observer = new MutationObserver(() => {
+        const hasItems = cartList.children.length > 0 && 
+                        !cartList.querySelector('.widget-placeholder');
+        
+        if (hasItems) {
+            emptyMessage.style.display = 'none';
+            cartActions.style.display = 'flex';
+        } else {
+            emptyMessage.style.display = 'flex';
+            cartActions.style.display = 'none';
+        }
+    });
+    
+    observer.observe(cartList, { childList: true, subtree: true });
+    
+    // Vérification initiale
+    const cart = JSON.parse(sessionStorage.getItem('reservationCart')) || {};
+    if (Object.keys(cart).length === 0) {
+        emptyMessage.style.display = 'flex';
+    }
+});
+</script>
+{% endblock %}

@@ -6,6 +6,8 @@ from datetime import date, datetime, timedelta
 from flask import Flask, redirect, request, session, url_for, current_app
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
+from dotenv import load_dotenv
+
 
 # On importe l'objet db et les modèles nécessaires pour le context_processor
 from db import db, Parametre, Armoire, Categorie, init_app as init_db_app
@@ -15,6 +17,8 @@ from views.inventaire import inventaire_bp
 from views.admin import admin_bp
 from views.main import main_bp
 from views.api import api_bp
+load_dotenv() # Cette ligne cherche et charge le fichier .env
+from datetime import date, datetime, timedelta
 
 # -----------------------------------------------------------------------------
 # 2. LA FONCTION "FACTORY" QUI CRÉE ET CONFIGURE L'APPLICATION
@@ -32,10 +36,13 @@ def create_app():
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
     # --- CONFIGURATION DE LA BASE DE DONNÉES ---
-    local_db_url = 'postgresql://user:password@localhost:5432/gestionlabo_db'
-    db_url = os.environ.get('DATABASE_URL', local_db_url).replace("postgres://", "postgresql://")
+    db_url = os.environ.get('DATABASE_URL')
+    if not db_url:
+        raise ValueError("Erreur: La variable d'environnement DATABASE_URL n'est pas définie !")
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace("postgres://", "postgresql://")
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_ECHO'] = True
 
     # --- INITIALISATION DES EXTENSIONS ---
     init_db_app(app)

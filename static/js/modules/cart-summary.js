@@ -1,5 +1,5 @@
 // =================================================================
-// MODULE: CART SUMMARY (Version Finale et Corrigée)
+// MODULE: CART SUMMARY / PANIER
 // =================================================================
 document.addEventListener("DOMContentLoaded", function () {
     const cartListContainer = document.getElementById('cart-summary-list');
@@ -19,8 +19,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         cartActions.style.display = 'flex';
-
-        // Trier les clés pour un affichage chronologique
         cartKeys.sort((a, b) => {
             const dateA = new Date(cart[a].date + 'T' + cart[a].heure_debut);
             const dateB = new Date(cart[b].date + 'T' + cart[b].heure_debut);
@@ -99,7 +97,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 const result = await response.json();
                 if (result.success) {
                     sessionStorage.removeItem('reservationCart');
-                    // Rediriger vers le calendrier pour voir le résultat
                     window.location.href = '/calendrier'; 
                 } else {
                     showInfoModal("Erreur de Réservation", result.error);
@@ -117,13 +114,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (removeBtn) {
             const keyToRemove = removeBtn.dataset.id;
-            const modal = document.getElementById('danger-modal'); // Utilisation d'une modale de danger générique
+            const modal = document.getElementById('danger-modal');
             if (modal) {
                 modal.querySelector('#danger-modal-text').textContent = "Êtes-vous sûr de vouloir retirer cette réservation de votre panier ?";
                 modal.style.display = 'flex';
                 
                 const confirmBtn = modal.querySelector('#danger-modal-confirm-btn');
-                // Cloner pour éviter les écouteurs multiples
                 const newConfirmBtn = confirmBtn.cloneNode(true);
                 confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
@@ -144,11 +140,9 @@ document.addEventListener("DOMContentLoaded", function () {
             const itemToEdit = cart[keyToEdit];
 
             if (itemToEdit) {
-                // On ne supprime plus l'item du panier immédiatement
-                // On passe les données à la page suivante via sessionStorage pour l'édition
                 const editData = {
                     ...itemToEdit,
-                    editingCartKey: keyToEdit // On passe la clé pour savoir quelle entrée remplacer
+                    editingCartKey: keyToEdit
                 };
                 sessionStorage.setItem('editReservationData', JSON.stringify(editData));
                 window.location.href = `/jour/${itemToEdit.date}`;

@@ -1043,7 +1043,7 @@ a.day-cell.can-reserve:hover {
     font-weight: 600;
     color: var(--texte-discret);
     border-right: 2px solid var(--couleur-bordure);
-    background: linear-gradient(to right, #f8f9fa 0%, white 100%);
+    background: linear-gradient(to right, #f8f9fa 0%, #eff4fa 100%);
 }
 
 /* Container des événements */
@@ -1333,7 +1333,7 @@ a.day-cell.can-reserve:hover {
 /* Dark mode support (optionnel) */
 @media (prefers-color-scheme: dark) {
     .content-card {
-        background: #1e1e1e;
+        background: #dfe3ee;
     }
     
     .schedule-slot {
@@ -1341,12 +1341,12 @@ a.day-cell.can-reserve:hover {
     }
     
     .time-label {
-        background: linear-gradient(to right, #252525 0%, #1e1e1e 100%);
+        background: linear-gradient(to right, #dfe3ee 0%, #f7f7f7 100%);
         border-right-color: #333;
     }
     
     .schedule-slot:hover {
-        background-color: rgba(255, 255, 255, 0.05);
+        background-color: #f7f7f7;
     }
 }
 
@@ -2512,5 +2512,252 @@ a.day-cell.can-reserve:hover {
     
     .empty-cart-state h3 {
         font-size: 20px;
+    }
+}
+
+
+/* ===================================================================
+   20. TOOLTIP DE RÉSERVATION
+   ================================================================== */
+
+#reservation-tooltip {
+    position: fixed;
+    z-index: 10000; /* Très élevé pour passer au-dessus de tout */
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 0;
+    min-width: 280px;
+    max-width: 400px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* État visible du tooltip */
+#reservation-tooltip.visible {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+/* Petite flèche pour indiquer la direction */
+#reservation-tooltip.tooltip-on-bottom::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid #ffffff;
+    filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.05));
+}
+
+#reservation-tooltip.tooltip-on-top::before {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #ffffff;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.05));
+}
+
+/* En-tête du tooltip */
+.tooltip-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    padding: 12px 16px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.tooltip-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    flex: 1;
+}
+
+.tooltip-title strong {
+    font-weight: 700;
+}
+
+/* Conteneur des boutons */
+.tooltip-buttons {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Boutons d'action */
+.btn-edit-resa,
+.btn-delete-resa {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-edit-resa {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-edit-resa:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+.btn-delete-resa {
+    background: rgba(239, 68, 68, 0.9);
+    color: #ffffff;
+}
+
+.btn-delete-resa:hover {
+    background: rgba(220, 38, 38, 1);
+    transform: translateY(-1px);
+}
+
+/* Liste du matériel */
+.tooltip-list {
+    list-style: none;
+    margin: 0;
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.tooltip-list > li {
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.tooltip-list > li:last-child {
+    margin-bottom: 0;
+}
+
+/* Titres des sections (Kits, Matériel) */
+.tooltip-list > li > strong {
+    display: block;
+    color: #1f2937;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sous-listes pour les items */
+.tooltip-list ul {
+    list-style: none;
+    margin: 0;
+    padding-left: 0;
+}
+
+.tooltip-list ul li {
+    padding: 6px 12px;
+    margin-bottom: 4px;
+    background: #f9fafb;
+    border-left: 3px solid #667eea;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+}
+
+.tooltip-list ul li:last-child {
+    margin-bottom: 0;
+}
+
+/* Icône avant chaque item (optionnel) */
+.tooltip-list ul li::before {
+    content: '•';
+    color: #667eea;
+    font-weight: bold;
+    font-size: 16px;
+    margin-right: 8px;
+}
+
+/* Message "Aucun matériel" */
+.tooltip-list > li:only-child {
+    color: #9ca3af;
+    font-style: italic;
+    text-align: center;
+    padding: 8px 0;
+}
+
+/* Scrollbar personnalisée pour la liste */
+.tooltip-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tooltip-list::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+}
+
+.tooltip-list::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.tooltip-list::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Animation de chargement */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+#reservation-tooltip .tooltip-title:contains('Chargement') {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive pour petits écrans */
+@media (max-width: 640px) {
+    #reservation-tooltip {
+        min-width: 240px;
+        max-width: calc(100vw - 20px);
+    }
+    
+    .tooltip-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .tooltip-buttons {
+        width: 100%;
+        justify-content: flex-end;
     }
 }

@@ -528,36 +528,56 @@ def api_reservation_details(groupe_id):
 
         
 # ============================================================
-# --- SUPPRIMER UNE RESERVATION (INCHANGÉ) ---
+# --- SUPPRIMER UNE RESERVATION ---
 # ============================================================
 @api_bp.route("/supprimer_reservation", methods=['POST'])
 @login_required
 def api_supprimer_reservation():
     etablissement_id = session.get('etablissement_id')
     user_id = session.get('user_id')
+    user_role = session.get('user_role')
+    
+    # Validation de la requête JSON
     data = request.get_json()
+    if not data:
+        return jsonify(success=False, error="Corps de la requête invalide ou vide."), 400
+        
     groupe_id = data.get("groupe_id")
-
     if not groupe_id:
-        return jsonify({"success": False, "error": "ID de groupe manquant."}), 400
-
+        return jsonify(success=False, error="ID de groupe manquant."), 400
+    
     try:
-        reservation_a_supprimer = db.session.execute(db.select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)).scalars().first()
-        if not reservation_a_supprimer:
+        # Vérifier que la réservation existe et appartient à l'établissement
+        reservation = db.session.execute(
+            db.select(Reservation).filter_by(
+                groupe_id=groupe_id,
+                etablissement_id=etablissement_id
+            )
+        ).scalars().first()
+        
+        if not reservation:
             return jsonify(success=False, error="Réservation non trouvée."), 404
-        if session.get('user_role') != 'admin' and reservation_a_supprimer.utilisateur_id != user_id:
+        
+        # Vérifier les permissions
+        if user_role != 'admin' and reservation.utilisateur_id != user_id:
             return jsonify(success=False, error="Vous n'avez pas la permission de supprimer cette réservation."), 403
         
-        db.session.execute(db.delete(Reservation).where(Reservation.groupe_id == groupe_id))
+        # Supprimer toutes les lignes du groupe
+        result = db.session.execute(
+            db.delete(Reservation).where(
+                Reservation.groupe_id == groupe_id,
+                Reservation.etablissement_id == etablissement_id
+            )
+        )
         db.session.commit()
         
         flash("La réservation a été annulée.", "success")
-        return jsonify(success=True)
+        return jsonify(success=True, message="Réservation supprimée avec succès.")
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur lors de la suppression de la réservation : {e}")
-        return jsonify(success=False, error=str(e)), 500
+        current_app.logger.error(f"Erreur lors de la suppression de la réservation {groupe_id}: {e}", exc_info=True)
+        return jsonify(success=False, error="Erreur serveur lors de la suppression."), 500
 
 
 # =============================================================

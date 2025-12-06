@@ -1,12 +1,14 @@
 import { openReservationModal } from './booking-modal.js';
 
 document.addEventListener("DOMContentLoaded", function () {
-    const scheduleContainer = document.querySelector('.daily-schedule');
+    const scheduleContainer = document.querySelector('.daily-schedule-wrapper');
     const tooltipElement = document.getElementById('reservation-tooltip');
     const dangerModalElement = document.getElementById('dangerModal');
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const mainContainer = document.querySelector('.main-container');
 
-    if (!scheduleContainer || !tooltipElement || !dangerModalElement || !confirmDeleteBtn) {
+    if (!scheduleContainer || !tooltipElement || !dangerModalElement || !confirmDeleteBtn || !mainContainer) {
+        console.warn("Éléments du calendrier manquants. Script calendar-daily.js arrêté.");
         return;
     }
 
@@ -15,265 +17,251 @@ document.addEventListener("DOMContentLoaded", function () {
     let currentFetchController = null;
     let groupIdToDelete = null;
 
-    // --- RESTAURATION DE L'ÉDITION (SessionStorage) ---
+    // --- 1. RESTAURATION DE L'ÉDITION ---
     const editDataJSON = sessionStorage.getItem('editReservationData');
     if (editDataJSON) {
         try {
             const editData = JSON.parse(editDataJSON);
             openReservationModal(editData.date, editData.editingGroupId);
         } catch (e) {
-            console.error("Erreur lors de la lecture des données d'édition:", e);
+            console.error("Erreur session storage:", e);
         } finally {
             sessionStorage.removeItem('editReservationData');
         }
     }
 
-    // --- AFFICHAGE DU TOOLTIP ---
-    const showTooltip = async (block) => {
+    // --- 2. FONCTION D'AFFICHAGE DU TOOLTIP ---
+    const showTooltip = async (block, event) => {        
         clearTimeout(hideTooltipTimeout);
         
         const groupeId = block.dataset.groupeId;
-        if (!groupeId || (tooltipElement.classList.contains('visible') && tooltipElement.dataset.currentGroupeId === groupeId)) {
+        
+        if (tooltipElement.classList.contains('visible') && tooltipElement.dataset.currentGroupeId === groupeId) {
             return;
         }
 
-        // Annuler la requête précédente si elle existe
-        if (currentFetchController) {
-            currentFetchController.abort();
-        }
+        if (currentFetchController) currentFetchController.abort();
         currentFetchController = new AbortController();
 
         tooltipElement.dataset.currentGroupeId = groupeId;
-        tooltipElement.innerHTML = '<div class="tooltip-header"><span class="tooltip-title">Chargement...</span></div>';
+        
+        tooltipElement.innerHTML = `
+            <div class="tooltip-header">
+                <span class="tooltip-title">Chargement...</span>
+            </div>`;
         tooltipElement.classList.add('visible');
+        
+        positionTooltip(block);
 
         try {
             const response = await fetch(`/api/reservation_details/${groupeId}`, {
                 signal: currentFetchController.signal
             });
             
-            if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`);
+            if (!response.ok) throw new Error(`Erreur ${response.status}`);
             
             const details = await response.json();
             
-            // Vérifier que c'est toujours la bonne réservation
-            if (tooltipElement.dataset.currentGroupeId !== groupeId) {
-                return;
-            }
+            if (tooltipElement.dataset.currentGroupeId !== groupeId) return;
 
-            const container = document.querySelector('.main-container');
-            const isAdmin = container?.dataset.isAdmin === 'true';
-            const currentUserId = container?.dataset.userId;
+            const isAdmin = mainContainer.dataset.isAdmin === 'true';
+            const currentUserId = mainContainer.dataset.userId;
             const isMine = String(details.utilisateur_id) === String(currentUserId);
 
-            // Construire la liste du matériel
-            let listItems = '';
-            const kits = details.kits || {};
-            const objetsManuels = details.objets_manuels || [];
-
-            if (Object.keys(kits).length > 0) {
-                listItems += `<li><strong>Kits :</strong></li><ul>`;
-                for (const kitId in kits) {
-                    listItems += `<li>${kits[kitId].quantite} x ${kits[kitId].nom}</li>`;
+            let contentHtml = '<ul class="tooltip-list">';
+            
+            if (details.kits && Object.keys(details.kits).length > 0) {
+                contentHtml += `<li class="text-primary fw-bold mt-2">Kits :</li>`;
+                for (const kitId in details.kits) {
+                    contentHtml += `<li>• ${details.kits[kitId].quantite} x ${details.kits[kitId].nom}</li>`;
                 }
-                listItems += `</ul>`;
             }
 
-            if (objetsManuels.length > 0) {
-                listItems += `<li><strong>Matériel ajouté :</strong></li><ul>`;
-                objetsManuels.forEach(item => {
-                    listItems += `<li>${item.quantite_reservee} x ${item.nom}</li>`;
+            if (details.objets_manuels && details.objets_manuels.length > 0) {
+                contentHtml += `<li class="text-primary fw-bold mt-2">Matériel :</li>`;
+                details.objets_manuels.forEach(item => {
+                    contentHtml += `<li>• ${item.quantite_reservee} x ${item.nom}</li>`;
                 });
-                listItems += `</ul>`;
             }
+            contentHtml += '</ul>';
 
-            // Boutons d'action si autorisé
             let buttonsHtml = '';
+            const currentDateStr = mainContainer.dataset.date;
+            
             if (isMine || isAdmin) {
-                const pathParts = window.location.pathname.split('/');
-                const currentDateStr = pathParts[pathParts.length - 1];
-                buttonsHtml += `<button class="btn-edit-resa" data-groupe-id="${groupeId}" data-date="${currentDateStr}">Modifier</button>`;
-                buttonsHtml += `<button class="btn-delete-resa" data-groupe-id="${groupeId}">Supprimer</button>`;
+                buttonsHtml = `
+                    <div class="tooltip-actions">
+                        <button class="btn-tooltip edit" data-groupe-id="${groupeId}" data-date="${currentDateStr}">Modifier</button>
+                        <button class="btn-tooltip delete" data-groupe-id="${groupeId}">Supprimer</button>
+                    </div>`;
             }
 
             tooltipElement.innerHTML = `
                 <div class="tooltip-header">
-                    <span class="tooltip-title">Réservation de <strong>${details.nom_utilisateur}</strong></span>
-                    <div class="tooltip-buttons">${buttonsHtml}</div>
+                    <span class="tooltip-title">${details.nom_utilisateur}</span>
+                    ${buttonsHtml}
                 </div>
-                <ul class="tooltip-list">${listItems || '<li>Aucun matériel spécifique.</li>'}</ul>`;
-
+                <div class="tooltip-body">
+                    <div class="mb-2 text-muted">
+                        <i class="bi bi-clock"></i> ${details.debut_reservation.split('T')[1].slice(0,5)} - ${details.fin_reservation.split('T')[1].slice(0,5)}
+                    </div>
+                    ${contentHtml}
+                </div>`;
+            
             positionTooltip(block);
 
         } catch (error) {
-            if (error.name === 'AbortError') {
-                return;
-            }
-            console.error("Erreur lors de la récupération des détails:", error);
-            tooltipElement.innerHTML = `<div class="tooltip-header"><span class="tooltip-title">Erreur de chargement</span></div>`;
-            positionTooltip(block);
+            if (error.name === 'AbortError') return;
+            console.error(error);
+            tooltipElement.innerHTML = `<div class="tooltip-header text-danger">Erreur de chargement</div>`;
         }
     };
 
-    // --- POSITIONNEMENT DU TOOLTIP ---
-    const positionTooltip = (block) => {
-        requestAnimationFrame(() => {
-            const blockRect = block.getBoundingClientRect();
-            const tooltipRect = tooltipElement.getBoundingClientRect();
-            const margin = 12;
+    // --- 3. POSITIONNEMENT INTELLIGENT ---
+    const positionTooltip = (eventBlock) => {
+        const blockRect = eventBlock.getBoundingClientRect();
+        const tooltipRect = tooltipElement.getBoundingClientRect();
+        const margin = 10;
 
-            // Positionner en haut ou en bas selon l'espace disponible
-            if ((window.innerHeight - blockRect.bottom) > tooltipRect.height + margin) {
-                tooltipElement.className = 'tooltip tooltip-on-bottom visible';
-                tooltipElement.style.top = `${blockRect.bottom + margin}px`;
+        let top = blockRect.bottom + margin;
+        let left = blockRect.left + (blockRect.width / 2) - (tooltipRect.width / 2);
+
+        if (left + tooltipRect.width > window.innerWidth - margin) {
+            left = window.innerWidth - tooltipRect.width - margin;
+        }
+
+        if (left < margin) {
+            left = margin;
+        }
+
+        if (top + tooltipRect.height > window.innerHeight - margin) {
+            top = blockRect.top - tooltipRect.height - margin;
+        }
+
+        if (top < margin) {
+            top = margin;
+        }
+
+        tooltipElement.style.top = `${top}px`;
+        tooltipElement.style.left = `${left}px`;
+    };
+
+	// --- 4. GESTIONNAIRES D'ÉVÉNEMENTS ---
+
+	let currentHoveredBlock = null;
+	let switchTooltipTimeout = null;
+
+	scheduleContainer.addEventListener('mouseenter', (e) => {
+		const block = e.target.closest('.event-item');
+		if (block) {
+			// Annuler tout changement de tooltip en cours
+			clearTimeout(switchTooltipTimeout);
+			clearTimeout(hideTooltipTimeout);
+			
+			// Si c'est un nouveau bloc différent
+			if (currentHoveredBlock !== block) {
+				currentHoveredBlock = block;
+				
+				// Délai de 400ms avant de changer le tooltip
+				switchTooltipTimeout = setTimeout(() => {
+					showTooltip(block, e);
+				}, tooltipElement.classList.contains('visible') ? 400 : 0);
+				// Si pas de tooltip visible, afficher immédiatement
+				// Sinon attendre 400ms (temps de traverser vers le tooltip)
+			}
+		}
+	}, true);
+
+	scheduleContainer.addEventListener('mouseleave', (e) => {
+		const block = e.target.closest('.event-item');
+		if (block && block === currentHoveredBlock) {
+			currentHoveredBlock = null;
+			
+			// Attendre 600ms avant de fermer le tooltip
+			hideTooltipTimeout = setTimeout(() => {
+				if (!tooltipElement.matches(':hover')) {
+					tooltipElement.classList.remove('visible');
+					tooltipElement.dataset.currentGroupeId = '';
+				}
+			}, 300);
+		}
+	}, true);
+
+	// Garder le tooltip ouvert si on est dessus
+	tooltipElement.addEventListener('mouseenter', () => {
+		clearTimeout(hideTooltipTimeout);
+		clearTimeout(switchTooltipTimeout);
+	});
+
+	// Fermer le tooltip quand on sort
+	tooltipElement.addEventListener('mouseleave', () => {
+		currentHoveredBlock = null;
+		hideTooltipTimeout = setTimeout(() => {
+			tooltipElement.classList.remove('visible');
+			tooltipElement.dataset.currentGroupeId = '';
+		}, 200);
+	});
+
+	// Clics sur les boutons du tooltip
+	tooltipElement.addEventListener('click', (e) => {
+		const editBtn = e.target.closest('.btn-tooltip.edit');
+		if (editBtn) {
+			tooltipElement.classList.remove('visible');
+			openReservationModal(editBtn.dataset.date, editBtn.dataset.groupeId);
+			return;
+		}
+
+		const deleteBtn = e.target.closest('.btn-tooltip.delete');
+		if (deleteBtn) {
+			groupIdToDelete = deleteBtn.dataset.groupeId;
+			const modalText = document.getElementById('dangerModalText');
+			if (modalText) modalText.innerHTML = `Supprimer définitivement cette réservation ?`;
+			
+			tooltipElement.classList.remove('visible');
+			dangerModal.show();
+		}
+	});
+    // --- 5. BOUTON NOUVELLE RÉSERVATION ---
+    const newReservationBtn = document.getElementById('new-reservation-btn');
+    if (newReservationBtn) {
+        newReservationBtn.addEventListener('click', () => {
+            const dateStr = mainContainer.dataset.date;
+            if (dateStr) {
+                openReservationModal(dateStr);
             } else {
-                tooltipElement.className = 'tooltip tooltip-on-top visible';
-                tooltipElement.style.top = `${blockRect.top - tooltipRect.height - margin}px`;
+                console.error("Date introuvable dans data-date");
+                alert("Erreur interne : Date introuvable.");
             }
-
-            // Centrer horizontalement avec limites d'écran
-            let leftPos = blockRect.left + (blockRect.width / 2) - (tooltipRect.width / 2);
-            leftPos = Math.max(10, Math.min(leftPos, window.innerWidth - tooltipRect.width - 10));
-            tooltipElement.style.left = `${leftPos}px`;
         });
-    };
+    }
 
-    // --- MASQUER LE TOOLTIP AVEC DÉLAI ---
-    const startHideTooltipTimer = () => {
-        hideTooltipTimeout = setTimeout(() => {
-            tooltipElement.classList.remove('visible');
-            tooltipElement.dataset.currentGroupeId = '';
-            
-            if (currentFetchController) {
-                currentFetchController.abort();
-                currentFetchController = null;
-            }
-        }, 400);
-    };
-
-    // --- ÉVÉNEMENTS SOURIS SUR LES BLOCS ---
-    scheduleContainer.addEventListener('mouseenter', (e) => {
-        const block = e.target.closest('.event-block');
-        if (block) {
-            showTooltip(block);
-        }
-    }, true);
-
-    scheduleContainer.addEventListener('mouseleave', (e) => {
-        const block = e.target.closest('.event-block');
-        if (block) {
-            startHideTooltipTimer();
-        }
-    }, true);
-
-    // --- ÉVÉNEMENTS SOURIS SUR LE TOOLTIP ---
-    tooltipElement.addEventListener('mouseenter', () => {
-        clearTimeout(hideTooltipTimeout);
-    });
-
-    tooltipElement.addEventListener('mouseleave', startHideTooltipTimer);
-
-    // --- CLICS DANS LE TOOLTIP ---
-    tooltipElement.addEventListener('click', (e) => {
-        const editBtn = e.target.closest('.btn-edit-resa');
-        if (editBtn) {
-            tooltipElement.classList.remove('visible');
-            tooltipElement.dataset.currentGroupeId = '';
-            openReservationModal(editBtn.dataset.date, editBtn.dataset.groupeId);
-            return;
-        }
-
-        const deleteBtn = e.target.closest('.btn-delete-resa');
-        if (deleteBtn) {
-            groupIdToDelete = deleteBtn.dataset.groupeId;
-            
-            const modalText = dangerModalElement.querySelector('.modal-body p');
-            if (modalText) {
-                modalText.innerHTML = `Êtes-vous sûr de vouloir supprimer cette réservation ?<br>Cette action est irréversible.`;
-            }
-
-            tooltipElement.classList.remove('visible');
-            tooltipElement.dataset.currentGroupeId = '';
-            dangerModal.show();
-        }
-    });
-
-    // --- CONFIRMATION DE SUPPRESSION ---
+    // --- 6. CONFIRMATION SUPPRESSION ---
     confirmDeleteBtn.addEventListener('click', async () => {
-        if (!groupIdToDelete) {
-            console.warn('Aucun groupe_id à supprimer');
-            return;
-        }
-
-        // Désactiver le bouton pendant la requête
+        if (!groupIdToDelete) return;
         confirmDeleteBtn.disabled = true;
-        const originalText = confirmDeleteBtn.textContent;
-        confirmDeleteBtn.textContent = 'Suppression...';
-
+        
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            
-            if (!csrfToken) {
-                throw new Error('Token CSRF introuvable');
-            }
-
             const response = await fetch('/api/supprimer_reservation', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-CSRFToken': csrfToken
                 },
-                credentials: 'same-origin',
                 body: JSON.stringify({ groupe_id: groupIdToDelete })
             });
 
-            // Gérer les redirections (session expirée)
-            if (response.redirected) {
-                window.location.href = response.url;
-                return;
-            }
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ 
-                    error: `Erreur HTTP ${response.status}` 
-                }));
-                throw new Error(errorData.error || 'La suppression a échoué');
-            }
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                dangerModal.hide();
-                dangerModalElement.addEventListener('hidden.bs.modal', () => {
-                    window.location.reload();
-                }, { once: true });
+            if (response.ok) {
+                window.location.reload();
             } else {
-                throw new Error(result.error || 'Une erreur est survenue');
+                alert("Erreur lors de la suppression");
             }
-
         } catch (error) {
-            console.error('Erreur lors de la suppression:', error);
-            dangerModal.hide();
-            
-            setTimeout(() => {
-                alert(`Impossible de supprimer la réservation :\n${error.message}`);
-            }, 300);
-
+            console.error(error);
+            alert("Erreur réseau");
         } finally {
             confirmDeleteBtn.disabled = false;
-            confirmDeleteBtn.textContent = originalText;
-            groupIdToDelete = null;
+            dangerModal.hide();
         }
     });
-
-    // --- BOUTON NOUVELLE RÉSERVATION ---
-    const newReservationBtn = document.getElementById('new-reservation-btn');
-    if (newReservationBtn) {
-        const pathParts = window.location.pathname.split('/');
-        const dateStr = pathParts[pathParts.length - 1];
-        newReservationBtn.addEventListener('click', () => {
-            openReservationModal(dateStr);
-        });
-    }
 });

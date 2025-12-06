@@ -236,13 +236,6 @@ document.addEventListener("DOMContentLoaded", function () {
 				if (modalMessage) modalMessage.textContent = trigger.dataset.modalMessage;
 			}
 			modal.style.display = 'flex';
-
-			const form = modal.querySelector('form');
-			if (form) {
-				if (trigger.dataset.actionUrl) {
-					form.action = trigger.dataset.actionUrl;
-				}
-			}
 			
 			if (modalId === 'cloture-impossible-modal') {
 				const anneeScolaire = trigger.dataset.anneeScolaire;
@@ -252,42 +245,68 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 
 			if (modalId === 'add-object-modal') {
-				const modalTitle = modal.querySelector('#modal-objet-title');
-				const modalSubmitBtn = modal.querySelector('#modal-submit-btn');
-				const imagePreviewContainer = modal.querySelector('#image-preview-container');
-				const iconTemplate = document.getElementById('modal-icon-template');
-
-				if (trigger.dataset.objetId) {
-					modalTitle.innerHTML = '';
-					if (iconTemplate) modalTitle.appendChild(iconTemplate.cloneNode(true));
-					modalTitle.appendChild(document.createTextNode(" Modifier l'objet"));
-					modalSubmitBtn.textContent = "Mettre à jour";
-					form.action = `/modifier_objet/${trigger.dataset.objetId}`;
-					form.querySelector('#nom').value = trigger.dataset.nom || '';
-					form.querySelector('#quantite').value = trigger.dataset.quantite || '';
-					form.querySelector('#seuil').value = trigger.dataset.seuil || '';
-					form.querySelector('#date_peremption').value = trigger.dataset.datePeremption || '';
-					form.querySelector('#armoire_id').value = trigger.dataset.armoireId || '';
-					form.querySelector('#categorie_id').value = trigger.dataset.categorieId || '';
+				const addObjectModalElement = document.getElementById('add-object-modal');
+				if (!addObjectModalElement) return;
+				
+				const addObjectModalInstance = bootstrap.Modal.getOrCreateInstance(addObjectModalElement);
+				const form = addObjectModalElement.querySelector('form');
+				const modalTitle = addObjectModalElement.querySelector('#modal-objet-title');
+				const submitBtn = addObjectModalElement.querySelector('#modal-submit-btn');
+				const imagePreviewContainer = addObjectModalElement.querySelector('#image-preview-container');
+				const imagePreview = imagePreviewContainer?.querySelector('img');
+				
+				const objetId = trigger.dataset.objetId;
+				
+				if (objetId) {
+					// --- MODE MODIFICATION ---
+					if (modalTitle) modalTitle.textContent = "Modifier l'objet";
+					if (submitBtn) submitBtn.textContent = "Mettre à jour";
+					if (form) form.action = `/modifier_objet/${objetId}`;
+					
+					// Pré-remplissage des champs
+					const fields = {
+						'nom': trigger.dataset.nom,
+						'quantite': trigger.dataset.quantite,
+						'seuil': trigger.dataset.seuil,
+						'date_peremption': trigger.dataset.datePeremption,
+						'armoire_id': trigger.dataset.armoireId,
+						'categorie_id': trigger.dataset.categorieId,
+						'image_url': trigger.dataset.imageUrl,
+						'fds_url': trigger.dataset.fdsUrl
+					};
+					
+					for (const [fieldId, value] of Object.entries(fields)) {
+						const input = form?.querySelector(`#${fieldId}`);
+						if (input) input.value = value || '';
+					}
+					
+					// Gestion de l'image
 					const imageUrl = trigger.dataset.imageUrl;
-					form.querySelector('#image_url').value = imageUrl || '';
-
-					if (imageUrl) {
-						imagePreviewContainer.querySelector('img').src = imageUrl;
+					if (imageUrl && imagePreview && imagePreviewContainer) {
+						imagePreview.src = imageUrl;
 						imagePreviewContainer.style.display = 'block';
-					} else {
+					} else if (imagePreviewContainer) {
 						imagePreviewContainer.style.display = 'none';
 					}
+					
 				} else {
-					modalTitle.innerHTML = '';
-					if (iconTemplate) modalTitle.appendChild(iconTemplate.cloneNode(true));
-					modalTitle.appendChild(document.createTextNode(" Ajouter un nouvel objet"));
-					modalSubmitBtn.textContent = "Enregistrer l'objet";
-					form.action = document.body.dataset.addUrl;
-					form.reset();
-					imagePreviewContainer.style.display = 'none';
+					// --- MODE AJOUT ---
+					if (modalTitle) modalTitle.textContent = "Ajouter un nouvel objet";
+					if (submitBtn) submitBtn.textContent = "Enregistrer l'objet";
+					if (form) {
+						form.action = document.body.dataset.addUrl || '/ajouter_objet';
+						form.reset();
+					}
+					if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
 				}
+				
+				// Ouvrir la modale Bootstrap
+				addObjectModalInstance.show();
+				
+				// Initialisation Pexels
 				setupPexelsSearch();
+				
+				return; // Important : arrêter ici
 			}
 
 			if (trigger.dataset.formUsername) {
@@ -397,7 +416,6 @@ document.addEventListener("DOMContentLoaded", function () {
 			if (form && modal && anneeSpan && confirmBtn) {
 				anneeSpan.textContent = form.dataset.annee;
 				confirmBtn.onclick = () => { form.submit(); };
-				modal.style.display = 'flex';
 			}
 		}
 	});
@@ -876,6 +894,114 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 		});
 	}
+	
+	// =================================================================
+    // SECTION 14 : MODALE DE SUGGESTION DE COMMANDE (BOOTSTRAP 5)
+    // =================================================================
+    const suggestionModal = document.getElementById('suggestionModal');
+    if (suggestionModal) {
+        const suggestionModalInstance = new bootstrap.Modal(suggestionModal);
+        
+        const objetNomElement = document.getElementById('suggestion-objet-nom');
+        const objetIdInput = document.getElementById('suggestion-objet-id');
+        const quantityInput = document.getElementById('suggestion-quantity-input');
+        const commentaireInput = document.getElementById('suggestion-commentaire');
+        const confirmBtn = document.getElementById('suggestion-confirm-btn');
 
+        // Ouvrir la modale via les boutons "Suggérer"
+        document.addEventListener('click', function(e) {
+            const btnSuggest = e.target.closest('.btn-suggest');
+            if (btnSuggest) {
+                e.preventDefault();
+                
+                const objetId = btnSuggest.dataset.objetId;
+                const objetNom = btnSuggest.dataset.objetNom;
+                
+                // Remplir les données
+                if (objetNomElement) objetNomElement.textContent = objetNom;
+                if (objetIdInput) objetIdInput.value = objetId;
+                if (quantityInput) quantityInput.value = '';
+                if (commentaireInput) commentaireInput.value = '';
+                
+                // Ouvrir la modale Bootstrap
+                suggestionModalInstance.show();
+                
+                // Focus sur le champ quantité après ouverture
+                setTimeout(() => {
+                    if (quantityInput) quantityInput.focus();
+                }, 300);
+            }
+        });
+
+        // Réinitialiser au clic sur annuler
+        suggestionModal.addEventListener('hidden.bs.modal', function() {
+            if (quantityInput) quantityInput.value = '';
+            if (commentaireInput) commentaireInput.value = '';
+            if (objetIdInput) objetIdInput.value = '';
+            if (objetNomElement) objetNomElement.textContent = '-';
+            if (confirmBtn) {
+                confirmBtn.classList.remove('loading');
+                confirmBtn.disabled = false;
+            }
+            if (quantityInput) quantityInput.classList.remove('is-invalid');
+        });
+
+        // Confirmer la suggestion
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', async function() {
+                const objetId = objetIdInput.value;
+                const quantite = parseInt(quantityInput.value);
+                const commentaire = commentaireInput.value.trim();
+                
+                // Validation
+                if (!quantite || quantite < 1) {
+                    quantityInput.classList.add('is-invalid');
+                    quantityInput.focus();
+                    return;
+                }
+                quantityInput.classList.remove('is-invalid');
+                
+                if (!objetId) {
+                    showInfoModal('Erreur', 'Objet non identifié');
+                    return;
+                }
+                
+                // État de chargement
+                confirmBtn.classList.add('loading');
+                confirmBtn.disabled = true;
+                
+                try {
+                    const response = await fetch('/api/suggerer_commande', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({
+                            objet_id: objetId,
+                            quantite: quantite,
+                            commentaire: commentaire
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        showInfoModal('Succès', result.message || 'Suggestion enregistrée avec succès !');
+                        suggestionModalInstance.hide();
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        showInfoModal('Erreur', result.error || 'Une erreur est survenue');
+                    }
+                } catch (error) {
+                    console.error('Erreur:', error);
+                    showInfoModal('Erreur', 'Erreur de connexion au serveur');
+                } finally {
+                    confirmBtn.classList.remove('loading');
+                    confirmBtn.disabled = false;
+                }
+            });
+        }
+    }
     setupPexelsSearch();
 });

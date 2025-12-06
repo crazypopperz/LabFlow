@@ -176,19 +176,74 @@ def api_reservations_par_mois(year, month):
     try:
         start_date = date(year, month, 1)
         end_date = date(year, month + 1, 1) if month < 12 else date(year + 1, 1, 1)
-        jours_reserves = db.session.execute(
-            db.select(func.date(Reservation.debut_reservation))
+        
+        # Compte le nombre de groupes (réservations distinctes) par jour
+        reservations = db.session.execute(
+            db.select(
+                func.date(Reservation.debut_reservation).label('jour'),
+                func.count(func.distinct(Reservation.groupe_id)).label('count')
+            )
             .filter(
                 Reservation.etablissement_id == etablissement_id,
                 Reservation.debut_reservation >= start_date,
                 Reservation.debut_reservation < end_date
-            ).distinct()
-        ).scalars().all()
-        reservations_par_jour = {jour.strftime('%Y-%m-%d'): [{'placeholder': True}] for jour in jours_reserves}
+            )
+            .group_by(func.date(Reservation.debut_reservation))
+        ).all()
+        
+        # Retourne {date: nombre_de_reservations}
+        reservations_par_jour = {r.jour.strftime('%Y-%m-%d'): r.count for r in reservations}
         return jsonify(reservations_par_jour)
     except Exception as e:
         current_app.logger.error(f"Erreur API reservations_par_mois : {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/reservations_jour/<date_str>")
+@login_required
+def api_reservations_jour(date_str):
+    """Retourne toutes les réservations pour un jour donné"""
+    etablissement_id = session.get('etablissement_id')
+    if not etablissement_id:
+        return jsonify({"error": "Non autorisé"}), 403
+    
+    try:
+        # Parse la date
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Récupère les groupes de réservations distincts pour ce jour
+        groupes = db.session.execute(
+            db.select(
+                Reservation.groupe_id,
+                Reservation.utilisateur_id,
+                Reservation.debut_reservation,
+                Reservation.fin_reservation
+            )
+            .filter(
+                Reservation.etablissement_id == etablissement_id,
+                func.date(Reservation.debut_reservation) == date_obj
+            )
+            .distinct(Reservation.groupe_id)
+            .order_by(Reservation.groupe_id, Reservation.debut_reservation)
+        ).all()
+        
+        result = []
+        for groupe in groupes:
+            # Récupère l'utilisateur
+            user = db.session.get(Utilisateur, groupe.utilisateur_id)
+            
+            result.append({
+                'nom_utilisateur': user.nom_utilisateur if user else 'Inconnu',
+                'heure_debut': groupe.debut_reservation.strftime('%H:%M'),
+                'heure_fin': groupe.fin_reservation.strftime('%H:%M'),
+                'groupe_id': groupe.groupe_id
+            })
+        
+        return jsonify({'reservations': result})
+        
+    except Exception as e:
+        current_app.logger.error(f"Erreur API reservations_jour : {e}")
+        return jsonify({'error': str(e), 'reservations': []}), 500
 
 
 # ========================================================================
@@ -611,3 +666,52 @@ def rechercher_objets():
     ).mappings().all()
 
     return jsonify([dict(row) for row in objets])
+    
+
+# ================================================================
+# API SUGGESTION COMMANDES
+# ================================================================
+@api_bp.route("/suggerer_commande", methods=['POST'])
+@login_required
+def api_suggerer_commande():
+    """Enregistre une suggestion de commande pour un objet"""
+    etablissement_id = session.get('etablissement_id')
+    user_id = session.get('user_id')
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "error": "Données manquantes"}), 400
+    
+    objet_id = data.get('objet_id')
+    quantite = data.get('quantite')
+    commentaire = data.get('commentaire', '')
+    
+    if not objet_id or not quantite:
+        return jsonify({"success": False, "error": "Objet ou quantité manquant"}), 400
+    
+    try:
+        # Vérifier que l'objet existe
+        objet = db.session.get(Objet, objet_id)
+        if not objet or objet.etablissement_id != etablissement_id:
+            return jsonify({"success": False, "error": "Objet introuvable"}), 404
+        
+        # Pour l'instant, on peut simplement :
+        # Option 1 : Envoyer un email à l'admin (si tu as un système d'email)
+        # Option 2 : Créer une table "Suggestions" dans ta BDD
+        # Option 3 : Juste afficher un message de confirmation (temporaire)
+        
+        # Solution temporaire : juste retourner un succès
+        # Tu pourras améliorer ça plus tard avec une vraie table
+        current_app.logger.info(
+            f"Suggestion de commande : Objet {objet.nom} (ID: {objet_id}), "
+            f"Quantité: {quantite}, Par: User {user_id}, Commentaire: {commentaire}"
+        )
+        
+        return jsonify({
+            "success": True, 
+            "message": f"Suggestion enregistrée : {quantite} unités de {objet.nom}"
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Erreur suggestion commande : {e}")
+        return jsonify({"success": False, "error": "Erreur serveur"}), 500

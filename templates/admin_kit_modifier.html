@@ -1,96 +1,233 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Modifier le Kit : {{ kit.nom }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-</head>
-<body>
-    {% include 'header.html' %}
-    <div class="main-container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-            {% for category, message in messages %}
-                <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
+{% extends "base.html" %}
+
+{% block title %}Modifier le Kit : {{ kit.nom }} - LabFlow{% endblock %}
+
+{% block content %}
+
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-2">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white" 
+                 style="width: 40px; height: 40px; background: linear-gradient(135deg, #6f42c1 0%, #a8edea 100%);">
+                <i class="bi bi-box-seam"></i>
             </div>
-        {% endif %}
-        {% endwith %}
+            Modification du Kit : <span class="text-primary">{{ kit.nom }}</span>
+        </h2>
+        <a href="{{ url_for('admin.gestion_kits') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
 
-        <nav class="breadcrumb-nav">
-            <a href="{{ url_for('admin.gestion_kits') }}" class="breadcrumb-link">
-                <span class="breadcrumb-icon">
-                    <svg class="page-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-80q-33 0-56.5-23.5T200-160v-480q0-33 23.5-56.5T280-720h400q33 0 56.5 23.5T760-640v480q0 33-23.5 56.5T680-80H280Zm0-80h400v-480H280v480Zm100-40q17 0 28.5-11.5T420-240q0-17-11.5-28.5T380-280q-17 0-28.5 11.5T340-240q0 17 11.5 28.5T380-200Zm200 0q17 0 28.5-11.5T620-240q0-17-11.5-28.5T580-280q-17 0-28.5 11.5T540-240q0 17 11.5 28.5T580-200ZM480-320q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35ZM280-640v480-480Z"/></svg>
-                </span>
-                <span class="breadcrumb-text">Gestion des Kits</span>
-            </a>
-            <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current">{{ kit.nom }}</span>
-        </nav>
+    <div class="row g-4">
+        
+        <!-- COLONNE GAUCHE : Objets DANS le kit -->
+        <div class="col-lg-6">
+            <div class="kit-edit-card">
+                <div class="kit-edit-header">
+                    <h3 class="kit-edit-title">
+                        <i class="bi bi-check-circle-fill text-success"></i> Contenu du Kit
+                    </h3>
+                    <span class="badge bg-white text-dark border">{{ objets_in_kit|length }} objets</span>
+                </div>
+                
+                <div class="kit-edit-body">
+                    {% if objets_in_kit %}
+                    <form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <table class="kit-edit-table">
+                            <thead>
+                                <tr>
+                                    <th>Objet</th>
+                                    <th class="text-center" style="width: 100px;">Qté</th>
+                                    <th class="text-end" style="width: 60px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assoc in objets_in_kit %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ assoc.objet.nom }}</div>
+                                        <small class="text-muted">Stock total : {{ assoc.objet.quantite_physique }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="number" name="quantite_{{ assoc.id }}" 
+                                               value="{{ assoc.quantite }}" 
+                                               class="form-control form-control-sm kit-qty-input mx-auto" 
+                                               min="1">
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-danger border-0"
+                                                title="Retirer du kit"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#removeModal"
+                                                data-url="{{ url_for('admin.retirer_objet_kit', kit_objet_id=assoc.id) }}"
+                                                data-name="{{ assoc.objet.nom }}">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
 
-        <div class="kit-editor-grid">
-            <!-- Colonne 1: Objets dans le kit -->
-            <div class="details-card">
-                <h3 class="management-header">Objets dans le kit "{{ kit.nom }}"</h3>
-                {% if objets_in_kit %}
-                <form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <table class="objet-table">
-                        <thead><tr><th>Nom</th><th>Quantité dans le kit</th><th>Action</th></tr></thead>
-                        <tbody>
-                        {% for assoc in objets_in_kit %}
-							<tr>
-								<!-- On accède à l'objet via assoc.objet -->
-								<td>{{ assoc.objet.nom }} <span class="text-discret">({{ assoc.objet.quantite_physique }} en stock)</span></td>
-								<td><input type="number" name="quantite_{{ assoc.id }}" value="{{ assoc.quantite }}" class="input-small" min="1"></td>
-								<td>
-									<button type="button" class="btn-action btn-danger btn-open-danger-modal"
-											data-action="{{ url_for('admin.retirer_objet_kit', kit_objet_id=assoc.id) }}"
-											data-message="Êtes-vous sûr de vouloir retirer '{{ assoc.objet.nom }}' de ce kit ?">
-										Retirer
-									</button>
-								</td>
-							</tr>
-						{% endfor %}
-                        </tbody>
-                    </table>
-                    <div class="form-actions-right">
-                        <button type="submit" class="btn-action">Mettre à jour les quantités</button>
+                        <!-- Bouton flottant en bas de la liste -->
+                        <div class="p-3 border-top bg-white text-end sticky-bottom">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save me-2"></i>Mettre à jour les quantités
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-box-seam display-4 mb-3 d-block opacity-25"></i>
+                            <p>Ce kit est vide.</p>
+                            <small>Ajoutez des objets depuis la liste de droite.</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DROITE : Objets DISPONIBLES -->
+        <div class="col-lg-6">
+            <div class="kit-edit-card border-primary border-opacity-25">
+                <div class="kit-edit-header bg-primary bg-opacity-10">
+                    <h3 class="kit-edit-title text-primary">
+                        <i class="bi bi-plus-circle-fill"></i> Ajouter des objets
+                    </h3>
+                </div>
+                
+                <!-- Barre de recherche fixe en haut de la liste -->
+                <div class="kit-edit-toolbar">
+                    <div class="kit-search-wrapper">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="kit-objet-search" class="form-control kit-search-input" placeholder="Rechercher un objet à ajouter...">
                     </div>
-                </form>
-                {% else %}
-                <p>Ce kit est vide. Ajoutez des objets depuis la liste de droite.</p>
-                {% endif %}
-            </div>
+                </div>
 
-            <!-- Colonne 2: Objets disponibles -->
-            <div class="details-card">
-                <h3 class="management-header">Ajouter un objet au kit</h3>
-                <input type="text" id="kit-objet-search" placeholder="Rechercher un objet à ajouter..." style="width: 100%; margin-bottom: 15px; padding: 8px;">
-                <div class="history-table-container">
-                    <table class="objet-table" id="available-objects-table">
-                        <thead><tr><th>Nom (Stock)</th><th>Quantité</th><th>Action</th></tr></thead>
+                <div class="kit-edit-body">
+                    <table class="kit-edit-table" id="available-objects-table">
+                        <thead>
+                            <tr>
+                                <th>Objet (Stock)</th>
+                                <th class="text-center" style="width: 90px;">Qté</th>
+                                <th class="text-end" style="width: 60px;"></th>
+                            </tr>
+                        </thead>
                         <tbody>
-                        {% for objet in objets_disponibles %}
-							<tr>
-								<td>{{ objet.nom }} <span class="text-discret">({{ objet.quantite_physique }})</span></td>
-								<form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
-									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-									<input type="hidden" name="objet_id" value="{{ objet.id }}">
-									<td><input type="number" name="quantite" value="1" class="input-small" min="1" max="{{ objet.quantite_physique }}"></td>
-									<td><button type="submit" class="btn-action btn-small" {% if objet.quantite_physique == 0 %}disabled{% endif %}>Ajouter</button></td>
-								</form>
-							</tr>
-						{% endfor %}
+                            {% for objet in objets_disponibles %}
+                            <tr class="objet-row">
+                                <td>
+                                    <span class="objet-name fw-medium">{{ objet.nom }}</span>
+                                    <small class="text-muted ms-1">({{ objet.quantite_physique }})</small>
+                                </td>
+                                
+                                <!-- Formulaire individuel par ligne -->
+                                <form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="objet_id" value="{{ objet.id }}">
+                                    
+                                    <td class="text-center">
+                                        <input type="number" name="quantite" value="1" 
+                                               class="form-control form-control-sm kit-qty-input mx-auto" 
+                                               min="1" max="{{ objet.quantite_physique }}">
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="submit" class="btn btn-sm btn-primary" 
+                                                title="Ajouter au kit"
+                                                {% if objet.quantite_physique == 0 %}disabled{% endif %}>
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </td>
+                                </form>
+                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
+                    
+                    <!-- Message si aucun résultat de recherche -->
+                    <div id="no-results" class="text-center py-5 text-muted d-none">
+                        <i class="bi bi-search mb-2 d-block opacity-50"></i>
+                        Aucun objet trouvé
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    {% include 'footer.html' %}
-	{% include '_modale_danger.html' %}
-</body>
-</html>
+</div>
+
+<!-- Modale de confirmation de retrait -->
+<div class="modal fade" id="removeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Retirer l'objet</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Voulez-vous vraiment retirer <strong id="remove-object-name"></strong> du kit ?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form id="removeForm" method="post" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Retirer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. Recherche dynamique JS
+    const searchInput = document.getElementById('kit-objet-search');
+    const tableRows = document.querySelectorAll('#available-objects-table .objet-row');
+    const noResults = document.getElementById('no-results');
+
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function(e) {
+            const term = e.target.value.toLowerCase();
+            let visibleCount = 0;
+
+            tableRows.forEach(row => {
+                const name = row.querySelector('.objet-name').textContent.toLowerCase();
+                if (name.includes(term)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('d-none');
+            } else {
+                noResults.classList.add('d-none');
+            }
+        });
+    }
+
+    // 2. Gestion de la modale de retrait
+    const removeModal = document.getElementById('removeModal');
+    if (removeModal) {
+        removeModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const url = button.dataset.url;
+            const name = button.dataset.name;
+            
+            document.getElementById('removeForm').action = url;
+            document.getElementById('remove-object-name').textContent = name;
+        });
+    }
+});
+</script>
+{% endblock %}

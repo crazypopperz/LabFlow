@@ -2,69 +2,359 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Créer un Compte - GMLCL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer un Compte - LabFlow</title>
+    
+    <!-- Bootstrap 5 CSS LOCAL -->
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <!-- Bootstrap Icons LOCAL -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}">
+    <!-- Google Fonts (optionnel si local souhaité) -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Global -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
-    <div class="main-container">
-        <div class="setup-form-container">
-            <form class="setup-form" method="post">
+<body class="login-page-body">
+
+    <div class="register-card">
+        <!-- En-tête -->
+        <div class="register-header">
+            <div class="register-logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" aria-hidden="true">
+                    <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z"/>
+                </svg>
+            </div>
+            <h1 class="h4 fw-bold mb-1">Créer un compte</h1>
+            <p class="small opacity-75 mb-0">Rejoignez votre établissement sur LabFlow</p>
+        </div>
+
+        <div class="p-4">
+            <!-- Messages flash -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} py-2 px-3 small mb-3 shadow-sm border-0" role="alert">
+                            <i class="bi bi-info-circle-fill me-2" aria-hidden="true"></i>{{ message | e }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="post" id="registerForm" novalidate>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <div class="setup-header">
-                    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo GMLCL" class="setup-logo">
-                    <h1>Créer un Nouveau Compte</h1>
-                    <p class="form-subtitle" style="text-align: center;">Ce compte aura un accès standard à l'application.</p>
-                </div>
-
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="flash {{ category }}">{{ message }}</div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-
-                <div class="form-group">
-                    <label for="username">Nom d'utilisateur :</label>
-                    <input type="text" id="username" name="username" required placeholder="Choisissez un nom d'utilisateur">
-                </div>
-
-                <div class="password-group">
-                    <div class="form-group">
-                        <label for="password">
-                            Mot de passe
-                            <span class="tooltip-container">
-                                <svg class="tooltip-trigger" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm1-8h-2V7h2v2z"/></svg>
-                                <span class="tooltip-text">
-                                    Doit contenir au moins 12 caractères, incluant :<br>
-                                    - Une majuscule (A-Z)<br>
-                                    - Une minuscule (a-z)<br>
-                                    - Un chiffre (0-9)<br>
-                                    - Un caractère spécial (!@#...)
-                                </span>
-                            </span>
-                        </label>
-                        <input type="password" id="password" name="password" required placeholder="Choisissez un mot de passe sécurisé">
+                <!-- Nom d'utilisateur -->
+                <div class="form-floating mb-3">
+                    <input type="text" 
+                           class="form-control" 
+                           id="username" 
+                           name="username" 
+                           placeholder="Identifiant" 
+                           required 
+                           minlength="3"
+                           maxlength="50"
+                           pattern="^[a-zA-Z0-9_-]+$"
+                           autocomplete="username"
+                           aria-describedby="usernameHelp">
+                    <label for="username">Nom d'utilisateur</label>
+                    <div class="invalid-feedback">
+                        Le nom d'utilisateur doit contenir entre 3 et 50 caractères (lettres, chiffres, - ou _)
                     </div>
-                    <div class="form-group">
-                        <label for="password_confirm">Confirmez le mot de passe</label>
-                        <input type="password" id="password_confirm" name="password_confirm" required placeholder="Retapez votre mot de passe">
+                    <div id="usernameHelp" class="form-text small">Uniquement lettres, chiffres, tirets et underscores</div>
+                </div>
+
+                <!-- Email -->
+                <div class="form-floating mb-3">
+                    <input type="email" 
+                           class="form-control" 
+                           id="email" 
+                           name="email" 
+                           placeholder="name@example.com" 
+                           required
+                           maxlength="120"
+                           autocomplete="email"
+                           aria-describedby="emailHelp">
+                    <label for="email">Adresse e-mail</label>
+                    <div class="invalid-feedback">
+                        Veuillez saisir une adresse e-mail valide
+                    </div>
+                    <div id="emailHelp" class="form-text small">Vous recevrez un email de confirmation</div>
+                </div>
+
+                <!-- Code Invitation -->
+                <div class="mb-3">
+                    <div class="form-floating">
+                        <input type="text" 
+                               class="form-control text-uppercase text-center fw-bold" 
+                               id="code_invitation" 
+                               name="code_invitation" 
+                               placeholder="CODE" 
+                               required 
+                               maxlength="20"
+                               pattern="^[A-Z0-9-]+$"
+                               autocomplete="off"
+                               aria-describedby="codeHelp">
+                        <label for="code_invitation" class="w-100 text-center">Code d'invitation</label>
+                        <div class="invalid-feedback text-center">
+                            Le code d'invitation est requis
+                        </div>
+                    </div>
+                    <div id="codeHelp" class="form-text small text-center mt-1">Fourni par votre établissement</div>
+                </div>
+
+                <!-- Mot de passe -->
+                <div class="mb-2 position-relative">
+                    <div class="form-floating">
+                        <input type="password" 
+                               class="form-control" 
+                               id="password" 
+                               name="password" 
+                               placeholder="Mot de passe" 
+                               required
+                               minlength="12"
+                               maxlength="128"
+                               autocomplete="new-password"
+                               aria-describedby="passwordHelp">
+                        <label for="password">Mot de passe</label>
+                    </div>
+                    <button type="button" 
+                            class="btn btn-link position-absolute top-50 end-0 translate-middle-y text-decoration-none text-muted" 
+                            id="togglePassword" 
+                            style="z-index: 5; padding-right: 15px;"
+                            aria-label="Afficher ou masquer le mot de passe">
+                        <i class="bi bi-eye" id="togglePasswordIcon" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <!-- Barre de force -->
+                <div class="strength-bar mb-2" 
+                     role="progressbar" 
+                     aria-valuenow="0" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100"
+                     aria-label="Force du mot de passe">
+                    <div class="strength-bar-fill" id="strengthBar"></div>
+                </div>
+
+                <!-- Exigences -->
+                <div class="password-requirements mb-3" id="passwordHelp">
+                    <div class="row g-1">
+                        <div class="col-6 requirement-item" id="req-length">
+                            <i class="bi bi-circle" aria-hidden="true"></i> 
+                            <span>12 car. min</span>
+                        </div>
+                        <div class="col-6 requirement-item" id="req-uppercase">
+                            <i class="bi bi-circle" aria-hidden="true"></i> 
+                            <span>1 Majuscule</span>
+                        </div>
+                        <div class="col-6 requirement-item" id="req-lowercase">
+                            <i class="bi bi-circle" aria-hidden="true"></i> 
+                            <span>1 Minuscule</span>
+                        </div>
+                        <div class="col-6 requirement-item" id="req-number">
+                            <i class="bi bi-circle" aria-hidden="true"></i> 
+                            <span>1 Chiffre</span>
+                        </div>
+                        <div class="col-6 requirement-item" id="req-special">
+                            <i class="bi bi-circle" aria-hidden="true"></i> 
+                            <span>1 Caractère spécial</span>
+                        </div>
+                        <div class="col-6 requirement-item" id="req-match">
+                            <i class="bi bi-circle" aria-hidden="true"></i> 
+                            <span>Mots de passe identiques</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="email">Adresse e-mail :</label>
-                    <input type="email" id="email" name="email" required placeholder="Votre adresse e-mail">
+                <!-- Confirmation -->
+                <div class="form-floating mb-4">
+                    <input type="password" 
+                           class="form-control" 
+                           id="password_confirm" 
+                           name="password_confirm" 
+                           placeholder="Confirmation" 
+                           required
+                           minlength="12"
+                           maxlength="128"
+                           autocomplete="new-password">
+                    <label for="password_confirm">Confirmer le mot de passe</label>
+                    <div class="invalid-feedback">Les mots de passe ne correspondent pas</div>
                 </div>
 
-                <button type="submit" class="btn-action btn-full-width">Créer le compte</button>
+                <!-- Bouton -->
+                <button type="submit" 
+                        class="btn btn-primary btn-register w-100 text-white rounded-3 py-2 mb-3"
+                        id="submitBtn">
+                    <span id="submitBtnText">S'inscrire</span>
+                    <span id="submitBtnSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                </button>
 
-                <p class="form-switch-link" style="margin-top: 15px;">
-                    Vous avez déjà un compte ? <a href="{{ url_for('auth.login') }}">Connectez-vous</a>
-                </p>
+                <!-- Footer -->
+                <div class="text-center small">
+                    <span class="text-muted">Déjà un compte ?</span>
+                    <a href="{{ url_for('auth.login') }}" class="text-decoration-none fw-bold" style="color: var(--couleur-principale);">Se connecter</a>
+                </div>
             </form>
         </div>
     </div>
+
+    <!-- Bootstrap 5 JS LOCAL -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+    <script>
+        (function() {
+            'use strict';
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const form = document.getElementById('registerForm');
+                const password = document.getElementById('password');
+                const passwordConfirm = document.getElementById('password_confirm');
+                const togglePassword = document.getElementById('togglePassword');
+                const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+                const strengthBar = document.getElementById('strengthBar');
+                const submitBtn = document.getElementById('submitBtn');
+                const submitBtnText = document.getElementById('submitBtnText');
+                const submitBtnSpinner = document.getElementById('submitBtnSpinner');
+                const codeInput = document.getElementById('code_invitation');
+
+                let passwordValidationTimeout = null;
+
+                // Force le code invitation en majuscules en temps réel
+                codeInput.addEventListener('input', function() {
+                    this.value = this.value.toUpperCase();
+                });
+
+                // Toggle Password Visibility
+                togglePassword.addEventListener('click', function() {
+                    const type = password.type === 'password' ? 'text' : 'password';
+                    password.type = type;
+                    passwordConfirm.type = type;
+                    
+                    togglePasswordIcon.classList.toggle('bi-eye');
+                    togglePasswordIcon.classList.toggle('bi-eye-slash');
+                    
+                    const label = type === 'text' ? 'Masquer le mot de passe' : 'Afficher le mot de passe';
+                    togglePassword.setAttribute('aria-label', label);
+                });
+
+                // Fonction pour vérifier la correspondance (appelée par les deux champs)
+                function checkMatch() {
+                    const valPass = password.value;
+                    const valConf = passwordConfirm.value;
+                    
+                    // On considère que ça matche si les deux ne sont pas vides et sont égaux
+                    const isMatch = valPass.length > 0 && valConf.length > 0 && valPass === valConf;
+                    
+                    updateRequirement('req-match', isMatch);
+
+                    // Gestion de la classe invalid de Bootstrap pour le champ confirm
+                    if (valConf.length > 0 && valPass !== valConf) {
+                        passwordConfirm.classList.add('is-invalid');
+                    } else {
+                        passwordConfirm.classList.remove('is-invalid');
+                    }
+
+                    return isMatch;
+                }
+
+                // Password Strength Logic avec debouncing
+                password.addEventListener('input', function() {
+                    clearTimeout(passwordValidationTimeout);
+                    
+                    passwordValidationTimeout = setTimeout(function() {
+                        const value = password.value;
+                        let strength = 0;
+                        
+                        // Vérifications avec regex plus robustes
+                        const hasLength = value.length >= 12;
+                        const hasUpperCase = /[A-Z]/.test(value);
+                        const hasLowerCase = /[a-z]/.test(value);
+                        const hasNumber = /[0-9]/.test(value);
+                        // Accepte tous les caractères non-alphanumériques
+                        const hasSpecial = /[^A-Za-z0-9]/.test(value);
+
+                        updateRequirement('req-length', hasLength);
+                        updateRequirement('req-uppercase', hasUpperCase);
+                        updateRequirement('req-lowercase', hasLowerCase);
+                        updateRequirement('req-number', hasNumber);
+                        updateRequirement('req-special', hasSpecial);
+
+                        if (hasLength) strength += 20;
+                        if (hasUpperCase) strength += 20;
+                        if (hasLowerCase) strength += 20;
+                        if (hasNumber) strength += 20;
+                        if (hasSpecial) strength += 20;
+
+                        strengthBar.style.width = strength + '%';
+                        strengthBar.parentElement.setAttribute('aria-valuenow', strength);
+                        
+                        if (strength <= 40) {
+                            strengthBar.style.backgroundColor = 'var(--couleur-erreur, #dc3545)';
+                            strengthBar.parentElement.setAttribute('aria-label', 'Force du mot de passe : Faible');
+                        } else if (strength <= 80) {
+                            strengthBar.style.backgroundColor = 'var(--couleur-avertissement, #ffc107)';
+                            strengthBar.parentElement.setAttribute('aria-label', 'Force du mot de passe : Moyenne');
+                        } else {
+                            strengthBar.style.backgroundColor = 'var(--couleur-succes, #198754)';
+                            strengthBar.parentElement.setAttribute('aria-label', 'Force du mot de passe : Forte');
+                        }
+
+                        // Vérifier aussi la correspondance quand on modifie le mot de passe principal
+                        checkMatch();
+                    }, 200);
+                });
+
+                // Validation Match Password sur l'input de confirmation
+                passwordConfirm.addEventListener('input', checkMatch);
+
+                function updateRequirement(id, isMet) {
+                    const element = document.getElementById(id);
+                    const icon = element.querySelector('i');
+                    if (isMet) {
+                        element.classList.add('met');
+                        icon.className = 'bi bi-check-circle-fill';
+                    } else {
+                        element.classList.remove('met');
+                        icon.className = 'bi bi-circle';
+                    }
+                }
+
+                // Form Submit Validation
+                form.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const isPasswordMatch = password.value === passwordConfirm.value;
+                    const isFormValid = form.checkValidity();
+
+                    if (!isFormValid || !isPasswordMatch) {
+                        if (!isPasswordMatch) {
+                            passwordConfirm.classList.add('is-invalid');
+                        }
+                        form.classList.add('was-validated');
+                        return false;
+                    }
+
+                    // Désactiver le bouton et afficher le spinner
+                    submitBtn.disabled = true;
+                    submitBtnText.textContent = 'Inscription en cours...';
+                    submitBtnSpinner.classList.remove('d-none');
+
+                    // Soumettre le formulaire
+                    form.submit();
+                });
+
+                // Empêcher la soumission multiple (double-clic)
+                let formSubmitted = false;
+                form.addEventListener('submit', function() {
+                    if (formSubmitted) {
+                        return false;
+                    }
+                    formSubmitted = true;
+                });
+            });
+        })();
+    </script>
 </body>
 </html>

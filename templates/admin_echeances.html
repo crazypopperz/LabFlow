@@ -1,126 +1,217 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Gestion des Échéances</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-</head>
-<body data-url-ajout-echeance="{{ url_for('admin.ajouter_echeance') }}">
-    {% include 'header.html' %}
-    <div class="main-container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-            {% for category, message in messages %}
-                <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
-            </div>
-        {% endif %}
-        {% endwith %}
-		{% include '_breadcrumb.html' %}
+{% extends "base.html" %}
 
-        <div class="table-header">
-            <h2 class="page-title">
-                <svg class="page-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M19 19H5V8h14m-3-7v2H8V1H6v2H5c-1.11 0-2 .89-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-1V1m-1 11h-5v5h5v-5Z"/></svg>
-                <span>Gestion des Échéances</span>
-            </h2>
-            <button class="btn-action" data-modal-trigger="echeance-modal">Ajouter une échéance</button>
-        </div>
+{% block title %}Gestion des Échéances - LabFlow{% endblock %}
 
-        <div class="content-card">
-            <div class="table-container">
-                <table class="objet-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 150px;">Date d'échéance</th>
-                            <th>Intitulé</th>
-                            <th>Détails</th>
-                            <th style="width: 100px;">Statut</th>
-                            <th style="width: 120px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for echeance in echeances %}
-                        <tr class="{% if not echeance.traite and echeance.date_echeance < date_actuelle %}row-perime{% elif not echeance.traite and (echeance.date_echeance - date_actuelle).days < 30 %}row-perime-bientot{% endif %} {% if echeance.traite %}acquitte{% endif %}">
-                            <td>{{ echeance.date_echeance.strftime('%d/%m/%Y') }}</td>
-                            <td style="text-align: left; font-weight: 500;">{{ echeance.intitule }}</td>
-                            <td style="text-align: left;">{{ echeance.details or '' }}</td>
-                            <td>
-                                {% if echeance.traite %}
-                                    Traité
-                                {% else %}
-                                    En cours
-                                {% endif %}
-                            </td>
-                            <td class="actions-cell">
-                                <button class="btn-action btn-icon-only" 
-                                        title="Modifier cette échéance"
-                                        data-modal-trigger="echeance-modal"
-                                        data-echeance-id="{{ echeance.id }}"
-                                        data-form-intitule="{{ echeance.intitule | e }}"
-                                        data-form-date-echeance="{{ echeance.date_echeance.strftime('%Y-%m-%d') }}"
-                                        data-form-details="{{ echeance.details | e }}"
-                                        data-form-traite="{{ echeance.traite }}">
-                                    <svg style="width:24px;height:24px" viewBox="0 0 24 24"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.13,5.12L18.88,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg>
-                                </button>
-                                <form class="form-in-cell delete-form-interactive" 
-									  action="{{ url_for('admin.supprimer_echeance', id=echeance.id) }}" 
-									  method="post"
-									  data-item-type="échéance"
-									  data-item-name="{{ echeance.intitule }}">
-									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-									 <button type="button" class="btn-action btn-icon-only delete-btn" title="Supprimer cette échéance">
-										<svg style="width:24px;height:24px" viewBox="0 0 24 24"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>
-									</button>
-								</form>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-discret" style="padding: 20px;">Aucune échéance enregistrée.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+{% block content %}
+*
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <!-- Icône Échéances (Orange) -->
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
+                    <path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Z"/>
+                </svg>
             </div>
-        </div>
+            <span class="fw-bold">Gestion des Échéances</span>
+        </h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#echeanceModal" onclick="resetModal()">
+            <i class="bi bi-plus-lg me-2"></i> Ajouter une échéance
+        </button>
     </div>
 
-    <!-- Modale pour Ajouter/Modifier une échéance -->
-    <div id="echeance-modal" class="modal-overlay" style="display: none;">
+    <!-- Tableau -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="table-responsive">
+            <table class="echeance-table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 150px;">Date</th>
+                        <th>Intitulé</th>
+                        <th>Détails</th>
+                        <th style="width: 140px;">Statut</th>
+                        <th class="text-end" style="width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if echeances %}
+                        {% for echeance in echeances %}
+                            <!-- Calcul du statut pour le style -->
+                            {% set is_late = (not echeance.traite and echeance.date_echeance < date_actuelle) %}
+                            {% set is_soon = (not echeance.traite and (echeance.date_echeance - date_actuelle).days < 30 and not is_late) %}
+                            
+                            <tr class="{{ 'row-done' if echeance.traite else '' }}">
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-calendar3 text-muted"></i>
+                                        <span class="fw-medium">{{ echeance.date_echeance.strftime('%d/%m/%Y') }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong class="d-block text-dark">{{ echeance.intitule }}</strong>
+                                </td>
+                                <td class="text-muted small">
+                                    {{ echeance.details or '-' }}
+                                </td>
+                                <td>
+                                    {% if echeance.traite %}
+                                        <span class="status-badge status-done"><i class="bi bi-check-circle-fill"></i> Traité</span>
+                                    {% elif is_late %}
+                                        <span class="status-badge status-danger"><i class="bi bi-exclamation-triangle-fill"></i> Retard</span>
+                                    {% elif is_soon %}
+                                        <span class="status-badge status-warning"><i class="bi bi-clock-history"></i> Bientôt</span>
+                                    {% else %}
+                                        <span class="status-badge status-ok"><i class="bi bi-hourglass-split"></i> En cours</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <!-- Wrapper Flexbox pour aligner les boutons -->
+                                    <div class="actions-wrapper">
+                                        <!-- Modifier -->
+                                        <button class="btn btn-sm btn-outline-primary btn-icon-only" 
+                                                title="Modifier"
+                                                onclick='openEditModal({{ echeance.id }}, "{{ echeance.intitule|replace('"', '&quot;') }}", "{{ echeance.date_echeance.strftime('%Y-%m-%d') }}", "{{ (echeance.details or "")|replace('"', '&quot;')|replace('\n', ' ')|replace('\r', '') }}", {{ "true" if echeance.traite else "false" }})'>
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                        
+                                        <!-- Supprimer -->
+                                        <button class="btn btn-sm btn-outline-danger btn-icon-only" 
+                                                title="Supprimer"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteModal"
+                                                data-url="{{ url_for('admin.supprimer_echeance', id=echeance.id) }}">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x display-4 d-block mb-3 opacity-25"></i>
+                                Aucune échéance enregistrée.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Ajout/Modification -->
+<div class="modal fade" id="echeanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="echeance-modal-title" class="modal-title-with-icon">Ajouter une échéance</h3>
-                <button class="close-btn">×</button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTitle"><i class="bi bi-calendar-plus me-2"></i>Nouvelle Échéance</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="" method="post" class="modal-form">
-			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="form-group">
-                    <label for="intitule">Intitulé</label>
-                    <input type="text" id="intitule" name="intitule" required>
+            <form id="echeanceForm" action="{{ url_for('admin.ajouter_echeance') }}" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Intitulé *</label>
+                        <input type="text" class="form-control" name="intitule" id="inputIntitule" required placeholder="Ex: Renouvellement contrat maintenance">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Date d'échéance *</label>
+                        <input type="date" class="form-control" name="date_echeance" id="inputDate" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Détails</label>
+                        <textarea class="form-control" name="details" id="inputDetails" rows="3"></textarea>
+                    </div>
+
+                    <!-- Checkbox visible uniquement en mode édition -->
+                    <div class="form-check d-none" id="divTraite">
+                        <input class="form-check-input" type="checkbox" name="traite" id="checkTraite">
+                        <label class="form-check-label" for="checkTraite">
+                            Marquer comme traitée / terminée
+                        </label>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="date_echeance">Date d'échéance</label>
-                    <input type="date" id="date_echeance" name="date_echeance" required>
-                </div>
-                <div class="form-group">
-                    <label for="details">Détails (optionnel)</label>
-                    <textarea id="details" name="details" rows="4"></textarea>
-                </div>
-                <div class="form-group" id="traite-group" style="display: none; align-items: center; gap: 10px;">
-                    <input type="checkbox" id="traite" name="traite" style="width: auto;">
-                    <label for="traite" style="margin-bottom: 0; font-weight: normal;">Marquer comme traité</label>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-action btn-secondary">Annuler</button>
-                    <button id="echeance-submit-btn" type="submit" class="btn-action">Enregistrer</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-    {% include 'footer.html' %}
-	{% include '_modale_danger.html' %}
-</body>
-</html>
+<!-- Modale Suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Supprimer l'échéance</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Voulez-vous vraiment supprimer cette échéance ?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form id="deleteForm" method="post" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Réinitialiser la modale pour l'ajout
+    function resetModal() {
+        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-calendar-plus me-2"></i>Nouvelle Échéance';
+        document.getElementById('echeanceForm').action = "{{ url_for('admin.ajouter_echeance') }}";
+        document.getElementById('inputIntitule').value = '';
+        document.getElementById('inputDate').value = '';
+        document.getElementById('inputDetails').value = '';
+        document.getElementById('checkTraite').checked = false;
+        document.getElementById('divTraite').classList.add('d-none'); // Cacher le statut traité à la création
+    }
+
+    // Remplir la modale pour l'édition
+    function openEditModal(id, intitule, date, details, traite) {
+        // Ouvrir la modale via Bootstrap
+        const modal = new bootstrap.Modal(document.getElementById('echeanceModal'));
+        modal.show();
+
+        // Remplir les champs
+        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier l\'échéance';
+        document.getElementById('echeanceForm').action = "/admin/echeances/modifier/" + id;
+        document.getElementById('inputIntitule').value = intitule;
+        document.getElementById('inputDate').value = date;
+        document.getElementById('inputDetails').value = details;
+        
+        // Gérer la case à cocher
+        const checkTraite = document.getElementById('checkTraite');
+        checkTraite.checked = traite;
+        document.getElementById('divTraite').classList.remove('d-none'); // Afficher le statut traité
+    }
+
+    // Gestion suppression
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const url = button.dataset.url;
+            document.getElementById('deleteForm').action = url;
+        });
+    }
+</script>
+{% endblock %}

@@ -7,40 +7,62 @@
 			</a>
 		</div>
         <div class="header-right">
-            <div class="search-container">
-                <!-- AJOUT : L'icône SVG de la loupe est de retour -->
-                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
-                <input type="search" id="recherche-objet" placeholder="Rechercher un objet..." autocomplete="off">
-                <div id="search-results-container"></div>
-            </div>
+            <div class="search-wrapper" id="search-wrapper-dropdown">
+				<svg class="search-icon-dropdown" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+					<path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/>
+				</svg>
+				<input type="text" 
+					   id="globalSearchInput" 
+					   class="search-input-dropdown"
+					   placeholder="Rechercher un objet, un code-barre..." 
+					   autocomplete="off">
+				<button class="search-clear-btn" id="clear-btn-dropdown">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+						<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+					</svg>
+				</button>
+				
+				<!-- Conteneur des résultats -->
+				<div id="globalSearchResults" class="dropdown-results">
+					<!-- Les résultats seront injectés ici par JS -->
+				</div>
+			</div>
             
             <a href="{{ url_for('main.panier') }}" class="header-icon-link" title="Panier de réservation">
-				<svg class="header-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="header-icon" viewBox="0 0 16 16">
+					<path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+				</svg>
 				<span id="cart-count-badge" class="cart-count-badge" style="display: none;">0</span>
 			</a>
             
-            <a href="{{ url_for('main.alertes') }}" id="alert-icon-link" class="header-icon-link" ...>
-				<svg class="header-icon 
-                    {% if alertes_total > 3 %}
-                        alert-critical pulse-fast
-                    {% elif alertes_total > 0 %}
-                        alert-warning pulse
-                    {% else %}
-                        alert-ok
-                    {% endif %}" 
-                    xmlns="http://www.w3.org/2000/svg" height="28px" viewBox="0 0 24 24" width="28px">
-                    <path d="M12 23c1.1 0 1.99-.89 1.99-1.99h-3.98c0 1.1.89 1.99 1.99 1.99zm7-6v-6c0-3.35-2.36-6.15-5.5-6.83V1.5h-3v2.67C7.36 4.85 5 7.65 5 11v6l-2 2v1h18v-1l-2-2zm-6-1h-2v-2h2v2zm0-4h-2V8h2v4z"/>
-                </svg>
-				{% if alertes_total and alertes_total > 0 %}
-					<span class="notification-badge">{{ alertes_total }}</span>
-				{% endif %}
-			</a>
+            <a href="{{ url_for('main.alertes') }}" class="header-icon-link text-white" title="Alertes">
+    
+    <!-- SVG Bootstrap Icons (bi-bell-fill) -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" 
+         class="header-icon 
+         {% if alertes_total > 3 %}
+             bell-critical
+         {% elif alertes_total > 0 %}
+             bell-warning
+         {% endif %}" 
+         viewBox="0 0 16 16">
+        <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/>
+    </svg>
+    
+    <!-- Pastille (Réutilisation exacte du style Panier) -->
+    {% if alertes_total and alertes_total > 0 %}
+    <span class="cart-count-badge pulse" data-count="{{ alertes_total }}">
+        {{ alertes_total }}
+    </span>
+    {% endif %}
+</a>
 
             <div class="auth-section">
                 {% if session.user_id %}
                     <a href="{{ url_for('auth.profil') }}" class="header-icon-link" title="Gérer mon profil">
-                        <svg class="profile-link-svg" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M600-120h240v-33q-25-23-56-35t-64-12q-33 0-64 12t-56 35v33Zm120-120q25 0 42.5-17.5T780-300q0-25-17.5-42.5T720-360q-25 0-42.5 17.5T660-300q0 25 17.5 42.5T720-240ZM480-480Zm2-140q-58 0-99 41t-41 99q0 48 27 84t71 50q0-23 .5-44t8.5-38q-14-8-20.5-22t-6.5-30q0-25 17.5-42.5T482-540q15 0 28.5 7.5T533-512q11-5 23-7t24-2h36q-13-43-49.5-71T482-620ZM370-80l-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-85 65H696q-1-5-2-10.5t-3-10.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q24 25 54 42t65 22v184h-70Zm210 40q-25 0-42.5-17.5T520-100v-280q0-25 17.5-42.5T580-440h280q25 0 42.5 17.5T920-380v280q0 25-17.5 42.5T860-40H580Z"/></svg>
-                    </a>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="header-icon" viewBox="0 0 16 16">
+        <path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 0 0 1.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.08.284a.96.96 0 0 0 1.187 1.187l.283-.081c.96-.275 1.65.918.931 1.613l-.211.205a.96.96 0 0 0 .434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 0 0-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.284-.08a.96.96 0 0 0-1.187 1.187l.081.283c.275.96-.918 1.65-1.613.931l-.205-.211a.96.96 0 0 0-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 0 0-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.08-.284a.96.96 0 0 0-1.186-1.187l-.284.081c-.96.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 0 0-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071a.96.96 0 0 0 .434-1.622l-.211-.205c-.719-.695-.03-1.888.931-1.613l.284.08a.96.96 0 0 0 1.187-1.186l-.081-.284c-.275-.96.918-1.65 1.613-.931l.205.211a.96.96 0 0 0 1.622-.434zM12.973 8.5H8.25l-2.834 3.779A4.998 4.998 0 0 0 12.973 8.5m0-1a4.998 4.998 0 0 0-7.557-3.779l2.834 3.78zM5.048 3.967l-.087.065zm-.431.355A4.98 4.98 0 0 0 3.002 8c0 1.455.622 2.765 1.615 3.678L7.375 8zm.344 7.646.087.065z"/>
+    </svg></a>
                     <span class="welcome-message">Bonjour, {{ session.username }}</span>
                     <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline-light">Se déconnecter</a>
                 {% else %}

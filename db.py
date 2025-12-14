@@ -23,6 +23,7 @@ class Etablissement(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nom: Mapped[str] = mapped_column(String, nullable=False)
     ville: Mapped[str] = mapped_column(String, nullable=True)
+    code_invitation: Mapped[str] = mapped_column(String, unique=True, nullable=False) 
     utilisateurs: Mapped[List["Utilisateur"]] = relationship(back_populates="etablissement")
     armoires: Mapped[List["Armoire"]] = relationship(back_populates="etablissement")
     categories: Mapped[List["Categorie"]] = relationship(back_populates="etablissement")

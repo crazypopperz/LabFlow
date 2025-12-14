@@ -465,74 +465,116 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	// =======================================================================
-	// SECTION 4 : RECHERCHE GLOBALE
 	// =======================================================================
-    const globalSearchInput = document.getElementById("recherche-objet");
-    const resultsContainer = document.getElementById("search-results-container");
+	// SECTION 4 : RECHERCHE GLOBALE (HEADER) - VERSION CORRIGÉE
+	// =======================================================================
+	const globalSearchInput = document.getElementById('globalSearchInput');
+	const resultsContainer = document.getElementById('globalSearchResults');
+	const searchWrapper = document.getElementById('search-wrapper-dropdown');
+	const clearBtn = document.getElementById('clear-btn-dropdown');
 
-    if (globalSearchInput && resultsContainer) {
-        let searchTimeoutHeader;
-        globalSearchInput.addEventListener("input", function () {
-            const query = this.value.trim();
-            clearTimeout(searchTimeoutHeader);
-            
-            resultsContainer.innerHTML = '';
-            resultsContainer.style.display = 'none';
-            
-            if (query.length < 2) return;
+	if (globalSearchInput && resultsContainer && searchWrapper) {
+		let searchTimeoutHeader;
+		
+		// 1. Gestion visuelle (Focus)
+		globalSearchInput.addEventListener('focus', () => {
+			searchWrapper.classList.add('focused');
+			globalSearchInput.classList.add('expanded');
+			// Si on a déjà une recherche, on réaffiche les résultats
+			if (globalSearchInput.value.length >= 2 && resultsContainer.innerHTML !== '') {
+				resultsContainer.style.display = 'block';
+				resultsContainer.classList.add('visible');
+			}
+		});
 
-            searchTimeoutHeader = setTimeout(() => {
-                fetch(`/api/rechercher?q=${encodeURIComponent(query)}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Erreur réseau.');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    resultsContainer.innerHTML = '';
-                    if (data.length > 0) {
-                        const list = document.createElement('ul');
-                        list.className = 'search-results-list';
-                        data.forEach(item => {
-                            const li = document.createElement('li');
-                            const a = document.createElement('a');
-                            a.href = `/objet/${item.id}`;
-                            
-                            const nameSpan = document.createElement('span');
-                            nameSpan.textContent = item.nom;
-                            
-                            const contextSmall = document.createElement('small');
-                            contextSmall.className = 'search-result-context';
-                            contextSmall.textContent = `Armoire: ${item.armoire_nom} / Catégorie: ${item.categorie_nom}`;
-                            
-                            a.appendChild(nameSpan);
-                            a.appendChild(contextSmall);
-                            li.appendChild(a);
-                            list.appendChild(li);
-                        });
-                        resultsContainer.appendChild(list);
-                    } else {
-                        // LE MESSAGE QUE VOUS VOULEZ
-                        resultsContainer.innerHTML = '<div class="search-no-results">Cet objet n\'existe pas dans la base.</div>';
-                    }
-                    resultsContainer.style.display = 'block';
-                })
-                .catch(error => {
-                    console.error("Erreur de recherche:", error);
-                    resultsContainer.innerHTML = '<div class="search-error">Erreur de recherche.</div>';
-                    resultsContainer.style.display = 'block';
-                });
-            }, 300);
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!resultsContainer.contains(e.target) && e.target !== globalSearchInput) {
-                resultsContainer.style.display = 'none';
-            }
-        });
-    }
-
+		// 2. Gestion de la frappe
+		globalSearchInput.addEventListener('input', function(e) {
+			const query = e.target.value.trim();
+			clearTimeout(searchTimeoutHeader);
+			
+			// Gestion du bouton croix
+			if (clearBtn) {
+				if (query) clearBtn.classList.add('visible');
+				else clearBtn.classList.remove('visible');
+			}
+			
+			// Si vide ou trop court, on cache tout
+			if (query.length < 2) {
+				resultsContainer.classList.remove('visible');
+				resultsContainer.style.display = 'none';
+				return;
+			}
+			
+			// Délai (Debounce)
+			searchTimeoutHeader = setTimeout(() => {
+				console.log("Recherche lancée pour :", query); // DEBUG
+				
+				// Afficher chargement
+				resultsContainer.style.display = 'block';
+				resultsContainer.classList.add('visible');
+				resultsContainer.innerHTML = '<div class="search-status"><div class="spinner-border spinner-border-sm text-white me-2"></div>Recherche...</div>';
+				
+				// Appel API
+				fetch(`/api/search?q=${encodeURIComponent(query)}`)
+					.then(response => {
+						console.log("Statut réponse API :", response.status); // DEBUG
+						if (!response.ok) throw new Error('Erreur réseau');
+						return response.json();
+					})
+					.then(data => {
+						console.log("Données reçues :", data); // DEBUG
+						
+						if (data.length === 0) {
+							resultsContainer.innerHTML = '<div class="search-status">Aucun résultat trouvé.</div>';
+						} else {
+							let html = '';
+							data.forEach(item => {
+								const imgUrl = item.image_url || 'https://via.placeholder.com/40?text=IMG';
+								// Sécurisation des valeurs nulles
+								const armoire = item.armoire || 'Sans armoire';
+								const quantite = item.quantite !== undefined ? item.quantite : '?';
+								
+								html += `
+									<a href="/inventaire/objet/${item.id}" class="search-result-item">
+										<img src="${imgUrl}" alt="Img" class="search-result-img">
+										<div class="search-result-info">
+											<h6>${item.nom}</h6>
+											<small>${armoire} • Qté: ${quantite}</small>
+										</div>
+									</a>
+								`;
+							});
+							resultsContainer.innerHTML = html;
+						}
+					})
+					.catch(error => {
+						console.error('Erreur JS recherche:', error);
+						resultsContainer.innerHTML = '<div class="search-status text-danger">Erreur technique.</div>';
+					});
+			}, 300);
+		});
+		
+		// 3. Bouton Clear
+		if (clearBtn) {
+			clearBtn.addEventListener('click', function() {
+				globalSearchInput.value = '';
+				clearBtn.classList.remove('visible');
+				resultsContainer.classList.remove('visible');
+				resultsContainer.style.display = 'none';
+				globalSearchInput.focus();
+			});
+		}
+		
+		// 4. Fermeture au clic extérieur (INDISPENSABLE)
+		document.addEventListener('click', function(e) {
+			if (!searchWrapper.contains(e.target)) {
+				searchWrapper.classList.remove('focused');
+				globalSearchInput.classList.remove('expanded');
+				resultsContainer.classList.remove('visible');
+				resultsContainer.style.display = 'none';
+			}
+		});
+	}
     // =====================================================================
 	// SECTION 5 : GESTION DEPLACEMENT EN MASSE
 	// =====================================================================
@@ -917,23 +959,54 @@ document.addEventListener("DOMContentLoaded", function () {
                 const objetId = btnSuggest.dataset.objetId;
                 const objetNom = btnSuggest.dataset.objetNom;
                 
-                // Remplir les données
+                // --- NOUVEAU : Récupération des données pour le calcul ---
+                const stockActuel = parseInt(btnSuggest.dataset.stock) || 0;
+                const seuilAlerte = parseInt(btnSuggest.dataset.seuil) || 0;
+                
+                // Remplir les textes
                 if (objetNomElement) objetNomElement.textContent = objetNom;
                 if (objetIdInput) objetIdInput.value = objetId;
-                if (quantityInput) quantityInput.value = '';
-                if (commentaireInput) commentaireInput.value = '';
+                
+                // --- NOUVEAU : Calcul Intelligent de la quantité ---
+                let proposition = 1; // Valeur par défaut
+                
+                // Si le stock est critique (inférieur ou égal au seuil)
+                if (stockActuel <= seuilAlerte) {
+                    // On vise à remonter le stock à 2 fois le seuil (stock de sécurité)
+                    const cible = seuilAlerte * 2;
+                    proposition = cible - stockActuel;
+                    
+                    // On propose au minimum 5 unités si le calcul donne moins (pour éviter les micro-commandes)
+                    if (proposition < 5) proposition = 5;
+                }
+                
+                // Application de la proposition
+                if (quantityInput) quantityInput.value = proposition;
+                
+                // Gestion du commentaire (Placeholder contextuel)
+                if (commentaireInput) {
+                    commentaireInput.value = ''; // Reset du texte
+                    if (stockActuel <= seuilAlerte) {
+                        commentaireInput.placeholder = `Stock critique (${stockActuel}/${seuilAlerte}). Réapprovisionnement suggéré.`;
+                    } else {
+                        commentaireInput.placeholder = "Pourquoi cette commande ? (Optionnel)";
+                    }
+                }
                 
                 // Ouvrir la modale Bootstrap
                 suggestionModalInstance.show();
                 
-                // Focus sur le champ quantité après ouverture
+                // Focus et sélection du chiffre (pour pouvoir le changer directement en tapant)
                 setTimeout(() => {
-                    if (quantityInput) quantityInput.focus();
+                    if (quantityInput) {
+                        quantityInput.focus();
+                        quantityInput.select();
+                    }
                 }, 300);
             }
         });
 
-        // Réinitialiser au clic sur annuler
+        // Réinitialiser au clic sur annuler (inchangé)
         suggestionModal.addEventListener('hidden.bs.modal', function() {
             if (quantityInput) quantityInput.value = '';
             if (commentaireInput) commentaireInput.value = '';
@@ -946,7 +1019,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (quantityInput) quantityInput.classList.remove('is-invalid');
         });
 
-        // Confirmer la suggestion
+        // Confirmer la suggestion (inchangé)
         if (confirmBtn) {
             confirmBtn.addEventListener('click', async function() {
                 const objetId = objetIdInput.value;
@@ -989,6 +1062,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (response.ok) {
                         showInfoModal('Succès', result.message || 'Suggestion enregistrée avec succès !');
                         suggestionModalInstance.hide();
+                        // On recharge pour voir la suggestion apparaître dans la liste (si on est sur la page alertes)
                         setTimeout(() => window.location.reload(), 1500);
                     } else {
                         showInfoModal('Erreur', result.error || 'Une erreur est survenue');

@@ -2,9 +2,9 @@ from datetime import datetime, timedelta
 import os
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, send_from_directory, current_app)
-from sqlalchemy import func
+from sqlalchemy import func, desc
 from sqlalchemy.orm import joinedload
-from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur
+from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget
 from utils import login_required
 
 main_bp = Blueprint(
@@ -13,6 +13,7 @@ main_bp = Blueprint(
     template_folder='../templates'
 )
 
+    
 #============================================================
 # GESTION ARMOIRES (LOGIQUE RESTAURÉE)
 #============================================================

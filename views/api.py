@@ -638,35 +638,46 @@ def api_supprimer_reservation():
 # =============================================================
 # API FONCTION RECHERCHER UN OBJET
 # =============================================================
-@api_bp.route("/rechercher")
+@api_bp.route("/search")  # <--- CORRECTION 1 : Renommé pour matcher le JS
 @login_required
-def rechercher_objets():
+def search():
     etablissement_id = session.get('etablissement_id')
     query = request.args.get('q', '').strip()
 
     if not etablissement_id or len(query) < 2:
-        return jsonify([]) # Retourne une liste vide si la requête est trop courte ou si non connecté
+        return jsonify([])
 
-    search_term = f"%{query}%"
-    
-    objets = db.session.execute(
-        db.select(
-            Objet.id,
-            Objet.nom,
-            Armoire.nom.label('armoire_nom'),
-            Categorie.nom.label('categorie_nom')
-        )
-        .join(Armoire, Objet.armoire_id == Armoire.id)
-        .join(Categorie, Objet.categorie_id == Categorie.id)
-        .filter(
-            Objet.etablissement_id == etablissement_id,
-            Objet.nom.ilike(search_term)
-        )
-        .limit(5) # On limite à 5 résultats pour la performance
-    ).mappings().all()
+    try:
+        # CORRECTION 3 : On sélectionne l'objet entier et on utilise outerjoin
+        # pour ne pas exclure les objets sans armoire/catégorie
+        results = db.session.execute(
+            db.select(Objet)
+            .outerjoin(Objet.armoire)
+            .outerjoin(Objet.categorie)
+            .filter(Objet.etablissement_id == etablissement_id)
+            .filter(Objet.nom.ilike(f"%{query}%")) # Insensible à la casse
+            .limit(10) # On augmente un peu la limite
+        ).scalars().all()
 
-    return jsonify([dict(row) for row in objets])
-    
+        # CORRECTION 2 : On renvoie les champs attendus par le JS
+        data = []
+        for obj in results:
+            data.append({
+                'id': obj.id,
+                'nom': obj.nom,
+                'quantite': obj.quantite_physique, # Indispensable pour le JS
+                'armoire': obj.armoire.nom if obj.armoire else "Sans armoire",
+                'categorie': obj.categorie.nom if obj.categorie else "Sans catégorie",
+                'image_url': obj.image_url # Indispensable pour l'image
+            })
+
+        return jsonify(data)
+
+    except Exception as e:
+        # Log l'erreur pour le débogage serveur sans faire planter le front
+        print(f"Erreur recherche API : {e}")
+        return jsonify([])
+        
 
 # ================================================================
 # API SUGGESTION COMMANDES

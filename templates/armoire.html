@@ -5,25 +5,36 @@
 {% block content %}
 
     <div class="main-container">
-        <!-- VOTRE FIL D'ARIANE PERSONNALISÉ EST CONSERVÉ -->
-        <nav class="breadcrumb-nav">
-            <a href="{{ url_for('main.gestion_armoires') }}" class="breadcrumb-link">
-                <span class="breadcrumb-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="page-title-icon" viewBox="0 -960 960 960"><path d="M360-440q-17 0-28.5-11.5T320-480q0-17 11.5-28.5T360-520q17 0 28.5 11.5T400-480q0 17-11.5 28.5T360-440Zm240 0q-17 0-28.5-11.5T560-480q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480q0 17-11.5 28.5T600-440ZM120-120v-80h40v-560q0-33 23.5-56.5T240-840h480q33 0 56.5 23.5T800-760v560h40v80H120Zm120-80h200v-560H240v560Zm280 0h200v-560H520v560Zm-40-320Z"/></svg>
-                </span>
-                <span class="breadcrumb-text">Accès aux Armoires</span>
-            </a>
-            <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current">{{ armoire.nom }}</span>
+        <!-- Fil d'ariane Modernisé -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('main.gestion_armoires') }}" class="text-decoration-none d-flex align-items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box2-fill" viewBox="0 0 16 16">
+                            <path d="M3.75 0a1 1 0 0 0-.8.4L.1 4.2a.5.5 0 0 0-.1.3V15a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4.5a.5.5 0 0 0-.1-.3L13.05.4a1 1 0 0 0-.8-.4zM15 4.667V5H1v-.333L1.5 4h6V1h1v3h6z"/>
+                        </svg>
+                        Gestion des Armoires
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">{{ armoire.nom }}</li>
+            </ol>
         </nav>
         
-        <div class="table-header">
-            <h2 class="page-title">
-                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M440-181 240-296q-19-11-29.5-29T200-365v-230q0-22 10.5-40t29.5-29l200-115q19-11 40-11t40 11l200 115q19 11 29.5 29t10.5 40v230q0 22-10.5 40T720-296L520-181q-19 11-40 11t-40-11Zm0-92v-184l-160-93v185l160 92Zm80 0 160-92v-185l-160 93v184ZM80-680v-120q0-33 23.5-56.5T160-880h120v80H160v120H80ZM280-80H160q-33 0-56.5-23.5T80-160v-120h80v120h120v80Zm400 0v-80h120v-120h80v120q0 33-23.5 56.5T800-80H680Zm120-600v-120H680v-80h120q33 0 56.5 23.5T880-800v120h-80ZM480-526l158-93-158-91-158 91 158 93Zm0 45Zm0-45Zm40 69Zm-80 0Z"/></svg>
-                <span>Objets dans : <strong>{{ armoire.nom }}</strong></span>
+        <!-- En-tête Armoire (Style Admin - Vert) -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+            <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+                <!-- Icône Armoire (Vert Nature) -->
+                <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                     style="width: 48px; height: 48px; background: linear-gradient(135deg, #198754 0%, #20c997 100%);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-box2-fill" viewBox="0 0 16 16">
+                        <path d="M3.75 0a1 1 0 0 0-.8.4L.1 4.2a.5.5 0 0 0-.1.3V15a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4.5a.5.5 0 0 0-.1-.3L13.05.4a1 1 0 0 0-.8-.4zM15 4.667V5H1v-.333L1.5 4h6V1h1v3h6z"/>
+                    </svg>
+                </div>
+                <span>Contenu de l'armoire : <strong class="text-success">{{ armoire.nom }}</strong></span>
             </h2>
         </div>
 
+        <!-- Contenu de l'inventaire -->
         <div id="inventory-content" 
              data-sort-by="{{ sort_by }}" 
              data-direction="{{ direction }}" 
@@ -32,17 +43,29 @@
             {% include '_inventaire_content.html' %}
         </div>
 
+        <!-- Barre d'action de masse (Modernisée) -->
         {% if session.user_role == 'admin' %}
-        <div id="bulk-action-section" class="bulk-action-container" style="display: none;">
-			<span>Déplacer la sélection vers l'armoire :</span>
-			<select id="move-destination">
-				<option value="" disabled selected>Choisir une destination...</option>
-				{% for autre_armoire in autres_armoires %}
-					<option value="{{ autre_armoire.id }}">{{ autre_armoire.nom }}</option>
-				{% endfor %}
-			</select>
-			<button id="bulk-move-btn" class="btn-action">Déplacer</button>
-		</div>
+        <div id="bulk-action-section" class="card border-0 shadow-sm mt-4 bg-light" style="display: none;">
+            <div class="card-body d-flex align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center text-primary">
+                    <i class="bi bi-check-square-fill fs-4 me-2"></i>
+                    <span class="fw-bold">Action groupée</span>
+                </div>
+                
+                <div class="d-flex align-items-center gap-2 flex-grow-1">
+                    <label for="move-destination" class="text-nowrap">Déplacer la sélection vers :</label>
+                    <select id="move-destination" class="form-select w-auto" style="min-width: 200px;">
+                        <option value="" disabled selected>Choisir une autre armoire...</option>
+                        {% for autre_armoire in autres_armoires %}
+                            <option value="{{ autre_armoire.id }}">{{ autre_armoire.nom }}</option>
+                        {% endfor %}
+                    </select>
+                    <button id="bulk-move-btn" class="btn btn-primary">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Déplacer
+                    </button>
+                </div>
+            </div>
+        </div>
         {% endif %}
     </div>
 {% endblock %}

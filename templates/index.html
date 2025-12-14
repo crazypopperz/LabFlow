@@ -2,233 +2,310 @@
 
 {% block title %}Tableau de Bord - LabFlow{% endblock %}
 
-{% block head_styles %}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
-{% endblock %}
-
 {% block content %}
+<div class="dashboard-container">
+    <!-- En-tête Principal -->
+    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
+        <h1 class="h2 mb-0 text-dark d-flex align-items-center gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #1f3b73 0%, #2c3e50 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-motherboard-fill" viewBox="0 0 16 16">
+                    <path d="M5 7h3V4H5z"/>
+                    <path d="M1 2a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-2H.5a.5.5 0 0 1-.5-.5v-1A.5.5 0 0 1 .5 9H1V8H.5a.5.5 0 0 1-.5-.5v-1A.5.5 0 0 1 .5 6H1V5H.5a.5.5 0 0 1-.5-.5v-2A.5.5 0 0 1 .5 2zm11 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0zm2 0a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0zM3.5 10a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zM4 4h-.5a.5.5 0 0 0 0 1H4v1h-.5a.5.5 0 0 0 0 1H4a1 1 0 0 0 1 1v.5a.5.5 0 0 0 1 0V8h1v.5a.5.5 0 0 0 1 0V8a1 1 0 0 0 1-1h.5a.5.5 0 0 0 0-1H9V5h.5a.5.5 0 0 0 0-1H9a1 1 0 0 0-1-1v-.5a.5.5 0 0 0-1 0V3H6v-.5a.5.5 0 0 0-1 0V3a1 1 0 0 0-1 1m7 7.5v1a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-2a.5.5 0 0 0-.5.5"/>
+                </svg>
+            </div>
+            <span class="fw-bold">Tableau de Bord</span>
+        </h1>
+    </div>
 
-    <div class="main-container" data-add-url="{{ url_for('inventaire.ajouter_objet') }}" data-icon-url="{{ url_for('static', filename='icons/ajout.png') }}">
-
-        <!-- ============================================================ -->
-        <!-- MODIFICATION : Le bloc "messages flash" a été supprimé d'ici. -->
-        <!-- Il est maintenant géré par base.html pour s'afficher en "toast". -->
-        <!-- ============================================================ -->
-
-        <div class="page-header">
-            <h2 class="page-title">
-                <svg xmlns="http://www.w3.org/2000/svg" class="page-title-icon" viewBox="0 -960 960 960"><path d="M160-120q-33 0-56.5-23.5T80-200v-560q0-33 23.5-56.5T160-840h560q33 0 56.5 23.5T800-760v80h80v80h-80v80h80v80h-80v80h80v80h-80v80q0 33-23.5 56.5T720-120H160Zm0-80h560v-560H160v560Zm80-80h200v-160H240v160Zm240-280h160v-120H480v120Zm-240 80h200v-200H240v200Zm240 200h160v-240H480v240ZM160-760v560-560Z"/></svg>
-                <span>Tableau de Bord</span>
-            </h2>
-        </div>
-
-        <div class="dashboard-grid">
-
-            <!-- Widget Suivi Budgétaire -->
-			<div class="dashboard-widget">
-				<div class="widget-header">
-					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M640-520q17 0 28.5-11.5T680-560q0-17-11.5-28.5T640-600q-17 0-28.5 11.5T600-560q0 17 11.5 28.5T640-520Zm-320-80h200v-80H320v80ZM180-120q-34-114-67-227.5T80-580q0-92 64-156t156-64h200q29-38 70.5-59t89.5-21q25 0 42.5 17.5T720-820q0 6-1.5 12t-3.5 11q-4 11-7.5 22.5T702-751l91 91h87v279l-113 37-67 224H480v-80h-80v80H180Zm60-80h80v-80h240v80h80l62-206 98-33v-141h-40L620-720q0-20 2.5-38.5T630-796q-29 8-51 27.5T547-720H300q-58 0-99 41t-41 99q0 98 27 191.5T240-200Zm240-298Z"/></svg><h3>Suivi Budgétaire</h3>
-				</div>
-				<div class="widget-content">
-					{% if data.solde_budget is not none %}
-						<div class="budget-display">
-							<span class="budget-label">Solde Actuel</span>
-							<span class="budget-value {{ 'positive' if data.solde_budget >= 0 else 'negative' }}">
-								{{ "%.2f"|format(data.solde_budget) }} €
-							</span>
-						</div>
-					{% else %}
-						<div class="widget-placeholder">
-							<p>Aucun budget n'a été défini pour l'année en cours.</p>
-						</div>
-					{% endif %}
-				</div>
-                <div class="widget-footer">
+    <div class="row g-4">
+        
+        <!-- Widget Suivi Budgétaire -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="widget-card shadow-sm">
+                <div class="bg-white border-bottom p-3 d-flex align-items-center gap-3">
+                    <div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+                            <path d="M600-120q-118 0-210-67T260-360H120v-80h122q-2-11-2-20v-40q0-9 2-20H120v-80h140q38-106 130-173t210-67q69 0 130.5 24T840-748l-70 70q-35-29-78.5-45.5T600-740q-75 0-136.5 38.5T370-600h230v80H344q-2 11-3 20t-1 20q0 11 1 20t3 20h256v80H370q32 63 93.5 101.5T600-220q48 0 92.5-16.5T770-282l70 70q-48 44-109.5 68T600-120Z"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Suivi Budgétaire</h3>
+                </div>
+                <div class="p-4 d-flex flex-column justify-content-center flex-grow-1">
                     {% if data.solde_budget is not none %}
-                        <a href="{{ url_for('admin.budget') }}" class="btn-widget">Consulter le budget</a>
-                    {% elif session.user_role == 'admin' %}
-                        <a href="{{ url_for('admin.budget') }}" class="btn-widget">Définir le budget</a>
+                        <div class="text-center">
+                            <span class="d-block text-muted small text-uppercase fw-bold mb-2">Solde Actuel</span>
+                            <span class="display-6 fw-bold {{ 'text-success' if data.solde_budget >= 0 else 'text-danger' }}">
+                                {{ "%.2f"|format(data.solde_budget) }} €
+                            </span>
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted mb-0">Aucun budget défini.</p>
                     {% endif %}
                 </div>
-			</div>
-
-			<!-- WIDGET PROCHAINES ÉCHÉANCES -->
-			<div class="dashboard-widget">
-				<div class="widget-header">
-					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-160 0q-17 0-28.5-11.5T280-440q0-17 11.5-28.5T320-480q17 0 28.5 11.5T360-440q0 17-11.5 28.5T320-400Zm320 0q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-160 0q-17 0-28.5-11.5T280-280q0-17 11.5-28.5T320-320q17 0 28.5 11.5T360-280q0 17-11.5 28.5T320-240Zm320 0q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z"/></svg>
-					<h3>Prochaines Échéances</h3>
-				</div>
-				<div class="widget-content">
-					<ul class="widget-list">
-						{% for echeance in data.prochaines_echeances %}
-						<li class="dashboard-list-item">
-							<div class="item-main-info">
-								<span class="item-title">{{ echeance.intitule }}</span>
-								<span class="item-subtitle">Pour le {{ echeance.date_echeance_obj|strftime('%d/%m/%Y') }}</span>
-							</div>
-							<span class="action-tag-small {% if echeance.jours_restants < 7 %}texte-perime{% elif echeance.jours_restants < 15 %}texte-perime-bientot{% endif %}">
-								J-{{ echeance.jours_restants }}
-							</span>
-						</li>
-						{% else %}
-						<div class="widget-placeholder">
-							<p>Aucune échéance prévue dans les 30 prochains jours.</p>
-						</div>
-						{% endfor %}
-					</ul>
-				</div>
-				<div class="widget-footer">
-				    {% if session.user_role == 'admin' %}
-					    <a href="{{ url_for('admin.gestion_echeances') }}" class="btn-widget">Gérer toutes les échéances</a>
-				    {% endif %}
-				</div>
-			</div>
-			
-			<!-- Widget Mes Réservations -->
-			<div class="dashboard-widget">
-				<div class="widget-header">
-					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M582-298 440-440v-200h80v167l118 118-56 57ZM440-720v-80h80v80h-80Zm280 280v-80h80v80h-80ZM440-160v-80h80v80h-80ZM160-440v-80h80v80h-80ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg><h3>Mes Prochaines Réservations</h3>
-				</div>
-				<div class="widget-content">
-					{% if data.reservations %}
-						<ul class="widget-list">
-						{% for resa in data.reservations %}
-							<li class="dashboard-list-item">
-								<div class="item-main-info">
-									<span class="item-title">{{ resa.debut_reservation|strftime_fr('%A %d %B à %Hh%M') }} ({{ resa.item_count }} article{% if resa.item_count > 1 %}s{% endif %})</span>
-								</div>
-							</li>
-						{% endfor %}
-						</ul>
-					{% else %}
-						<div class="widget-placeholder">
-							<p>Vous n'avez aucune réservation à venir.</p>
-						</div>
-					{% endif %}
-				</div>
-                <div class="widget-footer">
-                    <a href="{{ url_for('main.calendrier') }}" class="btn-widget">Réserver du matériel</a>
-                </div>
-			</div>
-			
-			<!-- WIDGET FOURNISSEURS -->
-            <div class="dashboard-widget">
-                <div class="widget-header">
-                    <svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M240-160q-50 0-85-35t-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T280-280q0-17-11.5-28.5T240-320q-17 0-28.5 11.5T200-280q0 17 11.5 28.5T240-240ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm600 120q17 0 28.5-11.5T760-280q0-17-11.5-28.5T720-320q-17 0-28.5 11.5T680-280q0 17 11.5 28.5T720-240Zm-40-200h170l-90-120h-80v120ZM360-540Z"/></svg>
-                    <h3>Fournisseurs</h3>
-                </div>
-                <div class="widget-content">
-                    <div class="widget-placeholder">
-                        <p>Consultez la liste de nos fournisseurs référencés.</p>
-                    </div>
-                </div>
-                <div class="widget-footer">
-                    <a href="{{ url_for('admin.gestion_fournisseurs') }}" class="btn-widget">Voir les fournisseurs</a>
+                <div class="p-3 bg-light border-top">
+                    <a href="{{ url_for('admin.budget') }}" class="btn-dashboard w-100">Accéder</a>
                 </div>
             </div>
+        </div>
 
-			<!-- Widget Mon Historique Récent -->
-			<div class="dashboard-widget">
-				<div class="widget-header">
-					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M160-200v-440 440-15 15Zm0 80q-33 0-56.5-23.5T80-200v-440q0-33 23.5-56.5T160-720h160v-80q0-33 23.5-56.5T400-880h160q33 0 56.5 23.5T640-800v80h160q33 0 56.5 23.5T880-640v171q-18-13-38-22.5T800-508v-132H160v440h283q3 21 9 41t15 39H160Zm240-600h160v-80H400v80ZM720-40q-83 0-141.5-58.5T520-240q0-83 58.5-141.5T720-440q83 0 141.5 58.5T920-240q0 83-58.5 141.5T720-40Zm20-208v-112h-40v128l86 86 28-28-74-74Z"/></svg><h3>Mon Historique Récent</h3>
-				</div>
-				<div class="widget-content">
-					{% if data.historique_recent %}
-						<ul class="widget-list">
-						{% for action in data.historique_recent %}
-							<li class="dashboard-list-item">
-								<div class="item-main-info">
-									{% if action.type == 'reservation' %}
-                                        <span class="item-title">Réservation effectuée</span>
-									{% else %}
-										<span class="item-title">{{ action.details }}</span>
-									{% endif %}
-									<span class="item-subtitle">{{ action.timestamp|strftime('%d/%m/%Y %H:%M') }}</span>
-								</div>
-								<span class="action-tag-small">{{ action.action }}</span>
-							</li>
-						{% endfor %}
-						</ul>
-					{% else %}
-						<div class="widget-placeholder">
-							<p>Aucune activité récente enregistrée.</p>
-						</div>
-					{% endif %}
-				</div>
-                <div class="widget-footer"></div> <!-- Footer vide pour l'alignement -->
-			</div>
-
-			<!-- WIDGET NOUVEAUTÉS & CONTACT -->
-            <div class="dashboard-widget">
-                <div class="widget-header">
-                    <svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-560q0-100 44.5-183.5T244-882l47 64q-60 44-95.5 111T160-560H80Zm720 0q0-80-35.5-147T669-818l47-64q75 55 119.5 138.5T880-560h-80ZM160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z"/></svg>
-                    <h3>Nouveautés & Contact</h3>
+        <!-- Widget Prochaines Échéances -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="widget-card shadow-sm">
+                <div class="bg-white border-bottom p-3 d-flex align-items-center gap-3">
+                    <div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                            <path d="M9.05.435c-.58-.58-1.52-.58-2.1 0L.436 6.95c-.58.58-.58 1.519 0 2.098l6.516 6.516c.58.58 1.519.58 2.098 0l6.516-6.516c.58-.58.58-1.519 0-2.098zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Prochaines Échéances</h3>
                 </div>
-                <div class="widget-content">
-                    <h4 class="widget-subtitle">Ajouts récents (-24h)</h4>
-                    {% if data.objets_recents %}
-                        <ul class="widget-list">
-                        {% for objet in data.objets_recents %}
-                            <li class="dashboard-list-item">
-                                <span class="item-title">{{ objet.nom }}</span>
-                                <a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}" class="btn btn-light btn-compact">Détails</a>
+                <div class="p-0 flex-grow-1">
+                    {% if data.prochaines_echeances %}
+                        <ul class="list-group list-group-flush">
+                            {% for echeance in data.prochaines_echeances %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                <div class="text-truncate me-2">
+                                    <div class="fw-bold text-dark text-truncate">{{ echeance.intitule }}</div>
+                                    <small class="text-muted">Le {{ echeance.date_echeance_obj|strftime('%d/%m/%Y') }}</small>
+                                </div>
+                                <span class="badge rounded-pill {{ 'bg-danger' if echeance.jours_restants < 7 else 'bg-warning text-dark' }}">
+                                    J-{{ echeance.jours_restants }}
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-center text-muted py-5 mb-0">Aucune échéance.</p>
+                    {% endif %}
+                </div>
+                {% if session.user_role == 'admin' %}
+                <div class="p-3 bg-light border-top">
+                    <a href="{{ url_for('admin.gestion_echeances') }}" class="btn-dashboard w-100">Gérer</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Widget Mes Réservations -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="widget-card shadow-sm">
+                <div class="bg-white border-bottom p-3 d-flex align-items-center gap-3">
+                    <div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                            <path d="M6 .5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H9v1.07a7.001 7.001 0 0 1 3.274 12.474l.601.602a.5.5 0 0 1-.707.708l-.746-.746A6.97 6.97 0 0 1 8 16a6.97 6.97 0 0 1-3.422-.892l-.746.746a.5.5 0 0 1-.707-.708l.602-.602A7.001 7.001 0 0 1 7 2.07V1h-.5A.5.5 0 0 1 6 .5m2.5 5a.5.5 0 0 0-1 0v3.362l-1.429 2.38a.5.5 0 1 0 .858.515l1.5-2.5A.5.5 0 0 0 8.5 9zM.86 5.387A2.5 2.5 0 1 1 4.387 1.86 8.04 8.04 0 0 0 .86 5.387M11.613 1.86a2.5 2.5 0 1 1 3.527 3.527 8.04 8.04 0 0 0-3.527-3.527"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Mes Réservations</h3>
+                </div>
+                <div class="p-0 flex-grow-1">
+                    {% if data.reservations %}
+                        <ul class="list-group list-group-flush">
+                        {% for resa in data.reservations %}
+                            <li class="list-group-item p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold text-primary">{{ resa.debut_reservation|strftime_fr('%A %d %B') }}</span>
+                                    <span class="badge bg-light text-dark border">{{ resa.debut_reservation|strftime('%H:%M') }}</span>
+                                </div>
+                                <small class="text-muted">{{ resa.item_count }} article(s)</small>
                             </li>
                         {% endfor %}
                         </ul>
                     {% else %}
-                        <div class="widget-placeholder" style="padding: 10px 0;">
-                            <p>Aucun objet ajouté ou réapprovisionné dans les dernières 24h.</p>
+                        <p class="text-center text-muted py-5 mb-0">Aucune réservation.</p>
+                    {% endif %}
+                </div>
+                <div class="p-3 bg-light border-top">
+                    <a href="{{ url_for('main.calendrier') }}" class="btn-dashboard w-100">Réserver</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget Fournisseurs -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="widget-card shadow-sm">
+                <!-- Header -->
+                <div class="bg-white border-bottom p-3 d-flex align-items-center gap-3">
+                    <div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #0ba360 0%, #3cba92 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                            <path d="M5 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0m8 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-6-1a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2zm1-6c-1.876 0-3.426.109-4.552.226A.5.5 0 0 0 3 4.723v3.554a.5.5 0 0 0 .448.497C4.574 8.891 6.124 9 8 9s3.426-.109 4.552-.226A.5.5 0 0 0 13 8.277V4.723a.5.5 0 0 0-.448-.497A44 44 0 0 0 8 4m0-1c-1.837 0-3.353.107-4.448.22a.5.5 0 1 1-.104-.994A44 44 0 0 1 8 2c1.876 0 3.426.109 4.552.226a.5.5 0 1 1-.104.994A43 43 0 0 0 8 3"/>
+                            <path d="M15 8a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1V2.64c0-1.188-.845-2.232-2.064-2.372A44 44 0 0 0 8 0C5.9 0 4.208.136 3.064.268 1.845.408 1 1.452 1 2.64V4a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v3.5c0 .818.393 1.544 1 2v2a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5V14h6v1.5a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-2c.607-.456 1-1.182 1-2zM8 1c2.056 0 3.71.134 4.822.261.676.078 1.178.66 1.178 1.379v8.86a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5V2.64c0-.72.502-1.301 1.178-1.379A43 43 0 0 1 8 1"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Fournisseurs</h3>
+                </div>
+                
+                <!-- Liste -->
+                <div class="widget-body p-0 flex-grow-1">
+                    {% if data.fournisseurs %}
+                        <div class="list-group list-group-flush">
+                        {% for f in data.fournisseurs %}
+                            <div class="supplier-item p-3 d-flex align-items-center gap-3">
+                                <!-- Avatar Intelligent -->
+                                <div class="supplier-avatar">
+                                    {% if f.logo %}
+                                        <!-- Image du logo -->
+                                        <img src="{{ f.logo }}" alt="{{ f.nom }}" class="supplier-logo-img" 
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                                        <!-- Fallback (Initiale) si l'image ne charge pas -->
+                                        <span style="display: none;">{{ f.nom[0]|upper }}</span>
+                                    {% else %}
+                                        <!-- Initiale si pas de logo du tout -->
+                                        <span>{{ f.nom[0]|upper }}</span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Infos -->
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <div class="fw-bold text-dark text-truncate">{{ f.nom }}</div>
+                                    {% if f.site_web %}
+                                        <a href="{{ f.site_web }}" target="_blank" class="supplier-link">
+                                            <i class="bi bi-link-45deg"></i> Site web
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted small" style="font-size: 0.8rem;">Aucun site web</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Petite flèche déco -->
+                                <i class="bi bi-chevron-right text-muted opacity-25"></i>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-4 d-flex align-items-center justify-content-center h-100">
+                            <div class="text-center text-muted opacity-50">
+                                <i class="bi bi-shop display-4"></i>
+                                <p class="mt-2 small mb-0">Annuaire vide</p>
+                            </div>
                         </div>
                     {% endif %}
                 </div>
-                <div class="widget-footer">
-                    <a href="mailto:{{ data.admin_contact }}" class="btn-widget">
-                        <span>Contacter l'admin</span>
-                    </a>
+                
+                <!-- Footer -->
+                <div class="p-3 bg-light border-top">
+                    <a href="{{ url_for('admin.gestion_fournisseurs') }}" class="btn btn-dashboard w-100">Gérer l'annuaire</a>
                 </div>
             </div>
-
-            <!-- WIDGET ADMIN -->
-			{% if session.user_role == 'admin' and data.stats %}
-			<div class="dashboard-widget">
-				<div class="widget-header">
-					<svg class="widget-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M80-120v-80h800v80H80Zm40-120v-280h120v280H120Zm200 0v-480h120v480H320Zm200 0v-360h120v360H520Zm200 0v-600h120v600H720Z"/></svg>
-					<h3>Statistiques Clés</h3>
-				</div>
-				<div class="widget-content">
-					<ul class="widget-list">
-						<li class="stat-item">
-							<span>Objets référencés</span>
-							<span class="stat-value">{{ data.stats.total_objets }}</span>
-						</li>
-						<li class="stat-item">
-							<span>Utilisateurs inscrits</span>
-							<span class="stat-value">{{ data.stats.total_utilisateurs }}</span>
-						</li>
-						<li class="stat-item">
-							<span>Réservations actives</span>
-							<span class="stat-value">{{ data.stats.reservations_actives }}</span>
-						</li>
-					</ul>
-				</div>
-				<div class="widget-footer">
-					<a href="{{ url_for('admin.admin') }}" class="btn-widget">Panel Admin</a>
-				</div>
-			</div>
-			{% endif %}
-
         </div>
+
+        <!-- Widget Mon Historique Récent -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="widget-card shadow-sm">
+                <div class="bg-white border-bottom p-3 d-flex align-items-center gap-3">
+                    <div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                            <path d="M2.5 15a.5.5 0 1 1 0-1h1v-1a4.5 4.5 0 0 1 2.557-4.06c.29-.139.443-.377.443-.59v-.7c0-.213-.154-.451-.443-.59A4.5 4.5 0 0 1 3.5 3V2h-1a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-1v1a4.5 4.5 0 0 1-2.557 4.06c-.29.139-.443.377-.443.59v.7c0 .213.154.451.443.59A4.5 4.5 0 0 1 12.5 13v1h1a.5.5 0 0 1 0 1zm2-13v1c0 .537.12 1.045.337 1.5h6.326c.216-.455.337-.963.337-1.5V2zm3 6.35c0 .701-.478 1.236-1.011 1.492A3.5 3.5 0 0 0 4.5 13s.866-1.299 3-1.48zm1 0v3.17c2.134.181 3 1.48 3 1.48a3.5 3.5 0 0 0-1.989-3.158C8.978 9.586 8.5 9.052 8.5 8.351z"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Mon Historique</h3>
+                </div>
+                <div class="p-0 flex-grow-1">
+                    {% if data.historique_recent %}
+                        <ul class="list-group list-group-flush">
+                        {% for action in data.historique_recent %}
+                            <li class="list-group-item p-3">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-bold text-dark small">{{ action.action }}</span>
+                                    <small class="text-muted">{{ action.timestamp|strftime('%d/%m %H:%M') }}</small>
+                                </div>
+                                <small class="text-muted d-block text-truncate">{{ action.details }}</small>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-center text-muted py-5 mb-0">Aucune activité.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget Nouveautés & Contact -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="widget-card shadow-sm">
+                <div class="bg-white border-bottom p-3 d-flex align-items-center gap-3">
+                    <div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                            <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0"/>
+                            <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7.256A4.5 4.5 0 0 0 12.5 8a4.5 4.5 0 0 0-3.59 1.787A.5.5 0 0 0 9 9.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .39-.187A4.5 4.5 0 0 0 8.027 12H6.5a.5.5 0 0 0-.5.5V16H3a1 1 0 0 1-1-1zm2 1.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5m3 0v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5m3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM4 5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5M7.5 5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5zm2.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5M4.5 8a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Nouveautés et contact</h3>
+                </div>
+                <div class="p-0 flex-grow-1">
+                    <div class="p-2 bg-light border-bottom text-center">
+                        <small class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem;">Ajouts récents (-24h)</small>
+                    </div>
+                    {% if data.objets_recents %}
+                        <ul class="list-group list-group-flush">
+                        {% for objet in data.objets_recents %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center p-2 px-3">
+                                <span class="small fw-medium text-dark">{{ objet.nom }}</span>
+                                <a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}" class="btn btn-sm btn-link p-0 text-decoration-none">Voir</a>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-center text-muted py-4 small mb-0">Aucun ajout.</p>
+                    {% endif %}
+                </div>
+                <div class="p-3 bg-light border-top">
+                    <a href="mailto:{{ data.admin_contact }}" class="btn-dashboard w-100">Contacter l'admin</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget Statistiques Admin -->
+        {% if session.user_role == 'admin' and data.stats %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="widget-card shadow-sm">
+                <div class="bg-white border-bottom p-3 d-flex align-items-center gap-3">
+                    <div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+                            <path d="M11 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h1V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h1z"/>
+                        </svg>
+                    </div>
+                    <h3 class="h5 mb-0 fw-bold text-dark">Statistiques Clés</h3>
+                </div>
+                <div class="p-4 flex-grow-1">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded text-center border">
+                                <div class="h4 fw-bold text-primary mb-0">{{ data.stats.total_objets }}</div>
+                                <small class="text-muted" style="font-size: 0.7rem;">OBJETS</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded text-center border">
+                                <div class="h4 fw-bold text-success mb-0">{{ data.stats.reservations_actives }}</div>
+                                <small class="text-muted" style="font-size: 0.7rem;">RÉSAS</small>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-2 bg-light rounded text-center border">
+                                <div class="h5 fw-bold text-dark mb-0">{{ data.stats.total_utilisateurs }}</div>
+                                <small class="text-muted" style="font-size: 0.7rem;">UTILISATEURS</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 bg-light border-top">
+                    <a href="{{ url_for('admin.admin') }}" class="btn-dashboard w-100">Panel Admin</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ url_for('static', filename='js/modules/tour.js') }}" type="module"></script>
-    <script type="module">
-        import { startTour } from "{{ url_for('static', filename='js/modules/tour.js') }}";
-        {% if start_tour %}
-            startTour();
-        {% endif %}
-    </script>
+<script src="{{ url_for('static', filename='js/modules/tour.js') }}" type="module"></script>
+<script type="module">
+    import { startTour } from "{{ url_for('static', filename='js/modules/tour.js') }}";
+    {% if start_tour %}
+        startTour();
+    {% endif %}
+</script>
 {% endblock %}

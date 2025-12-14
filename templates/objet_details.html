@@ -1,124 +1,207 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Détails de {{ objet.nom }}</title>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-</head>
-<body>
-    {% include 'header.html' %}
-    <div class="main-container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-                </div>
+{% extends "base.html" %}
+
+{% block title %}{{ objet.nom }} - Détails{% endblock %}
+
+{% block content %}
+
+<div class="main-container">
+    
+    <!-- Fil d'ariane -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('inventaire.index') }}" class="text-decoration-none">Inventaire</a></li>
+            {% if objet.categorie %}
+            <li class="breadcrumb-item"><a href="#" class="text-decoration-none">{{ objet.categorie.nom }}</a></li>
             {% endif %}
-        {% endwith %}
+            <li class="breadcrumb-item active" aria-current="page">{{ objet.nom }}</li>
+        </ol>
+    </nav>
 
-        <div class="page-header">
-            <div class="breadcrumb-nav">
-                <a href="{{ url_for('inventaire.inventaire') }}" class="breadcrumb-link">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="sub-nav-icon" viewBox="0 -960 960 960"><path d="M360-200v-80h480v80H360Zm0-240v-80h480v80H360Zm0-240v-80h480v80H360ZM200-160q-33 0-56.5-23.5T120-240q0-33 23.5-56.5T200-320q33 0 56.5 23.5T280-240q0 33-23.5 56.5T200-160Zm0-240q-33 0-56.5-23.5T120-480q0-33 23.5-56.5T200-560q33 0 56.5 23.5T280-480q0 33-23.5 56.5T200-400Zm0-240q-33 0-56.5-23.5T120-720q0-33 23.5-56.5T200-800q33 0 56.5 23.5T280-720q0 33-23.5 56.5T200-640Z"/></svg><span class="breadcrumb-text"> Inventaire</span>
-                </a>
-                <span class="breadcrumb-separator">/</span>
-                <span class="breadcrumb-current">{{ objet.nom }}</span>
-            </div>
-        </div>
-
-        <div class="details-grid">
-            <!-- CARTE 1 : IDENTITÉ (IMAGE + NOM) -->
-            <div class="details-card">
-                <div class="image-preview-wrapper">
+    <div class="row g-4">
+        
+        <!-- COLONNE GAUCHE : Identité & Actions -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+                <!-- Image -->
+                <div class="object-image-container">
                     {% if objet.image_url %}
-                        <img src="{{ objet.image_url }}" class="details-image-thumbnail" alt="Image de {{ objet.nom }}">
-                        <img src="{{ objet.image_url }}" class="details-image-preview" alt="Aperçu de {{ objet.nom }}">
+                        <img src="{{ objet.image_url }}" alt="{{ objet.nom }}" class="object-image">
                     {% else %}
-                        <div class="identity-image-placeholder">
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"/></svg>
+                        <div class="text-center text-muted opacity-50">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
+                                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
+                                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12"/>
+                            </svg>
+                            <p class="mt-2 mb-0 small">Aucune image</p>
                         </div>
                     {% endif %}
                 </div>
-                <h2 class="details-title">{{ objet.nom }}</h2>
-            </div>
 
-            <!-- CARTE 2 : INFORMATIONS -->
-            <div class="details-card">
-                <h3>Informations Clés</h3>
-                <ul class="details-list">
-                    <li><strong>Quantité Disponible :</strong> <span class="stock-disponible">{{ objet.quantite_disponible }}</span></li>
-                    <li><strong>Quantité Physique Totale :</strong> {{ objet.quantite_physique }}</li>
-                    <li><strong>Seuil d'alerte :</strong> {{ objet.seuil }}</li>
-                    <li class="separator"></li>
-                    <li><strong>Armoire :</strong> <a href="{{ url_for('inventaire.voir_armoire', armoire_id=objet.armoire_id) }}">{{ objet.armoire_nom }}</a></li>
-                    <li><strong>Catégorie :</strong> <a href="{{ url_for('inventaire.voir_categorie', categorie_id=objet.categorie_id) }}">{{ objet.categorie_nom }}</a></li>
-                    <li class="separator"></li>
-                    <li>
-                        <strong>Date de péremption :</strong>
-                        {% if objet.date_peremption %}{{ objet.date_peremption | strftime('%d/%m/%Y') }}{% else %}<span class="text-discret">Non spécifiée</span>{% endif %}
-                    </li>
-                    <li>
-                        <strong>Fiche de Sécurité :</strong>
-                        {% if objet.fds_url %}<a href="{{ objet.fds_url }}" target="_blank" class="link-external">Consulter</a>{% else %}<span class="text-discret">Aucune</span>{% endif %}
-                    </li>
-                </ul>
-                <div class="details-actions">
-                    <button class="btn-action"
-                            data-modal-trigger="add-object-modal"
-                            data-objet-id="{{ objet.id }}"
-                            data-nom="{{ objet.nom }}"
-                            data-quantite="{{ objet.quantite_physique }}"
-                            data-seuil="{{ objet.seuil }}"
-                            data-date-peremption="{{ objet.date_peremption or '' }}"
-                            data-armoire-id="{{ objet.armoire_id }}"
-                            data-categorie-id="{{ objet.categorie_id }}"
-                            data-image-url="{{ objet.image_url or '' }}"
-                            data-fds-url="{{ objet.fds_url or '' }}">
-                        Modifier l'objet
-                    </button>
+                <div class="card-body">
+                    <h1 class="h4 fw-bold mb-2">{{ objet.nom }}</h1>
+                    
+                    <div class="mb-4">
+                        {% if objet.categorie %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                <i class="bi bi-tag-fill me-1"></i> {{ objet.categorie.nom }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">Sans catégorie</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Infos Rapides -->
+                    <ul class="list-group list-group-flush mb-4 small">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">Emplacement</span>
+                            <span class="fw-bold text-dark">
+                                <i class="bi bi-archive me-1"></i>
+                                {{ objet.armoire.nom if objet.armoire else 'Non rangé' }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">Péremption</span>
+                            {% if objet.date_peremption %}
+                                <span class="fw-bold {{ 'text-danger' if objet.date_peremption < now.date() else 'text-dark' }}">
+                                    {{ objet.date_peremption.strftime('%d/%m/%Y') }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">Fiche Sécurité (FDS)</span>
+                            {% if objet.fds_url %}
+                                <a href="{{ objet.fds_url }}" target="_blank" class="text-decoration-none">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Voir
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+
+                    <!-- Actions -->
+                    <div class="d-grid gap-2">
+                        {% if session.user_role == 'admin' %}
+                        <button class="btn btn-outline-primary" 
+                                data-modal-trigger="add-object-modal"
+                                data-objet-id="{{ objet.id }}"
+                                data-nom="{{ objet.nom }}"
+                                data-quantite="{{ objet.quantite_physique }}"
+                                data-seuil="{{ objet.seuil }}"
+                                data-armoire-id="{{ objet.armoire_id }}"
+                                data-categorie-id="{{ objet.categorie_id }}"
+                                data-image-url="{{ objet.image_url }}"
+                                data-date-peremption="{{ objet.date_peremption }}"
+                                data-fds-url="{{ objet.fds_url }}">
+                            <i class="bi bi-pencil-square me-2"></i>Modifier
+                        </button>
+                        {% endif %}
+                        
+                        <!-- Bouton Suggestion pour tous -->
+                        <button class="btn btn-outline-warning text-dark btn-suggest"
+                                data-objet-id="{{ objet.id }}"
+                                data-objet-nom="{{ objet.nom }}">
+                            <i class="bi bi-cart-plus me-2"></i>Suggérer une commande
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DROITE : Stock & Historique -->
+        <div class="col-lg-8">
+            
+            <!-- Indicateurs de Stock -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="stock-indicator">
+                        <div class="stock-value text-primary">{{ objet.quantite_physique }}</div>
+                        <div class="stock-label">Stock Physique Total</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="stock-indicator">
+                        <div class="stock-value {{ 'text-success' if objet.quantite_disponible > objet.seuil else 'text-danger' }}">
+                            {{ objet.quantite_disponible }}
+                        </div>
+                        <div class="stock-label">Disponible à la réservation</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- CARTE 3 : HISTORIQUE -->
-            <div class="details-card full-width-card">
-                <h3>Historique des actions</h3>
-                {% if historique %}
-					<div class="history-table-container">
-						<table class="history-table">
-							<thead>
-								<tr>
-									<th>Date</th>
-									<th>Action</th>
-									<th>Utilisateur</th>
-									<th>Détails</th>
-								</tr>
-							</thead>
-							<tbody>
-								{% for entree in historique %}
-								<tr>
-									<td class="timestamp">{{ entree.timestamp | strftime('%d/%m/%Y %H:%M') }}</td>
-									<td><span class="action-tag-small">{{ entree.action }}</span></td>
-									<td>{{ entree.nom_utilisateur }}</td>
-									<td>{{ entree.details }}</td>
-								</tr>
-								{% endfor %}
-								<tr>
-									<td colspan="4" class="text-discret" style="text-align: center; padding: 20px;">Aucun historique pour cet objet.</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				{% else %}
-				    <div class="widget-placeholder" style="padding: 20px 0;"><p>Aucun historique pour cet objet.</p></div>
-				{% endif %}
+            <!-- Alerte Seuil -->
+            {% if objet.quantite_physique <= objet.seuil %}
+            <div class="alert alert-danger d-flex align-items-center mb-4 shadow-sm border-0" role="alert">
+                <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                <div>
+                    <strong>Stock critique !</strong>
+                    <div class="small">La quantité est inférieure ou égale au seuil d'alerte ({{ objet.seuil }}). Pensez à recommander.</div>
+                </div>
             </div>
+            {% endif %}
+
+            <!-- Historique -->
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-clock-history me-2 text-secondary"></i>Historique des mouvements
+                    </h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover history-table mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 150px;">Date</th>
+                                <th>Utilisateur</th>
+                                <th>Action</th>
+                                <th>Détails</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if historique %}
+                                {% for h in historique %}
+                                <tr>
+                                    <td>{{ h.timestamp.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                                                <i class="bi bi-person-fill text-muted" style="font-size: 0.8rem;"></i>
+                                            </div>
+                                            {{ h.utilisateur.nom_utilisateur if h.utilisateur else 'Utilisateur supprimé' }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if 'Ajout' in h.action %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">Ajout</span>
+                                        {% elif 'Retrait' in h.action or 'Suppression' in h.action %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Retrait</span>
+                                        {% elif 'Modification' in h.action %}
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Modif</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ h.action }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted">{{ h.details }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">
+                                        Aucun historique disponible pour cet objet.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
     </div>
-    {% include 'footer.html' %}
-    {% include '_modals.html' %}
-</body>
-</html>
+</div>
+
+{% include '_modals.html' %}
+
+{% endblock %}

@@ -1,50 +1,76 @@
 {% extends "base.html" %}
 
-{% block title %}Catégorie : {{ categorie.nom }}{% endblock %}
+{% block title %}Catégorie : {{ categorie.nom }} - LabFlow{% endblock %}
 
 {% block content %}
     <div class="main-container">
-        <!-- VOTRE FIL D'ARIANE PERSONNALISÉ EST CONSERVÉ -->
-        <nav class="breadcrumb-nav">
-            <a href="{{ url_for('main.gestion_categories') }}" class="breadcrumb-link">
-                <span class="breadcrumb-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M160-480v240-480 240Zm400 360q17 0 28.5-11.5T600-160q0-17-11.5-28.5T560-200q-17 0-28.5 11.5T520-160q0 17 11.5 28.5T560-120Zm240-400q17 0 28.5-11.5T840-560q0-17-11.5-28.5T800-600q-17 0-28.5 11.5T760-560q0 17 11.5 28.5T800-520Zm-560 0h200v-80H240v80Zm0 160h200v-80H240v80Zm-80 200q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720H160v480h200v80H160ZM560-40q-50 0-85-35t-35-85q0-39 22.5-70t57.5-43v-127h240v-47q-35-12-57.5-43T680-560q0-50 35-85t85-35q50 0 85 35t35 85q0 39-22.5 70T840-447v127H600v47q35 12 57.5 43t22.5 70q0 50-35 85t-85 35Z"/></svg>
-                </span>
-                <span class="breadcrumb-text">Accès aux Catégories</span>
-            </a>
-            <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current">{{ categorie.nom }}</span>
+        <!-- Fil d'ariane -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('main.gestion_categories') }}" class="text-decoration-none d-flex align-items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-tags" viewBox="0 0 16 16">
+                            <path d="M3 2v4.586l7 7L14.586 9l-7-7zM2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586z"/>
+                            <path d="M5.5 5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1m3.606-2.061a7 7 0 0 1 .413.581l1.104 2.068a.5.5 0 0 1-.986.176l-1.104-2.068l-.192-.361a.5.5 0 1 1 .765-.396z"/>
+                        </svg>
+                        Gestion des Catégories
+                    </a>
+                </li>
+                <!-- CORRECTION ICI : categorie.nom au lieu de armoire.nom -->
+                <li class="breadcrumb-item active" aria-current="page">{{ categorie.nom }}</li>
+            </ol>
         </nav>
 
-        <div class="table-header">
-            <h2 class="page-title">
-                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="M160-480v240-480 240Zm400 360q17 0 28.5-11.5T600-160q0-17-11.5-28.5T560-200q-17 0-28.5 11.5T520-160q0 17 11.5 28.5T560-120Zm240-400q17 0 28.5-11.5T840-560q0-17-11.5-28.5T800-600q-17 0-28.5 11.5T760-560q0 17 11.5 28.5T800-520Zm-560 0h200v-80H240v80Zm0 160h200v-80H240v80Zm-80 200q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720H160v480h200v80H160ZM560-40q-50 0-85-35t-35-85q0-39 22.5-70t57.5-43v-127h240v-47q-35-12-57.5-43T680-560q0-50 35-85t85-35q50 0 85 35t35 85q0 39-22.5 70T840-447v127H600v47q35 12 57.5 43t22.5 70q0 50-35 85t-85 35Z"/></svg>
-                <span>Objets dans la catégorie : <strong>{{ categorie.nom }}</strong></span>
+        <!-- En-tête Catégorie (Style Admin - Rose) -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+            <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+                <!-- Icône Catégorie (Rose Vif) -->
+                <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                     style="width: 48px; height: 48px; background: linear-gradient(135deg, #f77062 0%, #fe5196 100%);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-inboxes-fill" viewBox="0 0 16 16">
+                        <path d="M4.98 1a.5.5 0 0 0-.39.188L1.54 5H6a.5.5 0 0 1 .5.5 1.5 1.5 0 0 0 3 0A.5.5 0 0 1 10 5h4.46l-3.05-3.812A.5.5 0 0 0 11.02 1zM3.81.563A1.5 1.5 0 0 1 4.98 0h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .106.374l-.39 3.124A1.5 1.5 0 0 1 14.117 10H1.883A1.5 1.5 0 0 1 .394 8.686l-.39-3.124a.5.5 0 0 1 .106-.374zM.125 11.17A.5.5 0 0 1 .5 11H6a.5.5 0 0 1 .5.5 1.5 1.5 0 0 0 3 0 .5.5 0 0 1 .5-.5h5.5a.5.5 0 0 1 .496.562l-.39 3.124A1.5 1.5 0 0 1 14.117 16H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .121-.393z"/>
+                    </svg>
+                </div>
+                <!-- CORRECTION ICI : categorie.nom -->
+                <span>Objets dans la catégorie : <strong style="color: #fe5196;">{{ categorie.nom }}</strong></span>
             </h2>
         </div>
 
+        <!-- Contenu de l'inventaire -->
         <div id="inventory-content" 
              data-sort-by="{{ sort_by }}" 
              data-direction="{{ direction }}" 
              data-categorie-id="{{ categorie.id }}">
             
-            <!-- VOTRE TABLEAU EST CONSERVÉ INTÉGRALEMENT -->
             {% include '_inventaire_content.html' %}
         </div>
 
+        <!-- Barre d'action de masse (Modernisée) -->
         {% if session.user_role == 'admin' %}
-        <div id="bulk-action-section" class="bulk-action-container" style="display: none;">
-			<label for="move-destination">Déplacer la sélection vers la catégorie :</label>
-			<select id="move-destination">
-				<option value="" disabled selected>Choisir une destination...</option>
-				{% for c in categories_list %}
-					{% if c.id != categorie.id %}
-						<option value="{{ c.id }}">{{ c.nom }}</option>
-					{% endif %}
-				{% endfor %}
-			</select>
-			<button id="bulk-move-btn" class="btn-action">Déplacer</button>
-		</div>
+        <div id="bulk-action-section" class="card border-0 shadow-sm mt-4 bg-light" style="display: none;">
+            <div class="card-body d-flex align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center text-primary">
+                    <i class="bi bi-check-square-fill fs-4 me-2"></i>
+                    <span class="fw-bold">Action groupée</span>
+                </div>
+                
+                <div class="d-flex align-items-center gap-2 flex-grow-1">
+                    <label for="move-destination" class="text-nowrap">Déplacer la sélection vers :</label>
+                    <select id="move-destination" class="form-select w-auto" style="min-width: 200px;">
+                        <option value="" disabled selected>Choisir une autre catégorie...</option>
+                        {% for c in categories_list %}
+                            <!-- CORRECTION ICI : c.id != categorie.id -->
+                            {% if c.id != categorie.id %}
+                                <option value="{{ c.id }}">{{ c.nom }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button id="bulk-move-btn" class="btn btn-primary">
+                        <i class="bi bi-arrow-right-circle me-2"></i>Déplacer
+                    </button>
+                </div>
+            </div>
+        </div>
         {% endif %}
     </div>
 {% endblock %}

@@ -18,6 +18,49 @@
                 <p class="admin-hero-subtitle">Gérez et configurez votre application LabFlow</p>
             </div>
         </div>
+		
+		<!-- Code d'invitation de l'établissement -->
+		<div class="alert alert-info shadow-sm">
+			<div class="d-flex align-items-center mb-2">
+				<i class="bi bi-ticket-perforated-fill fs-4 me-2"></i>
+				<h5 class="mb-0">Code d'invitation de votre établissement</h5>
+			</div>
+			<p class="mb-2">Partagez ce code avec vos collègues pour qu'ils rejoignent <strong>{{ session.nom_etablissement }}</strong> :</p>
+			<div class="input-group">
+				<input type="text" 
+					   class="form-control form-control-lg text-center fw-bold" 
+					   id="codeInvitation"
+					   value="{{ etablissement.code_invitation }}" 
+					   readonly
+					   style="font-family: monospace; font-size: 1.75rem; letter-spacing: 0.1em; background: #f8f9fa;">
+				<button class="btn btn-primary btn-lg" onclick="copierCode()" type="button">
+					<i class="bi bi-clipboard me-1"></i> Copier
+				</button>
+			</div>
+			<small class="text-muted d-block mt-2">
+				<i class="bi bi-info-circle me-1"></i>
+				Ce code permet à quiconque le possède de créer un compte dans votre établissement
+			</small>
+		</div>
+
+		<script>
+		function copierCode() {
+			const input = document.getElementById('codeInvitation');
+			input.select();
+			navigator.clipboard.writeText(input.value).then(() => {
+				const btn = event.target.closest('button');
+				const originalHTML = btn.innerHTML;
+				btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Copié !';
+				btn.classList.remove('btn-primary');
+				btn.classList.add('btn-success');
+				setTimeout(() => {
+					btn.innerHTML = originalHTML;
+					btn.classList.remove('btn-success');
+					btn.classList.add('btn-primary');
+				}, 2000);
+			});
+		}
+		</script>
         
         <!-- Statut de la licence -->
         <div class="license-status {{ 'license-pro' if licence.is_pro else 'license-free' }}">

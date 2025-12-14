@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, jsonify)
 from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 
 # NOUVEAUX IMPORTS
-from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget, Depense
+from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget, Depense, Fournisseur
 from utils import login_required, admin_required, limit_objets_required
 from .api import get_paginated_objets
 
@@ -177,7 +178,15 @@ def index():
         historique_enrichi.append(entry)
 
     dashboard_data['historique_recent'] = historique_enrichi
-    # --- FIN DE LA NOUVELLE LOGIQUE ---
+    
+    fournisseurs = db.session.execute(
+        db.select(Fournisseur)
+        .filter_by(etablissement_id=etablissement_id)
+        .order_by(Fournisseur.nom)
+        .limit(5)
+    ).scalars().all()
+    
+    dashboard_data['fournisseurs'] = fournisseurs
 
     start_tour = db.session.query(Armoire).filter_by(etablissement_id=etablissement_id).count() == 0
     
@@ -303,52 +312,52 @@ def supprimer_objet(id_objet):
 @login_required
 def voir_objet(objet_id):
     etablissement_id = session['etablissement_id']
-    now = datetime.now()
-    subquery = db.session.query(
-        Reservation.objet_id,
-        func.sum(Reservation.quantite_reservee).label('total_reserve')
-    ).filter(
-        Reservation.etablissement_id == etablissement_id,
-        Reservation.fin_reservation > now
-    ).group_by(Reservation.objet_id).subquery()
+    
+    # 1. Récupération de l'objet
+    # Ici joinedload fonctionne car 'armoire' et 'categorie' sont définis dans class Objet
+    objet = db.session.execute(
+        db.select(Objet)
+        .options(joinedload(Objet.armoire), joinedload(Objet.categorie))
+        .filter_by(id=objet_id, etablissement_id=etablissement_id)
+    ).scalar_one_or_none()
 
-    result = db.session.execute(
-        db.select(
-            Objet,
-            Armoire.nom.label('armoire_nom'),
-            Categorie.nom.label('categorie_nom'),
-            (Objet.quantite_physique - func.coalesce(subquery.c.total_reserve, 0)).label('quantite_disponible')
-        )
-        .join(Armoire, Objet.armoire_id == Armoire.id)
-        .join(Categorie, Objet.categorie_id == Categorie.id)
-        .outerjoin(subquery, Objet.id == subquery.c.objet_id)
-        .filter(
-            Objet.id == objet_id,
-            Objet.etablissement_id == etablissement_id
-        )
-    ).first()
-
-    if not result:
+    if not objet:
         flash("Objet non trouvé ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    objet = result.Objet
-    objet.quantite_disponible = result.quantite_disponible
-    objet.armoire_nom = result.armoire_nom
-    objet.categorie_nom = result.categorie_nom
-    historique = db.session.execute(
-        db.select(Historique, Utilisateur.nom_utilisateur)
-        .join(Utilisateur, Historique.utilisateur_id == Utilisateur.id)
-        .filter(
-            Historique.objet_id == objet_id,
-            Historique.etablissement_id == etablissement_id
-        )
+    # 2. Calcul de la quantité disponible
+    now = datetime.now()
+    total_reserve = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
+        Reservation.objet_id == objet.id,
+        Reservation.etablissement_id == etablissement_id,
+        Reservation.fin_reservation > now
+    ).scalar() or 0
+    
+    objet.quantite_disponible = objet.quantite_physique - total_reserve
+
+    # 3. Récupération de l'historique (CORRECTION MAJEURE)
+    # Comme il n'y a pas de relationship dans Historique, on joint manuellement sur les IDs
+    results = db.session.execute(
+        db.select(Historique, Utilisateur)
+        .outerjoin(Utilisateur, Historique.utilisateur_id == Utilisateur.id)
+        .filter(Historique.objet_id == objet.id)
+        .filter(Historique.etablissement_id == etablissement_id)
         .order_by(Historique.timestamp.desc())
+        .limit(20)
     ).all()
 
-    armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)).scalars().all()
-    categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)).scalars().all()
-    
+    # On prépare une liste propre pour le template
+    historique = []
+    for h, u in results:
+        # On ajoute manuellement le nom de l'utilisateur à l'objet historique
+        # pour que {{ entree.nom_utilisateur }} fonctionne dans le HTML
+        h.nom_utilisateur = u.nom_utilisateur if u else "Utilisateur supprimé"
+        historique.append(h)
+
+    # 4. Listes pour la modale de modification
+    armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
+    categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
+
     return render_template("objet_details.html",
                            objet=objet,
                            historique=historique,

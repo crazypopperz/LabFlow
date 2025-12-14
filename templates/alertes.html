@@ -8,12 +8,16 @@
     <!-- En-tête avec statistiques -->
     <div class="alerts-header">
         <div class="alerts-title-section">
-            <h2 class="page-title">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px" height="32px">
-                    <path d="M80-560q0-100 44.5-183.5T244-882l47 64q-60 44-95.5 111T160-560H80Zm720 0q0-80-35.5-147T669-818l47-64q75 55 119.5 138.5T880-560h-80ZM160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z"/>
+            <h2 class="page-title h3 mb-0 d-flex align-items-center gap-3">
+            <!-- Icône Suggestions (Jaune/Ambre) -->
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
+                    <path d="M440-280h80v-160h160v-80H520v-160h-80v160H280v80h160v160Zm40 200q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/>
                 </svg>
-                <span>Centre d'Alertes</span>
-            </h2>
+            </div>
+            <span class="fw-bold text-dark">Suggestions de Commande</span>
+        </h2>
             <p class="alerts-subtitle">Surveillance en temps réel de votre inventaire</p>
         </div>
         
@@ -126,7 +130,9 @@
                     </label>
                     <button class="btn-action btn-primary btn-suggest" 
                             data-objet-id="{{ objet.id }}" 
-                            data-objet-nom="{{ objet.nom }}">
+                            data-objet-nom="{{ objet.nom }}"
+							data-stock="{{ objet.quantite_physique }}"
+							data-seuil="{{ objet.seuil }}">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M440-280h80v-160h160v-80H520v-160h-80v160H280v80h160v160Zm40 200q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/>
                         </svg>

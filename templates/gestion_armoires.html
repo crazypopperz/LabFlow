@@ -7,20 +7,24 @@
     {% include '_breadcrumb.html' %}
 
     <!-- En-tête de page -->
-    <div class="management-header">
-        <h2 class="page-title">
-            <svg xmlns="http://www.w3.org/2000/svg" class="page-title-icon" viewBox="0 -960 960 960" fill="currentColor">
-                <path d="M360-440q-17 0-28.5-11.5T320-480q0-17 11.5-28.5T360-520q17 0 28.5 11.5T400-480q0 17-11.5 28.5T360-440Zm240 0q-17 0-28.5-11.5T560-480q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480q0 17-11.5 28.5T600-440ZM120-120v-80h40v-560q0-33 23.5-56.5T240-840h480q33 0 56.5 23.5T800-760v560h40v80H120Zm120-80h200v-560H240v560Zm280 0h200v-560H520v560Zm-40-320Z"/>
-            </svg>
-            <span>Gestion des Armoires</span>
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <!-- Icône Armoires (Vert/Teal) -->
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #198754 0%, #20c997 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-box2-fill" viewBox="0 0 16 16">
+                    <path d="M3.75 0a1 1 0 0 0-.8.4L.1 4.2a.5.5 0 0 0-.1.3V15a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4.5a.5.5 0 0 0-.1-.3L13.05.4a1 1 0 0 0-.8-.4zM15 4.667V5H1v-.333L1.5 4h6V1h1v3h6z"/>
+                </svg>
+            </div>
+            <span class="fw-bold">Gestion des Armoires</span>
         </h2>
+        
         {% if session.user_role == 'admin' %}
-        <div class="page-actions-container">
+        <div>
             <button type="button" 
                     class="btn btn-primary" 
                     data-bs-toggle="modal" 
-                    data-bs-target="#addArmoireModal"
-                    aria-label="Ajouter une nouvelle armoire">
+                    data-bs-target="#addArmoireModal">
                 <i class="bi bi-plus-circle-fill me-2"></i> 
                 Ajouter une armoire
             </button>

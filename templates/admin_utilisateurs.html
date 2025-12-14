@@ -1,185 +1,459 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Gestion des Utilisateurs</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-</head>
-<body class="page-admin-utilisateurs">
-    {% include 'header.html' %}
-    <div class="main-container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-            {% for category, message in messages %}
-                <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
+{% extends "base.html" %}
+
+{% block title %}Gestion des Utilisateurs - LabFlow{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête de page -->
+    <div class="management-header">
+        <h2 class="page-title h3 mb-0 d-flex align-items-center gap-3">
+            <!-- Icône Utilisateurs (Violet) -->
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
+                    <path d="M40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm720 0v-120q0-44-24.5-84.5T666-434q51 6 96 20.5t84 35.5q36 20 55 44.5t19 53.5v120H760ZM360-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm400-160q0 66-47 113t-113 47q-11 0-28-2.5t-28-5.5q27-32 41.5-71t14.5-81q0-42-14.5-81T544-792q14-5 28-6.5t28-1.5q66 0 113 47t47 113Z"/>
+                </svg>
             </div>
+            <span class="fw-bold text-dark">Gestion des Utilisateurs</span>
+        </h2>
+        
+        {% if session.user_role == 'admin' %}
+        <div class="page-actions-container">
+            <button type="button" 
+                    class="btn btn-primary" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#addUserModal">
+                <i class="bi bi-person-plus-fill me-2"></i> 
+                Ajouter un utilisateur
+            </button>
+        </div>
         {% endif %}
-        {% endwith %}
-		
-		{% include '_breadcrumb.html' %}
+    </div>
 
-        <div class="table-header">
-            <h2 class="page-title">
-                <svg class="page-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q62 0 126 15.5T736-378q29 15.5 46.5 44T800-272v112H160Z"/></svg>
-                <span>Gestion des Utilisateurs</span>
-            </h2>
+    <!-- Liste des utilisateurs -->
+    {% if utilisateurs and utilisateurs|length > 0 %}
+        <div class="card-container management-page">
+            {% for user in utilisateurs %}
+            <div class="user-card">
+                <!-- Avatar -->
+                <div class="user-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                        <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q62 0 126 15.5T736-378q29 15.5 46.5 44T800-272v112H160Z"/>
+                    </svg>
+                </div>
+
+                <!-- Informations -->
+                <div class="user-info">
+                    <h3 class="user-name">
+                        {{ user.nom_utilisateur }}
+                        {% if user.id|string == session.user_id|string %} 
+                            <span class="badge bg-light text-dark border ms-1" style="font-size: 0.7em;">VOUS</span> 
+                        {% endif %}
+                    </h3>
+                    <p class="user-email">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M160-160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v480q0 33-23.5 56.5T800-160H160Zm320-280L160-640v400h640v-400L480-440Zm0-80 320-200H160l320 200ZM160-640v-80 480-400Z"/>
+                        </svg>
+                        {{ user.email or 'Non défini' }}
+                    </p>
+                    <span class="role-badge role-{{ user.role }}">
+                        {% if user.role == 'admin' %}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                                <path d="m344-60-76-128-144-32 14-148-98-112 98-112-14-148 144-32 76-128 136 58 136-58 76 128 144 32-14 148 98 112-98 112 14 148-144 32-76 128-136-58-136 58Zm34-102 102-44 104 44 56-96 110-26-10-112 74-84-74-86 10-112-110-24-58-96-102 44-104-44-56 96-110 24 10 112-74 86 74 84-10 114 110 24 58 96Zm102-318Zm-42 142 226-226-56-58-170 170-86-84-56 56 142 142Z"/>
+                            </svg>
+                        {% endif %}
+                        {{ user.role|capitalize }}
+                    </span>
+                </div>
+
+                <!-- Actions (Style Restauré) -->
+                <div class="user-actions">
+                    <!-- 1. Modifier Email -->
+                    <button class="btn-icon-only btn-edit"
+                            title="Modifier l'e-mail"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editEmailModal"
+                            data-user-id="{{ user.id }}"
+                            data-username="{{ user.nom_utilisateur }}"
+                            data-email="{{ user.email or '' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+                            <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm280-280L200-640v440h560v-440L480-480Zm0-60 226-140H254l226 140Zm-280-60v560-560Z"/>
+                        </svg>
+                    </button>
+
+                    <!-- 2. Reset MDP -->
+                    <button class="btn-icon-only btn-reset"
+                            title="Réinitialiser le mot de passe"
+                            data-bs-toggle="modal"
+                            data-bs-target="#resetPasswordModal"
+                            data-user-id="{{ user.id }}"
+                            data-username="{{ user.nom_utilisateur }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+                            <path d="M280-400q-33 0-56.5-23.5T200-480q0-33 23.5-56.5T280-560q33 0 56.5 23.5T360-480q0 33-23.5 56.5T280-400Zm0 160q-100 0-170-70T40-480q0-100 70-170t170-70q67 0 121.5 33t86.5 87h352l120 120-180 180-80-60-80 60-85-60h-47q-32 54-86.5 87T280-240Zm0-80q56 0 98.5-34t56.5-86h125l58 41 82-61 71 55 75-75-40-40H435q-14-52-56.5-86T280-640q-66 0-113 47t-47 113q0 66 47 113t113 47Z"/>
+                        </svg>
+                    </button>
+
+                    <!-- 3. Promouvoir (Si pas soi-même et pas admin) -->
+                    {% if (user.id|string != session.user_id|string) and (user.role != 'admin') %}
+                    <button class="btn-icon-only btn-promote"
+                            title="Promouvoir Administrateur"
+                            data-bs-toggle="modal"
+                            data-bs-target="#promoteModal"
+                            data-user-id="{{ user.id }}"
+                            data-username="{{ user.nom_utilisateur }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trophy" viewBox="0 0 16 16">
+                          <path d="M2.5.5A.5.5 0 0 1 3 0h10a.5.5 0 0 1 .5.5q0 .807-.034 1.536a3 3 0 1 1-1.133 5.89c-.79 1.865-1.878 2.777-2.833 3.011v2.173l1.425.356c.194.048.377.135.537.255L13.3 15.1a.5.5 0 0 1-.3.9H3a.5.5 0 0 1-.3-.9l1.838-1.379c.16-.12.343-.207.537-.255L6.5 13.11v-2.173c-.955-.234-2.043-1.146-2.833-3.012a3 3 0 1 1-1.132-5.89A33 33 0 0 1 2.5.5m.099 2.54a2 2 0 0 0 .72 3.935c-.333-1.05-.588-2.346-.72-3.935m10.083 3.935a2 2 0 0 0 .72-3.935c-.133 1.59-.388 2.885-.72 3.935M3.504 1q.01.775.056 1.469c.13 2.028.457 3.546.87 4.667C5.294 9.48 6.484 10 7 10a.5.5 0 0 1 .5.5v2.61a1 1 0 0 1-.757.97l-1.426.356a.5.5 0 0 0-.179.085L4.5 15h7l-.638-.479a.5.5 0 0 0-.18-.085l-1.425-.356a1 1 0 0 1-.757-.97V10.5A.5.5 0 0 1 9 10c.516 0 1.706-.52 2.57-2.864.413-1.12.74-2.64.87-4.667q.045-.694.056-1.469z"/>
+                        </svg>
+                    </button>
+                    {% endif %}
+
+                    <!-- 4. Supprimer (Si pas soi-même) -->
+                    {% if user.id|string != session.user_id|string %}
+                    <button class="btn-icon-only btn-delete-danger"
+                            title="Supprimer l'utilisateur"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteUserModal"
+                            data-user-id="{{ user.id }}"
+                            data-username="{{ user.nom_utilisateur }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+                            <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                        </svg>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
         </div>
 
-        <table class="objet-table">
-            <thead>
-                <tr>
-                    <th>Nom d'utilisateur</th>
-                    <th>E-mail</th>
-                    <th>Rôle</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-                            <tbody>
-                {% for user in utilisateurs %}
-                <tr>
-                    <td>{{ user.nom_utilisateur }}</td>
-                    <td>{{ user.email or 'Non défini' }}</td>
-                    <td>
-                        <span class="role-tag role-{{ user.role }}">{{ user.role }}</span>
-                    </td>
-                    <td class="actions-cell">
-                        <button class="btn-action btn-icon-only"
-                                title="Modifier l'e-mail"
-                                data-modal-trigger="edit-email-modal"
-                                data-action-url="{{ url_for('admin.modifier_email_utilisateur', id_user=user.id) }}"
-                                data-form-username="{{ user.nom_utilisateur }}"
-                                data-form-email="{{ user.email or '' }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" ><path d="M638-80 468-250l56-56 114 114 226-226 56 56L638-80ZM480-520l320-200H160l320 200Zm0 80L160-640v400h206l80 80H160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720v174l-80 80v-174L480-440Zm0 0Zm0-80Zm0 80Z"/></svg>
-                        </button>
+    {% else %}
+        <!-- État vide -->
+        <div class="empty-state-container">
+            <div class="empty-state-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm720 0v-120q0-44-24.5-84.5T666-434q51 6 96 20.5t84 35.5q36 20 55 44.5t19 53.5v120H760ZM360-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47Zm400-160q0 66-47 113t-113 47q-11 0-28-2.5t-28-5.5q27-32 41.5-71t14.5-81q0-42-14.5-81T544-792q14-5 28-6.5t28-1.5q66 0 113 47t47 113Z"/>
+                </svg>
+            </div>
+            <h3>Aucun utilisateur enregistré</h3>
+            <p>Commencez par ajouter votre premier utilisateur.</p>
+            {% if session.user_role == 'admin' %}
+            <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                Ajouter le premier utilisateur
+            </button>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
 
-                        {% if user.role != 'admin' %}
-                            <button class="btn-action btn-icon-only"
-                                    title="Promouvoir Admin"
-                                    data-modal-trigger="promote-modal"
-                                    data-action-url="{{ url_for('admin.promouvoir_utilisateur', id_user=user.id) }}"
-                                    data-form-username="{{ user.nom_utilisateur }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-160v-80h560v80H200Zm0-140-51-321q-2 0-4.5.5t-4.5.5q-25 0-42.5-17.5T80-680q0-25 17.5-42.5T140-740q25 0 42.5 17.5T200-680q0 7-1.5 13t-3.5 11l125 56 125-171q-11-8-18-21t-7-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820q0 15-7 28t-18 21l125 171 125-56q-2-5-3.5-11t-1.5-13q0-25 17.5-42.5T820-740q25 0 42.5 17.5T880-680q0 25-17.5 42.5T820-620q-2 0-4.5-.5t-4.5-.5l-51 321H200Zm68-80h424l26-167-105 46-133-183-133 183-105-46 26 167Zm212 0Z"/></svg>
-                            </button>
-                        {% endif %}
+<!-- ================= MODALES ================= -->
 
-                        <button class="btn-action btn-icon-only"
-                                title="Réinitialiser le mot de passe"
-                                data-modal-trigger="reset-password-modal"
-                                data-action-url="{{ url_for('admin.reinitialiser_mdp', id_user=user.id) }}"
-                                data-form-username="{{ user.nom_utilisateur }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" ><path d="M280-400q-33 0-56.5-23.5T200-480q0-33 23.5-56.5T280-560q33 0 56.5 23.5T360-480q0 33-23.5 56.5T280-400Zm0 160q-100 0-170-70T40-480q0-100 70-170t170-70q67 0 121.5 33t86.5 87h352l120 120-180 180-80-60-80 60-85-60h-47q-32 54-86.5 87T280-240Zm0-80q56 0 98.5-34t56.5-86h125l58 41 82-61 71 55 75-75-40-40H435q-14-52-56.5-86T280-640q-66 0-113 47t-47 113q0 66 47 113t113 47Z"/></svg>
-                        </button>
-
-                        {% if user.id != session.user_id %}
-                            <button class="btn-action btn-icon-only"
-                                    title="Supprimer l'utilisateur"
-                                    data-modal-trigger="delete-user-modal"
-                                    data-action-url="{{ url_for('admin.supprimer_utilisateur', id_user=user.id) }}"
-                                    data-form-username="{{ user.nom_utilisateur }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" ><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
-                            </button>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-	<div id="edit-email-modal" class="modal-overlay" style="display: none;">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h3 class="modal-title-with-icon">Modifier l'e-mail de <strong id="username"></strong></h3>
-				<button class="close-btn">×</button>
-			</div>
-			<form action="" method="post" class="modal-form">
-			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-				<label for="email">Nouvelle adresse e-mail :</label>
-				<input type="email" id="email" name="email" required>
-				<div class="modal-actions">
-					<button type="button" class="btn-action btn-cancel">Annuler</button>
-					<button type="submit" class="btn-action">Enregistrer</button>
-				</div>
-			</form>
-		</div>
-	</div>
-    <!-- Modale de confirmation pour la passation de pouvoir -->
-    <div id="promote-modal" class="modal-overlay" style="display: none;">
+<!-- Modale Ajout -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form action="" method="POST" class="modal-form">
-			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-header">
-                    <h3 class="modal-title-with-icon">Promouvoir <strong id="username"></strong> Admin</h3>
-                    <button type="button" class="close-btn">×</button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-person-plus-fill me-2"></i>Nouvel utilisateur</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.ajouter_utilisateur') }}" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Nom d'utilisateur *</label>
+                        <input type="text" class="form-control" name="nom_utilisateur" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe *</label>
+                        <input type="password" class="form-control" name="mot_de_passe" required minlength="6">
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="est_admin" id="checkAdmin">
+                        <label class="form-check-label" for="checkAdmin">Accès Administrateur</label>
+                    </div>
                 </div>
-                <p style="padding: 0 25px; line-height: 1.6;">
-                    <strong class="texte-alerte">Attention, cette action est irréversible.</strong> Votre compte sera rétrogradé au rôle d'utilisateur.
-                </p>
-                <div style="padding: 0 25px 25px 25px;">
-                    <label for="admin_password_promote">Pour confirmer, entrez votre mot de passe :</label>
-                    <input type="password" name="password" id="admin_password_promote" required>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-action btn-cancel">Annuler</button>
-                    <button type="submit" class="btn-action">Confirmer la passation</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer</button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-        <!-- Modale pour réinitialiser le mot de passe -->
-    <div id="reset-password-modal" class="modal-overlay" style="display: none;">
+<!-- Modale Email -->
+<div class="modal fade" id="editEmailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form action="" method="POST" class="modal-form">
-			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-header">
-                    <h3 class="modal-title-with-icon">Réinitialiser le mot de passe de <strong id="username"></strong></h3>
-                    <button type="button" class="close-btn">×</button>
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier l'e-mail</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="" method="post" id="editEmailForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <p>Utilisateur : <strong id="edit-email-username"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label">Nouvel e-mail</label>
+                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                    </div>
                 </div>
-                <div style="padding: 0 25px 25px 25px;">
-                    <label for="nouveau_mot_de_passe">Entrez le nouveau mot de passe temporaire :</label>
-                    <input type="password" name="nouveau_mot_de_passe" required>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-action btn-cancel">Annuler</button>
-                    <button type="submit" class="btn-action">Définir le nouveau mot de passe</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
                 </div>
             </form>
         </div>
     </div>
+</div>
 
-    <!-- Modale pour supprimer un utilisateur -->
-    <div id="delete-user-modal" class="modal-overlay" style="display: none;">
-		<div class="modal-content modal-danger">
-			<form action="" method="POST" class="modal-form" data-username="">
-				<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-				<div class="modal-header">
-					<h3 class="modal-title-with-icon">
-						<svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m40-120 440-760 440 760H40Zm104-80h672L480-720 144-200Zm340.175-57q12.825 0 21.325-8.675 8.5-8.676 8.5-21.5 0-12.825-8.675-21.325-8.676-8.5-21.5-8.5-12.825 0-21.325 8.675-8.5 8.676-8.5 21.5 0 12.825 8.675 21.325 8.676 8.5 21.5 8.5ZM454-400h60v-240h-60v240Zm26-120Z"/></svg>
-						Suppression de l'utilisateur <strong id="username-placeholder"></strong>
-					</h3>
-					<button type="button" class="close-btn">×</button>
-				</div>
-				<div class="modal-danger-content">
-					<p>
-						<strong>Attention, cette action est définitive et irréversible.</strong>
-					</p>
-					<p>
-						Pour confirmer, veuillez retaper le nom de l'utilisateur : <strong id="username-to-match"></strong>
-					</p>
-					<input type="text" id="delete-confirm-input" name="confirmation_nom" autocomplete="off" required>
-					<small id="delete-error-message" class="delete-error-msg"></small>
-				</div>
-				<div class="modal-actions">
-					<button type="button" class="btn-action btn-secondary btn-cancel">Annuler</button>
-					<button type="submit" class="btn-action btn-danger">Je comprends, supprimer définitivement</button>
-				</div>
-			</form>
-		</div>
-	</div>
+<!-- Modale Reset MDP -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-shield-lock-fill me-2"></i>Réinitialiser le mot de passe</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="" method="post" id="resetPasswordForm" novalidate>
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <p class="mb-3">Utilisateur : <strong id="reset-password-username" class="text-primary"></strong></p>
+                    
+                    <!-- Nouveau Mot de passe -->
+                    <div class="mb-3 position-relative">
+                        <label class="form-label small fw-bold text-muted">Nouveau mot de passe</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="reset_new_pass" name="nouveau_mot_de_passe" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePass('reset_new_pass')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
 
-    {% include 'footer.html' %}
-</body>
-</html>
+                    <!-- Confirmation -->
+                    <div class="mb-3 position-relative">
+                        <label class="form-label small fw-bold text-muted">Confirmer le mot de passe</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="reset_confirm_pass" name="confirmation_mot_de_passe" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePass('reset_confirm_pass')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Critères de sécurité (Feedback visuel) -->
+                    <div class="card bg-light border-0 p-2">
+                        <small class="fw-bold text-muted mb-1 d-block">Critères de sécurité :</small>
+                        <ul class="list-unstyled mb-0 small" id="password-requirements-list">
+                            <li id="rule-length" class="text-danger"><i class="bi bi-x-circle me-1"></i>12 caractères min.</li>
+                            <li id="rule-upper" class="text-danger"><i class="bi bi-x-circle me-1"></i>1 Majuscule</li>
+                            <li id="rule-lower" class="text-danger"><i class="bi bi-x-circle me-1"></i>1 Minuscule</li>
+                            <li id="rule-number" class="text-danger"><i class="bi bi-x-circle me-1"></i>1 Chiffre</li>
+                            <li id="rule-special" class="text-danger"><i class="bi bi-x-circle me-1"></i>1 Caractère spécial</li>
+                            <li id="rule-match" class="text-danger fw-bold mt-1"><i class="bi bi-x-circle me-1"></i>Mots de passe identiques</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-reset" disabled>Valider</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    // Petit helper pour l'oeil (afficher/masquer)
+    function togglePass(id) {
+        const input = document.getElementById(id);
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const passInput = document.getElementById('reset_new_pass');
+        const confirmInput = document.getElementById('reset_confirm_pass');
+        const submitBtn = document.getElementById('btn-submit-reset');
+
+        function validatePassword() {
+            const val = passInput.value;
+            const confirmVal = confirmInput.value;
+
+            // Regex
+            const hasLength = val.length >= 12;
+            const hasUpper = /[A-Z]/.test(val);
+            const hasLower = /[a-z]/.test(val);
+            const hasNumber = /[0-9]/.test(val);
+            const hasSpecial = /[^A-Za-z0-9]/.test(val);
+            const isMatch = val === confirmVal && val.length > 0;
+
+            // Mise à jour UI
+            updateRule('rule-length', hasLength);
+            updateRule('rule-upper', hasUpper);
+            updateRule('rule-lower', hasLower);
+            updateRule('rule-number', hasNumber);
+            updateRule('rule-special', hasSpecial);
+            updateRule('rule-match', isMatch);
+
+            // Activation du bouton seulement si TOUT est bon
+            if (hasLength && hasUpper && hasLower && hasNumber && hasSpecial && isMatch) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+
+        function updateRule(elementId, isValid) {
+            const el = document.getElementById(elementId);
+            const icon = el.querySelector('i');
+            if (isValid) {
+                el.classList.remove('text-danger');
+                el.classList.add('text-success');
+                icon.classList.remove('bi-x-circle');
+                icon.classList.add('bi-check-circle-fill');
+            } else {
+                el.classList.remove('text-success');
+                el.classList.add('text-danger');
+                icon.classList.remove('bi-check-circle-fill');
+                icon.classList.add('bi-x-circle');
+            }
+        }
+
+        // Écouteurs d'événements
+        if(passInput && confirmInput) {
+            passInput.addEventListener('input', validatePassword);
+            confirmInput.addEventListener('input', validatePassword);
+        }
+        
+        // Reset du formulaire quand on ouvre la modale
+        const resetModal = document.getElementById('resetPasswordModal');
+        if(resetModal) {
+            resetModal.addEventListener('show.bs.modal', function () {
+                passInput.value = '';
+                confirmInput.value = '';
+                validatePassword(); // Pour remettre tout en rouge/désactivé
+            });
+        }
+    });
+</script>
+
+<!-- Modale Promotion -->
+<div class="modal fade" id="promoteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-warning">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Passation de Pouvoir</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="" method="post" id="promoteForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <p>Vous allez nommer <strong id="promote-username"></strong> Administrateur.</p>
+                    <div class="alert alert-danger">
+                        <strong>Attention :</strong> Vous perdrez vos droits d'administrateur.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Votre mot de passe pour confirmer :</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning">Confirmer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Suppression -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Supprimer l'utilisateur</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="" method="post" id="deleteUserForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="alert alert-danger">
+                        Cette action est définitive.
+                    </div>
+                    <p>Tapez le nom de l'utilisateur pour confirmer : <strong id="delete-username-to-match"></strong></p>
+                    <input type="text" class="form-control" id="delete_confirm_input" required placeholder="Nom d'utilisateur">
+                    <div id="delete_error_message" class="text-danger mt-2 small"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Helper pour configurer les modales
+    function setupModal(modalId, formId, actionBaseUrl, usernameFieldId, extraCallback) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        modal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const userId = button.dataset.userId;
+            const username = button.dataset.username;
+            
+            document.getElementById(formId).action = actionBaseUrl + userId;
+            
+            const usernameField = document.getElementById(usernameFieldId);
+            if (usernameField) usernameField.textContent = username;
+
+            if (extraCallback) extraCallback(button);
+        });
+    }
+
+    // Configuration des modales
+    setupModal('editEmailModal', 'editEmailForm', '/admin/utilisateurs/modifier_email/', 'edit-email-username', (btn) => {
+        document.getElementById('edit_email').value = btn.dataset.email || '';
+    });
+
+    setupModal('resetPasswordModal', 'resetPasswordForm', '/admin/utilisateurs/reinitialiser_mdp/', 'reset-password-username', () => {
+        document.getElementById('nouveau_mot_de_passe').value = '';
+    });
+
+    setupModal('promoteModal', 'promoteForm', '/admin/utilisateurs/promouvoir/', 'promote-username');
+
+    // Suppression avec validation
+    const deleteModal = document.getElementById('deleteUserModal');
+    if (deleteModal) {
+        let expectedUsername = '';
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            expectedUsername = button.dataset.username;
+            document.getElementById('deleteUserForm').action = '/admin/utilisateurs/supprimer/' + button.dataset.userId;
+            document.getElementById('delete-username-to-match').textContent = expectedUsername;
+            document.getElementById('delete_confirm_input').value = '';
+            document.getElementById('delete_error_message').textContent = '';
+        });
+
+        document.getElementById('deleteUserForm').addEventListener('submit', function(e) {
+            const input = document.getElementById('delete_confirm_input');
+            if (input.value.trim() !== expectedUsername) {
+                e.preventDefault();
+                document.getElementById('delete_error_message').textContent = "Le nom ne correspond pas.";
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

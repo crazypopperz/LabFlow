@@ -1,111 +1,147 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Importation en Masse - GMLCL</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
-</head>
-<body>
+{% extends "base.html" %}
 
-    {% include 'header.html' %}
+{% block title %}Importation en Masse - LabFlow{% endblock %}
 
-    <div class="main-container">
+{% block content %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
 
-        {# CORRECTION : On s'assure que le fil d'Ariane est bien inclus #}
-        {% include '_breadcrumb.html' %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
 
-        <div class="table-header">
-            <h2 class="page-title">
-                <svg xmlns="http://www.w3.org/2000/svg" class="page-title-icon" viewBox="0 -960 960 960"><path d="M320-240q-33 0-56.5-23.5T240-320v-80h80v80h480v-400H320v80h-80v-160q0-33 23.5-56.5T320-880h480q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H320ZM160-80q-33 0-56.5-23.5T80-160v-560h80v560h560v80H160Zm360-280-56-56 63-64H240v-80h287l-63-64 56-56 160 160-160 160Z"/></svg>
-                <span>Importation en Masse</span>
-            </h2>
-        </div>
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <!-- Icône Import (Indigo) -->
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 -960 960 960">
+                    <path d="M240-160q-33 0-56.5-23.5T160-240v-480q0-33 23.5-56.5T240-800h360l160 160v400q0 33-23.5 56.5T720-160H240Zm0-80h480v-360H560v-120H240v480Z"/>
+                </svg>
+            </div>
+            <span class="fw-bold">Importation en Masse</span>
+        </h2>
+    </div>
 
-        <div class="form-rapports-grid">
+    <div class="row g-4">
+        
+        <!-- COLONNE GAUCHE : Instructions -->
+        <div class="col-lg-6">
+            <div class="import-card">
+                <h4 class="mb-4 d-flex align-items-center">
+                    <span class="step-number">1</span>
+                    Préparer le fichier
+                </h4>
+                
+                <p class="text-muted mb-4">
+                    Pour importer de nouveaux objets, téléchargez le modèle Excel officiel. 
+                    Remplissez-le en respectant scrupuleusement les colonnes.
+                </p>
 
-            <!-- Colonne de gauche : Instructions et Téléchargement -->
-            <div class="rapports-config-col">
-                <div class="content-card rapport-card">
-                    <h3 class="card-title-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="card-title-svg" viewBox="0 -960 960 960"><path d="M660-160h40v-160h-40v160Zm20-200q8 0 14-6t6-14q0-8-6-14t-14-6q-8 0-14 6t-6 14q0 8 6 14t14 6ZM200-800v640-640 200-200Zm80 400h147q11-23 25.5-43t32.5-37H280v80Zm0 160h123q-3-20-3-40t3-40H280v80ZM200-80q-33 0-56.5-23.5T120-160v-640q0-33 23.5-56.5T200-880h320l240 240v92q-19-6-39-9t-41-3v-40H480v-200H200v640h227q11 23 25.5 43T485-80H200Zm480-400q83 0 141.5 58.5T880-280q0 83-58.5 141.5T680-80q-83 0-141.5-58.5T480-280q0-83 58.5-141.5T680-480Z"/></svg>
-                        1. Instructions et Téléchargement
-                    </h3>
-                    <p class="text-discret" style="margin-top: 10px; line-height: 1.6;">
-                        Pour importer de nouveaux objets, téléchargez le modèle Excel. Remplissez-le en respectant les colonnes et les formats demandés.
-                    </p>
-                    <div class="admin-actions" style="justify-content: center; padding-top: 10px;">
-                        <a href="{{ url_for('admin.telecharger_modele_excel') }}" class="btn-action btn-icon-left">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M12 11v6" /><path d="M9 14l3 3l3 -3" /></svg>
-                            Télécharger le Modèle (.xlsx)
-                        </a>
+                <!-- NOUVEAU BLOC D'AVERTISSEMENT -->
+                <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start mb-4" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill fs-5 me-3 text-warning-emphasis mt-1"></i>
+                    <div>
+                        <strong class="text-warning-emphasis">Préalable important :</strong>
+                        <p class="mb-0 small text-muted mt-1">
+                            Le modèle Excel génère des <strong>listes déroulantes</strong> basées sur vos données actuelles.
+                            <br>
+                            Assurez-vous d'avoir créé toutes vos 
+                            <a href="{{ url_for('main.gestion_armoires') }}" class="fw-bold text-dark text-decoration-underline">Armoires</a> 
+                            et 
+                            <a href="{{ url_for('main.gestion_categories') }}" class="fw-bold text-dark text-decoration-underline">Catégories</a> 
+                            dans l'application <strong>avant</strong> de télécharger ce fichier.
+                        </p>
                     </div>
                 </div>
-            </div>
 
-            <!-- Colonne de droite : Formulaire d'Upload -->
-            <div class="rapports-preview-col">
-                <div class="content-card rapport-card">
-                    <form action="{{ url_for('admin.importer_fichier') }}" method="post" enctype="multipart/form-data">
-                        
-                        {# CORRECTION : On utilise VOTRE syntaxe pour le token CSRF #}
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        <h3 class="card-title-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="card-title-svg" viewBox="0 -960 960 960"><path d="M660-160h40v-160h-40v160Zm20-200q8 0 14-6t6-14q0-8-6-14t-14-6q-8 0-14 6t-6 14q0 8 6 14t14 6ZM200-800v640-640 200-200Zm80 400h147q11-23 25.5-43t32.5-37H280v80Zm0 160h123q-3-20-3-40t3-40H280v80ZM200-80q-33 0-56.5-23.5T120-160v-640q0-33 23.5-56.5T200-880h320l240 240v92q-19-6-39-9t-41-3v-40H480v-200H200v640h227q11 23 25.5 43T485-80H200Zm480-400q83 0 141.5 58.5T880-280q0 83-58.5 141.5T680-80q-83 0-141.5-58.5T480-280q0-83 58.5-141.5T680-480Z"/></svg>
-                            2. Déposer votre fichier complété
-                        </h3>
-                        <div class="form-group">
-                            <div class="file-drop-zone" id="drop-zone">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
-                                <p class="file-msg">Glissez-déposez votre fichier ou <strong>cliquez pour sélectionner</strong>.</p>
-                                <input type="file" name="fichier_excel" id="fichier_excel" class="file-input" accept=".xlsx" required>
-                            </div>
-                        </div>
-                        <div class="admin-actions" style="justify-content: flex-end;">
-                            <button type="submit" class="btn-action btn-icon-left">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1" /><path d="M9 15l3 -3l3 3" /><path d="M12 12v9" /></svg>
-                                Lancer l'Importation
-                            </button>
-                        </div>
-                    </form>
+                <div class="alert alert-info border-0 bg-light text-dark mb-4">
+                    <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-2"></i>Règles de remplissage :</h6>
+                    <ul class="help-list mb-0">
+                        <li>Les colonnes <strong>Nom</strong>, <strong>Quantité</strong> et <strong>Seuil</strong> sont obligatoires.</li>
+                        <li>Utilisez les menus déroulants pour l'Armoire et la Catégorie.</li>
+                        <li>La date doit être au format <strong>AAAA-MM-JJ</strong> (ex: 2025-12-31).</li>
+                    </ul>
                 </div>
+
+                <div class="text-center">
+                    <a href="{{ url_for('admin.telecharger_modele_excel') }}" class="btn btn-outline-primary w-100 py-3 fw-bold">
+                        <i class="bi bi-file-earmark-arrow-down me-2"></i>Télécharger le Modèle (.xlsx)
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DROITE : Upload -->
+        <div class="col-lg-6">
+            <div class="import-card">
+                <h4 class="mb-4 d-flex align-items-center">
+                    <span class="step-number">2</span>
+                    Importer les données
+                </h4>
+
+                <form action="{{ url_for('admin.importer_fichier') }}" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="form-group mb-4">
+                        <div class="file-drop-zone" id="drop-zone">
+                            <i class="bi bi-cloud-upload drop-icon"></i>
+                            <h5 class="fw-bold text-dark mb-2">Déposez votre fichier ici</h5>
+                            <p class="text-muted small mb-0 file-msg">ou cliquez pour parcourir vos dossiers</p>
+                            
+                            <input type="file" name="fichier_excel" id="fichier_excel" class="file-input" accept=".xlsx" required>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary py-2 fw-bold">
+                            <i class="bi bi-play-circle-fill me-2"></i>Lancer l'Importation
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
 
-    {# CORRECTION : On s'assure que le footer est bien inclus #}
-    {% include 'footer.html' %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('fichier_excel');
+        const dropZone = document.getElementById('drop-zone');
+        const fileMsg = dropZone.querySelector('.file-msg');
+        const dropIcon = dropZone.querySelector('.drop-icon');
+        const originalMsg = fileMsg.innerHTML;
 
-    {# CORRECTION : On place le script JS ici, à la fin du body, pour garantir qu'il s'exécute après le chargement du HTML #}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const fileInput = document.getElementById('fichier_excel');
-            const dropZone = document.getElementById('drop-zone');
-            const fileMsg = dropZone.querySelector('.file-msg');
-            const originalMsg = fileMsg.innerHTML;
-
-            fileInput.addEventListener('change', function() {
-                if (this.files && this.files.length > 0) {
-                    fileMsg.innerHTML = `Fichier sélectionné : <strong>${this.files[0].name}</strong>`;
-                    dropZone.classList.add('file-selected');
-                } else {
-                    fileMsg.innerHTML = originalMsg;
-                    dropZone.classList.remove('file-selected');
-                }
-            });
+        // Gestion du changement de fichier
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                const fileName = this.files[0].name;
+                fileMsg.innerHTML = `Fichier prêt : <strong class="text-success">${fileName}</strong>`;
+                dropZone.classList.add('file-selected');
+                dropIcon.classList.remove('bi-cloud-upload');
+                dropIcon.classList.add('bi-file-earmark-excel-fill');
+            } else {
+                fileMsg.innerHTML = originalMsg;
+                dropZone.classList.remove('file-selected');
+                dropIcon.classList.add('bi-cloud-upload');
+                dropIcon.classList.remove('bi-file-earmark-excel-fill');
+            }
         });
-    </script>
 
-</body>
-</html>
+        // Effets visuels au Drag & Drop
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+            }, false);
+        });
+    });
+</script>
+
+{% endblock %}

@@ -172,6 +172,22 @@ class Reservation(db.Model):
     objet: Mapped["Objet"] = relationship()
     kit: Mapped["Kit"] = relationship()
 
+class Suggestion(db.Model):
+    __tablename__ = 'suggestions'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    objet_id: Mapped[int] = mapped_column(Integer, ForeignKey('objets.id'), nullable=False)
+    utilisateur_id: Mapped[int] = mapped_column(Integer, ForeignKey('utilisateurs.id'), nullable=False)
+    quantite: Mapped[int] = mapped_column(Integer, nullable=False)
+    commentaire: Mapped[str] = mapped_column(Text, nullable=True)
+    statut: Mapped[str] = mapped_column(String, default='En attente') # En attente, Validée, Refusée
+    date_demande: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
+    
+    # Relations
+    objet: Mapped["Objet"] = relationship()
+    utilisateur: Mapped["Utilisateur"] = relationship()
+    etablissement: Mapped["Etablissement"] = relationship()
+
 # --- FONCTIONS D'INITIALISATION ---
 def init_app(app):
     db.init_app(app)

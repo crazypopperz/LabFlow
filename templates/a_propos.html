@@ -1,58 +1,120 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>À Propos - GMLCL</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    {% include 'header.html' %}
-    <div class="main-container">
+{% extends "base.html" %}
 
-        <div class="breadcrumb-nav">
-            <a href="{{ url_for('admin.admin') }}" class="breadcrumb-link">
-                <svg class="breadcrumb-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2L3 9v12h18V9L12 2zm0 2.09L17.09 9H6.91L12 4.09zM7 19v-8h2v8H7zm4 0v-8h2v8h-2zm4 0v-8h2v8h-2z"/></svg>
-                <span class="breadcrumb-text">Administration</span>
-            </a>
-            <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current">À Propos</span>
-        </div>
-        
-        <div class="content-card" style="max-width: 800px; margin: 20px auto;">
-            <div style="text-align: center; margin-bottom: 30px;">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo GMLCL" style="width: 120px; height: auto; margin-bottom: 15px;">
-                <h2>Gestion Matériel Labo Collège et Lycée</h2>
-                <p class="text-discret" style="font-weight: bold;">Version 1.0</p>
+{% block title %}À Propos - LabFlow{% endblock %}
+
+{% block content %}
+
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <div class="row justify-content-center fade-in-up">
+        <div class="col-lg-10">
+            
+            <!-- 1. HERO SECTION -->
+            <div class="about-hero">
+                <div class="logo-container">
+                    <!-- Logo SVG LabFlow -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" fill="currentColor" class="bi bi-motherboard-fill text-primary" viewBox="0 0 16 16">
+                        <path d="M5 7h3V4H5z"/>
+                        <path d="M1 2a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-2H.5a.5.5 0 0 1-.5-.5v-1A.5.5 0 0 1 .5 9H1V8H.5a.5.5 0 0 1-.5-.5v-1A.5.5 0 0 1 .5 6H1V5H.5a.5.5 0 0 1-.5-.5v-2A.5.5 0 0 1 .5 2zm11 .5a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0zm2 0a.5.5 0 0 0-1 0v7a.5.5 0 0 0 1 0zM3.5 10a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zM4 4h-.5a.5.5 0 0 0 0 1H4v1h-.5a.5.5 0 0 0 0 1H4a1 1 0 0 0 1 1v.5a.5.5 0 0 0 1 0V8h1v.5a.5.5 0 0 0 1 0V8a1 1 0 0 0 1-1h.5a.5.5 0 0 0 0-1H9V5h.5a.5.5 0 0 0 0-1H9a1 1 0 0 0-1-1v-.5a.5.5 0 0 0-1 0V3H6v-.5a.5.5 0 0 0-1 0V3a1 1 0 0 0-1 1m7 7.5v1a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-2a.5.5 0 0 0-.5.5"/>
+                    </svg>
+                </div>
+                <h1 class="fw-bold text-dark mb-2">LabFlow</h1>
+                <p class="text-muted fs-5 mb-4">Gestion Intelligente de Matériel de Laboratoire</p>
+                <span class="badge bg-light text-dark border rounded-pill px-3 py-2">Version 1.0.0</span>
             </div>
 
-            <div class="details-list">
-				<li>
-					<strong>Développé par</strong>
-					<span>Xavier De Baudry d'Asson et Yll Basha @ac-nancy-metz.fr</span>
-				</li>
-				
-				{% if session.user_role == 'admin' %}
-					<li>
-						<strong>Statut de la Licence</strong>
-						{% if licence.is_pro %}
-							<span style="color: var(--couleur-succes); font-weight: bold;">PRO</span>
-						{% else %}
-							<span style="color: var(--couleur-avertissement-texte); font-weight: bold;">GRATUITE</span>
-						{% endif %}
-					</li>
-					<li>
-						<strong>Identifiant d'Instance</strong>
-						<code style="font-size: 0.9rem;">{{ licence.instance_id }}</code>
-					</li>
-				{% endif %}
-			</div>
+            <!-- 2. L'ÉQUIPE -->
+            <div class="row g-4 mb-5">
+                <div class="col-12 text-center mb-2">
+                    <h3 class="h5 fw-bold text-secondary text-uppercase ls-1">Développé avec passion par</h3>
+                </div>
+                
+                <!-- Xavier -->
+                <div class="col-md-6">
+                    <div class="dev-card">
+                        <div class="dev-avatar">
+                            <i class="bi bi-code-slash"></i>
+                        </div>
+                        <h4 class="fw-bold text-dark">Xavier De Baudry d'Asson</h4>
+                        <p class="text-primary small fw-bold mb-2">Enseignant SVT & Lead Developer</p>
+                        <p class="text-muted small">Conception, Architecture et Développement Backend.</p>
+                        <a href="mailto:xavier.de-baudry-d-asson@ac-nancy-metz.fr" class="btn btn-sm btn-outline-secondary rounded-pill mt-2">
+                            <i class="bi bi-envelope me-1"></i> Contact
+                        </a>
+                    </div>
+                </div>
 
-            <p class="text-discret" style="text-align: center; margin-top: 30px;">
-                Merci d'utiliser cette application pour simplifier la gestion de votre laboratoire.
-            </p>
+                <!-- Yll -->
+                <div class="col-md-6">
+                    <div class="dev-card">
+                        <div class="dev-avatar" style="background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);">
+                            <i class="bi bi-palette"></i>
+                        </div>
+                        <h4 class="fw-bold text-dark">Yll Basha</h4>
+                        <p class="text-info small fw-bold mb-2">Enseignant SVT & UI/UX Designer</p>
+                        <p class="text-muted small">Design, Expérience Utilisateur et Tests.</p>
+                        <a href="mailto:yll.basha@ac-nancy-metz.fr" class="btn btn-sm btn-outline-secondary rounded-pill mt-2">
+                            <i class="bi bi-envelope me-1"></i> Contact
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. LICENCE & SYSTÈME (Visible Admin) -->
+            {% if session.user_role == 'admin' %}
+            <div class="license-box shadow">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="fw-bold mb-1">État du Système</h4>
+                        <p class="text-white-50 mb-3 small">Informations techniques de votre instance.</p>
+                        
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div>
+                                <small class="d-block text-white-50 mb-1">Statut Licence</small>
+                                {% if licence.is_pro %}
+                                    <span class="license-badge-pro"><i class="bi bi-star-fill me-1"></i>PRO</span>
+                                {% else %}
+                                    <span class="license-badge-free">GRATUITE</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div>
+                                <small class="d-block text-white-50 mb-1">Identifiant Instance</small>
+                                <div class="instance-code" onclick="copierID(this)" title="Cliquer pour copier">
+                                    {{ licence.instance_id }}
+                                    <i class="bi bi-clipboard ms-2 opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center d-none d-md-block">
+                        <i class="bi bi-shield-check display-1 opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Footer discret -->
+            <div class="text-center mt-5 text-muted small">
+                <p class="opacity-50">Fait avec Flask, Bootstrap 5 & ❤️</p>
+            </div>
+
         </div>
-
     </div>
-    {% include 'footer.html' %}
-</body>
-</html>
+</div>
+
+<script>
+    function copierID(element) {
+        const text = element.innerText.trim();
+        navigator.clipboard.writeText(text).then(() => {
+            const original = element.innerHTML;
+            element.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i> Copié !';
+            setTimeout(() => {
+                element.innerHTML = original;
+            }, 2000);
+        });
+    }
+</script>
+
+{% endblock %}

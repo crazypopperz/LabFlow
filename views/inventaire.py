@@ -376,11 +376,13 @@ def voir_armoire(armoire_id):
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
     
+    # 1. Récupération de l'armoire
     armoire = db.session.get(Armoire, armoire_id)
     if not armoire or armoire.etablissement_id != etablissement_id:
         flash("Armoire non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
+    # 2. Récupération des objets paginés
     objets, total_pages = get_paginated_objets(
         etablissement_id=etablissement_id, 
         page=page, 
@@ -396,7 +398,7 @@ def voir_armoire(armoire_id):
         'armoire_id': armoire_id
     }
 
-    # --- AJOUT : Récupérer la liste des autres armoires pour la liste déroulante ---
+    # 3. Récupérer la liste des autres armoires pour la liste déroulante (Bulk action)
     autres_armoires = db.session.execute(
         db.select(Armoire)
         .filter(
@@ -406,13 +408,21 @@ def voir_armoire(armoire_id):
         .order_by(Armoire.nom)
     ).scalars().all()
 
+    # 4. DÉFINITION DU BREADCRUMB (L'ajout manquant)
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Gestion des Armoires', 'url': url_for('main.gestion_armoires')},
+        {'text': armoire.nom, 'url': None}
+    ]
+
     return render_template("armoire.html",
                            armoire=armoire,
                            objets=objets,
                            pagination=pagination,
                            sort_by=sort_by,
                            direction=direction,
-                           autres_armoires=autres_armoires, # <-- On passe la liste au template
+                           autres_armoires=autres_armoires,
+                           breadcrumbs=breadcrumbs, # <--- On passe la variable au template
                            now=datetime.now())
 
 #==============================================================================
@@ -426,11 +436,13 @@ def voir_categorie(categorie_id):
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
 
+    # 1. Récupération de la catégorie
     categorie = db.session.get(Categorie, categorie_id)
     if not categorie or categorie.etablissement_id != etablissement_id:
         flash("Catégorie non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
+    # 2. Récupération des objets paginés
     objets, total_pages = get_paginated_objets(
         etablissement_id=etablissement_id, 
         page=page, 
@@ -446,7 +458,7 @@ def voir_categorie(categorie_id):
         'categorie_id': categorie_id
     }
 
-    # --- AJOUT : Récupérer la liste des autres catégories pour la liste déroulante ---
+    # 3. Récupérer la liste des autres catégories pour la liste déroulante (Bulk action)
     categories_list = db.session.execute(
         db.select(Categorie)
         .filter(
@@ -456,13 +468,21 @@ def voir_categorie(categorie_id):
         .order_by(Categorie.nom)
     ).scalars().all()
 
+    # 4. DÉFINITION DU BREADCRUMB (C'est ce qu'il manquait)
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Gestion des Catégories', 'url': url_for('main.gestion_categories')},
+        {'text': categorie.nom, 'url': None}
+    ]
+
     return render_template("categorie.html",
                            categorie=categorie,
                            objets=objets,
                            pagination=pagination,
                            sort_by=sort_by,
                            direction=direction,
-                           categories_list=categories_list, # <-- On passe la liste au template
+                           categories_list=categories_list,
+                           breadcrumbs=breadcrumbs, # <--- On passe la variable au template
                            now=datetime.now())
                            
 #=======================================================

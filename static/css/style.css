@@ -367,20 +367,140 @@ a {
 /* =================================================================
    4. EN-TÊTE DE PAGE & FIL D'ARIANE
    ================================================================= */
-.page-header {
-    margin-bottom: 1.5rem;
-}
 .breadcrumb-container {
-    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 12px 24px; /* Un peu moins de hauteur pour s'intégrer au header */
+    background: linear-gradient(135deg, #f6f8fb 0%, #ffffff 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(31, 59, 115, 0.1);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 2rem; /* Espace sous le fil d'ariane */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
-.page-title {
-  font-size: 1.75rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+
+.breadcrumb-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(167, 211, 242, 0.1), transparent);
+    animation: shimmer 3s infinite;
+    pointer-events: none;
 }
-.page-title-icon { width: 28px; height: 28px; fill: var(--couleur-principale); }
+
+@keyframes shimmer {
+    to { left: 200%; }
+}
+
+.breadcrumb-link {
+    position: relative;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.breadcrumb-link::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1f3b73, #01257d);
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: -1;
+}
+
+.breadcrumb-link:hover {
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(31, 59, 115, 0.3);
+}
+
+.breadcrumb-link:hover::before {
+    opacity: 1;
+}
+
+.breadcrumb-link:hover svg {
+    stroke: #ffffff; /* Change la couleur de l'icône au survol */
+}
+
+.breadcrumb-separator {
+    color: #d1d5db;
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 300;
+    user-select: none;
+    transition: all 0.3s;
+	animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+            0%, 100% {
+                opacity: 0.5;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+.breadcrumb-current {
+    color: #1f3b73;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 16px;
+    background: linear-gradient(135deg, rgba(31, 59, 115, 0.08), rgba(167, 211, 242, 0.15));
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.breadcrumb-current::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #1f3b73, #a7d3f2);
+    animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+.breadcrumb-icon {
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    stroke: currentColor;
+    transition: stroke 0.3s;
+}
+
+@media (max-width: 768px) {
+    .breadcrumb-container {
+        padding: 10px 16px;
+        gap: 4px;
+    }
+    .breadcrumb-link, .breadcrumb-current {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+}
 
 /* =================================================================
    5. TABLEAU DE BORD (DASHBOARD)
@@ -1908,6 +2028,40 @@ En-tête avec split layout */
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
 }
+
+.cart-list-wrapper {
+        min-height: 200px;
+    }
+
+    /* Style des items générés par le JS (Anticipation) */
+    .cart-item {
+        border-bottom: 1px solid #f1f3f5;
+        padding: 1.5rem;
+        transition: background-color 0.2s;
+    }
+    .cart-item:last-child { border-bottom: none; }
+    .cart-item:hover { background-color: #f8f9fa; }
+
+    /* État vide */
+    .empty-cart-container {
+        padding: 4rem 2rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    .empty-cart-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+        color: var(--couleur-principale);
+    }
+
+    /* Barre d'actions */
+    .cart-footer {
+        background-color: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        padding: 1.5rem;
+        border-radius: 0 0 12px 12px;
+    }
 
 
 /* =================================================================
@@ -5815,4 +5969,224 @@ max-width: 450px;
         font-weight: bold;
         position: absolute;
         left: 0;
+    }
+
+
+/* =========================================
+   TOAST Premium
+   =======================================*/
+.toast-container {
+    z-index: 11000;
+}
+
+.toast {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Ombre un peu plus marquée */
+    margin-bottom: 10px;
+}
+
+/* Force le texte en BLANC et GRAS pour les toasts colorés */
+.toast.text-bg-success,
+.toast.text-bg-danger,
+.toast.text-bg-warning,
+.toast.text-bg-primary {
+    color: #ffffff !important;
+    font-weight: 600 !important; /* Gras mais pas trop */
+}
+
+/* On s'assure que les liens dans les toasts sont aussi blancs */
+.toast.text-bg-success a,
+.toast.text-bg-danger a {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+/* Bouton de fermeture bien blanc */
+.toast .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    opacity: 0.8;
+}
+.toast .btn-close:hover {
+    opacity: 1;
+}
+
+/* =====================================================
+   BOUTON SUGGÉRER (Style Premium)
+   ===================================================*/
+.btn-suggest {
+    /* Fond dégradé Jaune/Or */
+    background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);
+    border: none;
+    
+    /* Typographie */
+    color: #212529 !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem; /* Légèrement réduit pour l'harmonie */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    
+    /* Forme */
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(255, 193, 7, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* --- CORRECTION ALIGNEMENT --- */
+    display: flex !important;       /* Force le mode Flexbox */
+    align-items: center !important; /* Centre verticalement l'icône et le texte */
+    justify-content: center;        /* Centre horizontalement */
+    gap: 12px;                      /* Espace entre l'icône et le texte */
+    line-height: 1;                 /* Réinitialise la hauteur de ligne pour éviter les décalages */
+}
+
+/* Correction spécifique pour l'icône dans ce bouton */
+.btn-suggest svg, 
+.btn-suggest i {
+    width: 18px;       /* Taille ajustée à la hauteur du texte */
+    height: 18px;
+    display: block;    /* Supprime les comportements de texte */
+    margin: 0 !important; /* ON SUPPRIME LE DÉCALAGE PRÉCÉDENT */
+    fill: currentColor;
+}
+
+/* Effet au survol */
+.btn-suggest:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(255, 193, 7, 0.4);
+    background: linear-gradient(135deg, #ffca2c 0%, #ffc107 100%);
+    color: #000 !important;
+}
+
+/* Effet au clic */
+.btn-suggest:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(255, 193, 7, 0.25);
+}
+
+
+/* ==================================================
+   PAGE A PROPOS
+   ================================================*/
+.fade-in-up {
+        animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Carte Hero */
+    .about-hero {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        text-align: center;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 10px 30px rgba(31, 59, 115, 0.05);
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Décoration d'arrière-plan */
+    .about-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(31, 59, 115, 0.03) 0%, transparent 70%);
+        z-index: 0;
+    }
+
+    .logo-container {
+        width: 100px;
+        height: 100px;
+        background: white;
+        border-radius: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Cartes Développeurs */
+    .dev-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid #e9ecef;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+        text-align: center;
+    }
+    .dev-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(31, 59, 115, 0.1);
+        border-color: var(--couleur-principale);
+    }
+
+    .dev-avatar {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, var(--couleur-principale) 0%, #667eea 100%);
+        color: white;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 12px rgba(31, 59, 115, 0.2);
+    }
+
+    /* Section Licence */
+    .license-box {
+        background: #152952; /* Bleu nuit profond */
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .license-badge-pro {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #000;
+        font-weight: 800;
+        padding: 0.5rem 1rem;
+        border-radius: 30px;
+        display: inline-block;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+    }
+
+    .license-badge-free {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 30px;
+        display: inline-block;
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    .instance-code {
+        font-family: 'Courier New', monospace;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        color: #a7d3f2;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .instance-code:hover {
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
     }

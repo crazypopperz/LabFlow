@@ -101,10 +101,12 @@
                         
                         <!-- Bouton Suggestion pour tous -->
                         <button class="btn btn-outline-warning text-dark btn-suggest"
-                                data-objet-id="{{ objet.id }}"
-                                data-objet-nom="{{ objet.nom }}">
-                            <i class="bi bi-cart-plus me-2"></i>Suggérer une commande
-                        </button>
+								data-objet-id="{{ objet.id }}"
+								data-objet-nom="{{ objet.nom }}"
+								data-stock="{{ objet.quantite_physique }}"
+								data-seuil="{{ objet.seuil }}">
+							<i class="bi bi-cart-plus me-2"></i>Suggérer une commande
+						</button>
                     </div>
                 </div>
             </div>

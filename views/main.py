@@ -4,7 +4,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, send_from_directory, current_app)
 from sqlalchemy import func, desc
 from sqlalchemy.orm import joinedload
-from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget
+from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre
 from utils import login_required
 
 main_bp = Blueprint(
@@ -210,7 +210,12 @@ def voir_fournisseurs():
 @main_bp.route("/panier")
 @login_required
 def panier():
-    return render_template("panier.html")
+    # Définition du fil d'Ariane
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Mon Panier', 'url': None}
+    ]
+    return render_template("panier.html", breadcrumbs=breadcrumbs)
 
 #================================================================
 #  GESTION PAGE A PROPOS
@@ -218,7 +223,31 @@ def panier():
 @main_bp.route("/a-propos")
 @login_required
 def a_propos():
-    return render_template("a_propos.html")
+    etablissement_id = session.get('etablissement_id')
+    
+    # 1. Récupération des infos de licence (Indispensable pour le template)
+    params = db.session.execute(
+        db.select(Parametre).filter_by(etablissement_id=etablissement_id)
+    ).scalars().all()
+    
+    params_dict = {p.cle: p.valeur for p in params}
+    
+    licence_info = {
+        'is_pro': params_dict.get('licence_statut') == 'PRO',
+        'instance_id': params_dict.get('instance_id', 'N/A'),
+        'statut': params_dict.get('licence_statut', 'FREE')
+    }
+
+    # 2. Fil d'Ariane
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'À Propos', 'url': None}
+    ]
+
+    return render_template("a_propos.html", 
+                           breadcrumbs=breadcrumbs,
+                           licence=licence_info,
+                           now=datetime.now())
 
 #================================================================
 #  GESTION FAVICON

@@ -30,7 +30,7 @@ from html import escape
 
 # Modèles et DB
 # NOTE: J'ai ajouté Historique et Reservation aux imports pour la suppression sécurisée
-from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Etablissement, Historique, Reservation
+from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Etablissement, Historique, Reservation, Suggestion
 from utils import admin_required, login_required
 
 # Imports Exports
@@ -75,12 +75,13 @@ def generer_code_unique():
 def admin():
     etablissement_id = session.get('etablissement_id')
     
+    # 1. Récupération de l'établissement
     etablissement = db.session.get(Etablissement, etablissement_id)
     if not etablissement:
         flash("Erreur critique : Établissement introuvable.", "error")
         return redirect(url_for('auth.login'))
 
-    # AUTO-RÉPARATION sécurisée
+    # 2. AUTO-RÉPARATION sécurisée du code invitation
     if not etablissement.code_invitation:
         try:
             etablissement.code_invitation = generer_code_unique()
@@ -89,6 +90,16 @@ def admin():
             db.session.rollback()
             current_app.logger.error(f"Erreur génération code invitation: {e}")
 
+    # 3. Récupération des suggestions (pour la carte dynamique)
+    suggestions = db.session.execute(
+        db.select(Suggestion)
+        .options(joinedload(Suggestion.objet), joinedload(Suggestion.utilisateur))
+        .filter_by(etablissement_id=etablissement_id, statut='En attente')
+        .order_by(Suggestion.date_demande.desc())
+        .limit(4)
+    ).scalars().all()
+
+    # 4. Récupération des infos de licence via Parametre
     params = db.session.execute(
         db.select(Parametre).filter_by(etablissement_id=etablissement_id)
     ).scalars().all()
@@ -101,7 +112,13 @@ def admin():
         'statut': params_dict.get('licence_statut', 'FREE')
     }
 
-    return render_template("admin.html", now=datetime.now(), licence=licence_info, etablissement=etablissement)
+    return render_template(
+        "admin.html", 
+        now=datetime.now(), 
+        licence=licence_info,
+        etablissement=etablissement,
+        suggestions=suggestions
+    )
 
 # ============================================================
 # GESTION ARMOIRES / CATÉGORIES

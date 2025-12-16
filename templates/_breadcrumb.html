@@ -1,15 +1,30 @@
 {% if breadcrumbs %}
 <nav class="breadcrumb-container" aria-label="Fil d'Ariane">
     {% for item in breadcrumbs %}
+        
+        <!-- Séparateur (sauf avant le premier élément) -->
         {% if not loop.first %}
-            <span class="breadcrumb-separator">&rsaquo;</span>
+            <span class="breadcrumb-separator">›</span>
         {% endif %}
         
+        <!-- Élément Actif (Dernier ou sans URL) -->
         {% if loop.last or not item.url %}
             <span class="breadcrumb-current">{{ item.text }}</span>
+        
+        <!-- Lien Cliquable -->
         {% else %}
-            <a href="{{ item.url }}" class="breadcrumb-link">{{ item.text }}</a>
+            <a href="{{ item.url }}" class="breadcrumb-link">
+                <!-- Icône Maison uniquement pour le premier élément (Accueil/Dashboard) -->
+                {% if loop.first %}
+                <svg class="breadcrumb-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                {% endif %}
+                
+                {{ item.text }}
+            </a>
         {% endif %}
+        
     {% endfor %}
 </nav>
 {% endif %}

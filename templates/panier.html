@@ -1,56 +1,56 @@
 {% extends "base.html" %}
-{% block title %}Mon Panier de Réservation - LabFlow{% endblock %}
+
+{% block title %}Mon Panier - LabFlow{% endblock %}
 
 {% block content %}
+
 <div class="main-container">
     
-    <div class="page-title">
-        <svg class="page-title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M17.21 9l-4.38-6.56c-.19-.28-.51-.42-.83-.42-.32 0-.64.14-.83.43L6.79 9H2c-.55 0-1 .45-1 1 0 .09.01.18.04.27l2.54 9.27c.23.84 1 1.46 1.92 1.46h13c.92 0 1.69-.62 1.93-1.46l2.54-9.27L23 10c0-.55-.45-1-1-1h-4.79zM9 9l3-4.4L15 9H9zm10 12H5.04c-.47 0-.85-.34-.96-.81L1.92 11h1.95l.63 2.27c.22.81 1.01 1.32 1.87 1.22.87-.1 1.46-.8 1.32-1.67L6.85 11h10.3l-1.14 4.82c-.14.87.45 1.67 1.32 1.67.86.1 1.65-.42 1.87-1.22L19.96 11h1.92l-2.16 9.19c-.11.47-.5.81-.97.81z"/>
-        </svg>
-        <span>Mon Panier de Réservation</span>
+    <!-- Fil d'ariane -->
+     {% include '_breadcrumb.html' %}
+
+    <!-- En-tête Panier (Style Premium) -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <!-- Icône Panier (Dégradé Indigo/Violet) -->
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart-fill" viewBox="0 0 16 16">
+                    <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                </svg>
+            </div>
+            <span class="fw-bold">Mon Panier de Réservation</span>
+        </h2>
     </div>
 
-    <!-- Card principale du panier -->
-    <div class="content-card">
+    <!-- Carte Principale -->
+    <div class="card border-0 shadow-sm rounded-3">
         
-        <!-- Zone du contenu du panier -->
-        <div id="cart-summary-list" class="cart-items-container">
-            <!-- Contenu injecté par JS -->
+        <!-- Zone du contenu (Liste) -->
+        <div id="cart-summary-list" class="cart-list-wrapper">
+            <!-- Le JS va injecter les items ici -->
         </div>
 
-        <!-- Message panier vide (affiché par défaut, masqué par JS si items) -->
-        <div id="empty-cart-message" class="empty-cart-state">
-            <svg class="empty-cart-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
-            </svg>
-            <h3>Votre panier est vide</h3>
-            <p>Ajoutez des réservations depuis le calendrier pour les voir apparaître ici.</p>
-            <a href="{{ url_for('main.calendrier') }}" class="btn-action btn-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                Aller au calendrier
+        <!-- Message Panier Vide (Caché/Affiché par JS) -->
+        <div id="empty-cart-message" class="empty-cart-container" style="display: none;">
+            <div class="empty-cart-icon">
+                <i class="bi bi-cart-x"></i>
+            </div>
+            <h3 class="h5 fw-bold text-dark">Votre panier est vide</h3>
+            <p class="mb-4">Sélectionnez des objets dans le calendrier ou l'inventaire pour commencer une réservation.</p>
+            <a href="{{ url_for('main.calendrier') }}" class="btn btn-primary">
+                <i class="bi bi-calendar-week me-2"></i>Aller au calendrier
             </a>
         </div>
 
-        <!-- Actions du panier (visible uniquement si items) -->
-        <div id="cart-actions" class="cart-actions-bar" style="display: none;">
-            <button id="clear-cart-btn" class="btn-action btn-outline-danger">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-                Vider le panier
+        <!-- Actions (Footer) -->
+        <div id="cart-actions" class="cart-footer d-flex justify-content-between align-items-center" style="display: none;">
+            <button id="clear-cart-btn" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-2"></i>Vider le panier
             </button>
-            <button id="confirm-cart-btn" class="btn-action btn-primary btn-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                Confirmer les réservations
+            
+            <button id="confirm-cart-btn" class="btn btn-success btn-lg px-4 shadow-sm">
+                <i class="bi bi-check-circle-fill me-2"></i>Confirmer la réservation
             </button>
         </div>
     </div>
@@ -58,35 +58,44 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- On garde le module JS existant qui gère la logique -->
 <script src="{{ url_for('static', filename='js/modules/cart-summary.js') }}" type="module"></script>
+
 <script>
-// Gestion de l'affichage du message "panier vide"
+// Script d'affichage conditionnel (Vide / Plein)
 document.addEventListener('DOMContentLoaded', function() {
     const cartList = document.getElementById('cart-summary-list');
     const emptyMessage = document.getElementById('empty-cart-message');
     const cartActions = document.getElementById('cart-actions');
     
-    // Observer pour détecter les changements dans le panier
-    const observer = new MutationObserver(() => {
-        const hasItems = cartList.children.length > 0 && 
-                        !cartList.querySelector('.widget-placeholder');
+    // Fonction de mise à jour de l'interface
+    function updateCartUI() {
+        // On vérifie s'il y a des enfants dans la liste (les items injectés par le module)
+        // Note: Le module cart-summary.js met un peu de temps à charger le sessionStorage
+        // On utilise un petit délai ou on vérifie le sessionStorage directement
+        const cart = JSON.parse(sessionStorage.getItem('reservationCart')) || {};
+        const hasItems = Object.keys(cart).length > 0;
         
         if (hasItems) {
             emptyMessage.style.display = 'none';
             cartActions.style.display = 'flex';
+            cartList.style.display = 'block';
         } else {
-            emptyMessage.style.display = 'flex';
+            emptyMessage.style.display = 'block';
             cartActions.style.display = 'none';
+            cartList.style.display = 'none';
         }
-    });
-    
+    }
+
+    // Observer les changements dans le DOM (quand le module JS injecte le HTML)
+    const observer = new MutationObserver(updateCartUI);
     observer.observe(cartList, { childList: true, subtree: true });
     
     // Vérification initiale
-    const cart = JSON.parse(sessionStorage.getItem('reservationCart')) || {};
-    if (Object.keys(cart).length === 0) {
-        emptyMessage.style.display = 'flex';
-    }
+    updateCartUI();
+    
+    // Écouteur sur le stockage (si on vide le panier depuis un autre onglet/endroit)
+    window.addEventListener('storage', updateCartUI);
 });
 </script>
 {% endblock %}

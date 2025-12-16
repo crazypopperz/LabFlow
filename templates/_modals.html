@@ -304,3 +304,35 @@
         </form>
     </div>
 </div>
+
+
+<!-- MODALE DE SUGGESTION DE COMMANDE -->
+
+<div class="modal fade" id="suggestionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-lightbulb me-2"></i>Suggérer une commande</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Objet : <strong id="suggestion-objet-nom" class="text-primary">-</strong></p>
+                <input type="hidden" id="suggestion-objet-id">
+                
+                <div class="mb-3">
+                    <label class="form-label">Quantité suggérée *</label>
+                    <input type="number" class="form-control" id="suggestion-quantity-input" min="1" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Commentaire (Optionnel)</label>
+                    <textarea class="form-control" id="suggestion-commentaire" rows="2" placeholder="Pourquoi cette commande ?"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning" id="suggestion-confirm-btn">Envoyer la suggestion</button>
+            </div>
+        </div>
+    </div>
+</div>

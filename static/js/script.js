@@ -35,6 +35,58 @@ function showInfoModal(title, message) {
 }
 
 // =================================================================
+// SYSTÈME DE NOTIFICATIONS (TOASTS)
+// =================================================================
+function showToast(message, type = 'success') {
+    const container = document.querySelector('.toast-container');
+    if (!container) return;
+
+    let icon = 'bi-check-circle-fill';
+    let toastClass = 'text-bg-success'; // Vert par défaut
+
+    if (type === 'error' || type === 'danger') {
+        icon = 'bi-exclamation-triangle-fill';
+        toastClass = 'text-bg-danger'; // Rouge
+    } else if (type === 'info') {
+        icon = 'bi-info-circle-fill';
+        toastClass = 'text-bg-primary'; // Bleu
+    } else if (type === 'warning') {
+        icon = 'bi-exclamation-circle-fill';
+        toastClass = 'text-bg-warning'; // Jaune/Orange
+    }
+
+    const html = `
+        <div class="toast ${toastClass} align-items-center border-0 fade show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-3" style="padding: 12px 16px;">
+                    <i class="bi ${icon} fs-4"></i>
+                    <div style="font-size: 1rem;">
+                        ${message}
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+
+    container.insertAdjacentHTML('beforeend', html);
+    
+    const toastElement = container.lastElementChild;
+    
+    // Auto-destruction
+    setTimeout(() => {
+        if (toastElement && document.body.contains(toastElement)) {
+            toastElement.classList.remove('show');
+            setTimeout(() => toastElement.remove(), 500);
+        }
+    }, 4500);
+    
+    // Clic croix
+    const closeBtn = toastElement.querySelector('.btn-close');
+    if(closeBtn) closeBtn.addEventListener('click', () => toastElement.remove());
+}
+
+// =================================================================
 // POINT D'ENTRÉE UNIQUE : TOUT LE CODE EST DANS CE BLOC
 // =================================================================
 document.addEventListener("DOMContentLoaded", function () {
@@ -950,96 +1002,83 @@ document.addEventListener("DOMContentLoaded", function () {
         const commentaireInput = document.getElementById('suggestion-commentaire');
         const confirmBtn = document.getElementById('suggestion-confirm-btn');
 
-        // Ouvrir la modale via les boutons "Suggérer"
+        // 1. OUVERTURE ET CALCUL
         document.addEventListener('click', function(e) {
             const btnSuggest = e.target.closest('.btn-suggest');
             if (btnSuggest) {
                 e.preventDefault();
                 
+                // Récupération des données depuis le bouton HTML
                 const objetId = btnSuggest.dataset.objetId;
                 const objetNom = btnSuggest.dataset.objetNom;
                 
-                // --- NOUVEAU : Récupération des données pour le calcul ---
+                // Conversion en nombre (le || 0 évite le NaN si l'attribut est vide)
                 const stockActuel = parseInt(btnSuggest.dataset.stock) || 0;
                 const seuilAlerte = parseInt(btnSuggest.dataset.seuil) || 0;
                 
-                // Remplir les textes
+                console.log(`Calcul suggestion : Stock=${stockActuel}, Seuil=${seuilAlerte}`); // Debug console
+
+                // Remplissage UI
                 if (objetNomElement) objetNomElement.textContent = objetNom;
                 if (objetIdInput) objetIdInput.value = objetId;
                 
-                // --- NOUVEAU : Calcul Intelligent de la quantité ---
+                // --- CALCUL INTELLIGENT ---
                 let proposition = 1; // Valeur par défaut
                 
-                // Si le stock est critique (inférieur ou égal au seuil)
-                if (stockActuel <= seuilAlerte) {
-                    // On vise à remonter le stock à 2 fois le seuil (stock de sécurité)
+                // Si on est en dessous ou égal au seuil (et que le seuil est défini)
+                if (stockActuel <= seuilAlerte && seuilAlerte > 0) {
+                    // Objectif : Remonter à 2x le seuil (stock de sécurité)
                     const cible = seuilAlerte * 2;
                     proposition = cible - stockActuel;
                     
-                    // On propose au minimum 5 unités si le calcul donne moins (pour éviter les micro-commandes)
-                    if (proposition < 5) proposition = 5;
+                    // Sécurité : on commande au moins 1, et idéalement au moins 5 si c'est du consommable
+                    if (proposition < 1) proposition = 1;
                 }
                 
-                // Application de la proposition
                 if (quantityInput) quantityInput.value = proposition;
                 
-                // Gestion du commentaire (Placeholder contextuel)
+                // Placeholder contextuel
                 if (commentaireInput) {
-                    commentaireInput.value = ''; // Reset du texte
-                    if (stockActuel <= seuilAlerte) {
-                        commentaireInput.placeholder = `Stock critique (${stockActuel}/${seuilAlerte}). Réapprovisionnement suggéré.`;
+                    commentaireInput.value = '';
+                    if (stockActuel <= seuilAlerte && seuilAlerte > 0) {
+                        commentaireInput.placeholder = `Stock critique (${stockActuel}/${seuilAlerte}). Réassort conseillé.`;
                     } else {
-                        commentaireInput.placeholder = "Pourquoi cette commande ? (Optionnel)";
+                        commentaireInput.placeholder = "Pourquoi cette commande ?";
                     }
                 }
                 
-                // Ouvrir la modale Bootstrap
                 suggestionModalInstance.show();
                 
-                // Focus et sélection du chiffre (pour pouvoir le changer directement en tapant)
+                // Focus sur le champ quantité
                 setTimeout(() => {
-                    if (quantityInput) {
-                        quantityInput.focus();
-                        quantityInput.select();
-                    }
+                    if (quantityInput) { quantityInput.focus(); quantityInput.select(); }
                 }, 300);
             }
         });
 
-        // Réinitialiser au clic sur annuler (inchangé)
+        // 2. RESET FERMETURE
         suggestionModal.addEventListener('hidden.bs.modal', function() {
             if (quantityInput) quantityInput.value = '';
             if (commentaireInput) commentaireInput.value = '';
-            if (objetIdInput) objetIdInput.value = '';
-            if (objetNomElement) objetNomElement.textContent = '-';
             if (confirmBtn) {
                 confirmBtn.classList.remove('loading');
                 confirmBtn.disabled = false;
             }
-            if (quantityInput) quantityInput.classList.remove('is-invalid');
         });
 
-        // Confirmer la suggestion (inchangé)
+        // 3. ENVOI (Utilise showToast pour l'affichage propre)
         if (confirmBtn) {
             confirmBtn.addEventListener('click', async function() {
                 const objetId = objetIdInput.value;
                 const quantite = parseInt(quantityInput.value);
                 const commentaire = commentaireInput.value.trim();
                 
-                // Validation
                 if (!quantite || quantite < 1) {
                     quantityInput.classList.add('is-invalid');
-                    quantityInput.focus();
                     return;
                 }
                 quantityInput.classList.remove('is-invalid');
                 
-                if (!objetId) {
-                    showInfoModal('Erreur', 'Objet non identifié');
-                    return;
-                }
-                
-                // État de chargement
                 confirmBtn.classList.add('loading');
                 confirmBtn.disabled = true;
                 
@@ -1060,16 +1099,28 @@ document.addEventListener("DOMContentLoaded", function () {
                     const result = await response.json();
                     
                     if (response.ok) {
-                        showInfoModal('Succès', result.message || 'Suggestion enregistrée avec succès !');
+                        // C'EST ICI QUE L'AFFICHAGE SE JOUE
+                        // On utilise showToast (la bulle) et non showInfoModal (le truc moche)
+                        if (typeof showToast === 'function') {
+                            showToast(result.message || 'Suggestion envoyée !', 'success');
+                        } else {
+                            alert(result.message); // Fallback si showToast n'existe pas
+                        }
+                        
                         suggestionModalInstance.hide();
-                        // On recharge pour voir la suggestion apparaître dans la liste (si on est sur la page alertes)
                         setTimeout(() => window.location.reload(), 1500);
                     } else {
-                        showInfoModal('Erreur', result.error || 'Une erreur est survenue');
+                        if (typeof showToast === 'function') {
+                            showToast(result.error || 'Erreur serveur', 'error');
+                        } else {
+                            alert(result.error);
+                        }
                     }
                 } catch (error) {
                     console.error('Erreur:', error);
-                    showInfoModal('Erreur', 'Erreur de connexion au serveur');
+                    if (typeof showToast === 'function') {
+                        showToast('Erreur de connexion', 'error');
+                    }
                 } finally {
                     confirmBtn.classList.remove('loading');
                     confirmBtn.disabled = false;
@@ -1078,4 +1129,31 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
     setupPexelsSearch();
+	
+	// =================================================================
+    // SECTION 15 : ANIMATION BREADCRUMB (FIL D'ARIANE)
+    // =================================================================
+    const breadcrumbLinks = document.querySelectorAll('.breadcrumb-link');
+    
+    if (breadcrumbLinks.length > 0) {
+        breadcrumbLinks.forEach(link => {
+            link.addEventListener('mouseenter', function() {
+                const separator = this.nextElementSibling;
+                if (separator && separator.classList.contains('breadcrumb-separator')) {
+                    separator.style.transform = 'scale(1.3) rotate(20deg)';
+                    separator.style.color = '#667eea';
+                    separator.style.fontWeight = 'bold';
+                }
+            });
+            
+            link.addEventListener('mouseleave', function() {
+                const separator = this.nextElementSibling;
+                if (separator && separator.classList.contains('breadcrumb-separator')) {
+                    separator.style.transform = 'scale(1) rotate(0deg)';
+                    separator.style.color = '#d1d5db';
+                    separator.style.fontWeight = '300';
+                }
+            });
+        });
+    }
 });

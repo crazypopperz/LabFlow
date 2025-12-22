@@ -1,13 +1,19 @@
+# ============================================================
+# FICHIER : views/inventaire.py
+# ============================================================
 import math
+import os # <--- AJOUTÉ
 from datetime import datetime, timedelta
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, session, jsonify)
-from sqlalchemy import func, or_
+                   flash, session, jsonify, current_app) # <--- current_app AJOUTÉ
+from werkzeug.utils import secure_filename # <--- AJOUTÉ
+from sqlalchemy import func, desc, or_
 from sqlalchemy.orm import joinedload
 
 # NOUVEAUX IMPORTS
-from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget, Depense, Fournisseur
-from utils import login_required, admin_required, limit_objets_required
+from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget, Depense, Fournisseur, Suggestion
+# AJOUT DE allowed_file
+from utils import login_required, admin_required, limit_objets_required, allowed_file
 from .api import get_paginated_objets
 
 inventaire_bp = Blueprint(
@@ -190,6 +196,18 @@ def index():
 
     start_tour = db.session.query(Armoire).filter_by(etablissement_id=etablissement_id).count() == 0
     
+    suggestions_dashboard = db.session.execute(
+        db.select(Suggestion)
+        .options(joinedload(Suggestion.objet), joinedload(Suggestion.utilisateur))
+        .filter_by(etablissement_id=etablissement_id, statut='En attente')
+        .order_by(Suggestion.date_demande.desc())
+        .limit(10)
+    ).scalars().all()
+    
+    dashboard_data['suggestions'] = suggestions_dashboard
+    
+    start_tour = db.session.query(Armoire).filter_by(etablissement_id=etablissement_id).count() == 0
+    
     return render_template("index.html", start_tour=start_tour, now=datetime.now(), data=dashboard_data)
 
 
@@ -233,13 +251,41 @@ def inventaire():
 # ============================================================
 # ROUTES DE GESTION DES OBJETS (CRUD)
 # ============================================================
-
 @inventaire_bp.route("/ajouter_objet", methods=["POST"])
 @login_required
 @limit_objets_required
 def ajouter_objet():
     etablissement_id = session['etablissement_id']
     try:
+        # 1. Gestion de l'image (Upload Physique)
+        image_path_db = None
+        
+        # On vérifie si un fichier a été envoyé
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename != '':
+                if allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    # Ajout d'un timestamp pour éviter les conflits de noms
+                    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                    unique_filename = f"{ts}_{filename}"
+                    
+                    # Chemin de sauvegarde (Dossier static/uploads)
+                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                    if not os.path.exists(upload_folder):
+                        os.makedirs(upload_folder)
+                        
+                    file.save(os.path.join(upload_folder, unique_filename))
+                    
+                    # Ce qu'on stocke en base (chemin relatif pour le HTML)
+                    image_path_db = f"uploads/{unique_filename}"
+                else:
+                    flash("Format d'image non autorisé (JPG, PNG uniquement).", "warning")
+
+        # Fallback : Si pas d'upload, on regarde si une URL externe a été fournie
+        if not image_path_db:
+            image_path_db = request.form.get("image_url", "").strip() or None
+
         new_objet = Objet(
             nom=request.form.get("nom", "").strip(),
             quantite_physique=int(request.form.get("quantite")),
@@ -247,7 +293,7 @@ def ajouter_objet():
             armoire_id=int(request.form.get("armoire_id")),
             categorie_id=int(request.form.get("categorie_id")),
             date_peremption=request.form.get("date_peremption") or None,
-            image_url=request.form.get("image_url", "").strip() or None,
+            image_url=image_path_db, # <--- On utilise la variable calculée
             fds_url=request.form.get("fds_url", "").strip() or None,
             etablissement_id=etablissement_id
         )
@@ -258,10 +304,15 @@ def ajouter_objet():
         flash("Données invalides. Veuillez vérifier les champs numériques.", "error")
     except Exception as e:
         db.session.rollback()
-        flash(f"Une erreur est survenue : {e}", "error")
+        current_app.logger.error(f"Erreur ajout objet: {e}")
+        flash(f"Une erreur est survenue.", "error")
         
     return redirect(request.referrer or url_for('inventaire.index'))
 
+
+# ============================================================
+# MODIFICATION : modifier_objet (Gestion Upload)
+# ============================================================
 @inventaire_bp.route("/modifier_objet/<int:id_objet>", methods=["POST"])
 @login_required
 def modifier_objet(id_objet):
@@ -271,20 +322,46 @@ def modifier_objet(id_objet):
         return redirect(url_for('inventaire.index'))
 
     try:
+        # 1. Gestion de l'image (Upload Physique)
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename != '':
+                if allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                    unique_filename = f"{ts}_{filename}"
+                    
+                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                    if not os.path.exists(upload_folder):
+                        os.makedirs(upload_folder)
+                        
+                    file.save(os.path.join(upload_folder, unique_filename))
+                    
+                    # Mise à jour de l'objet avec le nouveau chemin
+                    objet.image_url = f"uploads/{unique_filename}"
+                else:
+                    flash("Format d'image non autorisé.", "warning")
+        
+        # Si l'utilisateur a rempli le champ URL texte, cela écrase l'image précédente
+        # (Optionnel : tu peux décider de la priorité ici)
+        url_externe = request.form.get("image_url", "").strip()
+        if url_externe:
+            objet.image_url = url_externe
+
         objet.nom = request.form.get("nom", "").strip()
         objet.quantite_physique = int(request.form.get("quantite"))
         objet.seuil = int(request.form.get("seuil"))
         objet.armoire_id = int(request.form.get("armoire_id"))
         objet.categorie_id = int(request.form.get("categorie_id"))
         objet.date_peremption = request.form.get("date_peremption") or None
-        objet.image_url = request.form.get("image_url", "").strip() or None
         objet.fds_url = request.form.get("fds_url", "").strip() or None
         
         db.session.commit()
         flash(f"L'objet '{objet.nom}' a été mis à jour avec succès !", "success")
     except Exception as e:
         db.session.rollback()
-        flash(f"Une erreur est survenue : {e}", "error")
+        current_app.logger.error(f"Erreur modif objet: {e}")
+        flash(f"Une erreur est survenue.", "error")
 
     return redirect(request.referrer or url_for('inventaire.index'))
 

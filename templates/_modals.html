@@ -1,10 +1,12 @@
-<!-- MODALE DE RÉSERVATION (SYSTÈME BOOTSTRAP 5) -->
-<div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="bookingModalLabel" aria-hidden="true">
+<!-- ================================================================= -->
+<!-- 1. MODALE DE RÉSERVATION (CALENDRIER) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="bookingModalLabel">Réserver du matériel</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Réserver du matériel</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="bookingDate">
@@ -12,44 +14,33 @@
                 <div class="row">
                     <div class="col-md-7">
                         <div class="mb-3">
-                            <label for="startTime" class="form-label">Créneau horaire</label>
-                            <div class="d-flex align-items-center">
-                                <select class="form-select me-2" id="startTime">
-                                    <option value="08:00">08:00</option>
-                                    <option value="09:00">09:00</option>
-                                    <option value="10:00">10:00</option>
-                                    <option value="11:00">11:00</option>
-                                    <option value="12:00">12:00</option>
-                                    <option value="13:00">13:00</option>
-                                    <option value="14:00">14:00</option>
-                                    <option value="15:00">15:00</option>
-                                    <option value="16:00">16:00</option>
-                                    <option value="17:00">17:00</option>
+                            <label class="form-label fw-bold">Créneau horaire</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <select class="form-select" id="startTime">
+                                    {% for h in range(8, 18) %}
+                                        <option value="{{ '%02d:00'|format(h) }}">{{ '%02d:00'|format(h) }}</option>
+                                    {% endfor %}
                                 </select>
-                                à
-                                <select class="form-select ms-2" id="endTime">
-                                    <option value="09:00">09:00</option>
-                                    <option value="10:00">10:00</option>
-                                    <option value="11:00">11:00</option>
-                                    <option value="12:00">12:00</option>
-                                    <option value="13:00">13:00</option>
-                                    <option value="14:00">14:00</option>
-                                    <option value="15:00">15:00</option>
-                                    <option value="16:00">16:00</option>
-                                    <option value="17:00">17:00</option>
-                                    <option value="18:00">18:00</option>
+                                <span>à</span>
+                                <select class="form-select" id="endTime">
+                                    {% for h in range(9, 19) %}
+                                        <option value="{{ '%02d:00'|format(h) }}">{{ '%02d:00'|format(h) }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                         </div>
                         <hr>
                         <div id="availableItems">
-                            <div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Chargement...</span></div></div>
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status"></div>
+                                <p class="mt-2 text-muted">Chargement du matériel...</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-5 border-start">
-                        <h5>Votre Panier</h5>
+                    <div class="col-md-5 border-start bg-light">
+                        <h6 class="fw-bold mb-3">Votre Panier</h6>
                         <div id="bookingCart">
-                            <p class="text-muted">Votre panier est vide.</p>
+                            <p class="text-muted small fst-italic">Votre panier est vide.</p>
                         </div>
                     </div>
                 </div>
@@ -62,276 +53,168 @@
     </div>
 </div>
 
-<!-- Modale de Confirmation (Étape 2) -->
-<div id="confirmation-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content modal-large">
-         <div class="modal-header">
-            <h3 id="confirmation-modal-title" class="modal-title-with-icon">Confirmer la réservation</h3>
-            <button class="close-btn">×</button>
-        </div>
-        <div class="modal-body" style="padding: 25px;">
-            <div id="confirmation-summary-list" class="reservation-list">
-                <!-- Contenu généré par JS -->
-            </div>
-        </div>
-        <div class="modal-actions">
-            <button type="button" id="confirmation-back-btn" class="btn-action btn-secondary">Modifier</button>
-            <button type="button" id="confirmation-confirm-btn" class="btn-action">Confirmer</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modale de Confirmation de Réinitialisation de Licence -->
-{#<div id="reset-licence-modal" class="modal-overlay modal-danger" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title-with-icon">
-                <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                <span>Réinitialiser la Licence Pro</span>
-            </h3>
-            <button type="button" class="close-btn">×</button>
-        </div>
-        <form action="{{ url_for('admin.reset_licence') }}" method="post">
-		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="modal-danger-content">
-                <p>Cette action est définitive. L'application repassera en mode <strong>GRATUIT</strong> et sera de nouveau soumise à la limite de 50 objets.</p>
-                <p>Pour confirmer cette action, veuillez entrer votre mot de passe administrateur.</p>
-                <div class="form-group">
-                    <label for="admin_password_confirm">Votre mot de passe :</label>
-                    <input type="password" id="admin_password_confirm" name="admin_password" required>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-cancel close-btn">Annuler</button>
-                <button type="submit" class="btn-action btn-danger">Confirmer la réinitialisation</button>
-            </div>
-        </form>
-    </div>
-</div>#}
-
-<!-- Modale de Confirmation de Suppression de Réservation -->
-<div id="delete-reservation-modal" class="modal-overlay modal-danger" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title-with-icon">
-                <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                <span>Confirmer la Suppression</span>
-            </h3>
-            <button class="close-btn">×</button>
-        </div>
-        <div class="modal-danger-content">
-            <p id="delete-resa-text">Êtes-vous sûr de vouloir supprimer définitivement cette réservation ? Le stock sera mis à jour.</p>
-        </div>
-        <div class="modal-actions">
-            <button type="button" class="btn-cancel close-btn">Annuler</button>
-            <button type="button" id="confirm-delete-resa-btn" class="btn-action btn-danger">Oui, supprimer</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modale de Confirmation pour Vider le Panier -->
-<div id="clear-cart-modal" class="modal-overlay modal-danger" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title-with-icon">
-                <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                <span>Vider le Panier</span>
-            </h3>
-            <button class="close-btn">×</button>
-        </div>
-        <div class="modal-danger-content">
-            <p>Êtes-vous sûr de vouloir supprimer toutes les réservations de votre panier ? Cette action est irréversible.</p>
-        </div>
-        <div class="modal-actions">
-            <button type="button" class="btn-cancel close-btn">Annuler</button>
-            <button type="button" id="confirm-clear-cart-btn" class="btn-action btn-danger">Oui, vider le panier</button>
-        </div>
-    </div>
-</div>
-
-<!-- Modale de Confirmation pour Clôture de budget -->
-<div id="cloture-budget-modal" class="modal-overlay modal-danger" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title-with-icon">
-                <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                <span>Clôturer le Budget</span>
-            </h3>
-            <button class="close-btn">×</button>
-        </div>
-        <div class="modal-danger-content">
-            <p>Êtes-vous sûr de vouloir clôturer le budget pour l'année scolaire <strong id="cloture-budget-annee"></strong> ? Cette action est irréversible.</p>
-        </div>
-        <div class="modal-actions">
-            <button type="button" class="btn-cancel close-btn">Annuler</button>
-            <button type="button" id="confirm-cloture-btn" class="btn-action btn-danger">Oui, clôturer</button>
-        </div>
-    </div>
-</div>
-
-<!-- NOUVELLE MODALE : Clôture impossible -->
-<div id="cloture-impossible-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title-with-icon">
-                <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4V7h2v6h-2z"/></svg>
-                <span>Clôture Impossible</span>
-            </h3>
-            <button class="close-btn">×</button>
-        </div>
-        <div class="modal-body" style="padding: 25px; text-align: center;">
-            <p>Le budget de l'année scolaire <strong id="cloture-impossible-annee"></strong> ne peut pas être clôturé avant <strong id="cloture-impossible-date"></strong>.</p>
-        </div>
-        <div class="modal-actions">
-            <button type="button" class="btn-action btn-cancel">OK</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODALE D'INFORMATION / AVERTISSEMENT (GÉNÉRIQUE) -->
-<div id="info-modal" class="modal-overlay" style="display: none;">
-    <div class="modal-content modal-warning">
-        <div class="modal-header">
-            <h3 id="info-modal-title" class="modal-title-with-icon">
-                <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                <span>Information</span>
-            </h3>
-            <button class="close-btn">×</button>
-        </div>
-        <div class="modal-body" style="padding: 25px; text-align: center; line-height: 1.6;">
-            <p id="info-modal-text">Message par défaut.</p>
-        </div>
-        <div class="modal-actions">
-            <button type="button" class="btn-action close-btn">OK</button>
-        </div>
-    </div>
-</div>
-
 <!-- ================================================================= -->
-<!-- NOUVELLE MODALE D'AJOUT D'OBJET (SYSTÈME BOOTSTRAP 5) -->
+<!-- 2. MODALE DE CONFIRMATION (RÉSERVATION) -->
 <!-- ================================================================= -->
-<div class="modal fade" id="addObjectModal" tabindex="-1" aria-labelledby="addObjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addObjectModalLabel">Ajouter un nouvel objet</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>Confirmer la réservation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('inventaire.ajouter_objet') }}" method="post">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="nom" class="form-label">Nom de l'objet</label>
-                                <input type="text" class="form-control" id="nom" name="nom" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="quantite" class="form-label">Quantité</label>
-                                <input type="number" class="form-control" id="quantite" name="quantite" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="seuil" class="form-label">Seuil d'alerte</label>
-                                <input type="number" class="form-control" id="seuil" name="seuil" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="date_peremption" class="form-label">Date de péremption</label>
-                                <input type="date" class="form-control" id="date_peremption" name="date_peremption">
-                            </div>
-                            <div class="mb-3">
-                                <label for="armoire_id" class="form-label">Armoire</label>
-                                <select class="form-select" id="armoire_id" name="armoire_id" required>
-                                    {% for a in all_armoires %}<option value="{{ a.id }}">{{ a.nom }}</option>{% endfor %}
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="categorie_id" class="form-label">Catégorie</label>
-                                <select class="form-select" id="categorie_id" name="categorie_id" required>
-                                    {% for c in all_categories %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="image_url" class="form-label">Image (Optionnel)</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="image_url" name="image_url" placeholder="Coller une URL ou chercher">
-                                    <button class="btn btn-outline-secondary" type="button" id="btn-search-pexels">Chercher</button>
-                                </div>
-                            </div>
-                            <div id="pexels-results" class="pexels-results-grid" style="display: none;"></div>
-                            <div id="image-preview-container" style="display:none; text-align: center; margin-top: 1rem;">
-                                <img id="image-preview" src="" style="max-height: 120px; border-radius: 6px;" alt="Aperçu">
-                            </div>
-                            <div class="mb-3">
-                                <label for="fds_url" class="form-label">Fiche de Sécurité (URL du PDF)</label>
-                                <input type="text" class="form-control" id="fds_url" name="fds_url">
-                            </div>
-                        </div>
-                    </div>
+            <div class="modal-body p-4">
+                <div id="confirmation-summary-list">
+                    <!-- Contenu généré par JS -->
                 </div>
-                <div class="modal-footer">
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="confirmation-back-btn" class="btn btn-secondary">Modifier</button>
+                <button type="button" id="confirmation-confirm-btn" class="btn btn-success">Confirmer définitivement</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- 3. MODALE DANGER (SUPPRESSION GÉNÉRIQUE) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="dangerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmation Requise</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="dangerModalForm" action="" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body p-4">
+                    <p id="dangerModalText" class="mb-0 fs-5">Êtes-vous sûr de vouloir effectuer cette action ?</p>
+                    <p class="text-muted small mt-2">Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="submit" class="btn btn-danger">Confirmer</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- ================================================================= -->
+<!-- 4. MODALE D'AJOUT/MODIF OBJET -->
+<!-- ================================================================= -->
+<div class="modal fade" id="addObjectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modal-objet-title"><i class="bi bi-box-seam me-2"></i>Gérer un objet</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('inventaire.ajouter_objet') }}" method="post">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-4">
+                        <!-- Colonne Gauche -->
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control" id="nom" name="nom" required placeholder="Nom">
+                                <label for="nom">Nom de l'objet</label>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <div class="form-floating">
+                                        <input type="number" class="form-control" id="quantite" name="quantite" required placeholder="Qté">
+                                        <label for="quantite">Quantité</label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-floating">
+                                        <input type="number" class="form-control" id="seuil" name="seuil" required placeholder="Seuil">
+                                        <label for="seuil">Seuil d'alerte</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <input type="date" class="form-control" id="date_peremption" name="date_peremption">
+                                <label for="date_peremption">Date de péremption (Optionnel)</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <select class="form-select" id="armoire_id" name="armoire_id" required>
+                                    {% for a in all_armoires %}<option value="{{ a.id }}">{{ a.nom }}</option>{% endfor %}
+                                </select>
+                                <label for="armoire_id">Armoire</label>
+                            </div>
+                            <div class="form-floating">
+                                <select class="form-select" id="categorie_id" name="categorie_id" required>
+                                    {% for c in all_categories %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}
+                                </select>
+                                <label for="categorie_id">Catégorie</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Colonne Droite (Image & FDS) -->
+                        <div class="col-md-6 border-start ps-4">
+                            <label class="form-label fw-bold text-muted small">IMAGE DE L'OBJET</label>
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" id="image_url" name="image_url" placeholder="URL de l'image">
+                                <button class="btn btn-outline-secondary" type="button" id="btn-search-pexels">
+                                    <i class="bi bi-search"></i> Pexels
+                                </button>
+                            </div>
+                            
+                            <!-- Zone de résultats Pexels -->
+                            <div id="pexels-results" class="d-flex gap-2 overflow-auto py-2" style="display: none;"></div>
+                            
+                            <!-- Aperçu -->
+                            <div id="image-preview-container" class="bg-light rounded d-flex align-items-center justify-content-center mb-3" style="height: 150px; display: none;">
+                                <img id="image-preview" src="" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                            </div>
 
-
-<!-- MODALE DE DANGER (GÉNÉRIQUE POUR LES SUPPRESSIONS) -->
-
-<div id="danger-modal" class="modal-overlay modal-danger" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title-with-icon">
-                <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                <span>Confirmer l'action</span>
-            </h3>
-            <button type="button" class="close-btn">×</button>
+                            <label class="form-label fw-bold text-muted small mt-3">SÉCURITÉ</label>
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="fds_url" name="fds_url" placeholder="URL FDS">
+                                <label for="fds_url">Lien vers la Fiche de Sécurité (PDF)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary" id="modal-submit-btn">Enregistrer</button>
+                </div>
+            </form>
         </div>
-        <form id="danger-modal-form" action="" method="post">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="modal-danger-content">
-                <p id="danger-modal-text">Êtes-vous sûr de vouloir effectuer cette action ?</p>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-cancel close-btn">Annuler</button>
-                <button type="submit" class="btn-action btn-danger">Confirmer</button>
-            </div>
-        </form>
     </div>
 </div>
 
-
-<!-- MODALE DE SUGGESTION DE COMMANDE -->
-
+<!-- ================================================================= -->
+<!-- 5. MODALE DE SUGGESTION (COMMANDE) -->
+<!-- ================================================================= -->
 <div class="modal fade" id="suggestionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-warning">
             <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title"><i class="bi bi-lightbulb me-2"></i>Suggérer une commande</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Objet : <strong id="suggestion-objet-nom" class="text-primary">-</strong></p>
+            <div class="modal-body p-4">
+                <p class="mb-3">Objet concerné : <strong id="suggestion-objet-nom" class="text-primary fs-5">-</strong></p>
                 <input type="hidden" id="suggestion-objet-id">
                 
-                <div class="mb-3">
-                    <label class="form-label">Quantité suggérée *</label>
-                    <input type="number" class="form-control" id="suggestion-quantity-input" min="1" required>
+                <div class="form-floating mb-3">
+                    <input type="number" class="form-control" id="suggestion-quantity-input" min="1" required placeholder="Qté">
+                    <label for="suggestion-quantity-input">Quantité suggérée</label>
                 </div>
                 
-                <div class="mb-3">
-                    <label class="form-label">Commentaire (Optionnel)</label>
-                    <textarea class="form-control" id="suggestion-commentaire" rows="2" placeholder="Pourquoi cette commande ?"></textarea>
+                <div class="form-floating">
+                    <textarea class="form-control" id="suggestion-commentaire" style="height: 100px" placeholder="Commentaire"></textarea>
+                    <label for="suggestion-commentaire">Pourquoi cette commande ? (Optionnel)</label>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="button" class="btn btn-warning" id="suggestion-confirm-btn">Envoyer la suggestion</button>
+                <button type="button" class="btn btn-warning fw-bold" id="suggestion-confirm-btn">Envoyer la suggestion</button>
             </div>
         </div>
     </div>

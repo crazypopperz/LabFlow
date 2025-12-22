@@ -98,73 +98,153 @@
 
     <!-- La modale d'ajout d'objet est maintenant ici -->
     <div class="modal fade" id="addObjectModal" tabindex="-1" aria-labelledby="addObjectModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addObjectModalLabel">Ajouter un nouvel objet</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="{{ url_for('inventaire.ajouter_objet') }}" method="post">
-                    <div class="modal-body">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="nom" class="form-label">Nom de l'objet</label>
-                                    <input type="text" class="form-control" id="nom" name="nom" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="quantite" class="form-label">Quantité</label>
-                                    <input type="number" class="form-control" id="quantite" name="quantite" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="seuil" class="form-label">Seuil d'alerte</label>
-                                    <input type="number" class="form-control" id="seuil" name="seuil" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="date_peremption" class="form-label">Date de péremption</label>
-                                    <input type="date" class="form-control" id="date_peremption" name="date_peremption">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="armoire_id" class="form-label">Armoire</label>
-                                    <select class="form-select" id="armoire_id" name="armoire_id" required>
-                                        {% for a in all_armoires %}<option value="{{ a.id }}">{{ a.nom }}</option>{% endfor %}
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="categorie_id" class="form-label">Catégorie</label>
-                                    <select class="form-select" id="categorie_id" name="categorie_id" required>
-                                        {% for c in all_categories %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="image_url" class="form-label">Image (Optionnel)</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" id="image_url" name="image_url" placeholder="Coller une URL ou chercher">
-                                        <button class="btn btn-outline-secondary" type="button" id="btn-search-pexels">Chercher</button>
-                                    </div>
-                                </div>
-                                <div id="pexels-results" class="pexels-results-grid" style="display: none;"></div>
-                                <div id="image-preview-container" style="display:none; text-align: center; margin-top: 1rem;">
-                                    <img id="image-preview" src="" style="max-height: 120px; border-radius: 6px;" alt="Aperçu">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="fds_url" class="form-label">Fiche de Sécurité (URL du PDF)</label>
-                                    <input type="text" class="form-control" id="fds_url" name="fds_url">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">Enregistrer</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+		<div class="modal-dialog modal-lg modal-dialog-centered"> <!-- modal-lg pour plus d'espace -->
+			<div class="modal-content border-0 shadow-lg">
+				
+				<!-- Header Stylisé -->
+				<div class="modal-header bg-primary text-white">
+					<h5 class="modal-title fw-bold" id="addObjectModalLabel">
+						<i class="bi bi-box-seam-fill me-2"></i>Ajouter un matériel
+					</h5>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+
+				<form action="{{ url_for('inventaire.ajouter_objet') }}" method="post" enctype="multipart/form-data">
+					<div class="modal-body p-4 bg-light"> <!-- Fond gris léger pour faire ressortir les inputs -->
+						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+						
+						<div class="row g-4">
+							
+							<!-- COLONNE GAUCHE : IDENTITÉ & STOCK -->
+							<div class="col-md-6">
+								<h6 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Informations Générales</h6>
+								
+								<!-- Nom -->
+								<div class="mb-3">
+									<label for="nom" class="form-label fw-bold small">Nom de l'objet <span class="text-danger">*</span></label>
+									<div class="input-group shadow-sm">
+										<span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
+										<input type="text" class="form-control border-start-0 ps-0" id="nom" name="nom" placeholder="Ex: Bécher 50ml" required>
+									</div>
+								</div>
+
+								<!-- Quantité & Seuil (Côte à côte) -->
+								<div class="row g-2 mb-3">
+									<div class="col-6">
+										<label for="quantite" class="form-label fw-bold small">Quantité <span class="text-danger">*</span></label>
+										<div class="input-group shadow-sm">
+											<input type="number" class="form-control text-center fw-bold" id="quantite" name="quantite" value="1" min="0" required>
+										</div>
+									</div>
+									<div class="col-6">
+										<label for="seuil" class="form-label fw-bold small text-danger">Seuil Alerte <span class="text-danger">*</span></label>
+										<div class="input-group shadow-sm">
+											<span class="input-group-text bg-white text-danger"><i class="bi bi-bell"></i></span>
+											<input type="number" class="form-control border-start-0 ps-0" id="seuil" name="seuil" value="5" min="0" required>
+										</div>
+									</div>
+								</div>
+
+								<!-- Date Péremption -->
+								<div class="mb-3">
+									<label for="date_peremption" class="form-label fw-bold small">Date de péremption</label>
+									<div class="input-group shadow-sm">
+										<span class="input-group-text bg-white"><i class="bi bi-calendar-event"></i></span>
+										<input type="date" class="form-control border-start-0 ps-0" id="date_peremption" name="date_peremption">
+									</div>
+								</div>
+							</div>
+
+							<!-- COLONNE DROITE : CLASSEMENT & MÉDIA -->
+							<div class="col-md-6">
+								<h6 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Classement & Média</h6>
+
+								<!-- Armoire & Catégorie -->
+								<div class="mb-3">
+									<label for="armoire_id" class="form-label fw-bold small">Armoire <span class="text-danger">*</span></label>
+									<div class="input-group shadow-sm">
+										<span class="input-group-text bg-white"><i class="bi bi-archive"></i></span>
+										<select class="form-select border-start-0 ps-0" id="armoire_id" name="armoire_id" required>
+											{% for a in all_armoires %}<option value="{{ a.id }}">{{ a.nom }}</option>{% endfor %}
+										</select>
+									</div>
+								</div>
+
+								<div class="mb-3">
+									<label for="categorie_id" class="form-label fw-bold small">Catégorie <span class="text-danger">*</span></label>
+									<div class="input-group shadow-sm">
+										<span class="input-group-text bg-white"><i class="bi bi-bookmarks"></i></span>
+										<select class="form-select border-start-0 ps-0" id="categorie_id" name="categorie_id" required>
+											{% for c in all_categories %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}
+										</select>
+									</div>
+								</div>
+
+								<!-- SECTION IMAGE UNIFIÉE -->
+								<div class="card border-0 shadow-sm mb-3">
+									<div class="card-body p-2 bg-white rounded">
+										<label class="form-label fw-bold small mb-2">Image de l'objet</label>
+										
+										<!-- Onglets simplifiés pour choisir la source -->
+										<ul class="nav nav-pills nav-fill small mb-2" id="pills-tab" role="tablist">
+											<li class="nav-item" role="presentation">
+												<button class="nav-link active py-1" id="pills-file-tab" data-bs-toggle="pill" data-bs-target="#pills-file" type="button" role="tab">
+													<i class="bi bi-upload me-1"></i>Fichier
+												</button>
+											</li>
+											<li class="nav-item" role="presentation">
+												<button class="nav-link py-1" id="pills-url-tab" data-bs-toggle="pill" data-bs-target="#pills-url" type="button" role="tab">
+													<i class="bi bi-link-45deg me-1"></i>URL / Web
+												</button>
+											</li>
+										</ul>
+
+										<div class="tab-content" id="pills-tabContent">
+											<!-- Option 1 : Upload Fichier -->
+											<div class="tab-pane fade show active" id="pills-file" role="tabpanel">
+												<input type="file" class="form-control form-control-sm" id="image" name="image" accept="image/*">
+												<div class="form-text x-small mt-1">Format JPG, PNG. Max 5 Mo.</div>
+											</div>
+											
+											<!-- Option 2 : URL Web -->
+											<div class="tab-pane fade" id="pills-url" role="tabpanel">
+												<div class="input-group input-group-sm">
+													<input type="text" class="form-control" id="image_url" name="image_url" placeholder="https://...">
+													<button class="btn btn-outline-secondary" type="button" id="btn-search-pexels">
+														<i class="bi bi-search"></i>
+													</button>
+												</div>
+												<!-- Zone résultats Pexels (cachée par défaut) -->
+												<div id="pexels-results" class="d-flex gap-2 mt-2 overflow-auto" style="display:none; white-space: nowrap;"></div>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<!-- FDS -->
+								<div class="mb-0">
+									<label for="fds_url" class="form-label fw-bold small">Fiche Sécurité (PDF)</label>
+									<div class="input-group input-group-sm shadow-sm">
+										<span class="input-group-text bg-white"><i class="bi bi-file-pdf text-danger"></i></span>
+										<input type="text" class="form-control border-start-0 ps-0" id="fds_url" name="fds_url" placeholder="URL du PDF...">
+									</div>
+								</div>
+
+							</div>
+						</div>
+					</div>
+					
+					<!-- Footer Actions -->
+					<div class="modal-footer bg-white border-top-0">
+						<button type="button" class="btn btn-light text-muted fw-bold" data-bs-dismiss="modal">Annuler</button>
+						<button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+							<i class="bi bi-check-lg me-2"></i>Enregistrer
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
 	{% include '_modale_danger.html' %}
 {% endblock %}
 

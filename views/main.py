@@ -4,7 +4,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, send_from_directory, current_app)
 from sqlalchemy import func, desc
 from sqlalchemy.orm import joinedload
-from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre
+from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre, Suggestion
 from utils import login_required
 
 main_bp = Blueprint(
@@ -153,7 +153,8 @@ def alertes():
         joinedload(Objet.armoire),
         joinedload(Objet.categorie)
     ]
-    # Sous-requête pour la quantité disponible (on la réutilise)
+    
+    # 1. Sous-requête pour la quantité disponible
     subquery = db.session.query(
         Objet.id.label('objet_id'),
         (Objet.quantite_physique - func.coalesce(db.session.query(func.sum(Reservation.quantite_reservee))
@@ -161,8 +162,8 @@ def alertes():
             .scalar_subquery(), 0)).label('quantite_disponible')
     ).filter(Objet.etablissement_id == etablissement_id).subquery()
 
-    # Requête pour récupérer les objets en alerte de stock
-    objets_stock_results = db.session.query(Objet, subquery.c.quantite_disponible.label('quantite_disponible'))\
+    # 2. Requête brute (Renvoie des Rows [Objet, quantite])
+    rows_stock = db.session.query(Objet, subquery.c.quantite_disponible.label('quantite_disponible'))\
         .join(subquery, Objet.id == subquery.c.objet_id)\
         .options(*options)\
         .filter(
@@ -170,7 +171,17 @@ def alertes():
             subquery.c.quantite_disponible <= Objet.seuil
         ).order_by(Objet.nom).all()
 
-    # Requête pour récupérer les objets en alerte de péremption
+    # --- CORRECTION ICI : On extrait l'objet de la Row ---
+    objets_stock_results = []
+    for row in rows_stock:
+        # row[0] est l'objet, row[1] est la quantité disponible calculée
+        obj = row[0] 
+        # On peut attacher la quantité calculée à l'objet si on veut l'afficher
+        obj.quantite_disponible_calc = row[1] 
+        objets_stock_results.append(obj)
+    # -----------------------------------------------------
+
+    # 3. Requête Péremption (Celle-ci renvoie déjà des Objets, pas de souci)
     date_limite = (now + timedelta(days=30)).date()
     objets_peremption = db.session.query(Objet)\
         .options(*options)\
@@ -181,9 +192,18 @@ def alertes():
             Objet.traite == 0
         ).order_by(Objet.date_peremption.asc()).all()
     
+    # 4. Suggestions
+    suggestions = db.session.execute(
+        db.select(Suggestion)
+        .options(joinedload(Suggestion.objet), joinedload(Suggestion.utilisateur))
+        .filter_by(etablissement_id=etablissement_id, statut='En attente')
+        .order_by(Suggestion.date_demande.desc())
+    ).scalars().all()
+
     return render_template("alertes.html",
                            objets_stock=objets_stock_results,
                            objets_peremption=objets_peremption,
+                           suggestions=suggestions,
                            date_actuelle=now,
                            now=now)
 

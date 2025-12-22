@@ -69,7 +69,7 @@
                         <h4 class="fw-bold mb-1">État du Système</h4>
                         <p class="text-white-50 mb-3 small">Informations techniques de votre instance.</p>
                         
-                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="d-flex align-items-center gap-3 flex-wrap mb-4">
                             <div>
                                 <small class="d-block text-white-50 mb-1">Statut Licence</small>
                                 {% if licence.is_pro %}
@@ -87,6 +87,25 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- ZONE D'ACTIVATION (Ajoutée ici) -->
+                        {% if not licence.is_pro %}
+                        <div class="pt-3 border-top border-white-10" style="border-color: rgba(255,255,255,0.1) !important;">
+                            <label class="small text-white-50 mb-2">Vous avez une clé d'activation ?</label>
+                            <form action="{{ url_for('admin.activer_licence') }}" method="post" class="d-flex gap-2">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="text" name="licence_cle" 
+                                       class="form-control form-control-sm" 
+                                       placeholder="Collez votre clé ici (ex: A1B2...)" 
+                                       required
+                                       style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; max-width: 300px;">
+                                <button type="submit" class="btn btn-sm btn-warning fw-bold text-dark">
+                                    Activer
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+
                     </div>
                     <div class="col-md-4 text-center d-none d-md-block">
                         <i class="bi bi-shield-check display-1 opacity-25"></i>

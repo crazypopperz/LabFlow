@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Sauvegardes - LabFlow{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    
+    <!-- 1. Fil d'ariane Premium -->
+    {% include '_breadcrumb.html' %}
+
+    <!-- 2. En-tête avec Icône Rouge -->
+    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <!-- Fond Rouge -->
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);">
+                <i class="bi bi-hdd-network fs-4"></i>
+            </div>
+            <span class="fw-bold">Gestion des Sauvegardes</span>
+        </h2>
+    </div>
+
+    <!-- Zone 1 : Créer une sauvegarde -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4 class="fw-bold text-primary mb-2">
+                        <i class="bi bi-cloud-download me-2"></i>Exportation des données
+                    </h4>
+                    <p class="text-muted mb-0">
+                        Générez un fichier de sauvegarde complet (JSON) contenant tout votre inventaire, vos utilisateurs, vos budgets et votre historique.
+                        <br>
+                        <small class="text-info"><i class="bi bi-info-circle"></i> Ce fichier pourra être utilisé pour restaurer votre laboratoire en cas de problème.</small>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{{ url_for('admin.telecharger_db') }}" class="btn btn-primary btn-lg shadow-sm">
+                        <i class="bi bi-download me-2"></i>Télécharger une sauvegarde
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zone 2 : Restauration -->
+    <div class="card border-0 shadow-sm rounded-3 border-start border-warning border-5">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4 class="fw-bold text-dark mb-2">
+                        <i class="bi bi-arrow-counterclockwise me-2 text-warning"></i>Restauration
+                    </h4>
+                    <p class="text-muted mb-0">
+                        Restaurez les données de votre établissement à partir d'un fichier de sauvegarde précédent.
+                        <br>
+                        <strong class="text-danger">Attention : Cette action remplacera toutes les données actuelles.</strong>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-outline-warning text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#restoreModal">
+                        <i class="bi bi-upload me-2"></i>Importer une sauvegarde
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modale de Restauration Sécurisée -->
+<div class="modal fade" id="restoreModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Restauration Critique</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.importer_db') }}" method="post" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="alert alert-warning shadow-sm">
+                        <strong><i class="bi bi-cone-striped me-2"></i>Action Irréversible</strong>
+                        <p class="mb-0 small mt-1">
+                            Vous êtes sur le point d'écraser la base de données actuelle avec le contenu du fichier. 
+                            Les données non sauvegardées seront perdues.
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fichier de sauvegarde (.json)</label>
+                        <input type="file" name="fichier" class="form-control" accept=".json" required>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Sécurité : Tapez <strong>RESTAURER</strong> pour confirmer.</label>
+                        <input type="text" id="confirm-restore-input" class="form-control border-danger text-danger fw-bold" placeholder="RESTAURER" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" id="btn-confirm-restore" class="btn btn-danger" disabled>
+                        <i class="bi bi-check-circle me-2"></i>Lancer la restauration
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Sécurité pour le bouton restaurer
+    document.getElementById('confirm-restore-input').addEventListener('input', function() {
+        const btn = document.getElementById('btn-confirm-restore');
+        if (this.value === 'RESTAURER') {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    });
+</script>
+{% endblock %}

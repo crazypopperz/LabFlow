@@ -3,7 +3,7 @@
 		<tr>
 			{% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}<th class="checkbox-column"><input type="checkbox" id="select-all-checkbox" title="Tout sélectionner"></th>{% endif %}
 			
-			{# --- DÉBUT DES LIENS DE TRI CORRIGÉS (SYNTAXE JINJA2 CORRECTE) --- #}
+			{# --- LIENS DE TRI --- #}
 			<th class="sortable {% if sort_by == 'nom' %}th-sort-{{ direction }}{% endif %}">
 				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='nom', direction='desc' if sort_by == 'nom' and direction == 'asc' else 'asc', armoire_id=armoire.id if armoire else request.args.get('armoire_id'), categorie_id=categorie.id if categorie else request.args.get('categorie_id'), q=request.args.get('q'), etat=request.args.get('etat')) }}">Nom</a>
 			</th>
@@ -22,7 +22,6 @@
 			<th class="sortable {% if sort_by == 'armoire' %}th-sort-{{ direction }}{% endif %}">
 				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='armoire', direction='desc' if sort_by == 'armoire' and direction == 'asc' else 'asc', armoire_id=armoire.id if armoire else request.args.get('armoire_id'), categorie_id=categorie.id if categorie else request.args.get('categorie_id'), q=request.args.get('q'), etat=request.args.get('etat')) }}">Armoire</a>
 			</th>
-			{# --- FIN DES LIENS DE TRI CORRIGÉS --- #}
 
 			<th>Image</th>
 			<th>État</th>
@@ -31,44 +30,68 @@
 	</thead>
     <tbody>
         {% for objet in objets %}
+        
+        {# --- LOGIQUE ÉTAT (Corrigée) --- #}
         {% set perime, perime_bientot, statut = False, False, 'ok' %}
+        
         {% if objet.date_peremption %}
-            {% set date_peremption_obj = date_actuelle.strptime(objet.date_peremption, '%Y-%m-%d') %}
-            {% if date_peremption_obj < date_actuelle %}{% set perime, statut = True, 'perime' %}
-            {% elif (date_peremption_obj - date_actuelle).days <= 30 %}{% set perime_bientot, statut = True, 'bientot' %}
+            {# objet.date_peremption est déjà un objet date, on compare directement #}
+            {% if objet.date_peremption < date_actuelle.date() %}
+                {% set perime, statut = True, 'perime' %}
+            {% elif (objet.date_peremption - date_actuelle.date()).days <= 30 %}
+                {% set perime_bientot, statut = True, 'bientot' %}
             {% endif %}
         {% endif %}
-        {% if statut == 'ok' and objet.quantite_disponible <= objet.seuil %}{% set statut = 'stock' %}{% endif %}
+        
+        {% if statut == 'ok' and objet.quantite_disponible <= objet.seuil %}
+            {% set statut = 'stock' %}
+        {% endif %}
 
         <tr class="{{ 'row-perime' if perime else 'row-perime-bientot' if perime_bientot }}" data-objet-id="{{ objet.id }}">
             {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}<td class="checkbox-column"><input type="checkbox" class="objet-checkbox" data-id="{{ objet.id }}"></td>{% endif %}
             <td data-field="nom"><a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a></td>
             <td data-field="quantite">{{ objet.quantite_disponible }}</td>
             <td data-field="seuil">{{ objet.seuil }}</td>
-            <td data-field="date_peremption" class="{{ 'texte-perime' if perime else 'texte-perime-bientot' if perime_bientot }}">{{ date_peremption_obj.strftime('%d/%m/%Y') if objet.date_peremption }}</td>
-            <td data-field="categorie">{{ objet.categorie }}</td>
-            <td data-field="armoire">{{ objet.armoire }}</td>
+            <td data-field="date_peremption" class="{{ 'texte-perime' if perime else 'texte-perime-bientot' if perime_bientot }}">
+                {{ objet.date_peremption.strftime('%d/%m/%Y') if objet.date_peremption else '-' }}
+            </td>
+            <td data-field="categorie">{{ objet.categorie.nom if objet.categorie else '-' }}</td>
+            <td data-field="armoire">{{ objet.armoire.nom if objet.armoire else '-' }}</td>
+            
+            {# --- COLONNE IMAGE (Corrigée) --- #}
             <td class="image-cell">
 				<div class="image-preview-wrapper">
 					{% if objet.image_url %}
-						<!-- S'il y a une image, on l'affiche -->
-						<img src="{{ objet.image_url }}" class="image-objet-thumbnail" alt="Image de {{ objet.nom }}">
-						<img src="{{ objet.image_url }}" class="image-objet-preview" alt="Aperçu de {{ objet.nom }}">
+                        {% if objet.image_url.startswith('http') %}
+                            <!-- URL Externe -->
+						    <img src="{{ objet.image_url }}" class="image-objet-thumbnail" alt="{{ objet.nom }}" loading="lazy">
+						    <img src="{{ objet.image_url }}" class="image-objet-preview" alt="{{ objet.nom }}" loading="lazy">
+                        {% else %}
+                            <!-- Fichier Local (Upload) -->
+                            <img src="{{ url_for('static', filename=objet.image_url) }}" class="image-objet-thumbnail" alt="{{ objet.nom }}" loading="lazy">
+						    <img src="{{ url_for('static', filename=objet.image_url) }}" class="image-objet-preview" alt="{{ objet.nom }}" loading="lazy">
+                        {% endif %}
 					{% else %}
-						<!-- Sinon, on affiche le SVG placeholder -->
+						<!-- Placeholder -->
 						<div class="table-image-placeholder">
-							<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"><path d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"/></svg>
+							<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"/></svg>
 						</div>
 					{% endif %}
 				</div>
 			</td>
+
             <td data-type="alerte" data-alerte-status="{{ statut }}">
-                {% if statut == 'perime' %}<span class="texte-perime" title="Produit périmé. A recycler !"><svg ...></svg></span>
-                {% elif statut == 'bientot' %}<span class="texte-perime-bientot" title="Expire bientôt"><svg ...></svg></span>
-                {% elif statut == 'stock' %}<span class="texte-alerte" title="Stock bas"><svg ...></svg></span>
-                {% else %}<span class="texte-ok" title="OK"><svg ...></svg></span>
+                {% if statut == 'perime' %}
+                    <span class="texte-perime" title="Produit périmé"><i class="bi bi-x-circle-fill"></i></span>
+                {% elif statut == 'bientot' %}
+                    <span class="texte-perime-bientot" title="Expire bientôt"><i class="bi bi-exclamation-circle-fill"></i></span>
+                {% elif statut == 'stock' %}
+                    <span class="texte-alerte" title="Stock bas"><i class="bi bi-exclamation-triangle-fill"></i></span>
+                {% else %}
+                    <span class="texte-ok" title="OK"><i class="bi bi-check-circle-fill"></i></span>
                 {% endif %}
             </td>
+
             {% if session.user_id %}
 			<td class="actions-cell">
 				<button class="btn btn-sm btn-outline-primary edit-objet-btn"
@@ -80,16 +103,16 @@
 						data-seuil="{{ objet.seuil }}"
 						data-date-peremption="{{ objet.date_peremption or '' }}"
 						data-image-url="{{ objet.image_url or '' }}"
+                        data-fds-url="{{ objet.fds_url or '' }}"
 						data-bs-toggle="modal" data-bs-target="#addObjectModal">
-					Modifier
+					<i class="bi bi-pencil-square"></i>
 				</button>
 				
 				{% if session.user_role == 'admin' %}
 				<form class="form-in-cell" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post">
 					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<!-- CORRECTION : On s'assure que le type est "button" -->
 					<button type="button" class="btn btn-sm btn-outline-danger btn-delete-objet" data-objet-nom="{{ objet.nom }}">
-						Supprimer
+						<i class="bi bi-trash"></i>
 					</button>
 				</form>
 				{% endif %}

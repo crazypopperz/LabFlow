@@ -24,18 +24,25 @@
             <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
                 <!-- Image -->
                 <div class="object-image-container">
-                    {% if objet.image_url %}
-                        <img src="{{ objet.image_url }}" alt="{{ objet.nom }}" class="object-image">
-                    {% else %}
-                        <div class="text-center text-muted opacity-50">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
-                                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
-                                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12"/>
-                            </svg>
-                            <p class="mt-2 mb-0 small">Aucune image</p>
-                        </div>
-                    {% endif %}
-                </div>
+					{% if objet.image_url %}
+						{% if objet.image_url.startswith('http') %}
+							<!-- Cas 1 : URL Externe (Copié-collé) -->
+							<img src="{{ objet.image_url }}" alt="{{ objet.nom }}" class="object-image">
+						{% else %}
+							<!-- Cas 2 : Fichier Uploadé (Local) -->
+							<img src="{{ url_for('static', filename=objet.image_url) }}" alt="{{ objet.nom }}" class="object-image">
+						{% endif %}
+					{% else %}
+						<!-- Cas 3 : Pas d'image (Placeholder) -->
+						<div class="text-center text-muted opacity-50">
+							<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
+								<path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
+								<path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12"/>
+							</svg>
+							<p class="mt-2 mb-0 small">Aucune image</p>
+						</div>
+					{% endif %}
+				</div>
 
                 <div class="card-body">
                     <h1 class="h4 fw-bold mb-2">{{ objet.nom }}</h1>
@@ -85,7 +92,8 @@
                     <div class="d-grid gap-2">
                         {% if session.user_role == 'admin' %}
                         <button class="btn btn-outline-primary" 
-                                data-modal-trigger="add-object-modal"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#addObjectModal"
                                 data-objet-id="{{ objet.id }}"
                                 data-nom="{{ objet.nom }}"
                                 data-quantite="{{ objet.quantite_physique }}"

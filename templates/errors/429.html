@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Trop de requêtes - LabFlow{% endblock %}
+
+{% block content %}
+<div class="main-container d-flex align-items-center justify-content-center" style="min-height: 70vh;">
+    
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="max-width: 500px; width: 100%;">
+        <!-- Bandeau supérieur décoratif -->
+        <div style="height: 10px; background: linear-gradient(90deg, #ff9a56, #ff6a88);"></div>
+        
+        <div class="card-body p-5 text-center">
+            
+            <!-- Icône Animée -->
+            <div class="mb-4 position-relative d-inline-block">
+                <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" 
+                     style="width: 80px; height: 80px; background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);">
+                    <i class="bi bi-hourglass-split fs-1 pulse-icon"></i>
+                </div>
+            </div>
+
+            <h1 class="h3 fw-bold text-dark mb-3">Oups ! Vous allez un peu trop vite.</h1>
+            
+            <p class="text-muted mb-4">
+                Le serveur a reçu trop de demandes de votre part en très peu de temps. 
+                Par mesure de sécurité, nous avons temporairement mis votre accès en pause.
+            </p>
+
+            <div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis small mb-4">
+                <i class="bi bi-clock-history me-2"></i>
+                Veuillez patienter quelques instants avant de réessayer.
+            </div>
+
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('inventaire.index') }}" class="btn btn-primary btn-lg shadow-sm">
+                    <i class="bi bi-house-door-fill me-2"></i>Retour à l'accueil
+                </a>
+                <button onclick="window.history.back()" class="btn btn-link text-decoration-none text-muted">
+                    Réessayer la page précédente
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Style spécifique pour l'animation du sablier -->
+<style>
+    .pulse-icon {
+        animation: spin-slow 3s infinite linear;
+    }
+
+    @keyframes spin-slow {
+        0% { transform: rotate(0deg); }
+        25% { transform: rotate(180deg); }
+        50% { transform: rotate(180deg); }
+        75% { transform: rotate(360deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}

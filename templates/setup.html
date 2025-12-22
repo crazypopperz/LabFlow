@@ -3,69 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Configuration de LabFlow</title>
+    <title>Configuration Initiale - LabFlow</title>
+    
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        /* --- MAGIE DES ICÔNES DANS LES INPUTS --- */
+        .form-floating-icon {
+            position: relative;
+        }
+        
+        /* L'icône à gauche */
+        .form-floating-icon > i {
+            position: absolute;
+            top: 50%;
+            left: 1rem;
+            transform: translateY(-50%);
+            color: #6c757d; /* Couleur discrète */
+            z-index: 5;
+            font-size: 1.1rem;
+        }
+
+        /* On décale le texte de l'input vers la droite */
+        .form-floating-icon > .form-control {
+            padding-left: 3rem;
+        }
+
+        /* On décale aussi le label pour qu'il ne soit pas sur l'icône */
+        .form-floating-icon > label {
+            padding-left: 3rem;
+        }
+
+        /* --- STYLES VALIDATION (Inchangés) --- */
+        .strength-bar {
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .strength-bar-fill {
+            height: 100%;
+            width: 0;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+        .password-requirements {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 5px;
+            border: 1px solid var(--couleur-bordure);
+        }
+        .requirement-item {
+            margin-bottom: 2px;
+            color: var(--texte-discret);
+            transition: color 0.2s;
+        }
+        .requirement-item.met {
+            color: var(--couleur-succes);
+            font-weight: 600;
+        }
+        .requirement-item i {
+            font-size: 0.8rem;
+            margin-right: 4px;
+        }
+    </style>
 </head>
-<body>
-    <div class="setup-container">
-        <div class="setup-illustration">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Mascotte LabFlow">
+
+<body class="login-page-body">
+
+    <div class="login-form-container" style="max-width: 600px;">
+        <!-- En-tête -->
+        <div class="login-header">
+            <div class="login-icon-wrapper" style="background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="white" viewBox="0 0 16 16">
+                    <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+                </svg>
+            </div>
+            <h2>Bienvenue sur LabFlow</h2>
+            <p class="text-muted">Configuration de votre établissement</p>
         </div>
-        <div class="setup-form-wrapper">
-            <div class="setup-header">
-                <h1>LabFlow</h1>
-                <p class="form-subtitle">Configuration du compte administrateur</p>
+
+        <!-- Messages Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm border-0 mb-4">
+                        <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('auth.setup') }}" method="post" id="setupForm" class="login-form" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Nom Établissement -->
+            <div class="form-floating form-floating-icon mb-3">
+                <i class="bi bi-building"></i>
+                <input type="text" class="form-control" id="nom_etablissement" name="nom_etablissement" placeholder="Nom" required autocomplete="organization">
+                <label for="nom_etablissement">Nom de l'établissement</label>
             </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="flash-messages-inline">
-                    {% for category, message in messages %}
-                        <div class="flash {{ category }}">{{ message }}</div>
-                    {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
+            <!-- Admin User -->
+            <div class="form-floating form-floating-icon mb-3">
+                <i class="bi bi-person-badge"></i>
+                <input type="text" class="form-control" id="username" name="username" placeholder="Admin" required autocomplete="username">
+                <label for="username">Nom d'utilisateur Admin</label>
+            </div>
 
-            <form action="{{ url_for('auth.setup') }}" method="post" class="setup-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
-                <div class="form-group">
-                    <label for="nom_etablissement">Nom de votre établissement :</label>
-                    <!-- Le nom 'nom_etablissement' est déjà correct -->
-                    <input type="text" id="nom_etablissement" name="nom_etablissement" required placeholder="Ex: Collège Jean Moulin">
-                    <small class="form-help-text">Soyez précis, ce nom sera affiché sur votre page.</small>
+            <!-- Email -->
+            <div class="form-floating form-floating-icon mb-3">
+                <i class="bi bi-envelope"></i>
+                <input type="email" class="form-control" id="email" name="email" placeholder="Email" required autocomplete="email">
+                <label for="email">Email Administrateur</label>
+            </div>
+
+            <!-- Mot de passe -->
+            <div class="mb-2 position-relative">
+                <div class="form-floating form-floating-icon">
+                    <i class="bi bi-lock"></i>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Mot de passe" required autocomplete="new-password">
+                    <label for="password">Mot de passe</label>
                 </div>
+                <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y text-decoration-none text-muted" 
+                        id="togglePassword" style="z-index: 10; padding-right: 15px;">
+                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                </button>
+            </div>
 
-                <div class="form-group">
-                    <label for="username">Nom d'utilisateur</label>
-                    <!-- CORRECTION : name="username" -->
-                    <input type="text" id="username" name="username" required placeholder="Ex: admin.dupont">
+            <!-- Barre de force -->
+            <div class="strength-bar mb-2">
+                <div class="strength-bar-fill" id="strengthBar"></div>
+            </div>
+
+            <!-- Exigences -->
+            <div class="password-requirements mb-3">
+                <div class="row g-1">
+                    <div class="col-6 requirement-item" id="req-length"><i class="bi bi-circle"></i> 12 car. min</div>
+                    <div class="col-6 requirement-item" id="req-uppercase"><i class="bi bi-circle"></i> 1 Majuscule</div>
+                    <div class="col-6 requirement-item" id="req-lowercase"><i class="bi bi-circle"></i> 1 Minuscule</div>
+                    <div class="col-6 requirement-item" id="req-number"><i class="bi bi-circle"></i> 1 Chiffre</div>
+                    <div class="col-6 requirement-item" id="req-special"><i class="bi bi-circle"></i> 1 Caractère spécial</div>
+                    <div class="col-6 requirement-item" id="req-match"><i class="bi bi-circle"></i> Identiques</div>
                 </div>
+            </div>
 
-                <div class="password-group">
-                    <div class="form-group">
-                        <label for="password">Mot de passe</label>
-                        <!-- CORRECTION : name="password" -->
-                        <input type="password" id="password" name="password" required placeholder="Choisissez un mot de passe">
-                    </div>
-                    <div class="form-group">
-                        <label for="password_confirm">Confirmez le mot de passe</label>
-                        <!-- CORRECTION : name="password_confirm" -->
-                        <input type="password" id="password_confirm" name="password_confirm" required placeholder="Retapez votre mot de passe">
-                    </div>
-                </div>
+            <!-- Confirmation -->
+            <div class="form-floating form-floating-icon mb-4">
+                <i class="bi bi-check2-circle"></i>
+                <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Confirmation" required autocomplete="new-password">
+                <label for="password_confirm">Confirmer le mot de passe</label>
+                <div class="invalid-feedback">Les mots de passe ne correspondent pas</div>
+            </div>
 
-                <div class="form-group">
-                    <label for="email">Adresse e-mail</label>
-                    <!-- Le nom 'email' est déjà correct -->
-                    <input type="email" id="email" name="email" required placeholder="Ex: contact@mon-etablissement.fr">
-                </div>
-
-                <button type="submit" class="btn-full-width">Créer le compte et Démarrer</button>
-            </form>
-        </div>
+            <button type="submit" class="btn-login mt-2">
+                <i class="bi bi-rocket-takeoff-fill me-2"></i>
+                Créer et Démarrer
+            </button>
+        </form>
     </div>
+
+    <!-- Script de Validation (Identique) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('setupForm');
+            const password = document.getElementById('password');
+            const passwordConfirm = document.getElementById('password_confirm');
+            const togglePassword = document.getElementById('togglePassword');
+            const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+            const strengthBar = document.getElementById('strengthBar');
+
+            // Toggle Password Visibility
+            togglePassword.addEventListener('click', function() {
+                const type = password.type === 'password' ? 'text' : 'password';
+                password.type = type;
+                passwordConfirm.type = type;
+                togglePasswordIcon.classList.toggle('bi-eye');
+                togglePasswordIcon.classList.toggle('bi-eye-slash');
+            });
+
+            // Fonction de vérification de correspondance
+            function checkMatch() {
+                const valPass = password.value;
+                const valConf = passwordConfirm.value;
+                const isMatch = valPass.length > 0 && valConf.length > 0 && valPass === valConf;
+                
+                updateRequirement('req-match', isMatch);
+
+                if (valConf.length > 0 && valPass !== valConf) {
+                    passwordConfirm.classList.add('is-invalid');
+                } else {
+                    passwordConfirm.classList.remove('is-invalid');
+                }
+                return isMatch;
+            }
+
+            // Password Strength Logic
+            password.addEventListener('input', function() {
+                const value = this.value;
+                let strength = 0;
+                
+                const hasLength = value.length >= 12;
+                const hasUpperCase = /[A-Z]/.test(value);
+                const hasLowerCase = /[a-z]/.test(value);
+                const hasNumber = /[0-9]/.test(value);
+                const hasSpecial = /[^A-Za-z0-9]/.test(value);
+
+                updateRequirement('req-length', hasLength);
+                updateRequirement('req-uppercase', hasUpperCase);
+                updateRequirement('req-lowercase', hasLowerCase);
+                updateRequirement('req-number', hasNumber);
+                updateRequirement('req-special', hasSpecial);
+
+                if (hasLength) strength += 20;
+                if (hasUpperCase) strength += 20;
+                if (hasLowerCase) strength += 20;
+                if (hasNumber) strength += 20;
+                if (hasSpecial) strength += 20;
+
+                strengthBar.style.width = strength + '%';
+                
+                if (strength <= 40) {
+                    strengthBar.style.backgroundColor = 'var(--couleur-erreur, #dc3545)'; 
+                } else if (strength <= 80) {
+                    strengthBar.style.backgroundColor = 'var(--couleur-avertissement, #ffc107)'; 
+                } else {
+                    strengthBar.style.backgroundColor = 'var(--couleur-succes, #198754)'; 
+                }
+
+                checkMatch();
+            });
+
+            passwordConfirm.addEventListener('input', checkMatch);
+
+            function updateRequirement(id, isMet) {
+                const element = document.getElementById(id);
+                const icon = element.querySelector('i');
+                if (isMet) {
+                    element.classList.add('met');
+                    icon.className = 'bi bi-check-circle-fill';
+                } else {
+                    element.classList.remove('met');
+                    icon.className = 'bi bi-circle';
+                }
+            }
+
+            // Validation à la soumission
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity() || password.value !== passwordConfirm.value) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (password.value !== passwordConfirm.value) {
+                        passwordConfirm.classList.add('is-invalid');
+                    }
+                }
+                form.classList.add('was-validated');
+            });
+        });
+    </script>
 </body>
 </html>

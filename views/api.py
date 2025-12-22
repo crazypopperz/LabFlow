@@ -3,7 +3,7 @@
 # ============================================================
 import uuid
 from datetime import datetime, timedelta
-from flask import Blueprint, request, jsonify, session, current_app
+from flask import Blueprint, request, jsonify, session, current_app, render_template
 from sqlalchemy import or_, func, text, and_
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -597,9 +597,13 @@ def api_supprimer_reservation():
 @api_bp.route("/inventaire/")
 @login_required
 def api_inventaire():
-    """Retourne l'inventaire paginé avec filtres (JSON)."""
+    """
+    Retourne le HTML de l'inventaire paginé pour injection AJAX.
+    Compatible avec script.js (attend data.html).
+    """
     etablissement_id = session.get('etablissement_id')
     
+    # 1. Extraction des paramètres
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
@@ -607,25 +611,50 @@ def api_inventaire():
     armoire_id = request.args.get('armoire', type=int)
     categorie_id = request.args.get('categorie', type=int)
     etat = request.args.get('etat')
-
+    
+    # 2. Récupération des données (Sécurisée)
     objets, total_pages = get_paginated_objets(
         etablissement_id, page, sort_by, direction, 
         search_query, armoire_id, categorie_id, etat
     )
-
-    objets_json = [{
-        'id': o.id,
-        'nom': o.nom,
-        'quantite_physique': o.quantite_physique,
-        'quantite_disponible': o.quantite_disponible,
-        'seuil': o.seuil,
-        'image_url': o.image_url,
-        'armoire': o.armoire.nom if o.armoire else None,
-        'categorie': o.categorie.nom if o.categorie else None
-    } for o in objets]
-
+    
+    # 3. Infos filtres (Optimisation : évite des requêtes SQL si possible)
+    current_armoire = None
+    current_categorie = None
+    
+    if armoire_id:
+        if objets and objets[0].armoire and objets[0].armoire.id == armoire_id:
+            current_armoire = objets[0].armoire
+        else:
+            current_armoire = db.session.get(Armoire, armoire_id)
+    
+    if categorie_id:
+        if objets and objets[0].categorie and objets[0].categorie.id == categorie_id:
+            current_categorie = objets[0].categorie
+        else:
+            current_categorie = db.session.get(Categorie, categorie_id)
+    
+    # 4. Rendu template
+    html_content = render_template(
+        '_inventaire_content.html',
+        objets=objets,
+        pagination={
+            'page': page,
+            'total_pages': total_pages,
+            'endpoint': 'inventaire.inventaire' # <--- Mieux pour les permaliens
+        },
+        sort_by=sort_by,
+        direction=direction,
+        armoire=current_armoire,
+        categorie=current_categorie,
+        etat=etat,
+        search_query=search_query,
+        date_actuelle=datetime.now()
+    )
+    
+    # 5. Retour JSON compatible script.js
     return jsonify({
-        'objets': objets_json,
+        'html': html_content,
         'pagination': {
             'page': page,
             'total_pages': total_pages

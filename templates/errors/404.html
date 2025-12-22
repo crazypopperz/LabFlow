@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Page non trouvée - LabFlow{% endblock %}
+
+{% block content %}
+<div class="container d-flex flex-column justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="text-center">
+        <h1 class="display-1 fw-bold text-primary">404</h1>
+        <h2 class="h4 mb-4 text-muted">Oups ! Cette page semble introuvable.</h2>
+        <p class="mb-5 text-secondary">Le lien que vous avez suivi est peut-être cassé ou la page a été supprimée.</p>
+        <a href="{{ url_for('inventaire.index') }}" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+            <i class="bi bi-house-door-fill me-2"></i>Retour à l'accueil
+        </a>
+    </div>
+</div>
+{% endblock %}

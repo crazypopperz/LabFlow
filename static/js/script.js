@@ -517,7 +517,6 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	// =======================================================================
-	// =======================================================================
 	// SECTION 4 : RECHERCHE GLOBALE (HEADER) - VERSION CORRIGÉE
 	// =======================================================================
 	const globalSearchInput = document.getElementById('globalSearchInput');
@@ -581,13 +580,26 @@ document.addEventListener("DOMContentLoaded", function () {
 						} else {
 							let html = '';
 							data.forEach(item => {
-								const imgUrl = item.image_url || 'https://via.placeholder.com/40?text=IMG';
+								// 1. Correction du nom de la clé (l'API renvoie 'image', pas 'image_url')
+								const rawImage = item.image || item.image_url; 
+								
+								// 2. Logique Hybride : URL Externe vs Fichier Local
+								let imgUrl = 'https://via.placeholder.com/40?text=IMG'; // Image par défaut
+								
+								if (rawImage) {
+									if (rawImage.startsWith('http')) {
+										imgUrl = rawImage; // C'est une URL web (Pexels, etc.)
+									} else {
+										imgUrl = `/static/${rawImage}`; // C'est un fichier local -> on ajoute /static/
+									}
+								}
+
 								// Sécurisation des valeurs nulles
 								const armoire = item.armoire || 'Sans armoire';
 								const quantite = item.quantite !== undefined ? item.quantite : '?';
 								
 								html += `
-									<a href="/inventaire/objet/${item.id}" class="search-result-item">
+									<a href="/objet/${item.id}" class="search-result-item">
 										<img src="${imgUrl}" alt="Img" class="search-result-img">
 										<div class="search-result-info">
 											<h6>${item.nom}</h6>
@@ -944,7 +956,12 @@ document.addEventListener("DOMContentLoaded", function () {
 				// Gestion de l'aperçu d'image
 				const imageUrl = button.dataset.imageUrl;
 				if (imageUrl && imagePreview && imagePreviewContainer) {
-					imagePreview.src = imageUrl;
+					// Vérification si URL externe ou fichier local
+					if (imageUrl.startsWith('http')) {
+						imagePreview.src = imageUrl;
+					} else {
+						imagePreview.src = `/static/${imageUrl}`;
+					}
 					imagePreviewContainer.style.display = 'block';
 				} else if (imagePreviewContainer) {
 					imagePreviewContainer.style.display = 'none';

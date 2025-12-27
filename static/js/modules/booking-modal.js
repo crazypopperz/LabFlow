@@ -1,490 +1,472 @@
 // static/js/modules/booking-modal.js
-
 import { showToast } from './toast.js';
+import { updateCartBadge } from './cart-utils.js';
 
-// ===================================================================
-// VARIABLES GLOBALES DU MODULE
-// ===================================================================
-let bookingModalInstance = null; 
 const bookingModalElement = document.getElementById('bookingModal');
+let bookingModalInstance = null;
 
-let cart = {};
-let selectedDate = '';
-let editingGroupId = null;
-let editingCartKey = null; // NOUVEAU : pour éditer un item du panier
-
-// Références aux éléments DOM
 let modalTitle, dateInput, startTimeSelect, endTimeSelect;
-let availableItemsContainer, bookingCartContainer, validateBookingBtn, hiddenGroupIdInput;
+let availableItemsContainer, bookingCartContainer, validateBtn, cancelBtn;
+let editingGroupId = null;
 
-// ===================================================================
-// FONCTIONS UTILITAIRES
-// ===================================================================
+// Gestion Modale "Dernier Item"
+let lastItemModalInstance = null;
+let pendingDelete = null;
 
-function resetModalState() {
-    cart = {};
-    editingCartKey = null;
-    if (availableItemsContainer) {
-        availableItemsContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
-    }
-    if (bookingCartContainer) {
-        bookingCartContainer.innerHTML = '<p class="text-muted">Votre panier est vide.</p>';
-    }
-    if (validateBookingBtn) {
-        validateBookingBtn.disabled = true;
-    }
-}
+export function initBookingModal() {
+    if (!bookingModalElement) return;
 
-function updateHourOptions() {
-    if (!startTimeSelect) return;
-    
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    const currentHour = now.getHours();
-    
-    Array.from(startTimeSelect.options).forEach(opt => opt.disabled = false);
-    
-    if (selectedDate === today) {
-        Array.from(startTimeSelect.options).forEach(opt => {
-            const optionHour = parseInt(opt.value.split(':')[0]);
-            if (optionHour <= currentHour) opt.disabled = true;
-        });
-    }
-    
-    if (startTimeSelect.options[startTimeSelect.selectedIndex].disabled) {
-        const firstEnabledOption = startTimeSelect.querySelector('option:not([disabled])');
-        if (firstEnabledOption) {
-            startTimeSelect.value = firstEnabledOption.value;
-        } else {
-            startTimeSelect.value = '';
-            if (endTimeSelect) endTimeSelect.value = '';
-        }
-    }
-    handleTimeChange({ target: startTimeSelect });
-}
-
-async function handleTimeChange(event) {
-    if (event.target === startTimeSelect) {
-        const startHour = parseInt(startTimeSelect.value.split(':')[0]);
-        const endHour = startHour + 1;
-        if (endHour <= 18 && endTimeSelect) {
-            const newEndTime = `${String(endHour).padStart(2, '0')}:00`;
-            const endTimeOption = endTimeSelect.querySelector(`option[value="${newEndTime}"]`);
-            if (endTimeOption) endTimeSelect.value = newEndTime;
-        }
-    }
-    await fetchAndDisplayAvailabilities();
-}
-
-async function fetchAndDisplayAvailabilities() {
-    if (!startTimeSelect || !endTimeSelect || !availableItemsContainer) return;
-    
-    const startTime = startTimeSelect.value;
-    const endTime = endTimeSelect.value;
-    
-    if (!startTime || !endTime || startTime >= endTime) {
-        availableItemsContainer.innerHTML = '<div class="alert alert-warning">Veuillez sélectionner un créneau horaire valide.</div>';
-        return;
-    }
-    
-    try {
-        let url = `/api/disponibilites?date=${selectedDate}&heure_debut=${startTime}&heure_fin=${endTime}`;
-        if (editingGroupId) {
-            url += `&exclude_group_id=${editingGroupId}`;
-        }
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Erreur réseau.');
-        const data = await response.json();
-        renderAvailableItems(data);
-    } catch (error) {
-        console.error('Erreur:', error);
-        availableItemsContainer.innerHTML = '<div class="alert alert-danger">Impossible de charger les disponibilités.</div>';
-    }
-}
-
-function renderAvailableItems(data) {
-    if (!availableItemsContainer) return;
-    
-    let html = '<h6>Objets</h6><ul class="list-group mb-3">';
-    if (data.objets && data.objets.length > 0) {
-        data.objets.forEach(obj => {
-            const inCartQuantity = cart[`objet_${obj.id}`] ? cart[`objet_${obj.id}`].quantity : 0;
-            const remainingStock = obj.quantite_disponible - inCartQuantity;
-            html += `<li class="list-group-item d-flex justify-content-between align-items-center">${obj.nom}<div><span class="badge bg-secondary rounded-pill me-2">Dispo: ${remainingStock}</span><button class="btn btn-sm btn-primary btn-add-to-cart" data-type="objet" data-id="${obj.id}" data-name="${obj.nom}" data-max-quantity="${obj.quantite_disponible}" ${remainingStock <= 0 ? 'disabled' : ''}>+</button></div></li>`;
-        });
-    } else {
-        html += '<li class="list-group-item text-muted">Aucun objet disponible.</li>';
-    }
-    html += '</ul><h6>Kits</h6><ul class="list-group">';
-    if (data.kits && data.kits.length > 0) {
-        data.kits.forEach(kit => {
-            const inCartQuantity = cart[`kit_${kit.id}`] ? cart[`kit_${kit.id}`].quantity : 0;
-            const remainingStock = kit.disponible - inCartQuantity;
-            html += `<li class="list-group-item d-flex justify-content-between align-items-center">${kit.nom}<div><span class="badge bg-secondary rounded-pill me-2">Dispo: ${remainingStock}</span><button class="btn btn-sm btn-primary btn-add-to-cart" data-type="kit" data-id="${kit.id}" data-name="${kit.nom}" data-max-quantity="${kit.disponible}" ${remainingStock <= 0 ? 'disabled' : ''}>+</button></div></li>`;
-        });
-    } else {
-        html += '<li class="list-group-item text-muted">Aucun kit disponible.</li>';
-    }
-    html += '</ul>';
-    availableItemsContainer.innerHTML = html;
-}
-
-function addToCart(type, id, name, maxQuantity) {
-    const key = `${type}_${id}`;
-    const inCartQuantity = cart[key] ? cart[key].quantity : 0;
-    const availableStock = maxQuantity - inCartQuantity;
-    if (availableStock <= 0) {
-        showToast('Quantité maximale atteinte pour cet article.', 'warning');
-        return;
-    }
-    if (cart[key]) {
-        cart[key].quantity++;
-    } else {
-        cart[key] = { type, id, name, quantity: 1 };
-    }
-    updateCartAndAvailabilities();
-}
-
-function removeFromCart(key) {
-    if (cart[key]) {
-        cart[key].quantity--;
-        if (cart[key].quantity <= 0) delete cart[key];
-    }
-    updateCartAndAvailabilities();
-}
-
-function updateCartAndAvailabilities() {
-    renderCart();
-    fetchAndDisplayAvailabilities();
-}
-
-function renderCart() {
-    if (!bookingCartContainer || !validateBookingBtn) return;
-    
-    if (Object.keys(cart).length === 0) {
-        bookingCartContainer.innerHTML = '<p class="text-muted">Votre panier est vide.</p>';
-        validateBookingBtn.disabled = true;
-        return;
-    }
-    let html = '<ul class="list-group">';
-    for (const key in cart) {
-        const item = cart[key];
-        html += `<li class="list-group-item d-flex justify-content-between align-items-center">${item.name} (x${item.quantity})<button class="btn btn-sm btn-danger btn-remove-from-cart" data-key="${key}">-</button></li>`;
-    }
-    html += '</ul>';
-    bookingCartContainer.innerHTML = html;
-    validateBookingBtn.disabled = false;
-}
-
-// ===================================================================
-// NOUVELLE FONCTION : AJOUTER AU PANIER GLOBAL (sessionStorage)
-// ===================================================================
-function addToGlobalCart() {
-    if (!dateInput || !startTimeSelect || !endTimeSelect) return;
-    
-    const date = dateInput.value;
-    const heureDebut = startTimeSelect.value;
-    const heureFin = endTimeSelect.value;
-    
-    // Clé unique pour cette réservation dans le panier global
-    const cartKey = editingCartKey || `${date}_${heureDebut}_${heureFin}_${Date.now()}`;
-    
-    // Récupération du panier global
-    let globalCart = JSON.parse(sessionStorage.getItem('reservationCart')) || {};
-    
-    // Construction de l'objet de réservation au format attendu par cart-summary.js et api.py
-    const reservationData = {
-        date: date,
-        heure_debut: heureDebut,
-        heure_fin: heureFin,
-        kits: {},
-        objets: {}
-    };
-    
-    // Transformation du cart local (format items) vers le format kits/objets
-    for (const key in cart) {
-        const item = cart[key];
-        if (item.type === 'kit') {
-            reservationData.kits[item.id] = {
-                nom: item.name,
-                quantite: item.quantity
-            };
-        } else if (item.type === 'objet') {
-            reservationData.objets[item.id] = {
-                nom: item.name,
-                quantite: item.quantity
-            };
-        }
-    }
-    
-    // Ajout ou mise à jour dans le panier global
-    globalCart[cartKey] = reservationData;
-    
-    // Sauvegarde dans sessionStorage
-    sessionStorage.setItem('reservationCart', JSON.stringify(globalCart));
-    
-    // Mise à jour de l'icône panier si la fonction existe
-    if (typeof updateCartIcon === 'function') {
-        updateCartIcon();
-    }
-    
-    // Message de confirmation
-    const message = editingCartKey ? 'Réservation mise à jour dans le panier' : 'Réservation ajoutée au panier';
-    showToast(message, 'success');
-    
-    // Fermeture de la modale
-    if (bookingModalInstance) {
-        bookingModalInstance.hide();
-    }
-    
-    // Redirection optionnelle vers le panier (à décommenter si souhaité)
-    // window.location.href = '/panier';
-}
-
-// ===================================================================
-// CHARGEMENT D'UNE RÉSERVATION EXISTANTE (pour modification depuis le panier)
-// ===================================================================
-async function loadExistingCartItem(cartKey) {
-    const globalCart = JSON.parse(sessionStorage.getItem('reservationCart')) || {};
-    const itemData = globalCart[cartKey];
-    
-    if (!itemData) {
-        showToast('Réservation introuvable', 'danger');
-        return;
-    }
-    
-    // Chargement des horaires
-    if (startTimeSelect && endTimeSelect) {
-        startTimeSelect.value = itemData.heure_debut;
-        endTimeSelect.value = itemData.heure_fin;
-    }
-    
-    // Reconstruction du cart local depuis les kits et objets
-    cart = {};
-    
-    if (itemData.kits) {
-        for (const kitId in itemData.kits) {
-            const kitData = itemData.kits[kitId];
-            cart[`kit_${kitId}`] = {
-                type: 'kit',
-                id: parseInt(kitId),
-                name: kitData.nom,
-                quantity: kitData.quantite
-            };
-        }
-    }
-    
-    if (itemData.objets) {
-        for (const objetId in itemData.objets) {
-            const objetData = itemData.objets[objetId];
-            cart[`objet_${objetId}`] = {
-                type: 'objet',
-                id: parseInt(objetId),
-                name: objetData.nom,
-                quantity: objetData.quantite
-            };
-        }
-    }
-    
-    renderCart();
-}
-
-// ===================================================================
-// CHARGEMENT D'UNE RÉSERVATION DEPUIS LA BDD (pour modification admin)
-// ===================================================================
-async function loadExistingReservation(groupId) {
-    if (!startTimeSelect || !endTimeSelect) return;
-    
-    try {
-        const response = await fetch(`/api/reservation_details/${groupId}`);
-        if (!response.ok) throw new Error('Impossible de charger la réservation.');
-        const details = await response.json();
-        
-        startTimeSelect.value = new Date(details.debut_reservation).toTimeString().substring(0, 5);
-        endTimeSelect.value = new Date(details.fin_reservation).toTimeString().substring(0, 5);
-
-        cart = {};
-        if (details.kits) {
-            for (const kitId in details.kits) {
-                const kit = details.kits[kitId];
-                cart[`kit_${kitId}`] = { type: 'kit', id: parseInt(kitId), name: kit.nom, quantity: kit.quantite };
-            }
-        }
-        if (details.objets_manuels) {
-            details.objets_manuels.forEach(obj => {
-                cart[`objet_${obj.objet_id}`] = { type: 'objet', id: obj.objet_id, name: obj.nom, quantity: obj.quantite_reservee };
-            });
-        }
-        renderCart();
-    } catch (error) {
-        showToast(error.message, 'danger');
-        resetModalState();
-    }
-}
-
-// ===================================================================
-// CONFIGURATION DU CONTENU DE LA MODALE
-// ===================================================================
-async function setupModalContent(event) {
-    const button = event.relatedTarget;
-    selectedDate = button.getAttribute('data-date');
-    editingGroupId = button.getAttribute('data-editing-group-id');
-    editingCartKey = button.getAttribute('data-editing-cart-key'); // NOUVEAU
-
-    const formattedDate = new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    
-    if (editingGroupId) {
-        // Mode édition d'une réservation validée (depuis la BDD)
-        if (modalTitle) modalTitle.textContent = `Modifier la réservation pour le ${formattedDate}`;
-        if (validateBookingBtn) validateBookingBtn.textContent = 'Enregistrer les modifications';
-        if (hiddenGroupIdInput) hiddenGroupIdInput.value = editingGroupId;
-        await loadExistingReservation(editingGroupId);
-    } else if (editingCartKey) {
-        // Mode édition d'un item du panier (depuis sessionStorage)
-        if (modalTitle) modalTitle.textContent = `Modifier la réservation pour le ${formattedDate}`;
-        if (validateBookingBtn) validateBookingBtn.textContent = 'Mettre à jour le panier';
-        if (hiddenGroupIdInput) hiddenGroupIdInput.value = '';
-        await loadExistingCartItem(editingCartKey);
-    } else {
-        // Mode création
-        if (modalTitle) modalTitle.textContent = `Réserver du matériel pour le ${formattedDate}`;
-        if (validateBookingBtn) validateBookingBtn.textContent = 'Ajouter au panier';
-        if (hiddenGroupIdInput) hiddenGroupIdInput.value = '';
-        resetModalState();
-    }
-    
-    if (dateInput) dateInput.value = selectedDate;
-    updateHourOptions();
-    await fetchAndDisplayAvailabilities();
-}
-
-// ===================================================================
-// FONCTION EXPORTÉE (ouverture programmatique)
-// ===================================================================
-export function openReservationModal(date, groupId = null, cartKey = null) {
-    if (!bookingModalElement) {
-        console.error('La modale de réservation (#bookingModal) est introuvable dans le DOM');
-        return;
-    }
-    
-    selectedDate = date;
-    editingGroupId = groupId;
-    editingCartKey = cartKey;
-    
-    const fakeRelatedTarget = {
-        getAttribute: (attr) => {
-            if (attr === 'data-date') return selectedDate;
-            if (attr === 'data-editing-group-id') return editingGroupId;
-            if (attr === 'data-editing-cart-key') return editingCartKey;
-            return null;
-        }
-    };
-
-    setupModalContent({ relatedTarget: fakeRelatedTarget });
-    
-    if (!bookingModalInstance) {
-        bookingModalInstance = new bootstrap.Modal(bookingModalElement);
-    }
-    bookingModalInstance.show();
-}
-
-// ===================================================================
-// INITIALISATION DES EVENT LISTENERS
-// ===================================================================
-if (bookingModalElement) {
-    // Initialisation des références DOM
-    modalTitle = document.getElementById('bookingModalLabel');
+    modalTitle = bookingModalElement.querySelector('.modal-title');
     dateInput = document.getElementById('bookingDate');
     startTimeSelect = document.getElementById('startTime');
     endTimeSelect = document.getElementById('endTime');
     availableItemsContainer = document.getElementById('availableItems');
     bookingCartContainer = document.getElementById('bookingCart');
-    validateBookingBtn = document.getElementById('validateBookingBtn');
-    hiddenGroupIdInput = document.getElementById('editingGroupId');
+    validateBtn = document.getElementById('validateBookingBtn');
+    cancelBtn = bookingModalElement.querySelector('.modal-footer .btn-secondary');
 
-    // Event listeners
-    bookingModalElement.addEventListener('show.bs.modal', (event) => {
-        if (event.relatedTarget) {
-            setupModalContent(event);
+    // Init Modale Warning
+    const warningEl = document.getElementById('lastItemWarningModal');
+    if (warningEl) {
+        lastItemModalInstance = new bootstrap.Modal(warningEl);
+        const confirmBtn = document.getElementById('btnConfirmLastItemDelete');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                if (pendingDelete) {
+                    performRemoveItem(pendingDelete.id, pendingDelete.type);
+                    lastItemModalInstance.hide();
+                    pendingDelete = null;
+                }
+            });
         }
-    });
+    }
 
+    bookingModalElement.addEventListener('show.bs.modal', handleModalOpen);
+    
+    // CORRECTION : Nettoyage forcé à la fermeture
     bookingModalElement.addEventListener('hidden.bs.modal', () => {
-        cart = {};
-        selectedDate = '';
-        editingGroupId = null;
-        editingCartKey = null;
-        if (hiddenGroupIdInput) hiddenGroupIdInput.value = '';
+        resetModalState();
+        forceCleanup(); 
     });
 
     if (startTimeSelect) startTimeSelect.addEventListener('change', handleTimeChange);
-    if (endTimeSelect) endTimeSelect.addEventListener('change', handleTimeChange);
+    if (endTimeSelect) endTimeSelect.addEventListener('change', loadAvailabilities);
+
+    setupDelegatedEvents();
+}
+
+export function openReservationModal(date, groupId = null) {
+    if (!bookingModalElement) return;
+    bookingModalElement.dataset.date = date;
+    if (groupId) bookingModalElement.dataset.groupId = groupId;
+    else delete bookingModalElement.dataset.groupId;
+
+    if (!bookingModalInstance) bookingModalInstance = new bootstrap.Modal(bookingModalElement);
+    bookingModalInstance.show();
+}
+
+async function handleModalOpen(event) {
+    const trigger = event.relatedTarget || bookingModalElement;
+    const date = trigger.dataset.date;
+    editingGroupId = trigger.dataset.groupId || null;
+
+    if (!date) return;
+
+    dateInput.value = date;
+    const dateFr = new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
     
-    // MODIFICATION CRITIQUE : Le bouton valider ajoute au panier au lieu d'appeler l'API
-    if (validateBookingBtn) {
-        validateBookingBtn.addEventListener('click', () => {
-            if (editingGroupId) {
-                // Si on modifie une réservation validée, on appelle l'API
-                validateExistingReservation();
-            } else {
-                // Sinon on ajoute/met à jour le panier
-                addToGlobalCart();
-            }
-        });
-    }
+    if (bookingCartContainer) bookingCartContainer.style.display = 'block';
 
-    if (availableItemsContainer) {
-        availableItemsContainer.addEventListener('click', (event) => {
-            if (event.target.classList.contains('btn-add-to-cart')) {
-                const button = event.target;
-                addToCart(button.dataset.type, parseInt(button.dataset.id, 10), button.dataset.name, parseInt(button.dataset.maxQuantity, 10));
-            }
-        });
-    }
+    if (editingGroupId) {
+        // --- MODE ÉDITION ---
+        modalTitle.innerHTML = `<i class="bi bi-pencil-square me-2"></i>Modifier la réservation`;
+        if (validateBtn) validateBtn.style.display = 'none';
+        
+        if (cancelBtn) {
+            cancelBtn.textContent = "Fermer";
+            cancelBtn.classList.remove('btn-secondary', 'btn-outline-secondary');
+            cancelBtn.classList.add('btn-dark');
+            
+            // Reset du bouton pour comportement par défaut (fermeture)
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            // Pas d'event listener spécifique, le data-bs-dismiss suffit
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            cancelBtn = newCancelBtn;
+        }
+        await loadExistingReservation(editingGroupId);
 
-    if (bookingCartContainer) {
-        bookingCartContainer.addEventListener('click', (event) => {
-            if (event.target.classList.contains('btn-remove-from-cart')) {
-                removeFromCart(event.target.dataset.key);
-            }
-        });
+    } else {
+        // --- MODE CRÉATION ---
+        modalTitle.innerHTML = `<i class="bi bi-calendar-check me-2"></i>Réserver pour le ${dateFr}`;
+        
+        if (validateBtn) {
+            validateBtn.style.display = 'inline-block';
+            validateBtn.innerHTML = '<i class="bi bi-cart-check me-2"></i>Voir mon panier';
+            validateBtn.classList.remove('btn-primary', 'disabled');
+            validateBtn.classList.add('btn-success');
+            
+            const newValidateBtn = validateBtn.cloneNode(true);
+            newValidateBtn.type = 'button';
+            newValidateBtn.disabled = false;
+            newValidateBtn.onclick = (e) => { 
+                e.preventDefault(); 
+                window.location.href = '/panier'; 
+            };
+            validateBtn.parentNode.replaceChild(newValidateBtn, validateBtn);
+            validateBtn = newValidateBtn;
+        }
+
+        // Bouton "Poursuivre"
+        if (cancelBtn) {
+            cancelBtn.innerHTML = '<i class="bi bi-calendar-week me-2"></i>Poursuivre (Calendrier)';
+            cancelBtn.classList.remove('btn-dark', 'btn-secondary', 'btn-danger');
+            cancelBtn.classList.add('btn-outline-secondary');
+            
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            newCancelBtn.type = 'button';
+            
+            newCancelBtn.onclick = (e) => {
+                e.preventDefault();
+                
+                // Fermeture manuelle propre
+                if (bookingModalInstance) bookingModalInstance.hide();
+                else {
+                    const instance = bootstrap.Modal.getInstance(bookingModalElement);
+                    if (instance) instance.hide();
+                }
+                
+                // Nettoyage forcé immédiat
+                forceCleanup();
+
+                // Redirection si nécessaire
+                if (!window.location.pathname.includes('/calendrier')) {
+                    window.location.href = '/calendrier';
+                }
+            };
+            
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            cancelBtn = newCancelBtn;
+        }
+
+        updateHourOptions(); 
+        setSmartTime();      
+        loadAvailabilities();
+        refreshMiniCart();
     }
 }
 
-// ===================================================================
-// FONCTION POUR MODIFIER UNE RÉSERVATION VALIDÉE (BDD)
-// ===================================================================
-async function validateExistingReservation() {
-    if (!dateInput || !startTimeSelect || !endTimeSelect || !hiddenGroupIdInput) return;
-    
-    const reservationData = {
-        date: dateInput.value,
-        heure_debut: startTimeSelect.value,
-        heure_fin: endTimeSelect.value,
-        items: Object.values(cart),
-        groupe_id: hiddenGroupIdInput.value
-    };
-    
+function resetModalState() {
+    delete bookingModalElement.dataset.date;
+    delete bookingModalElement.dataset.groupId;
+    editingGroupId = null;
+    availableItemsContainer.innerHTML = '';
+    if (bookingCartContainer) bookingCartContainer.innerHTML = '';
+}
+
+/**
+ * NETTOYAGE FORCÉ DU BACKDROP (CORRECTION BUG CHROME)
+ * Supprime manuellement les éléments fantômes de Bootstrap
+ */
+function forceCleanup() {
+    setTimeout(() => {
+        // 1. Supprimer tous les backdrops restants
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        
+        // 2. Restaurer le scroll du body
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }, 150); // Petit délai pour laisser l'animation Bootstrap finir
+}
+
+// --- LOGIQUE MÉTIER ---
+
+async function loadExistingReservation(groupId) {
     try {
-        const response = await fetch('/api/creer_reservation', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content') 
-            },
-            body: JSON.stringify(reservationData),
-        });
-        const result = await response.json();
-        if (response.ok) {
-            showToast(result.message || 'Opération réussie!', 'success');
-            if (bookingModalInstance) {
-                bookingModalInstance.hide();
-            }
-            location.reload();
+        bookingCartContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-muted"></div></div>';
+        const response = await fetch(`/api/reservation_details/${groupId}`);
+        if (!response.ok) throw new Error("Erreur chargement");
+        const data = await response.json();
+
+        if (data.debut && data.fin) {
+            startTimeSelect.value = data.debut.substring(11, 16);
+            endTimeSelect.value = data.fin.substring(11, 16);
+        }
+
+        renderMiniCart(data.items, false); 
+        
+        const startDt = new Date(data.debut);
+        if (startDt < new Date()) {
+            availableItemsContainer.innerHTML = `<div class="alert alert-warning"><i class="bi bi-clock-history me-2"></i>Réservation passée. Lecture seule.</div>`;
+            renderMiniCart(data.items, true);
         } else {
-            throw new Error(result.error || 'Une erreur est survenue.');
+            loadAvailabilities();
         }
     } catch (error) {
-        showToast(error.message, 'danger');
+        console.error(error);
+        bookingCartContainer.innerHTML = '<div class="text-danger">Erreur chargement</div>';
     }
 }
+
+function loadAvailabilities() {
+    const date = dateInput.value;
+    const start = startTimeSelect.value;
+    const end = endTimeSelect.value;
+    if (!date || !start || !end) return;
+
+    availableItemsContainer.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary mb-2"></div><p class="text-muted small">Vérification stocks...</p></div>`;
+
+    let url = `/api/disponibilites?date=${date}&heure_debut=${start}&heure_fin=${end}`;
+    fetch(url).then(res => res.json()).then(response => {
+        if (!response.success) {
+            availableItemsContainer.innerHTML = `<div class="alert alert-danger">${response.error}</div>`;
+        } else {
+            renderAvailableItems(response.data);
+        }
+    }).catch(() => availableItemsContainer.innerHTML = `<div class="alert alert-danger">Erreur connexion.</div>`);
+}
+
+async function refreshMiniCart() {
+    if (!bookingCartContainer) return;
+    bookingCartContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-muted"></div></div>';
+    try {
+        const res = await fetch('/api/panier');
+        const json = await res.json();
+        if (json.success && json.data.items.length > 0) renderMiniCart(json.data.items, false);
+        else bookingCartContainer.innerHTML = '<div class="text-muted fst-italic text-center mt-3">Votre panier est vide.</div>';
+    } catch (e) { bookingCartContainer.innerHTML = '<div class="text-danger small">Erreur panier</div>'; }
+}
+
+// --- ACTIONS ---
+
+async function addItem(item) {
+    const payload = { type: item.type, id: item.id, quantite: 1 };
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    let url = '/api/panier/ajouter';
+    if (editingGroupId) {
+        url = `/api/reservation/${editingGroupId}/ajouter`;
+    } else {
+        payload.date = dateInput.value;
+        payload.heure_debut = startTimeSelect.value;
+        payload.heure_fin = endTimeSelect.value;
+    }
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            showToast(`Ajouté : ${item.nom}`, "success");
+            updateCartBadge();
+            loadAvailabilities();
+            if (editingGroupId) loadExistingReservation(editingGroupId);
+            else refreshMiniCart();
+        } else {
+            showToast(data.error || "Erreur", "error");
+        }
+    } catch (err) { showToast("Erreur technique", "error"); }
+}
+
+function requestRemoveItem(itemId, itemType, currentQty) {
+    if (editingGroupId) {
+        const itemsCount = document.querySelectorAll('#bookingCart li').length;
+        if (itemsCount === 1 && currentQty <= 1) {
+            pendingDelete = { id: itemId, type: itemType };
+            if (lastItemModalInstance) {
+                lastItemModalInstance.show();
+            } else {
+                if(confirm("Supprimer la réservation ?")) performRemoveItem(itemId, itemType);
+            }
+            return;
+        }
+    }
+    performRemoveItem(itemId, itemType);
+}
+
+async function performRemoveItem(itemId, itemType) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    let url = `/api/panier/retirer/${itemId}`;
+    if (editingGroupId) {
+        url = `/api/reservation/${editingGroupId}/retirer/${itemId}?type=${itemType}`;
+    }
+
+    try {
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': csrfToken }
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            showToast("Retiré", "info");
+            updateCartBadge();
+            
+            if (editingGroupId && data.remaining_items === 0) {
+                if (bookingModalInstance) bookingModalInstance.hide();
+                forceCleanup(); // Nettoyage aussi ici
+                window.location.reload();
+                return;
+            }
+
+            loadAvailabilities();
+            if (editingGroupId) loadExistingReservation(editingGroupId);
+            else refreshMiniCart();
+        }
+    } catch (e) { console.error(e); }
+}
+
+// --- RENDU ---
+
+function renderAvailableItems(data) {
+    let html = '<div class="list-group list-group-flush">';
+    const getImg = (img) => img ? (img.startsWith('http') ? img : `/static/${img}`) : null;
+    
+    const renderRow = (item, type, style) => {
+        const dispo = item.disponible;
+        const active = dispo > 0;
+        const imgUrl = getImg(item.image);
+        const imgHtml = imgUrl ? `<img src="${imgUrl}" class="rounded border" style="width:40px;height:40px;object-fit:cover;">` : `<div class="rounded bg-light d-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-box text-muted"></i></div>`;
+
+        return `
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-0 ${style}">
+                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                    ${imgHtml}
+                    <div class="text-truncate">
+                        <div class="fw-bold text-dark text-truncate" title="${item.nom}">${item.nom}</div>
+                        <div class="small text-muted">${item.armoire || ''}</div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    <span class="badge ${active ? 'bg-light text-dark border' : 'bg-danger-subtle text-danger'} rounded-pill">${dispo}</span>
+                    <button type="button" class="btn btn-sm ${active ? 'btn-primary' : 'btn-secondary disabled'} btn-add-item" 
+                            data-type="${type}" data-id="${item.id}" data-nom="${item.nom}" ${!active ? 'disabled' : ''}>
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            </div>`;
+    };
+
+    if (data.objets?.length) {
+        html += '<h6 class="mt-3 mb-2 text-muted small fw-bold">OBJETS</h6>';
+        data.objets.forEach(o => html += renderRow(o, 'objet', ''));
+    }
+    if (data.kits?.length) {
+        html += '<h6 class="mt-3 mb-2 text-muted small fw-bold">KITS</h6>';
+        data.kits.forEach(k => html += renderRow(k, 'kit', 'bg-light border-start border-3 border-info ps-2'));
+    }
+    availableItemsContainer.innerHTML = html + '</div>';
+}
+
+function renderMiniCart(items, readOnly) {
+    let html = '<ul class="list-group list-group-flush">';
+    items.forEach(item => {
+        const type = item.type || 'objet'; 
+        const deleteBtn = readOnly ? '' : `<button class="btn btn-link text-danger p-0 btn-remove-item" data-id="${item.id}" data-type="${type}" data-qty="${item.quantite}"><i class="bi bi-dash-circle-fill"></i></button>`;
+        
+        html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                <div class="small lh-1">
+                    <div class="fw-bold text-truncate" style="max-width: 140px;">${item.nom}</div>
+                    ${item.heure_debut ? `<div class="text-muted" style="font-size:0.75rem;">${item.heure_debut}-${item.heure_fin}</div>` : ''}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary rounded-pill">x${item.quantite}</span>
+                    ${deleteBtn}
+                </div>
+            </li>`;
+    });
+    bookingCartContainer.innerHTML = html + '</ul>';
+}
+
+function setupDelegatedEvents() {
+    availableItemsContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-add-item');
+        if (!btn || btn.disabled) return;
+        e.preventDefault();
+        
+        const original = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        addItem({
+            type: btn.dataset.type,
+            id: parseInt(btn.dataset.id, 10),
+            nom: btn.dataset.nom
+        }).then(() => {
+            btn.innerHTML = original;
+            btn.disabled = false;
+        });
+    });
+
+    if (bookingCartContainer) {
+        bookingCartContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-remove-item');
+            if (!btn) return;
+            e.preventDefault();
+            const itemId = parseInt(btn.dataset.id, 10);
+            const itemType = btn.dataset.type;
+            const currentQty = parseInt(btn.dataset.qty, 10);
+            
+            requestRemoveItem(itemId, itemType, currentQty);
+        });
+    }
+}
+
+function handleTimeChange(event) {
+    if (event.target === startTimeSelect) {
+        const startHour = parseInt(startTimeSelect.value.split(':')[0]);
+        const endHour = startHour + 1;
+        if (endHour <= 18) {
+            const newEndTime = `${String(endHour).padStart(2, '0')}:00`;
+            const optionExists = [...endTimeSelect.options].some(o => o.value === newEndTime);
+            if (optionExists) endTimeSelect.value = newEndTime;
+        }
+    }
+    loadAvailabilities();
+}
+
+function updateHourOptions() {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    if (dateInput.value === todayStr) {
+        const currentHour = now.getHours();
+        Array.from(startTimeSelect.options).forEach(opt => {
+            const h = parseInt(opt.value.split(':')[0]);
+            opt.disabled = (h <= currentHour);
+        });
+    } else {
+        Array.from(startTimeSelect.options).forEach(opt => opt.disabled = false);
+    }
+}
+
+function setSmartTime() {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    if (dateInput.value === todayStr) {
+        let currentHour = now.getHours();
+        let targetHour = currentHour + 1;
+        if (targetHour < 8) targetHour = 8;
+        if (targetHour > 17) targetHour = 17;
+
+        const startStr = `${String(targetHour).padStart(2, '0')}:00`;
+        const endStr = `${String(targetHour + 1).padStart(2, '0')}:00`;
+
+        const optionExists = [...startTimeSelect.options].some(o => o.value === startStr);
+        if (optionExists) {
+            startTimeSelect.value = startStr;
+            endTimeSelect.value = endStr;
+        }
+    } else {
+        startTimeSelect.value = "08:00";
+        endTimeSelect.value = "09:00";
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initBookingModal);

@@ -1,260 +1,311 @@
-# Fichier : db.py (Version Finale Bidirectionnelle)
-
-import click
-from datetime import date, datetime
-from flask.cli import with_appcontext
+import uuid
+from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import (Integer, String, Float, Boolean, Date, DateTime, Text,
-                        ForeignKey, UniqueConstraint)
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from typing import List, Optional
+from sqlalchemy.sql import func
+from flask_login import UserMixin
 
-# --- CONFIGURATION DE BASE DE SQLAlchemy ---
-class Base(DeclarativeBase):
-    pass
-db = SQLAlchemy(model_class=Base)
+db = SQLAlchemy()
 
-# -----------------------------------------------------------------------------
-# DÉFINITION DES MODÈLES
-# -----------------------------------------------------------------------------
+def init_app(app):
+    db.init_app(app)
+    # La création des tables se fait via reset_db.py
+
+# ============================================================
+# 1. MODÈLES DE BASE (Etablissement & Utilisateur)
+# ============================================================
 
 class Etablissement(db.Model):
     __tablename__ = 'etablissements'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nom: Mapped[str] = mapped_column(String, nullable=False)
-    ville: Mapped[str] = mapped_column(String, nullable=True)
-    code_invitation: Mapped[str] = mapped_column(String, unique=True, nullable=False) 
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    code_invitation = db.Column(db.String(20), unique=True)
     
-    # Relations Bidirectionnelles (Le "Hub" central)
-    # cascade="all, delete-orphan" signifie : si on supprime l'établissement, on supprime tout ce qui suit.
-    utilisateurs: Mapped[List["Utilisateur"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    armoires: Mapped[List["Armoire"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    categories: Mapped[List["Categorie"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    objets: Mapped[List["Objet"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    fournisseurs: Mapped[List["Fournisseur"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    depenses: Mapped[List["Depense"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    budgets: Mapped[List["Budget"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    
-    # Nouveaux ajouts pour couverture totale
-    echeances: Mapped[List["Echeance"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    kits: Mapped[List["Kit"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    parametres: Mapped[List["Parametre"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    reservations: Mapped[List["Reservation"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    suggestions: Mapped[List["Suggestion"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    historiques: Mapped[List["Historique"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    kit_objets: Mapped[List["KitObjet"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
-    audit_logs: Mapped[List["AuditLog"]] = relationship(back_populates="etablissement", cascade="all, delete-orphan")
+    # Relations complètes (Bidirectionnelles)
+    utilisateurs = db.relationship('Utilisateur', backref='etablissement', lazy=True)
+    objets = db.relationship('Objet', backref='etablissement', lazy=True)
+    kits = db.relationship('Kit', backref='etablissement', lazy=True)
+    armoires = db.relationship('Armoire', backref='etablissement', lazy=True)
+    categories = db.relationship('Categorie', backref='etablissement', lazy=True)
 
-
-class Utilisateur(db.Model):
+class Utilisateur(UserMixin, db.Model):
     __tablename__ = 'utilisateurs'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nom_utilisateur: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    mot_de_passe: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[str] = mapped_column(String, nullable=False, default='utilisateur')
-    email: Mapped[str] = mapped_column(String, nullable=True)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="utilisateurs")
+    id = db.Column(db.Integer, primary_key=True)
+    nom_utilisateur = db.Column(db.String(150), nullable=False)
+    email = db.Column(db.String(150))
+    mot_de_passe = db.Column(db.String(255), nullable=False) # Hash bcrypt/scrypt
+    role = db.Column(db.String(50), default='utilisateur')
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+
+# ============================================================
+# 2. GESTION DU MATÉRIEL (Objets & Kits)
+# ============================================================
 
 class Armoire(db.Model):
     __tablename__ = 'armoires'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nom: Mapped[str] = mapped_column(String, nullable=False)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="armoires")
-    
-    objets: Mapped[list["Objet"]] = relationship(back_populates="armoire")
-
-class Budget(db.Model):
-    __tablename__ = 'budgets'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    annee: Mapped[int] = mapped_column(Integer, nullable=False)
-    montant_initial: Mapped[float] = mapped_column(Float, nullable=False)
-    cloture: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="budgets")
-    
-    depenses: Mapped[List["Depense"]] = relationship(back_populates="budget", cascade="all, delete-orphan")
-    __table_args__ = (UniqueConstraint('annee', 'etablissement_id', name='_annee_etablissement_uc'),)
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    objets = db.relationship('Objet', back_populates='armoire')
 
 class Categorie(db.Model):
     __tablename__ = 'categories'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nom: Mapped[str] = mapped_column(String, nullable=False)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="categories")
-    
-    objets: Mapped[list["Objet"]] = relationship(back_populates="categorie")
-
-class Fournisseur(db.Model):
-    __tablename__ = 'fournisseurs'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nom: Mapped[str] = mapped_column(String, nullable=False)
-    site_web: Mapped[str] = mapped_column(String, nullable=True)
-    logo: Mapped[str] = mapped_column(String, nullable=True)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="fournisseurs")
-    
-    depenses: Mapped[List["Depense"]] = relationship(back_populates="fournisseur")
-
-class Depense(db.Model):
-    __tablename__ = 'depenses'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    budget_id: Mapped[int] = mapped_column(Integer, ForeignKey('budgets.id'), nullable=False)
-    fournisseur_id: Mapped[int] = mapped_column(Integer, ForeignKey('fournisseurs.id'), nullable=True)
-    contenu: Mapped[str] = mapped_column(Text, nullable=False)
-    montant: Mapped[float] = mapped_column(Float, nullable=False)
-    date_depense: Mapped[date] = mapped_column(Date, nullable=False)
-    est_bon_achat: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="depenses")
-    
-    budget: Mapped["Budget"] = relationship(back_populates="depenses")
-    fournisseur: Mapped["Fournisseur"] = relationship(back_populates="depenses")
-
-class Echeance(db.Model):
-    __tablename__ = 'echeances'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    intitule: Mapped[str] = mapped_column(Text, nullable=False)
-    date_echeance: Mapped[date] = mapped_column(Date, nullable=False)
-    details: Mapped[str] = mapped_column(Text, nullable=True)
-    traite: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="echeances")
-
-class Kit(db.Model):
-    __tablename__ = 'kits'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nom: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="kits")
-    
-    objets_assoc: Mapped[List["KitObjet"]] = relationship(back_populates="kit", cascade="all, delete-orphan")
-    __table_args__ = (UniqueConstraint('nom', 'etablissement_id', name='_nom_kit_etablissement_uc'),)
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    objets = db.relationship('Objet', back_populates='categorie')
 
 class Objet(db.Model):
     __tablename__ = 'objets'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    nom: Mapped[str] = mapped_column(String, nullable=False)
-    quantite_physique: Mapped[int] = mapped_column(Integer, nullable=False)
-    seuil: Mapped[int] = mapped_column(Integer, nullable=False)
-    armoire_id: Mapped[int] = mapped_column(Integer, ForeignKey('armoires.id'), nullable=False)
-    categorie_id: Mapped[int] = mapped_column(Integer, ForeignKey('categories.id'), nullable=False)
-    en_commande: Mapped[int] = mapped_column(Integer, default=0)
-    date_peremption: Mapped[str] = mapped_column(String, nullable=True)
-    traite: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    image_url: Mapped[str] = mapped_column(String, nullable=True)
-    fds_url: Mapped[str] = mapped_column(String, nullable=True)
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    quantite_physique = db.Column(db.Integer, default=0)
+    seuil = db.Column(db.Integer, default=0)
+    date_peremption = db.Column(db.Date, nullable=True)
+    image_url = db.Column(db.String(255), nullable=True)
+    fds_url = db.Column(db.String(255), nullable=True)
     
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="objets")
+    # FK
+    armoire_id = db.Column(db.Integer, db.ForeignKey('armoires.id'))
+    categorie_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
     
-    armoire: Mapped["Armoire"] = relationship(back_populates="objets")
-    categorie: Mapped["Categorie"] = relationship(back_populates="objets")
-    kits_assoc: Mapped[List["KitObjet"]] = relationship(back_populates="objet", cascade="all, delete-orphan")
+    # Relations
+    armoire = db.relationship('Armoire', back_populates='objets')
+    categorie = db.relationship('Categorie', back_populates='objets')
+    
+    # Champs de gestion
+    en_commande = db.Column(db.Integer, default=0) 
+    traite = db.Column(db.Integer, default=0)
 
-class Historique(db.Model):
-    __tablename__ = 'historique'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    objet_id: Mapped[int] = mapped_column(Integer, ForeignKey('objets.id', ondelete='CASCADE'), nullable=False)
-    utilisateur_id: Mapped[int] = mapped_column(Integer, ForeignKey('utilisateurs.id', ondelete='CASCADE'), nullable=False)
-    action: Mapped[str] = mapped_column(String, nullable=False)
-    details: Mapped[str] = mapped_column(Text, nullable=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    __table_args__ = (
+        db.Index('idx_objets_etablissement_categorie', 'etablissement_id', 'categorie_id'),
+    )
+
+class Kit(db.Model):
+    __tablename__ = 'kits'
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
     
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="historiques")
-    
-    objet: Mapped["Objet"] = relationship()
-    utilisateur: Mapped["Utilisateur"] = relationship()
+    # Relation vers la table de liaison
+    objets_assoc = db.relationship("KitObjet", back_populates="kit", cascade="all, delete-orphan")
 
 class KitObjet(db.Model):
-    __tablename__ = 'kit_objets'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    kit_id: Mapped[int] = mapped_column(Integer, ForeignKey('kits.id', ondelete='CASCADE'), nullable=False)
-    objet_id: Mapped[int] = mapped_column(Integer, ForeignKey('objets.id', ondelete='CASCADE'), nullable=False)
-    quantite: Mapped[int] = mapped_column(Integer, nullable=False)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="kit_objets")
-    
-    kit: Mapped["Kit"] = relationship(back_populates="objets_assoc")
-    objet: Mapped["Objet"] = relationship(back_populates="kits_assoc")
+    """Table de liaison Kit <-> Objet (kit_composants)"""
+    __tablename__ = 'kit_composants'
 
-class Parametre(db.Model):
-    __tablename__ = 'parametres'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    cle: Mapped[str] = mapped_column(String, nullable=False)
-    valeur: Mapped[str] = mapped_column(String, nullable=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="parametres")
+    # Clés étrangères
+    kit_id = db.Column(db.Integer, db.ForeignKey('kits.id', ondelete='CASCADE'), nullable=False)
+    objet_id = db.Column(db.Integer, db.ForeignKey('objets.id', ondelete='RESTRICT'), nullable=False)
+    
+    # Données
+    quantite = db.Column(db.Integer, nullable=False)
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+    
+    # SaaS
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+
+    # Relations
+    kit = db.relationship("Kit", back_populates="objets_assoc")
+    objet = db.relationship("Objet")
+
+    __table_args__ = (
+        db.UniqueConstraint('kit_id', 'objet_id', name='_kit_objet_uc'),
+        db.CheckConstraint('quantite > 0', name='check_quantite_positive'),
+        db.Index('idx_kit_composants_kit', 'kit_id'),
+        db.Index('idx_kit_composants_objet', 'objet_id'),
+    )
+
+# ============================================================
+# 3. SYSTÈME DE RÉSERVATION & PANIER (NOUVEAU)
+# ============================================================
+
+class Panier(db.Model):
+    __tablename__ = 'paniers'
+    
+    # UUID stocké en String(36) pour compatibilité maximale (SQLite/Postgres)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id_utilisateur = db.Column(db.Integer, db.ForeignKey('utilisateurs.id', ondelete='CASCADE'), nullable=False)
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+    date_expiration = db.Column(db.DateTime(timezone=True), nullable=False)
+    statut = db.Column(db.String(20), default='actif') # actif, validé, expiré
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+
+    items = db.relationship("PanierItem", back_populates="panier", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        db.Index('idx_paniers_utilisateur', 'id_utilisateur'),
+        db.Index('idx_paniers_expiration', 'date_expiration'),
+    )
+
+class PanierItem(db.Model):
+    __tablename__ = 'panier_items'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id_panier = db.Column(db.String(36), db.ForeignKey('paniers.id', ondelete='CASCADE'), nullable=False)
+    
+    type = db.Column(db.String(10), nullable=False) # 'objet' ou 'kit'
+    id_item = db.Column(db.Integer, nullable=False) # ID de l'objet ou du kit
+    quantite = db.Column(db.Integer, nullable=False)
+    
+    # Créneau
+    date_reservation = db.Column(db.Date, nullable=False)
+    heure_debut = db.Column(db.String(5), nullable=False)
+    heure_fin = db.Column(db.String(5), nullable=False)
+    
+    date_ajout = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+
+    panier = db.relationship("Panier", back_populates="items")
+    
+    __table_args__ = (
+        db.CheckConstraint('quantite > 0', name='check_panier_qte_positive'),
+        db.Index('idx_panier_items_panier', 'id_panier'),
+    )
 
 class Reservation(db.Model):
     __tablename__ = 'reservations'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    objet_id: Mapped[int] = mapped_column(Integer, ForeignKey('objets.id'), nullable=False)
-    utilisateur_id: Mapped[int] = mapped_column(Integer, ForeignKey('utilisateurs.id'), nullable=False)
-    quantite_reservee: Mapped[int] = mapped_column(Integer, nullable=False)
-    debut_reservation: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    fin_reservation: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    groupe_id: Mapped[str] = mapped_column(String, nullable=True)
-    kit_id: Mapped[int] = mapped_column(Integer, ForeignKey('kits.id'), nullable=True)
+    id = db.Column(db.Integer, primary_key=True)
     
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="reservations")
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
     
-    objet: Mapped["Objet"] = relationship()
-    kit: Mapped["Kit"] = relationship()
-    utilisateur: Mapped["Utilisateur"] = relationship()
+    # Quoi (Objet OU Kit) - XOR Logic
+    objet_id = db.Column(db.Integer, db.ForeignKey('objets.id'), nullable=True)
+    kit_id = db.Column(db.Integer, db.ForeignKey('kits.id'), nullable=True)
+    
+    # Détails
+    quantite_reservee = db.Column(db.Integer, nullable=False)
+    debut_reservation = db.Column(db.DateTime, nullable=False)
+    fin_reservation = db.Column(db.DateTime, nullable=False)
+    
+    # Groupement et Statut
+    groupe_id = db.Column(db.String(36), nullable=False, index=True)
+    statut = db.Column(db.String(20), default='confirmée') # en_attente, confirmée, annulée
+    
+    # Traçabilité
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+    date_modification = db.Column(db.DateTime(timezone=True), onupdate=func.current_timestamp())
+
+    # Relations
+    objet = db.relationship('Objet')
+    kit = db.relationship('Kit')
+    utilisateur = db.relationship('Utilisateur')
+
+    __table_args__ = (
+        # Contrainte XOR : Soit objet_id, soit kit_id, mais pas les deux (ni aucun)
+        db.CheckConstraint(
+            '(objet_id IS NOT NULL AND kit_id IS NULL) OR (objet_id IS NULL AND kit_id IS NOT NULL)',
+            name='check_objet_ou_kit'
+        ),
+        db.Index('idx_reservations_groupe', 'groupe_id'),
+        db.Index('idx_reservations_statut', 'statut'),
+        db.Index('idx_reservations_dates', 'debut_reservation', 'fin_reservation'),
+        db.Index('idx_reservations_etablissement_statut', 'etablissement_id', 'statut'),
+    )
+
+# ============================================================
+# 4. AUDIT & LOGS
+# ============================================================
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_log'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    timestamp = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+    id_utilisateur = db.Column(db.Integer, db.ForeignKey('utilisateurs.id', ondelete='SET NULL'), nullable=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    
+    action = db.Column(db.String(50), nullable=False)
+    table_cible = db.Column(db.String(50), nullable=False)
+    id_enregistrement = db.Column(db.String(50), nullable=True)
+    
+    details = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    
+    utilisateur = db.relationship("Utilisateur")
+
+    __table_args__ = (
+        db.Index('idx_audit_timestamp', 'timestamp'),
+        db.Index('idx_audit_utilisateur', 'id_utilisateur'),
+    )
+
+class Historique(db.Model):
+    """
+    DEPRECATED: Utilisez AuditLog pour les nouveaux enregistrements.
+    Cette table est conservée pour les données historiques existantes.
+    """
+    __tablename__ = 'historique'
+    id = db.Column(db.Integer, primary_key=True)
+    objet_id = db.Column(db.Integer, nullable=True)
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'))
+    action = db.Column(db.String(50), nullable=False)
+    details = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime, default=datetime.now)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    utilisateur = db.relationship('Utilisateur')
+
+# ============================================================
+# 5. AUTRES (Budget, Paramètres...)
+# ============================================================
+
+class Parametre(db.Model):
+    __tablename__ = 'parametres'
+    id = db.Column(db.Integer, primary_key=True)
+    cle = db.Column(db.String(50), nullable=False)
+    valeur = db.Column(db.Text, nullable=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+
+class Budget(db.Model):
+    __tablename__ = 'budgets'
+    id = db.Column(db.Integer, primary_key=True)
+    annee = db.Column(db.Integer, nullable=False)
+    montant_initial = db.Column(db.Float, default=0.0)
+    cloture = db.Column(db.Boolean, default=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    depenses = db.relationship('Depense', backref='budget', lazy=True, cascade="all, delete-orphan")
+
+class Depense(db.Model):
+    __tablename__ = 'depenses'
+    id = db.Column(db.Integer, primary_key=True)
+    date_depense = db.Column(db.Date, nullable=False)
+    contenu = db.Column(db.String(200))
+    montant = db.Column(db.Float, nullable=False)
+    est_bon_achat = db.Column(db.Boolean, default=False)
+    fournisseur_id = db.Column(db.Integer, db.ForeignKey('fournisseurs.id'), nullable=True)
+    budget_id = db.Column(db.Integer, db.ForeignKey('budgets.id'), nullable=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    fournisseur = db.relationship('Fournisseur', back_populates='depenses')
+
+class Fournisseur(db.Model):
+    __tablename__ = 'fournisseurs'
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    site_web = db.Column(db.String(255))
+    logo = db.Column(db.String(255))
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    depenses = db.relationship('Depense', back_populates='fournisseur')
+
+class Echeance(db.Model):
+    __tablename__ = 'echeances'
+    id = db.Column(db.Integer, primary_key=True)
+    intitule = db.Column(db.String(100), nullable=False)
+    date_echeance = db.Column(db.Date, nullable=False)
+    details = db.Column(db.Text)
+    traite = db.Column(db.Integer, default=0)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
 
 class Suggestion(db.Model):
     __tablename__ = 'suggestions'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    objet_id: Mapped[int] = mapped_column(Integer, ForeignKey('objets.id'), nullable=False)
-    utilisateur_id: Mapped[int] = mapped_column(Integer, ForeignKey('utilisateurs.id'), nullable=False)
-    quantite: Mapped[int] = mapped_column(Integer, nullable=False)
-    commentaire: Mapped[str] = mapped_column(Text, nullable=True)
-    statut: Mapped[str] = mapped_column(String, default='En attente')
-    date_demande: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    
-    etablissement_id: Mapped[int] = mapped_column(ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="suggestions")
-    
-    objet: Mapped["Objet"] = relationship()
-    utilisateur: Mapped["Utilisateur"] = relationship()
-
-class AuditLog(db.Model):
-    __tablename__ = 'audit_logs'
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    user_id_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    ip_address_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    action: Mapped[str] = mapped_column(String(50), nullable=False)
-    details: Mapped[str] = mapped_column(Text, nullable=True)
-    
-    etablissement_id: Mapped[int] = mapped_column(Integer, ForeignKey('etablissements.id'), nullable=False)
-    etablissement: Mapped["Etablissement"] = relationship(back_populates="audit_logs")
-
-# --- FONCTIONS D'INITIALISATION ---
-def init_app(app):
-    db.init_app(app)
-    app.cli.add_command(init_db_command)
-
-def init_db():
-    db.create_all()
-
-@click.command('init-db')
-@with_appcontext
-def init_db_command():
-    init_db()
-    click.echo('Base de données initialisée avec le schéma final.')
+    id = db.Column(db.Integer, primary_key=True)
+    objet_id = db.Column(db.Integer, db.ForeignKey('objets.id'), nullable=False)
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
+    quantite = db.Column(db.Integer, default=1)
+    commentaire = db.Column(db.Text)
+    date_demande = db.Column(db.DateTime, default=datetime.now)
+    statut = db.Column(db.String(20), default='En attente')
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    objet = db.relationship('Objet')
+    utilisateur = db.relationship('Utilisateur')

@@ -2,19 +2,22 @@
 # FICHIER : views/inventaire.py
 # ============================================================
 import math
-import os # <--- AJOUTÉ
+import os
 from datetime import datetime, timedelta
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, session, jsonify, current_app) # <--- current_app AJOUTÉ
-from werkzeug.utils import secure_filename # <--- AJOUTÉ
+                   flash, session, jsonify, current_app)
+from werkzeug.utils import secure_filename
 from sqlalchemy import func, desc, or_
 from sqlalchemy.orm import joinedload
 
-# NOUVEAUX IMPORTS
+# IMPORTS DB
 from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget, Depense, Fournisseur, Suggestion
-# AJOUT DE allowed_file
+
+# IMPORTS UTILS
 from utils import login_required, admin_required, limit_objets_required, allowed_file
-from .api import get_paginated_objets
+
+# --- CORRECTION ICI : On importe le Service au lieu de la fonction API ---
+from services.inventory_service import InventoryService, InventoryServiceError
 
 inventaire_bp = Blueprint(
     'inventaire', 
@@ -28,6 +31,7 @@ inventaire_bp = Blueprint(
 @inventaire_bp.route("/")
 @login_required
 def index():
+    # --- LOGIQUE DASHBOARD (Conservée) ---
     etablissement_id = session.get('etablissement_id')
     user_id = session.get('user_id')
     if not etablissement_id:
@@ -36,7 +40,6 @@ def index():
     
     dashboard_data = {}
 
-    # --- Widget Statistiques (déjà fonctionnel) ---
     if session.get('user_role') == 'admin':
         dashboard_data['stats'] = {
             'total_objets': db.session.query(Objet).filter_by(etablissement_id=etablissement_id).count(),
@@ -47,7 +50,6 @@ def index():
             ).count()
         }
 
-    # --- Widget Nouveautés & Contact (déjà fonctionnel) ---
     admin_user = db.session.execute(db.select(Utilisateur).filter_by(role='admin', etablissement_id=etablissement_id)).scalar_one_or_none()
     dashboard_data['admin_contact'] = admin_user.email if admin_user and admin_user.email else (admin_user.nom_utilisateur if admin_user else "Non défini")
     
@@ -55,7 +57,6 @@ def index():
     objets_recents = db.session.execute(db.select(Objet.id, Objet.nom).join(Historique, Objet.id == Historique.objet_id).filter(Objet.etablissement_id == etablissement_id, Historique.timestamp >= vingt_quatre_heures_avant, or_(Historique.action == 'Création', (Historique.action == 'Modification') & (Historique.details.like('%Quantité%')))).group_by(Objet.id, Objet.nom).order_by(db.desc(func.max(Historique.timestamp))).limit(10)).mappings().all()
     dashboard_data['objets_recents'] = objets_recents
 
-    # --- DÉBUT DE LA NOUVELLE LOGIQUE POUR LES ÉCHÉANCES ---
     date_aujourdhui = datetime.now().date()
     date_limite = date_aujourdhui + timedelta(days=30)
 
@@ -80,9 +81,7 @@ def index():
             'jours_restants': jours_restants
         })
     dashboard_data['prochaines_echeances'] = prochaines_echeances_calculees
-    # --- FIN DE LA NOUVELLE LOGIQUE ---
 
-    # --- DÉBUT DE LA NOUVELLE LOGIQUE POUR LES RÉSERVATIONS ---
     now = datetime.now()
     
     reservations = db.session.execute(
@@ -102,10 +101,7 @@ def index():
     ).mappings().all()
     
     dashboard_data['reservations'] = reservations
-    # --- FIN DE LA NOUVELLE LOGIQUE ---
 
-    # --- DÉBUT DE LA NOUVELLE LOGIQUE POUR LE BUDGET ---
-    now = datetime.now()
     annee_scolaire_actuelle = now.year if now.month >= 9 else now.year - 1
 
     budget_actuel = db.session.execute(
@@ -125,10 +121,7 @@ def index():
         solde_actuel = budget_actuel.montant_initial - total_depenses
 
     dashboard_data['solde_budget'] = solde_actuel
-    # --- FIN DE LA NOUVELLE LOGIQUE ---
 
-    # --- DÉBUT DE LA NOUVELLE LOGIQUE POUR L'HISTORIQUE ---
-    # 1. On récupère les 5 dernières réservations de l'utilisateur
     recent_reservations = db.session.execute(
         db.select(
             Reservation.groupe_id,
@@ -140,7 +133,6 @@ def index():
         .limit(5)
     ).mappings().all()
 
-    # 2. On récupère les 5 dernières autres actions de l'utilisateur
     other_actions = db.session.execute(
         db.select(
             Historique.action,
@@ -158,23 +150,16 @@ def index():
         .limit(5)
     ).mappings().all()
 
-    # 3. On fusionne les deux listes et on les trie
     all_actions = list(recent_reservations) + list(other_actions)
-    # On trie par la clé 'timestamp', du plus récent au plus ancien
     all_actions.sort(key=lambda x: x['timestamp'], reverse=True)
-
-    # On ne garde que les 5 actions les plus récentes au total
     top_5_actions = all_actions[:5]
 
-    # 4. On enrichit les données pour l'affichage (logique conservée)
     historique_enrichi = []
     for action in top_5_actions:
         entry = {'timestamp': action['timestamp']}
         if 'groupe_id' in action: 
             entry['type'] = 'reservation'
             entry['action'] = 'Réservation'
-            # NOTE : La logique pour récupérer le contenu des kits et objets manuels
-            # est complexe et sera réactivée dans un second temps.
             entry['kits'] = []
             entry['objets_manuels'] = ["Détails en cours de migration..."]
         else: 
@@ -194,8 +179,6 @@ def index():
     
     dashboard_data['fournisseurs'] = fournisseurs
 
-    start_tour = db.session.query(Armoire).filter_by(etablissement_id=etablissement_id).count() == 0
-    
     suggestions_dashboard = db.session.execute(
         db.select(Suggestion)
         .options(joinedload(Suggestion.objet), joinedload(Suggestion.utilisateur))
@@ -214,39 +197,61 @@ def index():
 @inventaire_bp.route("/inventaire")
 @login_required
 def inventaire():
+    """
+    Affiche l'inventaire principal.
+    CORRIGÉ : Utilise InventoryService.
+    """
     etablissement_id = session['etablissement_id']
+    service = InventoryService(etablissement_id)
+
+    # Paramètres
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
-    search_query = request.args.get('q', None)
-    armoire_id = request.args.get('armoire', None)
-    categorie_id = request.args.get('categorie', None)
-    etat = request.args.get('etat', None)
-
-    objets, total_pages = get_paginated_objets(
-        etablissement_id, page, sort_by, direction, search_query, armoire_id, categorie_id, etat
-    )
-
-    # On construit le VRAI dictionnaire de pagination
-    pagination = {
-        'page': page,
-        'total_pages': total_pages,
-        'endpoint': 'inventaire.inventaire' # <-- L'attribut manquant est maintenant là !
-    }
     
-    armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)).scalars().all()
-    categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)).scalars().all()
+    
+    filters = {
+        'q': request.args.get('q', None),
+        'armoire_id': request.args.get('armoire', type=int),
+        'categorie_id': request.args.get('categorie', type=int),
+        'etat': request.args.get('etat', None)
+    }
 
-    return render_template("inventaire.html",
-                           objets=objets,
-                           armoires=armoires,
-                           categories=categories,
-                           pagination=pagination,
-                           date_actuelle=datetime.now(),
-                           now=datetime.now,
-                           sort_by=sort_by,
-                           direction=direction,
-                           is_general_inventory=True)
+    try:
+        # Appel Service (Retourne un DTO)
+        dto = service.get_paginated_inventory(page, sort_by, direction, filters)
+
+        # Construction du dict pagination pour le template
+        pagination = {
+            'page': dto.current_page,
+            'total_pages': dto.total_pages,
+            'endpoint': 'inventaire.inventaire'
+        }
+        
+        # Listes pour les filtres (Dropdowns)
+        armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)).scalars().all()
+        categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)).scalars().all()
+        armoire_id = request.args.get('armoire', type=int)
+        categorie_id = request.args.get('categorie', type=int)
+        
+        return render_template("inventaire.html",
+                            objets=dto.items, # Liste de dicts
+                            armoires=armoires,
+                            categories=categories,
+                            pagination=pagination,
+                            date_actuelle=datetime.now(),
+                            now=datetime.now,
+                            sort_by=sort_by,
+                            direction=direction,
+                            is_general_inventory=True,
+                            armoire_id=armoire_id,
+                            categorie_id=categorie_id
+                            )
+                            
+    except Exception as e:
+        current_app.logger.error(f"Erreur inventaire: {e}")
+        flash("Erreur lors du chargement de l'inventaire.", "error")
+        return redirect(url_for('inventaire.index'))
 
 # ============================================================
 # ROUTES DE GESTION DES OBJETS (CRUD)
@@ -256,33 +261,25 @@ def inventaire():
 @limit_objets_required
 def ajouter_objet():
     etablissement_id = session['etablissement_id']
+    user_id = session.get('user_id')
+
     try:
-        # 1. Gestion de l'image (Upload Physique)
         image_path_db = None
-        
-        # On vérifie si un fichier a été envoyé
         if 'image' in request.files:
             file = request.files['image']
             if file and file.filename != '':
                 if allowed_file(file.filename):
                     filename = secure_filename(file.filename)
-                    # Ajout d'un timestamp pour éviter les conflits de noms
                     ts = datetime.now().strftime("%Y%m%d%H%M%S")
                     unique_filename = f"{ts}_{filename}"
-                    
-                    # Chemin de sauvegarde (Dossier static/uploads)
                     upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
                     if not os.path.exists(upload_folder):
                         os.makedirs(upload_folder)
-                        
                     file.save(os.path.join(upload_folder, unique_filename))
-                    
-                    # Ce qu'on stocke en base (chemin relatif pour le HTML)
                     image_path_db = f"uploads/{unique_filename}"
                 else:
                     flash("Format d'image non autorisé (JPG, PNG uniquement).", "warning")
 
-        # Fallback : Si pas d'upload, on regarde si une URL externe a été fournie
         if not image_path_db:
             image_path_db = request.form.get("image_url", "").strip() or None
 
@@ -293,14 +290,28 @@ def ajouter_objet():
             armoire_id=int(request.form.get("armoire_id")),
             categorie_id=int(request.form.get("categorie_id")),
             date_peremption=request.form.get("date_peremption") or None,
-            image_url=image_path_db, # <--- On utilise la variable calculée
+            image_url=image_path_db,
             fds_url=request.form.get("fds_url", "").strip() or None,
             etablissement_id=etablissement_id
         )
         db.session.add(new_objet)
+        db.session.flush() 
+
+        hist = Historique(
+            objet_id=new_objet.id,
+            utilisateur_id=user_id,
+            action="Création",
+            details=f"Ajout initial (Qté: {new_objet.quantite_physique})",
+            etablissement_id=etablissement_id,
+            timestamp=datetime.now()
+        )
+        db.session.add(hist)
+
         db.session.commit()
         flash(f"L'objet '{new_objet.nom}' a été ajouté avec succès !", "success")
+        
     except (ValueError, TypeError):
+        db.session.rollback()
         flash("Données invalides. Veuillez vérifier les champs numériques.", "error")
     except Exception as e:
         db.session.rollback()
@@ -310,9 +321,6 @@ def ajouter_objet():
     return redirect(request.referrer or url_for('inventaire.index'))
 
 
-# ============================================================
-# MODIFICATION : modifier_objet (Gestion Upload)
-# ============================================================
 @inventaire_bp.route("/modifier_objet/<int:id_objet>", methods=["POST"])
 @login_required
 def modifier_objet(id_objet):
@@ -321,8 +329,18 @@ def modifier_objet(id_objet):
         flash("Objet non trouvé ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
+    user_id = session.get('user_id')
+    etablissement_id = session['etablissement_id']
+
     try:
-        # 1. Gestion de l'image (Upload Physique)
+        anciens = {
+            'nom': objet.nom,
+            'quantite': objet.quantite_physique,
+            'seuil': objet.seuil,
+            'armoire': objet.armoire_id,
+            'categorie': objet.categorie_id
+        }
+
         if 'image' in request.files:
             file = request.files['image']
             if file and file.filename != '':
@@ -330,20 +348,14 @@ def modifier_objet(id_objet):
                     filename = secure_filename(file.filename)
                     ts = datetime.now().strftime("%Y%m%d%H%M%S")
                     unique_filename = f"{ts}_{filename}"
-                    
                     upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
                     if not os.path.exists(upload_folder):
                         os.makedirs(upload_folder)
-                        
                     file.save(os.path.join(upload_folder, unique_filename))
-                    
-                    # Mise à jour de l'objet avec le nouveau chemin
                     objet.image_url = f"uploads/{unique_filename}"
                 else:
                     flash("Format d'image non autorisé.", "warning")
         
-        # Si l'utilisateur a rempli le champ URL texte, cela écrase l'image précédente
-        # (Optionnel : tu peux décider de la priorité ici)
         url_externe = request.form.get("image_url", "").strip()
         if url_externe:
             objet.image_url = url_externe
@@ -356,14 +368,40 @@ def modifier_objet(id_objet):
         objet.date_peremption = request.form.get("date_peremption") or None
         objet.fds_url = request.form.get("fds_url", "").strip() or None
         
+        details_modif = []
+        if anciens['quantite'] != objet.quantite_physique:
+            diff = objet.quantite_physique - anciens['quantite']
+            signe = "+" if diff > 0 else ""
+            details_modif.append(f"Stock: {anciens['quantite']} ➝ {objet.quantite_physique} ({signe}{diff})")
+            
+        if anciens['nom'] != objet.nom:
+            details_modif.append(f"Nom changé")
+            
+        if anciens['armoire'] != objet.armoire_id:
+            details_modif.append("Déplacé (Armoire)")
+
+        if details_modif or anciens['seuil'] != objet.seuil:
+            msg = ", ".join(details_modif) if details_modif else "Mise à jour des détails"
+            hist = Historique(
+                objet_id=objet.id,
+                utilisateur_id=user_id,
+                action="Modification",
+                details=msg,
+                etablissement_id=etablissement_id,
+                timestamp=datetime.now()
+            )
+            db.session.add(hist)
+
         db.session.commit()
         flash(f"L'objet '{objet.nom}' a été mis à jour avec succès !", "success")
+        
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erreur modif objet: {e}")
         flash(f"Une erreur est survenue.", "error")
 
     return redirect(request.referrer or url_for('inventaire.index'))
+
 
 @inventaire_bp.route("/objet/supprimer/<int:id_objet>", methods=["POST"])
 @admin_required
@@ -375,23 +413,32 @@ def supprimer_objet(id_objet):
 
     try:
         nom_objet = objet.nom
+        hist = Historique(
+            objet_id=None, 
+            utilisateur_id=session.get('user_id'),
+            action="Suppression",
+            details=f"Suppression définitive de : {nom_objet}",
+            etablissement_id=session['etablissement_id'],
+            timestamp=datetime.now()
+        )
+        db.session.add(hist)
+        
         db.session.delete(objet)
         db.session.commit()
         flash(f"L'objet '{nom_objet}' a été supprimé.", "success")
+        
     except Exception as e:
         db.session.rollback()
-        flash(f"Une erreur est survenue : {e}", "error")
+        current_app.logger.error(f"Erreur suppression objet: {e}")
+        flash(f"Une erreur est survenue lors de la suppression.", "error")
 
     return redirect(request.referrer or url_for('inventaire.inventaire'))
-
 
 @inventaire_bp.route("/objet/<int:objet_id>")
 @login_required
 def voir_objet(objet_id):
     etablissement_id = session['etablissement_id']
     
-    # 1. Récupération de l'objet
-    # Ici joinedload fonctionne car 'armoire' et 'categorie' sont définis dans class Objet
     objet = db.session.execute(
         db.select(Objet)
         .options(joinedload(Objet.armoire), joinedload(Objet.categorie))
@@ -402,7 +449,6 @@ def voir_objet(objet_id):
         flash("Objet non trouvé ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # 2. Calcul de la quantité disponible
     now = datetime.now()
     total_reserve = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
         Reservation.objet_id == objet.id,
@@ -412,8 +458,6 @@ def voir_objet(objet_id):
     
     objet.quantite_disponible = objet.quantite_physique - total_reserve
 
-    # 3. Récupération de l'historique (CORRECTION MAJEURE)
-    # Comme il n'y a pas de relationship dans Historique, on joint manuellement sur les IDs
     results = db.session.execute(
         db.select(Historique, Utilisateur)
         .outerjoin(Utilisateur, Historique.utilisateur_id == Utilisateur.id)
@@ -423,15 +467,11 @@ def voir_objet(objet_id):
         .limit(20)
     ).all()
 
-    # On prépare une liste propre pour le template
     historique = []
     for h, u in results:
-        # On ajoute manuellement le nom de l'utilisateur à l'objet historique
-        # pour que {{ entree.nom_utilisateur }} fonctionne dans le HTML
         h.nom_utilisateur = u.nom_utilisateur if u else "Utilisateur supprimé"
         historique.append(h)
 
-    # 4. Listes pour la modale de modification
     armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
     categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
 
@@ -448,44 +488,42 @@ def voir_objet(objet_id):
 @inventaire_bp.route("/armoire/<int:armoire_id>")
 @login_required
 def voir_armoire(armoire_id):
+    """
+    Affiche le contenu d'une armoire.
+    CORRIGÉ : Utilise InventoryService.
+    """
     etablissement_id = session['etablissement_id']
+    service = InventoryService(etablissement_id)
+
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
     
-    # 1. Récupération de l'armoire
     armoire = db.session.get(Armoire, armoire_id)
     if not armoire or armoire.etablissement_id != etablissement_id:
         flash("Armoire non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # 2. Récupération des objets paginés
-    objets, total_pages = get_paginated_objets(
-        etablissement_id=etablissement_id, 
-        page=page, 
-        sort_by=sort_by, 
-        direction=direction,
-        armoire_id=armoire_id
-    )
+    # Appel Service avec filtre armoire
+    filters = {'armoire_id': armoire_id}
+    dto = service.get_paginated_inventory(page, sort_by, direction, filters)
 
     pagination = {
-        'page': page,
-        'total_pages': total_pages,
+        'page': dto.current_page,
+        'total_pages': dto.total_pages,
         'endpoint': 'inventaire.voir_armoire',
         'armoire_id': armoire_id
     }
 
-    # 3. Récupérer la liste des autres armoires pour la liste déroulante (Bulk action)
     autres_armoires = db.session.execute(
         db.select(Armoire)
         .filter(
             Armoire.etablissement_id == etablissement_id,
-            Armoire.id != armoire_id  # On exclut l'armoire actuelle
+            Armoire.id != armoire_id
         )
         .order_by(Armoire.nom)
     ).scalars().all()
 
-    # 4. DÉFINITION DU BREADCRUMB (L'ajout manquant)
     breadcrumbs = [
         {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
         {'text': 'Gestion des Armoires', 'url': url_for('main.gestion_armoires')},
@@ -494,13 +532,16 @@ def voir_armoire(armoire_id):
 
     return render_template("armoire.html",
                            armoire=armoire,
-                           objets=objets,
+                           objets=dto.items, # DTO
                            pagination=pagination,
                            sort_by=sort_by,
                            direction=direction,
                            autres_armoires=autres_armoires,
-                           breadcrumbs=breadcrumbs, # <--- On passe la variable au template
-                           now=datetime.now())
+                           breadcrumbs=breadcrumbs,
+                           now=datetime.now(),
+                           armoire_id=armoire_id,
+                           categorie_id=None
+                           )
 
 #==============================================================================
 #  ROUTE AFFICHAGE CATEGORIES
@@ -508,44 +549,42 @@ def voir_armoire(armoire_id):
 @inventaire_bp.route("/categorie/<int:categorie_id>")
 @login_required
 def voir_categorie(categorie_id):
+    """
+    Affiche le contenu d'une catégorie.
+    CORRIGÉ : Utilise InventoryService.
+    """
     etablissement_id = session['etablissement_id']
+    service = InventoryService(etablissement_id)
+
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
 
-    # 1. Récupération de la catégorie
     categorie = db.session.get(Categorie, categorie_id)
     if not categorie or categorie.etablissement_id != etablissement_id:
         flash("Catégorie non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # 2. Récupération des objets paginés
-    objets, total_pages = get_paginated_objets(
-        etablissement_id=etablissement_id, 
-        page=page, 
-        sort_by=sort_by, 
-        direction=direction,
-        categorie_id=categorie_id
-    )
+    # Appel Service avec filtre catégorie
+    filters = {'categorie_id': categorie_id}
+    dto = service.get_paginated_inventory(page, sort_by, direction, filters)
 
     pagination = {
-        'page': page,
-        'total_pages': total_pages,
+        'page': dto.current_page,
+        'total_pages': dto.total_pages,
         'endpoint': 'inventaire.voir_categorie',
         'categorie_id': categorie_id
     }
 
-    # 3. Récupérer la liste des autres catégories pour la liste déroulante (Bulk action)
     categories_list = db.session.execute(
         db.select(Categorie)
         .filter(
             Categorie.etablissement_id == etablissement_id,
-            Categorie.id != categorie_id # On exclut la catégorie actuelle
+            Categorie.id != categorie_id
         )
         .order_by(Categorie.nom)
     ).scalars().all()
 
-    # 4. DÉFINITION DU BREADCRUMB (C'est ce qu'il manquait)
     breadcrumbs = [
         {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
         {'text': 'Gestion des Catégories', 'url': url_for('main.gestion_categories')},
@@ -554,13 +593,16 @@ def voir_categorie(categorie_id):
 
     return render_template("categorie.html",
                            categorie=categorie,
-                           objets=objets,
+                           objets=dto.items, # DTO
                            pagination=pagination,
                            sort_by=sort_by,
                            direction=direction,
                            categories_list=categories_list,
-                           breadcrumbs=breadcrumbs, # <--- On passe la variable au template
-                           now=datetime.now())
+                           breadcrumbs=breadcrumbs,
+                           now=datetime.now(),
+                           armoire_id=None,
+                           categorie_id=categorie_id
+                           )
                            
 #=======================================================
 # ROUTE GESTION ALERTES TRAITEES
@@ -573,12 +615,10 @@ def maj_traite(objet_id):
     
     objet = db.session.get(Objet, objet_id)
 
-    # SÉCURITÉ : On vérifie que l'objet existe et appartient bien à l'établissement
     if not objet or objet.etablissement_id != etablissement_id:
         return jsonify(success=False, error="Objet non trouvé ou accès non autorisé."), 404
 
     try:
-        # On met à jour le statut "traité"
         objet.traite = 1 if data.get("traite") else 0
         db.session.commit()
         return jsonify(success=True)
@@ -594,12 +634,10 @@ def maj_commande(objet_id):
     
     objet = db.session.get(Objet, objet_id)
 
-    # SÉCURITÉ : On vérifie que l'objet existe et appartient bien à l'établissement
     if not objet or objet.etablissement_id != etablissement_id:
         return jsonify(success=False, error="Objet non trouvé ou accès non autorisé."), 404
 
     try:
-        # On met à jour le statut "en_commande"
         objet.en_commande = 1 if data.get("en_commande") else 0
         db.session.commit()
         return jsonify(success=True)

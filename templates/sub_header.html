@@ -1,6 +1,7 @@
 <nav class="sub-nav">
     <!-- Inventaire Complet -->
-    <a href="{{ url_for('inventaire.inventaire') }}" class="sub-nav-button {% if request.endpoint == 'inventaire.inventaire' %}active{% endif %}">
+    <a href="{{ url_for('inventaire.inventaire') }}" 
+       class="sub-nav-button {% if request.endpoint and request.endpoint == 'inventaire.inventaire' %}active{% endif %}">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="sub-nav-icon bi bi-credit-card-2-front-fill" viewBox="0 0 16 16">
 		  <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2.5 1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm0 3a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm3 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm3 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm3 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z"/>
 		</svg>
@@ -8,7 +9,8 @@
     </a>
 
     <!-- Gérer les Armoires -->
-    <a href="{{ url_for('main.gestion_armoires') }}" class="sub-nav-button {% if request.endpoint == 'main.gestion_armoires' %}active{% endif %}">
+    <a href="{{ url_for('main.gestion_armoires') }}" 
+       class="sub-nav-button {% if request.endpoint and request.endpoint == 'main.gestion_armoires' %}active{% endif %}">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="sub-nav-icon bi bi-box2-fill" viewBox="0 0 16 16">
             <path d="M3.75 0a1 1 0 0 0-.8.4L.1 4.2a.5.5 0 0 0-.1.3V15a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4.5a.5.5 0 0 0-.1-.3L13.05.4a1 1 0 0 0-.8-.4zM15 4.667V5H1v-.333L1.5 4h6V1h1v3h6z"/>
         </svg>
@@ -16,7 +18,8 @@
     </a>
 
     <!-- Gérer les Catégories -->
-    <a href="{{ url_for('main.gestion_categories') }}" class="sub-nav-button {% if request.endpoint == 'main.gestion_categories' %}active{% endif %}">
+    <a href="{{ url_for('main.gestion_categories') }}" 
+       class="sub-nav-button {% if request.endpoint and request.endpoint == 'main.gestion_categories' %}active{% endif %}">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="sub-nav-icon bi bi-inboxes-fill" viewBox="0 0 16 16">
             <path d="M4.98 1a.5.5 0 0 0-.39.188L1.54 5H6a.5.5 0 0 1 .5.5 1.5 1.5 0 0 0 3 0A.5.5 0 0 1 10 5h4.46l-3.05-3.812A.5.5 0 0 0 11.02 1zM3.81.563A1.5 1.5 0 0 1 4.98 0h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .106.374l-.39 3.124A1.5 1.5 0 0 1 14.117 10H1.883A1.5 1.5 0 0 1 .394 8.686l-.39-3.124a.5.5 0 0 1 .106-.374zM.125 11.17A.5.5 0 0 1 .5 11H6a.5.5 0 0 1 .5.5 1.5 1.5 0 0 0 3 0 .5.5 0 0 1 .5-.5h5.5a.5.5 0 0 1 .496.562l-.39 3.124A1.5 1.5 0 0 1 14.117 16H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .121-.393z"/>
         </svg>
@@ -25,7 +28,8 @@
 
     <!-- Calendrier de réservation -->
     {% if session.user_id %}
-    <a href="{{ url_for('main.calendrier') }}" class="sub-nav-button {% if request.endpoint.startswith('main.calendrier') or request.endpoint.startswith('main.vue_jour') %}active{% endif %}">
+    <a href="{{ url_for('main.calendrier') }}" 
+       class="sub-nav-button {% if request.endpoint and (request.endpoint.startswith('main.calendrier') or request.endpoint.startswith('main.vue_jour')) %}active{% endif %}">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="sub-nav-icon bi bi-calendar2-week-fill" viewBox="0 0 16 16">
             <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5m9.954 3H2.545c-.3 0-.545.224-.545.5v1c0 .276.244.5.545.5h10.91c.3 0 .545-.224.545-.5v-1c0-.276-.244-.5-.546-.5M8.5 7a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm3 0a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM3 10.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5m3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/>
         </svg>

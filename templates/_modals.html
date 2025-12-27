@@ -1,7 +1,7 @@
 <!-- ================================================================= -->
 <!-- 1. MODALE DE RÉSERVATION (CALENDRIER) -->
 <!-- ================================================================= -->
-<div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="bookingModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
@@ -56,7 +56,7 @@
 <!-- ================================================================= -->
 <!-- 2. MODALE DE CONFIRMATION (RÉSERVATION) -->
 <!-- ================================================================= -->
-<div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="confirmationModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -79,7 +79,7 @@
 <!-- ================================================================= -->
 <!-- 3. MODALE DANGER (SUPPRESSION GÉNÉRIQUE) -->
 <!-- ================================================================= -->
-<div class="modal fade" id="dangerModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="dangerModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-danger">
             <div class="modal-header bg-danger text-white">
@@ -104,7 +104,7 @@
 <!-- ================================================================= -->
 <!-- 4. MODALE D'AJOUT/MODIF OBJET -->
 <!-- ================================================================= -->
-<div class="modal fade" id="addObjectModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="addObjectModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
@@ -191,7 +191,7 @@
 <!-- ================================================================= -->
 <!-- 5. MODALE DE SUGGESTION (COMMANDE) -->
 <!-- ================================================================= -->
-<div class="modal fade" id="suggestionModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="suggestionModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-warning">
             <div class="modal-header bg-warning text-dark">
@@ -215,6 +215,84 @@
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                 <button type="button" class="btn btn-warning fw-bold" id="suggestion-confirm-btn">Envoyer la suggestion</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ================================================================= -->
+<!-- 6. MODALE DE SUPPRESSION RÉSERVATION (SPÉCIFIQUE CALENDRIER) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer cette réservation ?</p>
+                <p class="text-muted small mt-2">Cette action est irréversible et remettra le stock en circulation.</p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+                <!-- L'ID ci-dessous est celui cherché par calendar-daily.js -->
+                <button type="button" class="btn btn-danger px-4" id="btnConfirmDeleteAction">
+                    <i class="bi bi-trash-fill me-2"></i>Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ================================================================= -->
+<!-- 7. MODALE AVERTISSEMENT DERNIER ITEM (Pour booking-modal.js) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="lastItemWarningModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered modal-sm"> <!-- modal-sm pour faire compact -->
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning text-dark border-0">
+                <h5 class="modal-title fs-6 fw-bold">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Attention
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="mb-2 fw-medium">Retirer ce dernier objet annulera complètement la réservation.</p>
+                <p class="text-muted small mb-0">Voulez-vous continuer ?</p>
+            </div>
+            <div class="modal-footer bg-light border-0 justify-content-center">
+                <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Non, garder</button>
+                <button type="button" class="btn btn-warning btn-sm px-3 fw-bold" id="btnConfirmLastItemDelete">
+                    Oui, supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ================================================================= -->
+<!-- 8. MODALE ACTION PANIER (Suppression Item / Vider) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="cartActionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-trash3-fill me-2"></i>Confirmation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p id="cartModalMessage" class="mb-0 fs-5">Confirmez-vous cette action ?</p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger px-4" id="btnConfirmCartAction">
+                    Confirmer
+                </button>
             </div>
         </div>
     </div>

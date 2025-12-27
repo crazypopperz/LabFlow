@@ -69,14 +69,48 @@ def gestion_categories():
 #================================================================
 #  GESTION CALENDRIER (SECTION MODIFIÉE)
 #================================================================
-@main_bp.route("/calendrier")
+@main_bp.route('/calendrier')
 @login_required
 def calendrier():
-    breadcrumbs = [
-        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
-        {'text': 'Calendrier', 'url': None}
-    ]
-    return render_template("calendrier.html", now=datetime.now(), breadcrumbs=breadcrumbs)
+    etablissement_id = session.get('etablissement_id')
+    
+    # Gestion du mois affiché (par défaut mois courant)
+    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', datetime.now().month, type=int)
+    
+    # 1. Récupération des jours avec réservations pour ce mois
+    # On groupe par jour et on compte les groupes de réservation distincts
+    start_date = datetime(year, month, 1)
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1)
+    else:
+        end_date = datetime(year, month + 1, 1)
+
+    stats_res = db.session.execute(
+        db.select(
+            func.date(Reservation.debut_reservation).label('jour'), 
+            func.count(func.distinct(Reservation.groupe_id)).label('total')
+        )
+        .filter(
+            Reservation.etablissement_id == etablissement_id,
+            Reservation.debut_reservation >= start_date,
+            Reservation.debut_reservation < end_date,
+            Reservation.statut == 'confirmée'
+        )
+        .group_by(func.date(Reservation.debut_reservation))
+    ).all()
+
+    # 2. Transformation en Dictionnaire pour accès rapide dans le template
+    # Format : {'2025-12-28': 2, '2025-12-29': 1}
+    reservations_map = {str(row.jour): row.total for row in stats_res}
+
+    return render_template(
+        'calendrier.html', 
+        year=year, 
+        month=month, 
+        reservations_map=reservations_map, # <--- On passe ça au template
+        now=datetime.now()
+    )
 
 
 @main_bp.route("/jour/<string:date_str>")
@@ -276,5 +310,3 @@ def a_propos():
 def favicon():
     return send_from_directory(os.path.join(current_app.root_path, 'static', 'icons'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
-# ... Le reste des routes est neutralisé pour l'instant ...

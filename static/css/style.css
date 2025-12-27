@@ -1099,16 +1099,19 @@ a {
 
 /* Cellules des jours */
 .day-cell {
-    background-color: white;
-    padding: 0.75rem;
-    min-height: 120px;
     position: relative;
+    height: 100px; /* Hauteur fixe pour voir la pastille */
     display: flex;
     flex-direction: column;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    text-decoration: none;
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-decoration: none !important;
     color: inherit;
-    cursor: pointer;
+}
+
+.day-cell:hover {
+    background-color: #f8f9fa;
+    border-color: #0d6efd;
 }
 
 /* Effet hover pour les jours réservables */
@@ -3149,245 +3152,123 @@ En-tête avec split layout */
    ================================================================== */
 
 #reservation-tooltip {
-    position: fixed;
-    z-index: 10000; /* Très élevé pour passer au-dessus de tout */
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    padding: 0;
-    min-width: 280px;
-    max-width: 400px;
+    position: absolute;
+    z-index: 1060; /* Au-dessus de tout */
+    display: none; /* Caché par défaut */
     opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: auto; /* Permet de cliquer sur les boutons */
+    
+    /* Design de la carte */
+    background: #ffffff;
+    min-width: 260px;
+    max-width: 320px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 10px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.05);
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* État visible du tooltip */
+/* État visible */
 #reservation-tooltip.visible {
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
 }
 
-/* Petite flèche pour indiquer la direction */
-#reservation-tooltip.tooltip-on-bottom::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid #ffffff;
-    filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.05));
-}
-
-#reservation-tooltip.tooltip-on-top::before {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 8px solid #ffffff;
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.05));
-}
-
-/* En-tête du tooltip */
+/* --- EN-TÊTE (Heure + Actions) --- */
 .tooltip-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #ffffff;
-    padding: 12px 16px;
-    border-radius: 8px 8px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    padding: 12px 16px;
+    background: #f8f9fa; /* Gris très léger */
+    border-bottom: 1px solid #eee;
 }
 
 .tooltip-title {
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
-    flex: 1;
-}
-
-.tooltip-title strong {
+    font-size: 0.95rem;
+    color: #212529;
     font-weight: 700;
+    letter-spacing: -0.3px;
 }
 
-/* Conteneur des boutons */
+/* --- BOUTONS D'ACTION (Icônes seulement) --- */
 .tooltip-buttons {
     display: flex;
-    gap: 6px;
-    flex-shrink: 0;
+    gap: 8px;
 }
 
-/* Boutons d'action */
-.btn-edit-resa,
-.btn-delete-resa {
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 600;
+.tooltip-buttons button {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     border: none;
-    border-radius: 4px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: #adb5bd; /* Gris par défaut */
 }
 
-.btn-edit-resa {
-    background: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+/* Bouton Éditer (Bleu au survol) */
+.tooltip-buttons .btn-edit-resa:hover {
+    background: #e7f1ff;
+    color: #0d6efd;
 }
 
-.btn-edit-resa:hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-1px);
+/* Bouton Supprimer (Rouge au survol) */
+.tooltip-buttons .btn-delete-resa:hover {
+    background: #fee2e2;
+    color: #dc3545;
 }
 
-.btn-delete-resa {
-    background: rgba(239, 68, 68, 0.9);
-    color: #ffffff;
-}
-
-.btn-delete-resa:hover {
-    background: rgba(220, 38, 38, 1);
-    transform: translateY(-1px);
-}
-
-/* Liste du matériel */
+/* --- LISTE DES ITEMS --- */
 .tooltip-list {
     list-style: none;
+    padding: 12px 16px;
     margin: 0;
-    padding: 16px;
-    max-height: 300px;
+    max-height: 200px;
     overflow-y: auto;
 }
 
-.tooltip-list > li {
-    margin-bottom: 8px;
-    font-size: 13px;
-    color: #374151;
-}
-
-.tooltip-list > li:last-child {
-    margin-bottom: 0;
-}
-
-/* Titres des sections (Kits, Matériel) */
-.tooltip-list > li > strong {
-    display: block;
-    color: #1f2937;
-    font-weight: 700;
-    font-size: 13px;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Sous-listes pour les items */
-.tooltip-list ul {
-    list-style: none;
-    margin: 0;
-    padding-left: 0;
-}
-
-.tooltip-list ul li {
-    padding: 6px 12px;
-    margin-bottom: 4px;
-    background: #f9fafb;
-    border-left: 3px solid #667eea;
-    border-radius: 4px;
-    font-size: 13px;
-    color: #4b5563;
+.tooltip-list li {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    padding: 4px 0;
+    font-size: 0.9rem;
+    color: #495057;
+    line-height: 1.4;
 }
 
-.tooltip-list ul li:last-child {
-    margin-bottom: 0;
-}
-
-/* Icône avant chaque item (optionnel) */
-.tooltip-list ul li::before {
-    content: '•';
-    color: #667eea;
+/* Puce personnalisée */
+.tooltip-list li::before {
+    content: "•";
+    color: #0d6efd; /* Couleur primaire */
     font-weight: bold;
-    font-size: 16px;
     margin-right: 8px;
+    font-size: 1.2em;
+    line-height: 1;
 }
 
-/* Message "Aucun matériel" */
-.tooltip-list > li:only-child {
-    color: #9ca3af;
-    font-style: italic;
+/* --- ÉTATS DE CHARGEMENT / ERREUR --- */
+.tooltip-loading {
+    padding: 20px;
     text-align: center;
-    padding: 8px 0;
+    color: #6c757d;
+    font-size: 0.85rem;
 }
 
-/* Scrollbar personnalisée pour la liste */
-.tooltip-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.tooltip-list::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 3px;
-}
-
-.tooltip-list::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
-
-.tooltip-list::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-/* Animation de chargement */
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
-}
-
-#reservation-tooltip .tooltip-title:contains('Chargement') {
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-/* Responsive pour petits écrans */
-@media (max-width: 640px) {
-    #reservation-tooltip {
-        min-width: 240px;
-        max-width: calc(100vw - 20px);
-    }
-    
-    .tooltip-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .tooltip-buttons {
-        width: 100%;
-        justify-content: flex-end;
-    }
+.tooltip-error {
+    padding: 15px;
+    text-align: center;
+    color: #dc3545;
+    font-weight: 600;
+    background: #fff5f5;
 }
 
 
@@ -3581,24 +3462,15 @@ En-tête avec split layout */
    ================================================================= */
 
 .reservation-badge {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	background-color: #0d6efd; /* Bleu Bootstrap */
     color: white;
-    border-radius: 12px;
-    padding: 2px 8px;
     font-size: 0.75rem;
-    font-weight: 700;
-    min-width: 24px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 10;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-top: 4px;
+    display: inline-block;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .reservation-badge:hover {
@@ -3607,22 +3479,10 @@ En-tête avec split layout */
 }
 
 /* Couleurs selon le nombre */
-.reservation-badge[data-count="1"],
-.reservation-badge[data-count="2"] {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-}
-
-.reservation-badge[data-count="3"],
-.reservation-badge[data-count="4"],
-.reservation-badge[data-count="5"] {
-    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
-}
-
-.reservation-badge[data-count="6"],
-.reservation-badge[data-count="7"],
-.reservation-badge[data-count="8"],
-.reservation-badge[data-count="9"] {
-    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+.reservation-badge[data-count="1"] { background-color: #0dcaf0; color: #000; } /* Cyan pour 1 */
+.reservation-badge[data-count="2"] { background-color: #0d6efd; } /* Bleu pour 2 */
+.reservation-badge[data-count="3"] { background-color: #fd7e14; } /* Orange pour 3 */
+.reservation-badge[data-count="4"] { background-color: #dc3545; } /* Rouge pour 4+ */
 }
 
 /* Tooltip des réservations du jour */
@@ -6190,3 +6050,425 @@ max-width: 450px;
         background: rgba(0, 0, 0, 0.5);
         color: white;
     }
+
+
+/* =================================================================
+   21. MODULE RAPPORTS (DESIGN PREMIUM)
+   ================================================================= */
+
+/* --- Mise en page (Grille) --- */
+.form-rapports-grid {
+    display: grid;
+    grid-template-columns: 400px 1fr; /* Colonne gauche fixe, droite flexible */
+    gap: 2rem;
+    align-items: start;
+}
+
+.rapports-config-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* --- Cartes de Rapport --- */
+.rapport-card {
+    background: var(--fond-element);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--ombre-legere);
+    border: 1px solid var(--couleur-bordure);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.rapport-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ombre-moyenne);
+}
+
+/* --- Titres avec Icônes --- */
+.card-title-icon {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--couleur-principale);
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f1f3f5;
+}
+
+.card-title-svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--couleur-principale);
+    background: rgba(31, 59, 115, 0.1);
+    padding: 4px;
+    border-radius: 6px;
+    box-sizing: content-box; /* Important pour le padding */
+}
+
+/* --- Formulaires & Inputs --- */
+.form-subtitle {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--texte-discret);
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--texte-principal);
+    margin-bottom: 0.4rem;
+}
+
+.input-group input[type="date"] {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--couleur-bordure);
+    border-radius: 8px;
+    font-family: inherit;
+    color: var(--texte-principal);
+    background: #f8f9fa;
+    transition: all 0.2s;
+}
+
+.input-group input[type="date"]:focus {
+    background: white;
+    border-color: var(--couleur-principale);
+    box-shadow: 0 0 0 3px rgba(31, 59, 115, 0.1);
+    outline: none;
+}
+
+/* --- Segmented Controls (Radios Modernes) --- */
+.segmented-control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--couleur-bordure);
+}
+
+/* On cache les vrais boutons radio */
+.segmented-control input[type="radio"] {
+    display: none;
+}
+
+/* Le style du label (qui agit comme bouton) */
+.segmented-control label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    color: var(--texte-discret);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.segmented-control label:hover {
+    background: rgba(0,0,0,0.03);
+    color: var(--texte-principal);
+}
+
+/* État sélectionné (Magie CSS) */
+.segmented-control input[type="radio"]:checked + label {
+    background: white;
+    color: var(--couleur-principale);
+    border-color: var(--couleur-principale);
+    box-shadow: 0 2px 8px rgba(31, 59, 115, 0.15);
+    font-weight: 600;
+}
+
+.segmented-control .btn-icon {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0.7;
+}
+
+.segmented-control input[type="radio"]:checked + label .btn-icon {
+    opacity: 1;
+    stroke: var(--couleur-principale);
+}
+
+/* --- Boutons d'Export (Variante) --- */
+.export-control {
+    flex-direction: row; /* Horizontal pour les boutons */
+    gap: 1rem;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.segmented-label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: white;
+    border: 1px solid var(--couleur-bordure);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--texte-principal);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.segmented-label:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: var(--couleur-principale);
+    color: var(--couleur-principale);
+}
+
+.segmented-label:active {
+    transform: translateY(0);
+}
+
+/* --- Aperçu Historique (Timeline) --- */
+.history-preview-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.history-preview-item {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid var(--couleur-principale);
+    transition: background 0.2s;
+}
+
+.history-preview-item:hover {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.history-preview-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--texte-discret);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.history-preview-date, .history-preview-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.history-preview-icon {
+    width: 14px;
+    height: 14px;
+    fill: var(--texte-discret);
+}
+
+.history-preview-body {
+    font-size: 0.95rem;
+    color: var(--texte-principal);
+    margin-bottom: 0.5rem;
+}
+
+.history-preview-action {
+    font-weight: 700;
+    color: var(--couleur-principale);
+}
+
+.history-preview-object {
+    font-weight: 500;
+}
+
+.history-preview-footer {
+    font-size: 0.8rem;
+    color: var(--texte-discret);
+    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.history-preview-footer::before {
+    content: '';
+    display: block;
+    width: 20px;
+    height: 1px;
+    background: #dee2e6;
+}
+
+/* --- Responsive --- */
+@media (max-width: 992px) {
+    .form-rapports-grid {
+        grid-template-columns: 1fr; /* Empilement sur mobile/tablette */
+    }
+    
+    .form-group-inline {
+        grid-template-columns: 1fr;
+    }
+    
+    .export-control {
+        flex-direction: column;
+    }
+}
+
+
+/* --- CALENDRIER MENSUEL --- */
+.calendrier-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+
+.calendrier-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* 7 jours */
+    gap: 10px;
+}
+
+/* En-têtes (Lun, Mar...) */
+.cal-header {
+    text-align: center;
+    font-weight: bold;
+    color: #6c757d;
+    padding-bottom: 10px;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+/* Case Jour */
+.cal-day {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    min-height: 120px; /* Hauteur fixe pour uniformité */
+    padding: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.cal-day:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transform: translateY(-2px);
+}
+
+.cal-day.empty {
+    background: transparent;
+    border: none;
+    cursor: default;
+}
+
+.cal-day.today {
+    background-color: #f8f9fa;
+    border: 2px solid #0d6efd;
+}
+
+.cal-day.today .day-number {
+    color: #0d6efd;
+    font-weight: 800;
+}
+
+.cal-day.past-day {
+    background-color: #f8f9fa;
+    color: #adb5bd;
+    border-color: #f1f3f5;
+}
+
+.cal-day.past-day .day-number {
+    color: #adb5bd;
+}
+
+.cal-day.past-day:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: #f1f3f5;
+}
+
+.day-number {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #495057;
+    margin-bottom: 5px;
+}
+
+/* Badge Réservation */
+.day-content {
+    flex-grow: 1;
+    display: flex;
+    align-items: flex-end; /* Badge en bas */
+}
+
+.resa-badge {
+    width: 100%;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Bouton "+" flottant (visible au survol) */
+.btn-add-fast {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 12px;
+}
+
+.cal-day:hover .btn-add-fast {
+    opacity: 1;
+}

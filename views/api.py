@@ -1,662 +1,606 @@
-# ============================================================
-# FICHIER : views/api.py (Version Finale - Refactorisée & Complète)
-# ============================================================
-import uuid
-from datetime import datetime, timedelta
+# -*- coding: utf-8 -*-
+import json
+from datetime import datetime
+from typing import NamedTuple
 from flask import Blueprint, request, jsonify, session, current_app, render_template
-from sqlalchemy import or_, func, text, and_
-from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.exceptions import BadRequest
 
 # Imports locaux
-from db import db, Objet, Armoire, Categorie, Reservation, Suggestion, Kit, KitObjet, Utilisateur
+from db import db, Objet, Armoire, Categorie, Utilisateur, Reservation, Kit, KitObjet, Suggestion
 from extensions import limiter
-from utils import login_required, admin_required
+from utils import login_required
+
+# --- SERVICES ---
+from services.stock_service import StockService, StockServiceError
+from services.panier_service import PanierService, PanierServiceError
+from services.inventory_service import InventoryService, InventoryServiceError
+from sqlalchemy import func, select
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # ============================================================
-# 1. UTILITAIRES & VALIDATEURS (DRY)
+# STRUCTURES DE DONNÉES
 # ============================================================
 
-def validate_reservation_dates(date_str, heure_debut, heure_fin):
-    """
-    Valide la cohérence des dates pour une réservation.
-    Retourne (start_dt, end_dt) ou lève une ValueError.
-    """
-    try:
-        start_dt = datetime.strptime(f"{date_str} {heure_debut}", '%Y-%m-%d %H:%M')
-        end_dt = datetime.strptime(f"{date_str} {heure_fin}", '%Y-%m-%d %H:%M')
-    except ValueError:
-        raise ValueError("Format de date ou d'heure invalide.")
-
-    now = datetime.now()
-    
-    if start_dt < now:
-        raise ValueError("Impossible de réserver dans le passé.")
-    
-    if end_dt <= start_dt:
-        raise ValueError("L'heure de fin doit être postérieure à l'heure de début.")
-        
-    if (end_dt - start_dt).total_seconds() > 12 * 3600:
-        raise ValueError("La réservation ne peut pas dépasser 12 heures.")
-
-    return start_dt, end_dt
-
-def validate_and_parse_items(items, etablissement_id):
-    """
-    Valide les items du panier et retourne :
-    - objets_demandes: {objet_id: quantite_totale} (pour vérification stock)
-    - reservations_a_creer: [{objet_id, quantite, kit_id}] (pour insertion DB)
-    
-    Lève ValueError si les données sont invalides.
-    """
-    if not items:
-        raise ValueError("Panier vide")
-    
-    objets_demandes = {}
-    reservations_a_creer = []
-    
-    for item in items:
-        # Validation défensive des types
-        try:
-            qte = int(item.get('quantity', 0))
-            item_id = int(item.get('id', 0))
-            item_type = item.get('type', '').strip()
-            
-            if qte <= 0 or item_id <= 0:
-                continue
-                
-            if item_type not in ['objet', 'kit']:
-                raise ValueError("Type d'item invalide")
-                
-        except (ValueError, TypeError, KeyError):
-            raise ValueError("Format de données invalide dans le panier")
-        
-        # Traitement Objet unique
-        if item_type == 'objet':
-            objets_demandes[item_id] = objets_demandes.get(item_id, 0) + qte
-            reservations_a_creer.append({
-                'objet_id': item_id, 
-                'quantite': qte, 
-                'kit_id': None
-            })
-        
-        # Traitement Kit (Explosion du kit en objets)
-        elif item_type == 'kit':
-            kit = db.session.get(Kit, item_id)
-            if not kit or kit.etablissement_id != etablissement_id:
-                raise ValueError(f"Kit ID {item_id} invalide ou inaccessible")
-                
-            for assoc in kit.objets_assoc:
-                qte_necessaire = assoc.quantite * qte
-                objets_demandes[assoc.objet_id] = objets_demandes.get(assoc.objet_id, 0) + qte_necessaire
-                reservations_a_creer.append({
-                    'objet_id': assoc.objet_id, 
-                    'quantite': qte_necessaire, 
-                    'kit_id': item_id
-                })
-    
-    if not objets_demandes:
-        raise ValueError("Aucun objet valide trouvé dans le panier")
-    
-    return objets_demandes, reservations_a_creer
-
-def get_paginated_objets(etablissement_id, page, sort_by, direction, search_query=None, armoire_id=None, categorie_id=None, etat=None):
-    """
-    Fonction helper pour la pagination avec protection SQL Injection et DoS.
-    """
-    try:
-        page = int(page)
-        page = max(1, min(page, 1000))
-    except (ValueError, TypeError):
-        page = 1
-
-    ALLOWED_SORT_COLUMNS = {
-        'nom': Objet.nom,
-        'quantite': Objet.quantite_physique,
-        'seuil': Objet.seuil,
-        'date_peremption': Objet.date_peremption,
-        'categorie': 'categorie_nom',
-        'armoire': 'armoire_nom'
-    }
-    
-    sort_column = ALLOWED_SORT_COLUMNS.get(sort_by, Objet.nom)
-    
-    query = db.select(Objet).filter_by(etablissement_id=etablissement_id)
-    query = query.outerjoin(Categorie).outerjoin(Armoire)
-
-    if search_query:
-        term = f"%{search_query}%"
-        query = query.filter(or_(Objet.nom.ilike(term), Categorie.nom.ilike(term), Armoire.nom.ilike(term)))
-    
-    if armoire_id: query = query.filter(Objet.armoire_id == armoire_id)
-    if categorie_id: query = query.filter(Objet.categorie_id == categorie_id)
-
-    if etat:
-        today = datetime.now().date()
-        if etat == 'perime': query = query.filter(Objet.date_peremption < today)
-        elif etat == 'bientot': query = query.filter(Objet.date_peremption >= today, Objet.date_peremption <= today + timedelta(days=30))
-        elif etat == 'stock': query = query.filter(Objet.quantite_physique <= Objet.seuil)
-
-    if sort_by == 'categorie': sort_expr = Categorie.nom
-    elif sort_by == 'armoire': sort_expr = Armoire.nom
-    else: sort_expr = sort_column
-
-    query = query.order_by(sort_expr.desc() if direction == 'desc' else sort_expr.asc())
-
-    pagination = db.paginate(query, page=page, per_page=20, error_out=False)
-    
-    # Calcul stock dispo
-    objets = pagination.items
-    now = datetime.now()
-    objet_ids = [o.id for o in objets]
-    
-    res_map = {}
-    if objet_ids:
-        reservations = db.session.execute(
-            db.select(Reservation.objet_id, func.sum(Reservation.quantite_reservee))
-            .filter(Reservation.objet_id.in_(objet_ids), Reservation.fin_reservation > now, Reservation.etablissement_id == etablissement_id)
-            .group_by(Reservation.objet_id)
-        ).all()
-        res_map = {r[0]: r[1] for r in reservations}
-
-    for obj in objets:
-        obj.quantite_disponible = obj.quantite_physique - res_map.get(obj.id, 0)
-
-    return objets, pagination.pages
-
+class Services(NamedTuple):
+    stock: StockService
+    panier: PanierService
+    inventory: InventoryService
 
 # ============================================================
-# 2. ENDPOINTS PUBLICS / MONITORING
+# SÉCURITÉ & UTILITAIRES
 # ============================================================
-@api_bp.route('/health')
-@limiter.limit("60 per minute")
-def health_check():
-    try:
-        db.session.execute(text("SELECT 1"))
-        return jsonify({'status': 'ok', 'db': 'connected', 'timestamp': datetime.now().isoformat()}), 200
-    except Exception as e:
-        current_app.logger.error(f"Health Check Failed: {e}")
-        return jsonify({'status': 'error', 'db': 'disconnected'}), 503
 
+@api_bp.before_request
+def validate_json_content_type():
+    """
+    Valide le Content-Type pour les requêtes mutantes.
+    Note: Le CSRF est géré par Flask-WTF (cookie csrf_token + header X-CSRFToken ou form data).
+    """
+    if request.method in ['POST', 'PUT']:
+        if not request.is_json:
+            return jsonify({'success': False, 'error': 'Content-Type must be application/json'}), 415
 
-# ============================================================
-# 3. ENDPOINTS RECHERCHE & SUGGESTIONS
-# ============================================================
-@api_bp.route("/search")
-@login_required
-def search():
+def get_services() -> Services:
+    """Factory sécurisée retournant un NamedTuple."""
+    user_id = session.get('user_id')
     etablissement_id = session.get('etablissement_id')
-    query_text = request.args.get('q', '').strip()
-    
-    if not query_text or len(query_text) < 2:
-        return jsonify([])
 
+    if not user_id or not etablissement_id:
+        raise ValueError("Session invalide")
+
+    user = db.session.get(Utilisateur, user_id)
+    if not user or user.etablissement_id != etablissement_id:
+        current_app.logger.critical(
+            f"SECURITY: IDOR Attempt. User {user_id} -> Etab {etablissement_id} "
+            f"on {request.endpoint} ({request.method})"
+        )
+        raise ValueError("Session invalide : Incohérence établissement")
+
+    return Services(
+        stock=StockService(etablissement_id),
+        panier=PanierService(etablissement_id),
+        inventory=InventoryService(etablissement_id)
+    )
+
+def _parse_request_dates(date_str, h_debut, h_fin):
+    """Parsing basique."""
+    if not date_str or not h_debut or not h_fin:
+        raise ValueError("Paramètres date/heure manquants")
     try:
-        results = db.session.execute(
-            db.select(Objet)
-            .filter(Objet.etablissement_id == etablissement_id, Objet.nom.ilike(f"%{query_text}%"))
-            .limit(10)
-        ).scalars().all()
-        
-        return jsonify([{
-            'id': obj.id, 'nom': obj.nom, 'image': obj.image_url,
-            'armoire': obj.armoire.nom if obj.armoire else None
-        } for obj in results])
-    except Exception as e:
-        current_app.logger.error(f"Search error: {e}")
-        return jsonify([]), 500
+        d = datetime.strptime(date_str, "%Y-%m-%d").date()
+        t_start = datetime.strptime(h_debut, "%H:%M").time()
+        t_end = datetime.strptime(h_fin, "%H:%M").time()
+        return datetime.combine(d, t_start), datetime.combine(d, t_end)
+    except ValueError:
+        raise ValueError("Format date/heure invalide")
 
-@api_bp.route("/suggerer_commande", methods=['POST'])
+def _validate_simulated_cart(cart_data):
+    """Valide la structure du panier simulé."""
+    if not isinstance(cart_data, list):
+        raise ValueError("Le panier doit être une liste")
+    if len(cart_data) > PanierService.MAX_ITEMS_PANIER:
+        raise ValueError("Panier trop volumineux")
+    
+    for item in cart_data:
+        if not isinstance(item, dict):
+            raise ValueError("Item malformé")
+        
+        if not all(k in item for k in ('type', 'id')):
+            raise ValueError("Champs type/id manquants")
+            
+        if 'quantite' not in item and 'quantity' not in item:
+             raise ValueError("Quantité manquante")
+
+# ============================================================
+# GESTION D'ERREURS CENTRALISÉE
+# ============================================================
+
+@api_bp.errorhandler(StockServiceError)
+@api_bp.errorhandler(PanierServiceError)
+@api_bp.errorhandler(InventoryServiceError)
+def handle_business_error(error):
+    return jsonify({"success": False, "error": str(error), "code": "BUSINESS_ERROR"}), 400
+
+@api_bp.errorhandler(ValueError)
+@api_bp.errorhandler(BadRequest)
+def handle_validation_error(error):
+    msg = str(error) if isinstance(error, ValueError) else "JSON malformé ou invalide"
+    return jsonify({"success": False, "error": msg, "code": "VALIDATION_ERROR"}), 400
+
+# ============================================================
+# 1. GESTION DU PANIER
+# ============================================================
+
+@api_bp.route("/panier", methods=['GET'])
+@login_required
+@limiter.limit("120 per minute")
+def get_panier():
+    services = get_services()
+    contenu = services.panier.get_contenu(session['user_id'])
+    return jsonify({"success": True, "data": contenu})
+
+@api_bp.route("/panier/ajouter", methods=['POST'])
+@login_required
+@limiter.limit("60 per minute")
+def ajouter_item_panier():
+    services = get_services()
+    data = request.get_json()
+    result = services.panier.ajouter_item(session['user_id'], data)
+    return jsonify({"success": True, "data": result}), 201
+
+@api_bp.route("/panier/retirer/<int:item_id>", methods=['DELETE'])
+@login_required
+def retirer_item_panier(item_id):
+    services = get_services()
+    services.panier.retirer_item(session['user_id'], item_id)
+    return jsonify({"success": True}), 200
+
+@api_bp.route("/panier", methods=['DELETE'])
+@login_required
+def vider_panier():
+    services = get_services()
+    services.panier.vider_panier(session['user_id'])
+    return jsonify({"success": True}), 200
+
+@api_bp.route("/panier/checkout", methods=['POST'])
 @login_required
 @limiter.limit("10 per minute")
-def suggerer_commande():
-    etablissement_id = session.get('etablissement_id')
-    user_id = session.get('user_id')
-    data = request.get_json()
+def checkout_panier():
+    services = get_services()
+    user_id = session['user_id']
     
     try:
-        objet_id = int(data.get('objet_id'))
-        quantite = int(data.get('quantite', 1))
-        commentaire = data.get('commentaire', '').strip()
-        
-        if quantite <= 0: return jsonify({'success': False, 'error': "Quantité positive requise."}), 400
-
-        objet = db.session.get(Objet, objet_id)
-        if not objet or objet.etablissement_id != etablissement_id:
-            return jsonify({'success': False, 'error': "Objet introuvable."}), 404
-
-        db.session.add(Suggestion(
-            objet_id=objet_id, utilisateur_id=user_id, quantite=quantite,
-            commentaire=commentaire[:255], etablissement_id=etablissement_id
-        ))
-        db.session.commit()
-        return jsonify({'success': True})
-    except (ValueError, TypeError):
-        return jsonify({'success': False, 'error': "Données invalides."}), 400
+        result = services.panier.valider_panier(user_id)
+        current_app.logger.info(f"API CHECKOUT SUCCESS | User {user_id} | Group {result['groupe_id']}")
+        return jsonify({"success": True, "data": result}), 201
+    except (PanierServiceError, StockServiceError) as e:
+        current_app.logger.warning(f"API CHECKOUT BUSINESS ERROR | User {user_id} | {e}")
+        raise
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Erreur suggestion: {e}")
-        return jsonify({'success': False, 'error': "Erreur serveur."}), 500
-
-@api_bp.route("/traiter_suggestion/<int:suggestion_id>/<action>", methods=['POST'])
-@admin_required
-def traiter_suggestion(suggestion_id, action):
-    etablissement_id = session.get('etablissement_id')
-    suggestion = db.session.get(Suggestion, suggestion_id)
-    
-    if not suggestion or suggestion.etablissement_id != etablissement_id:
-        return jsonify({'success': False, 'error': "Suggestion introuvable"}), 404
-
-    try:
-        if action == 'valider':
-            suggestion.statut = 'Validée'
-            suggestion.objet.en_commande = 1
-        elif action == 'refuser':
-            suggestion.statut = 'Refusée'
-            db.session.delete(suggestion)
-        else:
-            return jsonify({'success': False, 'error': "Action inconnue"}), 400
-        db.session.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Erreur traitement suggestion: {e}")
-        return jsonify({'success': False, 'error': "Erreur serveur"}), 500
-
+        current_app.logger.error(f"API CHECKOUT CRITICAL ERROR | User {user_id} | {e}", exc_info=True)
+        # Correction Wording : Paiement -> Validation
+        return jsonify({"success": False, "error": "Erreur technique lors de la validation"}), 500
 
 # ============================================================
-# 4. CŒUR DU SYSTÈME : RÉSERVATIONS (SÉCURISÉ & DRY)
+# 2. DISPONIBILITÉS
 # ============================================================
 
-@api_bp.route("/valider_panier", methods=['POST'])
+@api_bp.route("/disponibilites", methods=['GET'])
 @login_required
-@limiter.limit("20 per minute")
-def api_valider_panier():
-    """
-    Vérifie la disponibilité des objets sans créer de réservation.
-    Utilise la logique centralisée `validate_and_parse_items`.
-    """
-    etablissement_id = session.get('etablissement_id')
-    data = request.get_json()
+def api_disponibilites():
+    services = get_services()
+    
+    start_dt, end_dt = _parse_request_dates(
+        request.args.get('date'), 
+        request.args.get('heure_debut'), 
+        request.args.get('heure_fin')
+    )
+
+    # 1. On récupère le panier ACTUEL de l'utilisateur (Server Side)
+    # Pour que le stock affiché tienne compte de ce qu'il a déjà mis dans son panier
+    items_a_deduire = []
     
     try:
-        start_dt, end_dt = validate_reservation_dates(
-            data.get('date'), data.get('heure_debut'), data.get('heure_fin')
-        )
+        # On récupère le contenu brut
+        contenu_panier = services.panier.get_contenu(session['user_id'])
         
-        # ✅ LOGIQUE CENTRALISÉE
-        objets_demandes, _ = validate_and_parse_items(data.get('items', []), etablissement_id)
-
-        # Vérification Disponibilité
-        for obj_id, qte_demandee in objets_demandes.items():
-            objet = db.session.get(Objet, obj_id)
-            if not objet or objet.etablissement_id != etablissement_id:
-                return jsonify({"success": False, "error": "Objet introuvable"}), 404
-
-            qte_reservee = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
-                Reservation.objet_id == obj_id,
-                Reservation.etablissement_id == etablissement_id,
-                Reservation.debut_reservation < end_dt,
-                Reservation.fin_reservation > start_dt
-            ).scalar() or 0
-            
-            disponible = objet.quantite_physique - qte_reservee
-            
-            if qte_demandee > disponible:
-                return jsonify({
-                    "success": False, 
-                    "error": f"Stock insuffisant pour '{objet.nom}'. Demandé: {qte_demandee}, Dispo: {disponible}"
-                }), 409
-
-        return jsonify({"success": True})
-
-    except ValueError as e:
-        return jsonify({"success": False, "error": str(e)}), 400
+        # On le transforme en format simple pour StockService
+        if contenu_panier and 'items' in contenu_panier:
+            for item in contenu_panier['items']:
+                # On ne déduit que les items qui chevauchent le créneau demandé ?
+                # Pour simplifier l'UX : on déduit tout ce qui est dans le panier 
+                # (approche pessimiste mais sûre pour l'utilisateur)
+                items_a_deduire.append({
+                    'type': item['type'],
+                    'id': item['id_item'], # Attention : get_contenu renvoie 'id_item'
+                    'quantite': item['quantite']
+                })
     except Exception as e:
-        current_app.logger.error(f"Erreur validation panier: {e}")
-        return jsonify({"success": False, "error": "Erreur serveur"}), 500
+        current_app.logger.warning(f"Erreur lecture panier pour dispo: {e}")
 
+    # 2. Gestion Panier Simulé (Paramètre URL optionnel, rarement utilisé maintenant)
+    panier_param = request.args.get('panier')
+    if panier_param:
+        try:
+            panier_simule = json.loads(panier_param)
+            _validate_simulated_cart(panier_simule)
+            items_a_deduire.extend(panier_simule)
+        except (json.JSONDecodeError, ValueError):
+            pass # On ignore le panier simulé s'il est cassé
 
-@api_bp.route("/creer_reservation", methods=['POST'])
+    # 3. Calcul final
+    resultats = services.stock.get_disponibilites(start_dt, end_dt, panier_items=items_a_deduire)
+    return jsonify({"success": True, "data": resultats})
+
+# ============================================================
+# 3. INVENTAIRE & RECHERCHE
+# ============================================================
+
+@api_bp.route("/search")
 @login_required
-@limiter.limit("5 per minute")
-def api_creer_reservation():
-    """
-    Crée une nouvelle réservation avec vérification atomique de disponibilité.
+@limiter.limit("30 per minute")
+def search():
+    services = get_services()
+    query_text = request.args.get('q', '').strip()
     
-    Request Body (JSON):
-        {
-            "date": "2025-01-15",
-            "heure_debut": "09:00",
-            "heure_fin": "11:00",
-            "items": [
-                {"type": "objet", "id": 1, "quantity": 2},
-                {"type": "kit", "id": 5, "quantity": 1}
-            ]
-        }
-    
-    Returns:
-        200: {"success": true, "groupe_id": "uuid"}
-        400: {"success": false, "error": "message"}
-        500: {"success": false, "error": "Erreur serveur"}
-    
-    Security:
-        - Pessimistic locking (FOR UPDATE) pour éviter race conditions
-        - Validation stricte des inputs
-        - Rate limited à 5 requêtes/minute
-    """
-    etablissement_id = session.get('etablissement_id')
-    user_id = session.get('user_id')
-    data = request.get_json()
-    
-    try:
-        start_dt, end_dt = validate_reservation_dates(
-            data.get('date'), data.get('heure_debut'), data.get('heure_fin')
-        )
-        
-        # ✅ LOGIQUE CENTRALISÉE
-        objets_demandes, reservations_a_creer = validate_and_parse_items(
-            data.get('items', []), etablissement_id
-        )
+    results = services.inventory.search_objets(query_text)
+    return jsonify({"success": True, "data": results})
 
-        groupe_id = str(uuid.uuid4())
-        
-        # LOCK & VÉRIFICATION (Transaction implicite via Flask-SQLAlchemy)
-        for obj_id, qte_demandee in objets_demandes.items():
-            # SELECT ... FOR UPDATE (Lock Pessimiste)
-            objet = db.session.execute(
-                db.select(Objet)
-                .filter_by(id=obj_id, etablissement_id=etablissement_id)
-                .with_for_update()
-            ).scalar_one_or_none()
-            
-            if not objet:
-                raise ValueError("Objet introuvable")
-
-            qte_reservee = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
-                Reservation.objet_id == obj_id,
-                Reservation.etablissement_id == etablissement_id,
-                Reservation.debut_reservation < end_dt,
-                Reservation.fin_reservation > start_dt
-            ).scalar() or 0
-            
-            disponible = objet.quantite_physique - qte_reservee
-            
-            if qte_demandee > disponible:
-                raise ValueError(f"Stock insuffisant pour '{objet.nom}' (Dispo: {disponible})")
-
-        # CRÉATION
-        for r in reservations_a_creer:
-            db.session.add(Reservation(
-                objet_id=r['objet_id'],
-                utilisateur_id=user_id,
-                quantite_reservee=r['quantite'],
-                debut_reservation=start_dt,
-                fin_reservation=end_dt,
-                groupe_id=groupe_id,
-                kit_id=r['kit_id'],
-                etablissement_id=etablissement_id
-            ))
-        
-        db.session.commit()
-        
-        current_app.logger.info(
-            "Reservation created",
-            extra={
-                'user_id': user_id, 'groupe_id': groupe_id,
-                'items_count': len(data.get('items', [])),
-                'start': start_dt.isoformat()
-            }
-        )
-        
-        return jsonify({"success": True, "groupe_id": groupe_id})
-
-    except ValueError as e:
-        db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        current_app.logger.error(f"DB Error: {e}", exc_info=True)
-        return jsonify({"success": False, "error": "Erreur technique"}), 500
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Unexpected error: {e}", exc_info=True)
-        return jsonify({"success": False, "error": "Erreur serveur"}), 500
-
-
-@api_bp.route("/reservation_details/<groupe_id>")
+@api_bp.route("/inventaire")
 @login_required
-def api_reservation_details(groupe_id):
-    """Récupère les détails d'une réservation (Sécurisé IDOR)."""
-    etablissement_id = session.get('etablissement_id')
-    user_id = session.get('user_id')
-    user_role = session.get('user_role')
+def api_inventaire():
+    services = get_services()
     
-    reservations = db.session.execute(
-        db.select(Reservation)
-        .options(db.joinedload(Reservation.objet), db.joinedload(Reservation.kit))
-        .filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
-    ).scalars().all()
-    
-    if not reservations:
-        return jsonify({'error': 'Réservation introuvable'}), 404
-        
-    # SÉCURITÉ IDOR
-    first_resa = reservations[0]
-    if user_role != 'admin' and first_resa.utilisateur_id != user_id:
-        current_app.logger.warning(f"IDOR Attempt: User {user_id} tried to access reservation {groupe_id}")
-        return jsonify({'error': 'Accès non autorisé'}), 403
-
-    details = {
-        'groupe_id': groupe_id,
-        'debut': first_resa.debut_reservation.isoformat(),
-        'fin': first_resa.fin_reservation.isoformat(),
-        'objets': []
+    filters = {
+        'q': request.args.get('q'),
+        'armoire_id': request.args.get('armoire', type=int),
+        'categorie_id': request.args.get('categorie', type=int),
+        'etat': request.args.get('etat')
     }
     
-    for r in reservations:
-        nom = r.objet.nom
-        if r.kit: nom += f" (via Kit: {r.kit.nom})"
-        details['objets'].append({
-            'nom': nom, 'quantite': r.quantite_reservee, 'image': r.objet.image_url
-        })
-        
-    return jsonify(details)
+    dto = services.inventory.get_paginated_inventory(
+        page=request.args.get('page', 1, type=int),
+        sort_by=request.args.get('sort_by', 'nom'),
+        direction=request.args.get('direction', 'asc'),
+        filters=filters
+    )
+    
+    html = render_template(
+        '_inventaire_content.html', 
+        objets=dto.items, 
+        pagination={'page': dto.current_page, 'total_pages': dto.total_pages, 'endpoint': 'inventaire.inventaire'}, 
+        sort_by=request.args.get('sort_by', 'nom'), 
+        direction=request.args.get('direction', 'asc'), 
+        armoire=dto.context.armoire_nom, 
+        categorie=dto.context.categorie_nom, 
+        etat=filters['etat'], 
+        date_actuelle=datetime.now()
+    )
+    return jsonify({'html': html})
 
 
 # ============================================================
-# 5. ENDPOINTS CALENDRIER & GESTION (RESTAURÉS)
+# 4. ROUTES CALENDRIER (Lecture Seule)
 # ============================================================
 
 @api_bp.route("/reservations_par_mois/<int:year>/<int:month>")
 @login_required
 def api_reservations_par_mois(year, month):
-    """Retourne le nombre de réservations par jour pour le calendrier."""
+    """Renvoie le nombre de réservations par jour pour le calendrier."""
     etablissement_id = session.get('etablissement_id')
-    
     try:
-        if not (1 <= month <= 12) or not (2000 <= year <= 2100):
-            return jsonify({"error": "Date invalide"}), 400
-        
         from calendar import monthrange
-        start_date = datetime(year, month, 1).date()
-        last_day = monthrange(year, month)[1]
-        end_date = datetime(year, month, last_day, 23, 59, 59)
-        
-        reservations = db.session.execute(
+        start_date = datetime(year, month, 1)
+        days_in_month = monthrange(year, month)[1]
+        end_date = datetime(year, month, days_in_month, 23, 59, 59)
+
+        # On compte les groupes de réservation distincts par jour
+        stats = db.session.execute(
             db.select(
-                func.date(Reservation.debut_reservation).label('jour'),
-                func.count(func.distinct(Reservation.groupe_id)).label('count')
+                func.date(Reservation.debut_reservation).label('jour'), 
+                func.count(func.distinct(Reservation.groupe_id)).label('total')
             )
             .filter(
                 Reservation.etablissement_id == etablissement_id,
                 Reservation.debut_reservation >= start_date,
-                Reservation.debut_reservation <= end_date
+                Reservation.debut_reservation <= end_date,
+                Reservation.statut == 'confirmée'
             )
             .group_by(func.date(Reservation.debut_reservation))
         ).all()
-        
-        return jsonify({r.jour.strftime('%Y-%m-%d'): r.count for r in reservations})
-        
+
+        # Format : {'2025-12-28': 2, '2025-12-29': 5}
+        return jsonify({str(row.jour): row.total for row in stats})
     except Exception as e:
-        current_app.logger.error(f"Erreur calendrier: {e}")
-        return jsonify({"error": "Erreur serveur"}), 500
+        current_app.logger.error(f"Erreur stats calendrier: {e}")
+        return jsonify({})
 
-
-@api_bp.route("/reservations_jour/<date_str>")
+@api_bp.route("/reservation_details/<groupe_id>")
 @login_required
-def api_reservations_jour(date_str):
-    """Retourne les réservations d'un jour spécifique."""
+def api_reservation_details(groupe_id):
+    """Renvoie les détails d'une réservation pour le tooltip."""
     etablissement_id = session.get('etablissement_id')
+    current_user_id = session.get('user_id')
+    user_role = session.get('user_role')
     
     try:
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        groupes = db.session.execute(
-            db.select(
-                Reservation.groupe_id,
-                Reservation.utilisateur_id,
-                Reservation.debut_reservation,
-                Reservation.fin_reservation
+        stmt = (
+            db.select(Reservation)
+            .options(
+                db.joinedload(Reservation.objet), 
+                db.joinedload(Reservation.utilisateur), # <--- On charge l'utilisateur
+                db.joinedload(Reservation.kit)
+                .joinedload(Kit.objets_assoc)
+                .joinedload(KitObjet.objet)
             )
-            .filter(
-                Reservation.etablissement_id == etablissement_id,
-                func.date(Reservation.debut_reservation) == date_obj
-            )
-            .distinct(Reservation.groupe_id)
-            .order_by(Reservation.groupe_id, Reservation.debut_reservation)
-        ).all()
+            .filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
+        )
+        res = db.session.execute(stmt).unique().scalars().all()
         
-        result = []
-        for groupe in groupes:
-            user = db.session.get(Utilisateur, groupe.utilisateur_id)
-            result.append({
-                'nom_utilisateur': user.nom_utilisateur if user else 'Inconnu',
-                'heure_debut': groupe.debut_reservation.strftime('%H:%M'),
-                'heure_fin': groupe.fin_reservation.strftime('%H:%M'),
-                'groupe_id': groupe.groupe_id
-            })
+        if not res: 
+            return jsonify({'error': 'Introuvable'}), 404
         
-        return jsonify({'reservations': result})
+        first = res[0]
         
-    except ValueError:
-        return jsonify({'error': 'Format de date invalide', 'reservations': []}), 400
-    except Exception as e:
-        current_app.logger.error(f"Erreur reservations jour: {e}")
-        return jsonify({'error': 'Erreur serveur', 'reservations': []}), 500
+        # Calcul des permissions
+        is_owner = (first.utilisateur_id == current_user_id)
+        is_admin = (user_role == 'admin')
+        can_edit = is_owner or is_admin
 
+        details = {
+            'groupe_id': groupe_id,
+            'debut': first.debut_reservation.isoformat(),
+            'fin': first.fin_reservation.isoformat(),
+            'user_name': first.utilisateur.nom_utilisateur if first.utilisateur else "Inconnu", # <--- Ajout du nom
+            'can_edit': can_edit, # <--- Ajout de la permission
+            'items': []
+        }
+        
+        for r in res:
+            if r.kit_id and r.kit:
+                nom = r.kit.nom
+                type_item = 'kit'
+                image = None
+                if r.kit.objets_assoc and r.kit.objets_assoc[0].objet:
+                    image = r.kit.objets_assoc[0].objet.image_url
+            elif r.objet:
+                nom = r.objet.nom
+                type_item = 'objet'
+                image = r.objet.image_url
+            else:
+                continue
+
+            details['items'].append({
+                'type': type_item,
+                'id': r.kit_id if r.kit_id else r.objet_id,
+                'nom': nom,
+                'quantite': r.quantite_reservee,
+                'image': image
+            })
+            
+        return jsonify(details)
+
+    except Exception as e:
+        current_app.logger.error(f"Erreur details reservation: {e}", exc_info=True)
+        return jsonify({'error': "Erreur serveur"}), 500
 
 @api_bp.route("/supprimer_reservation", methods=['POST'])
 @login_required
 def api_supprimer_reservation():
-    """Supprime une réservation (avec vérification des droits)."""
+    """Supprime une réservation (Admin ou Propriétaire)."""
     etablissement_id = session.get('etablissement_id')
-    user_id = session.get('user_id')
-    user_role = session.get('user_role')
-    
-    data = request.get_json()
-    if not data: return jsonify({'success': False, 'error': "Corps de requête vide"}), 400
-        
-    groupe_id = data.get("groupe_id")
-    if not groupe_id: return jsonify({'success': False, 'error': "ID de groupe manquant"}), 400
+    gid = request.get_json().get('groupe_id')
     
     try:
-        reservation = db.session.execute(
-            db.select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
-        ).scalars().first()
+        # Vérification existence et droits
+        existing = db.session.execute(
+            db.select(Reservation).filter_by(groupe_id=gid, etablissement_id=etablissement_id).limit(1)
+        ).scalar()
         
-        if not reservation:
-            return jsonify({'success': False, 'error': "Réservation introuvable"}), 404
+        if not existing: 
+            return jsonify({'success': False, 'error': "Introuvable"}), 404
         
-        if user_role != 'admin' and reservation.utilisateur_id != user_id:
-            current_app.logger.warning(f"Delete attempt: User {user_id} tried to delete reservation {groupe_id}")
-            return jsonify({'success': False, 'error': "Permissions insuffisantes"}), 403
+        if session.get('user_role') != 'admin' and existing.utilisateur_id != session.get('user_id'):
+            return jsonify({'success': False, 'error': "Interdit"}), 403
+
+        # Suppression
+        db.session.execute(db.delete(Reservation).where(Reservation.groupe_id == gid))
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur suppression: {e}")
+        return jsonify({'success': False, 'error': "Erreur technique"}), 500
+
+# Dans views/api.py
+
+@api_bp.route("/reservations_jour/<date_str>")
+@login_required
+def api_reservations_jour_detail(date_str):
+    """API JSON pour le tooltip du calendrier (survol)."""
+    etablissement_id = session.get('etablissement_id')
+    try:
+        d = datetime.strptime(date_str, '%Y-%m-%d').date()
         
-        db.session.execute(
-            db.delete(Reservation).where(
-                Reservation.groupe_id == groupe_id,
-                Reservation.etablissement_id == etablissement_id
+        # On récupère les réservations du jour
+        # On joint avec Utilisateur pour avoir le nom
+        res = db.session.execute(
+            db.select(Reservation, Utilisateur.nom_utilisateur)
+            .join(Utilisateur, Reservation.utilisateur_id == Utilisateur.id)
+            .filter(
+                Reservation.etablissement_id == etablissement_id,
+                func.date(Reservation.debut_reservation) == d,
+                Reservation.statut == 'confirmée'
             )
+            .order_by(Reservation.debut_reservation)
+        ).all()
+        
+        # On groupe par groupe_id pour éviter les doublons dans le tooltip
+        # (Si une résa a 3 objets, on ne veut pas afficher 3 fois le nom de l'utilisateur)
+        seen_groups = set()
+        data = []
+        
+        for r, nom_user in res:
+            if r.groupe_id not in seen_groups:
+                data.append({
+                    'nom_utilisateur': nom_user,
+                    'heure_debut': r.debut_reservation.strftime('%H:%M'),
+                    'heure_fin': r.fin_reservation.strftime('%H:%M')
+                })
+                seen_groups.add(r.groupe_id)
+                
+        return jsonify({'reservations': data})
+    except Exception as e:
+        current_app.logger.error(f"Erreur API jour: {e}")
+        return jsonify({'reservations': []}), 500
+        
+
+# ============================================================
+# 5. MODIFICATION LIVE DES RÉSERVATIONS (CORRIGÉ)
+# ============================================================
+
+@api_bp.route("/reservation/<groupe_id>/ajouter", methods=['POST'])
+@login_required
+def reservation_ajouter_item(groupe_id):
+    """Ajoute un item à une réservation existante."""
+    services = get_services() # Utilise la factory sécurisée
+    data = request.get_json()
+    
+    try:
+        # 1. Récupération de la réservation (via SQL direct pour performance)
+        stmt = select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=session['etablissement_id'])
+        existing_resas = db.session.execute(stmt).scalars().all()
+        
+        if not existing_resas:
+            return jsonify({'success': False, 'error': "Réservation introuvable"}), 404
+            
+        first_resa = existing_resas[0]
+        # Vérification droits
+        if session.get('user_role') != 'admin' and first_resa.utilisateur_id != session.get('user_id'):
+            return jsonify({'success': False, 'error': "Non autorisé"}), 403
+
+        # 2. Données
+        item_type = data.get('type')
+        item_id = int(data.get('id'))
+        qty_to_add = int(data.get('quantite', 1))
+        
+        # 3. Vérification Stock (Via le Service Stock)
+        # On regarde la dispo globale sur ce créneau
+        dispo = services.stock.get_disponibilites(
+            first_resa.debut_reservation, 
+            first_resa.fin_reservation
         )
+        
+        # On cherche combien il en reste
+        stock_restant = 0
+        found = False
+        
+        # Recherche dans les objets
+        if item_type == 'objet':
+            for obj in dispo['objets']:
+                if obj['id'] == item_id:
+                    stock_restant = obj['disponible']
+                    found = True
+                    break
+        # Recherche dans les kits
+        elif item_type == 'kit':
+            for kit in dispo['kits']:
+                if kit['id'] == item_id:
+                    stock_restant = kit['disponible']
+                    found = True
+                    break
+        
+        if not found:
+             return jsonify({'success': False, 'error': "Item inconnu ou indisponible"}), 400
+
+        # Note: get_disponibilites a déjà soustrait ce qui est réservé.
+        # Donc stock_restant est ce qu'on peut VRAIMENT ajouter en plus.
+        if stock_restant < qty_to_add:
+            return jsonify({'success': False, 'error': f"Stock insuffisant (Max ajout: {stock_restant})"}), 400
+
+        # 4. Mise à jour DB
+        target_resa = None
+        for r in existing_resas:
+            if item_type == 'kit' and r.kit_id == item_id: target_resa = r; break
+            if item_type == 'objet' and r.objet_id == item_id: target_resa = r; break
+            
+        if target_resa:
+            target_resa.quantite_reservee += qty_to_add
+        else:
+            new_resa = Reservation(
+                utilisateur_id=first_resa.utilisateur_id,
+                etablissement_id=session['etablissement_id'],
+                quantite_reservee=qty_to_add,
+                debut_reservation=first_resa.debut_reservation,
+                fin_reservation=first_resa.fin_reservation,
+                groupe_id=groupe_id,
+                statut='confirmée'
+            )
+            if item_type == 'kit': new_resa.kit_id = item_id
+            else: new_resa.objet_id = item_id
+            db.session.add(new_resa)
+            
+        db.session.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur ajout live: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': "Erreur technique"}), 500
+
+@api_bp.route("/reservation/<groupe_id>/retirer/<int:item_id>", methods=['DELETE'])
+@login_required
+def reservation_retirer_item(groupe_id, item_id):
+    """Retire un item d'une réservation."""
+    etablissement_id = session.get('etablissement_id')
+    item_type = request.args.get('type') # 'objet' ou 'kit'
+    
+    try:
+        stmt = select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
+        resas = db.session.execute(stmt).scalars().all()
+        
+        target = None
+        for r in resas:
+            if item_type == 'kit' and r.kit_id == item_id: target = r; break
+            if item_type == 'objet' and r.objet_id == item_id: target = r; break
+            
+        if not target:
+            return jsonify({'success': False, 'error': "Item non trouvé"}), 404
+            
+        if target.quantite_reservee > 1:
+            target.quantite_reservee -= 1
+        else:
+            db.session.delete(target)
+            
         db.session.commit()
         
-        current_app.logger.info(f"Reservation deleted: {groupe_id} by user {user_id}")
-        return jsonify({'success': True, 'message': "Réservation supprimée"})
+        # Vérifier s'il reste des items dans la réservation
+        remaining = db.session.execute(
+            select(func.count(Reservation.id)).filter_by(groupe_id=groupe_id)
+        ).scalar()
+        
+        return jsonify({'success': True, 'remaining_items': remaining})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
+# ============================================================
+# 6. SUGGESTIONS
+# ============================================================
+
+@api_bp.route("/suggerer_commande", methods=['POST'])
+@login_required
+def suggerer_commande():
+    """Enregistre une suggestion de commande."""
+    etablissement_id = session.get('etablissement_id')
+    user_id = session.get('user_id')
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'success': False, 'error': "Données manquantes"}), 400
+
+    try:
+        nouvelle_suggestion = Suggestion(
+            objet_id=int(data['objet_id']),
+            utilisateur_id=user_id,
+            quantite=int(data['quantite']),
+            commentaire=data.get('commentaire', ''),
+            etablissement_id=etablissement_id,
+            statut='En attente',
+            date_demande=datetime.now()
+        )
+        
+        db.session.add(nouvelle_suggestion)
+        db.session.commit()
+        
+        current_app.logger.info(f"Suggestion créée par User {user_id} pour Objet {data['objet_id']}")
+        return jsonify({'success': True})
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur suppression réservation: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': "Erreur serveur"}), 500
-
-
-# ============================================================
-# 6. ENDPOINTS INVENTAIRE (Pagination)
-# ============================================================
-
-@api_bp.route("/inventaire/")
-@login_required
-def api_inventaire():
-    """
-    Retourne le HTML de l'inventaire paginé pour injection AJAX.
-    Compatible avec script.js (attend data.html).
-    """
-    etablissement_id = session.get('etablissement_id')
-    
-    # 1. Extraction des paramètres
-    page = request.args.get('page', 1, type=int)
-    sort_by = request.args.get('sort_by', 'nom')
-    direction = request.args.get('direction', 'asc')
-    search_query = request.args.get('q')
-    armoire_id = request.args.get('armoire', type=int)
-    categorie_id = request.args.get('categorie', type=int)
-    etat = request.args.get('etat')
-    
-    # 2. Récupération des données (Sécurisée)
-    objets, total_pages = get_paginated_objets(
-        etablissement_id, page, sort_by, direction, 
-        search_query, armoire_id, categorie_id, etat
-    )
-    
-    # 3. Infos filtres (Optimisation : évite des requêtes SQL si possible)
-    current_armoire = None
-    current_categorie = None
-    
-    if armoire_id:
-        if objets and objets[0].armoire and objets[0].armoire.id == armoire_id:
-            current_armoire = objets[0].armoire
-        else:
-            current_armoire = db.session.get(Armoire, armoire_id)
-    
-    if categorie_id:
-        if objets and objets[0].categorie and objets[0].categorie.id == categorie_id:
-            current_categorie = objets[0].categorie
-        else:
-            current_categorie = db.session.get(Categorie, categorie_id)
-    
-    # 4. Rendu template
-    html_content = render_template(
-        '_inventaire_content.html',
-        objets=objets,
-        pagination={
-            'page': page,
-            'total_pages': total_pages,
-            'endpoint': 'inventaire.inventaire' # <--- Mieux pour les permaliens
-        },
-        sort_by=sort_by,
-        direction=direction,
-        armoire=current_armoire,
-        categorie=current_categorie,
-        etat=etat,
-        search_query=search_query,
-        date_actuelle=datetime.now()
-    )
-    
-    # 5. Retour JSON compatible script.js
-    return jsonify({
-        'html': html_content,
-        'pagination': {
-            'page': page,
-            'total_pages': total_pages
-        }
-    })
+        current_app.logger.error(f"Erreur suggestion: {e}")
+        return jsonify({'success': False, 'error': "Erreur technique"}), 500

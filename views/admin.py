@@ -1,19 +1,17 @@
 # ============================================================
-# IMPORTS SÉCURISÉS
+# FICHIER : views/admin.py (Version Durcie & Sécurisée)
 # ============================================================
 import json
 import hashlib
-import shutil
 import secrets
 import re
 import logging
-from extensions import limiter, cache
-from collections import defaultdict
-from functools import wraps
-from datetime import date, datetime, timedelta
 from io import BytesIO
 from urllib.parse import urlparse
 from html import escape
+from datetime import date, datetime, timedelta
+from collections import defaultdict
+from functools import wraps
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, jsonify, send_file, current_app, abort)
@@ -32,41 +30,40 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 # Pour PDF
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.units import cm, mm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Flowable
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+from reportlab.graphics.shapes import Drawing, Rect, Line
+from reportlab.graphics import renderPDF
 
-# Modèles et DB
-from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Etablissement, Historique, Reservation, Suggestion
-# AJOUT DE allowed_file DANS LES IMPORTS
+# Imports Locaux
+from extensions import limiter, cache
+from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Historique, Reservation, Suggestion
 from utils import calculate_license_key, admin_required, login_required, log_action, get_etablissement_params, allowed_file
 
-
 # ============================================================
-# CONFIGURATION & SÉCURITÉ
+# CONFIGURATION
 # ============================================================
 admin_bp = Blueprint('admin', __name__, template_folder='../templates', url_prefix='/admin')
 
 MAX_EXPORT_LIMIT = 3000
-MAX_FILE_SIZE = 10 * 1024 * 1024 # <--- AJOUTÉ (10 Mo max)
-PASSWORD_MIN_LENGTH = 12         # <--- AJOUTÉ
+MAX_FILE_SIZE = 10 * 1024 * 1024 # 10 Mo
+PASSWORD_MIN_LENGTH = 12
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 
 # ============================================================
-# UTILITAIRES DE SÉCURITÉ (NOUVEAUX)
+# UTILITAIRES DE SÉCURITÉ
 # ============================================================
 def hash_user_id(user_id):
     """Anonymise l'ID utilisateur pour les logs."""
     return hashlib.sha256(str(user_id).encode()).hexdigest()[:8]
 
 def validate_email(email):
-    """Valide le format de l'email."""
     return re.match(EMAIL_REGEX, email) is not None
 
 def validate_password_strength(password):
-    """Valide la complexité du mot de passe."""
     if len(password) < PASSWORD_MIN_LENGTH:
         return False, f"Le mot de passe doit contenir au moins {PASSWORD_MIN_LENGTH} caractères."
     if not re.search(r"[a-z]", password): return False, "Doit contenir une minuscule."
@@ -76,9 +73,7 @@ def validate_password_strength(password):
     return True, ""
 
 def validate_url(url):
-    """Vérifie si une URL est valide (http/https)."""
-    if not url:
-        return True
+    if not url: return True
     try:
         result = urlparse(url)
         return all([result.scheme in ['http', 'https'], result.netloc])
@@ -86,53 +81,34 @@ def validate_url(url):
         return False
 
 def sanitize_for_excel(value):
-    """
-    Protège contre l'injection de formules Excel (CSV Injection).
-    Si une valeur commence par =, +, - ou @, on ajoute une apostrophe
-    pour forcer Excel à la traiter comme du texte.
-    """
+    """Protège contre l'injection CSV/Excel."""
     if isinstance(value, str) and value.startswith(('=', '+', '-', '@')):
         return f"'{value}"
     return value
 
 def generer_code_unique():
-    """Génère un code unique via un test d'insertion atomique (Flush/Rollback)."""
     for _ in range(10):
         code = f"LABFLOW-{secrets.token_hex(3).upper()}"
         nested = db.session.begin_nested()
         try:
-            # On crée un objet temporaire juste pour tester la contrainte UNIQUE de la base
-            # Le nom "__TEST__" n'a pas d'importance car on rollback juste après
-            test_etab = Etablissement(nom="__TEST_UNIQUENESS__", code_invitation=code)
-            
+            test_etab = Etablissement(nom="__TEST__", code_invitation=code)
             db.session.add(test_etab)
-            db.session.flush()    # Envoie à la DB : Si doublon, ça plante ici (IntegrityError)
+            db.session.flush()
             nested.rollback()
             return code
-            
         except IntegrityError:
             nested.rollback()
-            continue # On retente avec un nouveau code
-
-    # Si on arrive ici, c'est qu'on a vraiment pas de chance (ou plus de codes dispos)
-    raise RuntimeError("Impossible de générer un code d'invitation unique après 10 tentatives")
+            continue
+    raise RuntimeError("Impossible de générer un code unique")
 
 def json_serial(obj):
-    """Helper pour sérialiser les dates en JSON."""
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
+    if isinstance(obj, (datetime, date)): return obj.isoformat()
     raise TypeError(f"Type {type(obj)} non sérialisable")
 
 def sanitize_filename(name):
     safe = re.sub(r'[^\w\s-]', '', str(name))
-    
     cleaned = secure_filename(safe)
-    
-    if not cleaned:
-        cleaned = "Export"
-        
-    return cleaned[:100]
-    
+    return cleaned[:100] if cleaned else "Export"
 
 # ============================================================
 # ROUTE PRINCIPALE
@@ -141,54 +117,38 @@ def sanitize_filename(name):
 @admin_required
 def admin():
     etablissement_id = session.get('etablissement_id')
-    
-    # 1. Récupération de l'établissement
     etablissement = db.session.get(Etablissement, etablissement_id)
+    
     if not etablissement:
-        # Log sécurisé
         admin_hash = hash_user_id(session.get('user_id'))
         current_app.logger.critical(f"Admin access attempt invalid etab by admin_{admin_hash}")
         flash("Erreur critique : Établissement introuvable.", "error")
         return redirect(url_for('auth.login'))
 
-    # 2. AUTO-RÉPARATION sécurisée du code invitation
     if not etablissement.code_invitation:
         try:
             etablissement.code_invitation = generer_code_unique()
             db.session.commit()
-            current_app.logger.info(f"Code invitation généré pour Etab_{etablissement_id}")
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Erreur génération code invitation: {e}")
+            current_app.logger.error("Erreur génération code invitation", exc_info=True)
 
-    # 3. Récupération des infos de licence
-    params = db.session.execute(
-        db.select(Parametre).filter_by(etablissement_id=etablissement_id)
-    ).scalars().all()
-    
-    params_dict = {p.cle: p.valeur for p in params}
+    params = get_etablissement_params(etablissement_id)
     
     licence_info = {
-        'is_pro': params_dict.get('licence_statut') == 'PRO',
-        'instance_id': params_dict.get('instance_id', 'N/A'),
-        'statut': params_dict.get('licence_statut', 'FREE')
+        'is_pro': params.get('licence_statut') == 'PRO',
+        'instance_id': params.get('instance_id', 'N/A'),
+        'statut': params.get('licence_statut', 'FREE')
     }
 
-    # On ne passe plus 'suggestions' ici
-    return render_template(
-        "admin.html", 
-        now=datetime.now(), 
-        licence=licence_info,
-        etablissement=etablissement
-    )
-
-
+    return render_template("admin.html", now=datetime.now(), licence=licence_info, etablissement=etablissement)
 
 # ============================================================
 # GESTION ARMOIRES / CATÉGORIES
 # ============================================================
 @admin_bp.route("/ajouter", methods=["POST"])
 @admin_required
+@limiter.limit("30 per minute") # Rate limit ajouté
 def ajouter():
     etablissement_id = session['etablissement_id']
     type_objet = request.form.get("type")
@@ -208,10 +168,10 @@ def ajouter():
     except IntegrityError:
         db.session.rollback()
         flash(f"L'élément '{nom}' existe déjà.", "error")
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur ajout {type_objet}: {e}") # AJOUTÉ : Log
-        flash(f"Erreur technique.", "error")
+        current_app.logger.error(f"Erreur ajout {type_objet}", exc_info=True) # Log sécurisé
+        flash("Erreur technique.", "error")
     
     redirect_to = "main.gestion_armoires" if type_objet == "armoire" else "main.gestion_categories"
     return redirect(url_for(redirect_to))
@@ -229,17 +189,14 @@ def supprimer(type_objet, id):
         Model = Categorie
         redirect_to = "main.gestion_categories"
     else:
-        abort(400) # Bad Request si le type est inconnu
+        abort(400)
 
     element = db.session.get(Model, id)
 
-    # SÉCURITÉ IDOR : Si l'élément n'existe pas ou n'appartient pas à l'établissement
     if not element or element.etablissement_id != etablissement_id:
-        # On loggue la tentative suspecte
-        current_app.logger.warning(f"IDOR SUSPECT: User {session.get('user_id')} a tenté de supprimer {type_objet} {id} sans droits.")
-        abort(403) # Forbidden
+        current_app.logger.warning(f"IDOR SUSPECT: User {session.get('user_id')} delete {type_objet} {id}")
+        abort(403)
 
-    # Vérification des dépendances
     if type_objet == "armoire":
         count = db.session.query(Objet).filter_by(armoire_id=id, etablissement_id=etablissement_id).count()
     else:
@@ -254,31 +211,27 @@ def supprimer(type_objet, id):
         db.session.delete(element)
         db.session.commit()
         flash(f"L'élément '{nom_element}' a été supprimé.", "success")
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur suppression {type_objet}: {e}")
-        flash("Erreur technique lors de la suppression.", "error")
+        current_app.logger.error(f"Erreur suppression {type_objet}", exc_info=True)
+        flash("Erreur technique.", "error")
     
     return redirect(url_for(redirect_to))
 
-# --- ENDPOINTS JSON SÉCURISÉS ---
 @admin_bp.route("/modifier_armoire", methods=["POST"])
 @admin_required
 def modifier_armoire():
     try:
         etablissement_id = session['etablissement_id']
         data = request.get_json()
-        if not data:
-            return jsonify(success=False, error="Données JSON manquantes"), 400
+        if not data: return jsonify(success=False, error="Données manquantes"), 400
             
         armoire_id = data.get("id")
         nouveau_nom = data.get("nom", "").strip()
 
-        if not all([armoire_id, nouveau_nom]):
-            return jsonify(success=False, error="Données invalides"), 400
+        if not all([armoire_id, nouveau_nom]): return jsonify(success=False, error="Données invalides"), 400
 
         armoire = db.session.get(Armoire, armoire_id)
-
         if not armoire or armoire.etablissement_id != etablissement_id:
             return jsonify(success=False, error="Armoire introuvable"), 404
 
@@ -289,9 +242,9 @@ def modifier_armoire():
     except IntegrityError:
         db.session.rollback()
         return jsonify(success=False, error="Ce nom existe déjà"), 409
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur modifier_armoire: {e}")
+        current_app.logger.error("Erreur modifier_armoire", exc_info=True)
         return jsonify(success=False, error="Erreur serveur"), 500
 
 @admin_bp.route("/modifier_categorie", methods=["POST"])
@@ -300,17 +253,14 @@ def modifier_categorie():
     try:
         etablissement_id = session['etablissement_id']
         data = request.get_json()
-        if not data:
-            return jsonify(success=False, error="Données JSON manquantes"), 400
+        if not data: return jsonify(success=False, error="Données manquantes"), 400
 
         categorie_id = data.get("id")
         nouveau_nom = data.get("nom", "").strip()
 
-        if not all([categorie_id, nouveau_nom]):
-            return jsonify(success=False, error="Données invalides"), 400
+        if not all([categorie_id, nouveau_nom]): return jsonify(success=False, error="Données invalides"), 400
 
         categorie = db.session.get(Categorie, categorie_id)
-
         if not categorie or categorie.etablissement_id != etablissement_id:
             return jsonify(success=False, error="Catégorie introuvable"), 404
 
@@ -320,14 +270,13 @@ def modifier_categorie():
     except IntegrityError:
         db.session.rollback()
         return jsonify(success=False, error="Ce nom existe déjà"), 409
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur modifier_categorie: {e}")
+        current_app.logger.error("Erreur modifier_categorie", exc_info=True)
         return jsonify(success=False, error="Erreur serveur"), 500
 
-
 # ============================================================
-# GESTION UTILISATEURS (SÉCURISÉE)
+# GESTION UTILISATEURS (DURCIE)
 # ============================================================
 @admin_bp.route("/utilisateurs")
 @admin_required
@@ -337,19 +286,15 @@ def gestion_utilisateurs():
         db.select(Utilisateur)
         .filter_by(etablissement_id=etablissement_id)
         .order_by(Utilisateur.nom_utilisateur)
-        .limit(100) # AJOUTÉ : Limite anti-DoS
+        .limit(100)
     ).scalars().all()
 
-    breadcrumbs = [
-        {'text': 'Panneau d\'Administration', 'url': url_for('admin.admin')},
-        {'text': 'Gestion des Utilisateurs'}
-    ]
-    
+    breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Utilisateurs'}]
     return render_template("admin_utilisateurs.html", utilisateurs=utilisateurs, breadcrumbs=breadcrumbs, now=datetime.now)
 
 @admin_bp.route("/utilisateurs/ajouter", methods=["POST"])
 @admin_required
-@limiter.limit("10 per minute")
+@limiter.limit("5 per minute") # Rate Limit Strict
 def ajouter_utilisateur():
     etablissement_id = session['etablissement_id']
     nom_utilisateur = request.form.get('nom_utilisateur', '').strip()
@@ -361,12 +306,10 @@ def ajouter_utilisateur():
         flash("Champs obligatoires manquants.", "danger")
         return redirect(url_for('admin.gestion_utilisateurs'))
     
-    # AJOUTÉ : Validation Email
     if email and not validate_email(email):
         flash("Format d'email invalide.", "danger")
         return redirect(url_for('admin.gestion_utilisateurs'))
 
-    # AJOUTÉ : Validation MDP
     is_valid, error_msg = validate_password_strength(mot_de_passe)
     if not is_valid:
         flash(error_msg, "danger")
@@ -382,19 +325,18 @@ def ajouter_utilisateur():
         )
         db.session.add(nouvel_utilisateur)
         db.session.commit()
-        log_action('create_user', f"Nouvel utilisateur : {nom_utilisateur}")
         
-        # AJOUTÉ : Log anonymisé
         admin_hash = hash_user_id(session['user_id'])
         current_app.logger.info(f"Utilisateur créé par admin_{admin_hash}")
-        
         flash(f"Utilisateur '{nom_utilisateur}' créé.", "success")
+        
     except IntegrityError:
         db.session.rollback()
-        flash(f"L'utilisateur '{nom_utilisateur}' existe déjà.", "danger")
-    except Exception as e:
+        # ANTI-ENUMERATION : Message générique
+        flash("Erreur : Impossible de créer cet utilisateur (nom peut-être déjà pris).", "danger")
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur création user: {e}")
+        current_app.logger.error("Erreur création user", exc_info=True)
         flash("Erreur technique.", "danger")
 
     return redirect(url_for('admin.gestion_utilisateurs'))
@@ -405,7 +347,6 @@ def modifier_email_utilisateur(id_user):
     etablissement_id = session['etablissement_id']
     email = request.form.get('email', '').strip()
     
-    # AJOUTÉ : Validation Email
     if email and not validate_email(email):
         flash("Format d'email invalide.", "error")
         return redirect(url_for('admin.gestion_utilisateurs'))
@@ -419,15 +360,16 @@ def modifier_email_utilisateur(id_user):
         user.email = email if email else None
         db.session.commit()
         flash("Email mis à jour.", "success")
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur modif email: {e}")
+        current_app.logger.error("Erreur modif email", exc_info=True)
         flash("Erreur technique.", "error")
 
     return redirect(url_for('admin.gestion_utilisateurs'))
 
 @admin_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])
 @admin_required
+@limiter.limit("5 per minute") # Rate Limit Strict
 def reinitialiser_mdp(id_user):
     etablissement_id = session['etablissement_id']
     
@@ -436,8 +378,6 @@ def reinitialiser_mdp(id_user):
         return redirect(url_for('admin.gestion_utilisateurs'))
 
     nouveau_mdp = request.form.get('nouveau_mot_de_passe')
-    
-    # AJOUTÉ : Validation MDP
     is_valid, error_msg = validate_password_strength(nouveau_mdp)
     if not is_valid:
         flash(error_msg, "error")
@@ -452,15 +392,16 @@ def reinitialiser_mdp(id_user):
         user.mot_de_passe = generate_password_hash(nouveau_mdp, method='scrypt')
         db.session.commit()
         flash(f"Mot de passe réinitialisé pour {user.nom_utilisateur}.", "success")
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur reset MDP: {e}")
+        current_app.logger.error("Erreur reset MDP", exc_info=True)
         flash("Erreur technique.", "error")
 
     return redirect(url_for('admin.gestion_utilisateurs'))
 
 @admin_bp.route("/utilisateurs/supprimer/<int:id_user>", methods=["POST"])
 @admin_required
+@limiter.limit("5 per minute") # Rate Limit Strict
 def supprimer_utilisateur(id_user):
     if id_user == session['user_id']:
         flash("Impossible de supprimer son propre compte.", "error")
@@ -474,32 +415,31 @@ def supprimer_utilisateur(id_user):
         return redirect(url_for('admin.gestion_utilisateurs'))
 
     try:
-        # VÉRIFICATION DES DÉPENDANCES (Soft Delete)
         has_history = db.session.query(Historique).filter_by(utilisateur_id=user.id).first()
         has_reservations = db.session.query(Reservation).filter_by(utilisateur_id=user.id).first()
 
         if has_history or has_reservations:
-            # ANONYMISATION au lieu de suppression
             user.nom_utilisateur = f"Utilisateur_Supprimé_{user.id}_{secrets.token_hex(2)}"
             user.email = None
             user.mot_de_passe = "deleted"
             user.role = "desactive"
             db.session.commit()
-            flash("Utilisateur anonymisé et désactivé (car il possède un historique).", "warning")
+            flash("Utilisateur anonymisé et désactivé (historique conservé).", "warning")
         else:
             db.session.delete(user)
             db.session.commit()
             flash("Utilisateur supprimé définitivement.", "success")
             
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur suppression user: {e}")
+        current_app.logger.error("Erreur suppression user", exc_info=True)
         flash("Erreur technique.", "error")
         
     return redirect(url_for('admin.gestion_utilisateurs'))
 
 @admin_bp.route("/utilisateurs/promouvoir/<int:id_user>", methods=["POST"])
 @admin_required
+@limiter.limit("3 per minute") # Rate Limit Très Strict
 def promouvoir_utilisateur(id_user):
     if id_user == session['user_id']:
         flash("Action impossible sur soi-même.", "warning")
@@ -523,23 +463,21 @@ def promouvoir_utilisateur(id_user):
         current_admin.role = 'utilisateur'
         db.session.commit()
         session['user_role'] = 'utilisateur'
-        flash(f"Passation réussie ! {target_user.nom_utilisateur} est désormais administrateur.", "success")
+        flash(f"Passation réussie ! {target_user.nom_utilisateur} est administrateur.", "success")
         return redirect(url_for('inventaire.index'))
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur promotion: {e}")
+        current_app.logger.error("Erreur promotion", exc_info=True)
         flash("Erreur technique.", "danger")
         return redirect(url_for('admin.gestion_utilisateurs'))
 
-
 # ============================================================
-# GESTION KITS (SÉCURISÉE)
+# GESTION KITS
 # ============================================================
 @admin_bp.route("/kits")
 @admin_required
 def gestion_kits():
     etablissement_id = session['etablissement_id']
-    
     kits_data = db.session.execute(
         db.select(Kit, func.count(KitObjet.id).label('count'))
         .outerjoin(KitObjet, Kit.id == KitObjet.kit_id)
@@ -547,7 +485,6 @@ def gestion_kits():
         .group_by(Kit.id)
         .order_by(Kit.nom)
     ).mappings().all()
-
     breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Kits'}]
     return render_template("admin_kits.html", kits=kits_data, breadcrumbs=breadcrumbs)
 
@@ -564,24 +501,18 @@ def ajouter_kit():
         return redirect(url_for('admin.gestion_kits'))
 
     try:
-        nouveau_kit = Kit(
-            nom=nom, 
-            description=description, 
-            etablissement_id=etablissement_id
-        )
+        nouveau_kit = Kit(nom=nom, description=description, etablissement_id=etablissement_id)
         db.session.add(nouveau_kit)
         db.session.commit()
-        flash(f"Kit '{nom}' créé avec succès.", "success")
+        flash(f"Kit '{nom}' créé.", "success")
         return redirect(url_for('admin.modifier_kit', kit_id=nouveau_kit.id))
-        
     except IntegrityError:
         db.session.rollback()
         flash("Un kit portant ce nom existe déjà.", "danger")
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur ajout kit: {e}")
-        flash("Erreur technique lors de la création.", "danger")
-        
+        current_app.logger.error("Erreur ajout kit", exc_info=True)
+        flash("Erreur technique.", "danger")
     return redirect(url_for('admin.gestion_kits'))
 
 @admin_bp.route("/kits/modifier/<int:kit_id>", methods=["GET", "POST"])
@@ -591,142 +522,81 @@ def modifier_kit(kit_id):
     kit = db.session.get(Kit, kit_id)
     
     if not kit or kit.etablissement_id != etablissement_id:
-        flash("Kit introuvable ou accès refusé.", "danger")
+        flash("Kit introuvable.", "danger")
         return redirect(url_for('admin.gestion_kits'))
 
     if request.method == "POST":
         try:
             objet_id_str = request.form.get("objet_id")
-            
-            # CAS 1 : AJOUT D'UN OBJET AU KIT
             if objet_id_str:
                 objet_id = int(objet_id_str)
                 quantite = int(request.form.get("quantite", 1))
-                
-                # Validation Métier : Quantité positive
-                if quantite <= 0:
-                    raise ValueError("La quantité doit être supérieure à 0.")
+                if quantite <= 0: raise ValueError("Quantité > 0 requise.")
 
                 objet = db.session.get(Objet, objet_id)
                 if not objet or objet.etablissement_id != etablissement_id:
-                    raise ValueError("Objet invalide ou introuvable.")
+                    raise ValueError("Objet invalide.")
                 
-                # Vérifier si l'objet est déjà dans le kit
-                assoc = db.session.execute(
-                    db.select(KitObjet).filter_by(kit_id=kit.id, objet_id=objet_id)
-                ).scalar_one_or_none()
-                
+                assoc = db.session.execute(db.select(KitObjet).filter_by(kit_id=kit.id, objet_id=objet_id)).scalar_one_or_none()
                 if assoc:
-                    assoc.quantite += quantite # On cumule
-                    flash(f"Quantité mise à jour pour '{objet.nom}'.", "success")
+                    assoc.quantite += quantite
                 else:
-                    db.session.add(KitObjet(
-                        kit_id=kit.id, 
-                        objet_id=objet_id, 
-                        quantite=quantite, 
-                        etablissement_id=etablissement_id
-                    ))
-                    flash(f"Objet '{objet.nom}' ajouté au kit.", "success")
-                
+                    db.session.add(KitObjet(kit_id=kit.id, objet_id=objet_id, quantite=quantite, etablissement_id=etablissement_id))
+                flash(f"Objet '{objet.nom}' ajouté.", "success")
                 db.session.commit()
-
-            # CAS 2 : MISE À JOUR EN MASSE (Tableau existant)
             else:
-                modifications_count = 0
+                modifs = 0
                 for key, value in request.form.items():
                     if key.startswith("quantite_"):
                         try:
                             k_id = int(key.split("_")[1])
                             val = int(value)
-                            
                             assoc = db.session.get(KitObjet, k_id)
-                            # Sécurité : on vérifie que l'association appartient bien au kit en cours
                             if assoc and assoc.kit_id == kit.id:
                                 if val > 0:
                                     assoc.quantite = val
-                                    modifications_count += 1
+                                    modifs += 1
                                 else:
-                                    # Si 0 ou négatif, on supprime l'objet du kit
                                     db.session.delete(assoc)
-                                    modifications_count += 1
-                        except ValueError:
-                            continue # On ignore les clés malformées
-                
-                if modifications_count > 0:
+                                    modifs += 1
+                        except ValueError: continue
+                if modifs > 0:
                     db.session.commit()
                     flash("Quantités mises à jour.", "success")
-                else:
-                    flash("Aucune modification détectée.", "info")
-
-        except ValueError as ve:
-            flash(f"Erreur de saisie : {ve}", "warning")
-        except IntegrityError:
-            db.session.rollback()
-            flash("Erreur d'intégrité (doublon ou conflit).", "danger")
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Erreur modif kit {kit_id}: {e}")
-            flash("Erreur technique lors de la mise à jour.", "danger")
-            
+            current_app.logger.error("Erreur modif kit", exc_info=True)
+            flash(f"Erreur : {str(e)}", "danger")
         return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
 
-    # --- GET : AFFICHAGE ---
-    
-    # 1. Objets DANS le kit
-    objets_in_kit = db.session.execute(
-        db.select(KitObjet)
-        .filter_by(kit_id=kit.id)
-        .options(joinedload(KitObjet.objet))
-        .order_by(KitObjet.id)
-    ).scalars().all()
-    
-    # Liste des IDs déjà présents pour l'exclusion
+    objets_in_kit = db.session.execute(db.select(KitObjet).filter_by(kit_id=kit.id).options(joinedload(KitObjet.objet))).scalars().all()
     ids_in_kit = [o.objet_id for o in objets_in_kit]
-    
-    # 2. Objets DISPONIBLES (Hors du kit)
-    # SÉCURITÉ : Limite à 500 objets pour éviter le crash du navigateur si l'inventaire est énorme
     objets_disponibles = db.session.execute(
-        db.select(Objet)
-        .filter(Objet.etablissement_id == etablissement_id)
-        .filter(~Objet.id.in_(ids_in_kit) if ids_in_kit else True) # Exclure si la liste n'est pas vide
-        .order_by(Objet.nom)
-        .limit(500) 
+        db.select(Objet).filter(Objet.etablissement_id == etablissement_id)
+        .filter(~Objet.id.in_(ids_in_kit) if ids_in_kit else True)
+        .order_by(Objet.nom).limit(500)
     ).scalars().all()
 
-    breadcrumbs = [
-        {'text': 'Administration', 'url': url_for('admin.admin')}, 
-        {'text': 'Kits', 'url': url_for('admin.gestion_kits')}, 
-        {'text': kit.nom}
-    ]
-    
-    return render_template(
-        "admin_kit_modifier.html", 
-        kit=kit, 
-        breadcrumbs=breadcrumbs, 
-        objets_in_kit=objets_in_kit, 
-        objets_disponibles=objets_disponibles
-    )
+    breadcrumbs = [{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Kits', 'url': url_for('admin.gestion_kits')}, {'text': kit.nom}]
+    return render_template("admin_kit_modifier.html", kit=kit, breadcrumbs=breadcrumbs, objets_in_kit=objets_in_kit, objets_disponibles=objets_disponibles)
 
 @admin_bp.route("/kits/retirer_objet/<int:kit_objet_id>", methods=["POST"])
 @admin_required
 def retirer_objet_kit(kit_objet_id):
     etablissement_id = session['etablissement_id']
     assoc = db.session.get(KitObjet, kit_objet_id)
-    
     if not assoc or assoc.etablissement_id != etablissement_id:
-        flash("Objet introuvable ou accès refusé.", "danger")
+        flash("Objet introuvable.", "danger")
         return redirect(url_for('admin.gestion_kits'))
-        
     kit_id = assoc.kit_id
     try:
         db.session.delete(assoc)
         db.session.commit()
-        flash("Objet retiré du kit.", "success")
-    except Exception as e:
+        flash("Objet retiré.", "success")
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur retrait objet kit: {e}")
-        flash("Erreur technique lors du retrait.", "danger")
-            
+        current_app.logger.error("Erreur retrait objet kit", exc_info=True)
+        flash("Erreur technique.", "danger")
     return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
 
 @admin_bp.route("/kits/supprimer/<int:kit_id>", methods=["POST"])
@@ -734,345 +604,195 @@ def retirer_objet_kit(kit_objet_id):
 def supprimer_kit(kit_id):
     etablissement_id = session['etablissement_id']
     kit = db.session.get(Kit, kit_id)
-    
     if kit and kit.etablissement_id == etablissement_id:
         try:
             db.session.delete(kit)
             db.session.commit()
-            flash("Kit supprimé avec succès.", "success")
-        except Exception as e:
+            flash("Kit supprimé.", "success")
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Erreur suppression kit {kit_id}: {e}")
-            flash("Erreur technique lors de la suppression.", "danger")
+            current_app.logger.error("Erreur suppression kit", exc_info=True)
+            flash("Erreur technique.", "danger")
     else:
         flash("Kit introuvable.", "danger")
-        
     return redirect(url_for('admin.gestion_kits'))
 
 # ============================================================
-# GESTION ÉCHÉANCES (SÉCURISÉE)
+# GESTION ÉCHÉANCES
 # ============================================================
 @admin_bp.route("/echeances", methods=['GET'])
 @admin_required
 def gestion_echeances():
     etablissement_id = session['etablissement_id']
-    
-    echeances = db.session.execute(
-        db.select(Echeance)
-        .filter_by(etablissement_id=etablissement_id)
-        .order_by(Echeance.date_echeance.asc())
-    ).scalars().all()
-
-    breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Échéances'}]
+    echeances = db.session.execute(db.select(Echeance).filter_by(etablissement_id=etablissement_id).order_by(Echeance.date_echeance.asc())).scalars().all()
+    breadcrumbs = [{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Échéances'}]
     return render_template("admin_echeances.html", echeances=echeances, breadcrumbs=breadcrumbs, date_actuelle=date.today())
 
 @admin_bp.route("/echeances/ajouter", methods=['POST'])
 @admin_required
 def ajouter_echeance():
     etablissement_id = session['etablissement_id']
-    
     intitule = request.form.get('intitule', '').strip()
     date_str = request.form.get('date_echeance')
     details = request.form.get('details', '').strip()
 
-    # Validation des entrées
-    if not intitule:
-        flash("L'intitulé est obligatoire.", "warning")
-        return redirect(url_for('admin.gestion_echeances'))
-    
-    if not date_str:
-        flash("La date d'échéance est obligatoire.", "warning")
+    if not intitule or not date_str:
+        flash("Champs obligatoires manquants.", "warning")
         return redirect(url_for('admin.gestion_echeances'))
 
     try:
-        # Parsing sécurisé de la date
-        try:
-            date_echeance = datetime.strptime(date_str, '%Y-%m-%d').date()
-        except ValueError:
-            raise ValueError("Format de date invalide (attendu: AAAA-MM-JJ).")
-
-        nouvelle_echeance = Echeance(
-            intitule=intitule,
-            date_echeance=date_echeance,
-            details=details or None,
-            etablissement_id=etablissement_id,
-            traite=0 # Par défaut non traité à la création
-        )
-        
-        db.session.add(nouvelle_echeance)
+        date_echeance = datetime.strptime(date_str, '%Y-%m-%d').date()
+        db.session.add(Echeance(intitule=intitule, date_echeance=date_echeance, details=details or None, etablissement_id=etablissement_id))
         db.session.commit()
-        flash("Échéance ajoutée avec succès.", "success")
-
-    except ValueError as ve:
-        flash(f"Erreur de saisie : {ve}", "warning")
-    except Exception as e:
+        flash("Échéance ajoutée.", "success")
+    except ValueError:
+        flash("Format de date invalide.", "warning")
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur ajout échéance: {e}")
-        flash("Erreur technique lors de l'ajout.", "danger")
-
+        current_app.logger.error("Erreur ajout échéance", exc_info=True)
+        flash("Erreur technique.", "danger")
     return redirect(url_for('admin.gestion_echeances'))
 
 @admin_bp.route("/echeances/modifier/<int:id>", methods=['POST'])
 @admin_required
 def modifier_echeance(id):
     etablissement_id = session['etablissement_id']
-    
-    # Récupération sécurisée
-    echeance = db.session.get(Echeance, id)
-    if not echeance or echeance.etablissement_id != etablissement_id:
-        flash("Échéance introuvable ou accès refusé.", "danger")
-        return redirect(url_for('admin.gestion_echeances'))
-
-    intitule = request.form.get('intitule', '').strip()
-    date_str = request.form.get('date_echeance')
-    details = request.form.get('details', '').strip()
-    # Gestion de la checkbox (si présente = '1' ou 'on', sinon absente)
-    est_traite = 1 if 'traite' in request.form else 0
-
-    if not intitule or not date_str:
-        flash("L'intitulé et la date sont obligatoires.", "warning")
-        return redirect(url_for('admin.gestion_echeances'))
-
-    try:
-        try:
-            date_echeance = datetime.strptime(date_str, '%Y-%m-%d').date()
-        except ValueError:
-            raise ValueError("Format de date invalide.")
-
-        echeance.intitule = intitule
-        echeance.date_echeance = date_echeance
-        echeance.details = details or None
-        echeance.traite = est_traite
-        
-        db.session.commit()
-        flash("Échéance modifiée avec succès.", "success")
-
-    except ValueError as ve:
-        flash(f"Erreur de saisie : {ve}", "warning")
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Erreur modif échéance {id}: {e}")
-        flash("Erreur technique lors de la modification.", "danger")
-
-    return redirect(url_for('admin.gestion_echeances'))
-
-@admin_bp.route("/echeances/supprimer/<int:id>", methods=['POST'])
-@admin_required
-def supprimer_echeance(id):
-    etablissement_id = session['etablissement_id']
-    
     echeance = db.session.get(Echeance, id)
     if not echeance or echeance.etablissement_id != etablissement_id:
         flash("Échéance introuvable.", "danger")
         return redirect(url_for('admin.gestion_echeances'))
 
     try:
+        echeance.intitule = request.form.get('intitule', '').strip()
+        echeance.date_echeance = datetime.strptime(request.form.get('date_echeance'), '%Y-%m-%d').date()
+        echeance.details = request.form.get('details', '').strip() or None
+        echeance.traite = 1 if 'traite' in request.form else 0
+        db.session.commit()
+        flash("Échéance modifiée.", "success")
+    except ValueError:
+        flash("Format de date invalide.", "warning")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.error("Erreur modif échéance", exc_info=True)
+        flash("Erreur technique.", "danger")
+    return redirect(url_for('admin.gestion_echeances'))
+
+@admin_bp.route("/echeances/supprimer/<int:id>", methods=['POST'])
+@admin_required
+def supprimer_echeance(id):
+    etablissement_id = session['etablissement_id']
+    echeance = db.session.get(Echeance, id)
+    if not echeance or echeance.etablissement_id != etablissement_id:
+        flash("Échéance introuvable.", "danger")
+        return redirect(url_for('admin.gestion_echeances'))
+    try:
         db.session.delete(echeance)
         db.session.commit()
         flash("Échéance supprimée.", "success")
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur suppression échéance {id}: {e}")
-        flash("Erreur technique lors de la suppression.", "danger")
-
+        current_app.logger.error("Erreur suppression échéance", exc_info=True)
+        flash("Erreur technique.", "danger")
     return redirect(url_for('admin.gestion_echeances'))
 
 # ============================================================
-# GESTION BUDGET (SÉCURISÉE)
+# GESTION BUDGET
 # ============================================================
-
 @admin_bp.route("/budget", methods=['GET'])
 @admin_required
 def budget():
     etablissement_id = session['etablissement_id']
     now = datetime.now()
     annee_scolaire_actuelle = now.year if now.month >= 8 else now.year - 1
-    
     try:
         annee_selectionnee = int(request.args.get('annee', annee_scolaire_actuelle))
     except ValueError:
         annee_selectionnee = annee_scolaire_actuelle
 
-    # 1. Récupérer l'historique
-    budgets_archives = db.session.execute(
-        db.select(Budget).filter_by(etablissement_id=etablissement_id).order_by(Budget.annee.desc())
-    ).scalars().all()
+    budgets_archives = db.session.execute(db.select(Budget).filter_by(etablissement_id=etablissement_id).order_by(Budget.annee.desc())).scalars().all()
+    budget_affiche = db.session.execute(db.select(Budget).filter_by(etablissement_id=etablissement_id, annee=annee_selectionnee)).scalar_one_or_none()
 
-    # 2. Récupérer le budget affiché
-    budget_affiche = db.session.execute(
-        db.select(Budget).filter_by(etablissement_id=etablissement_id, annee=annee_selectionnee)
-    ).scalar_one_or_none()
-
-    # 3. Initialisation auto
     if not budget_affiche and not budgets_archives:
         try:
             budget_affiche = Budget(annee=annee_selectionnee, montant_initial=0.0, etablissement_id=etablissement_id)
             db.session.add(budget_affiche)
             db.session.commit()
             budgets_archives.insert(0, budget_affiche)
-        except IntegrityError:
-            db.session.rollback()
+        except IntegrityError: db.session.rollback()
 
-    # 4. Calculs des totaux & Chargement Optimisé
     depenses = []
     total_depenses = 0
     solde = 0
     cloture_autorisee = False
 
     if budget_affiche:
-        # --- OPTIMISATION N+1 ---
-        # On charge les dépenses ET le fournisseur associé en une seule requête
-        # On trie directement en SQL (plus rapide que Python)
         depenses = db.session.execute(
-            db.select(Depense)
-            .filter_by(budget_id=budget_affiche.id)
-            .options(joinedload(Depense.fournisseur))  # Eager loading
-            .order_by(Depense.date_depense.desc())
+            db.select(Depense).filter_by(budget_id=budget_affiche.id).options(joinedload(Depense.fournisseur)).order_by(Depense.date_depense.desc())
         ).scalars().all()
-
-        # On calcule le total sur la liste déjà chargée en mémoire
         total_depenses = sum(d.montant for d in depenses)
         solde = budget_affiche.montant_initial - total_depenses
-        
-        if date.today() >= date(budget_affiche.annee + 1, 6, 1):
-            cloture_autorisee = True
+        if date.today() >= date(budget_affiche.annee + 1, 6, 1): cloture_autorisee = True
 
-    # 5. Définir le budget actif pour les modales
-    budget_actuel_pour_modales = None
+    budget_actuel_pour_modales = budget_affiche if budget_affiche and not budget_affiche.cloture else db.session.execute(db.select(Budget).filter_by(etablissement_id=etablissement_id, cloture=False).order_by(Budget.annee.desc())).scalars().first()
+    annee_proposee = annee_scolaire_actuelle
+    if budgets_archives and budgets_archives[0].annee >= annee_scolaire_actuelle: annee_proposee = budgets_archives[0].annee + 1
+    fournisseurs = db.session.execute(db.select(Fournisseur).filter_by(etablissement_id=etablissement_id).order_by(Fournisseur.nom)).scalars().all()
     
-    if budget_affiche and not budget_affiche.cloture:
-        budget_actuel_pour_modales = budget_affiche
-    else:
-        budget_actuel_pour_modales = db.session.execute(
-            db.select(Budget).filter_by(etablissement_id=etablissement_id, cloture=False).order_by(Budget.annee.desc())
-        ).scalars().first()
-
-    annee_proposee_pour_creation = annee_scolaire_actuelle
-    if budgets_archives and budgets_archives[0].annee >= annee_scolaire_actuelle:
-        annee_proposee_pour_creation = budgets_archives[0].annee + 1
-
-    fournisseurs = db.session.execute(
-        db.select(Fournisseur).filter_by(etablissement_id=etablissement_id).order_by(Fournisseur.nom)
-    ).scalars().all()
-    
-    breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Budget'}]
-    
-    return render_template("budget.html", 
-                           breadcrumbs=breadcrumbs, 
-                           budget_affiche=budget_affiche,
-                           budget_actuel_pour_modales=budget_actuel_pour_modales,
-                           annee_proposee_pour_creation=annee_proposee_pour_creation,
-                           depenses=depenses, 
-                           total_depenses=total_depenses, 
-                           solde=solde,
-                           fournisseurs=fournisseurs, 
-                           budgets_archives=budgets_archives,
-                           annee_selectionnee=annee_selectionnee, 
-                           cloture_autorisee=cloture_autorisee, 
-                           now=now)
+    return render_template("budget.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Budget'}], 
+                           budget_affiche=budget_affiche, budget_actuel_pour_modales=budget_actuel_pour_modales,
+                           annee_proposee_pour_creation=annee_proposee, depenses=depenses, total_depenses=total_depenses,
+                           solde=solde, fournisseurs=fournisseurs, budgets_archives=budgets_archives,
+                           annee_selectionnee=annee_selectionnee, cloture_autorisee=cloture_autorisee, now=now)
 
 @admin_bp.route("/budget/definir", methods=['POST'])
 @admin_required
 def definir_budget():
     etablissement_id = session['etablissement_id']
     try:
-        montant_str = request.form.get('montant_initial', '0').replace(',', '.')
-        annee_str = request.form.get('annee')
+        montant = float(request.form.get('montant_initial', '0').replace(',', '.'))
+        annee = int(request.form.get('annee'))
+        if montant < 0: raise ValueError("Montant négatif.")
         
-        if not annee_str:
-            raise ValueError("L'année est requise.")
-
-        montant = float(montant_str)
-        annee = int(annee_str)
-        
-        if montant < 0:
-            raise ValueError("Le montant ne peut pas être négatif.")
-        
-        # Recherche si le budget existe déjà pour cette année
-        budget = db.session.execute(
-            db.select(Budget).filter_by(annee=annee, etablissement_id=etablissement_id)
-        ).scalar_one_or_none()
-        
+        budget = db.session.execute(db.select(Budget).filter_by(annee=annee, etablissement_id=etablissement_id)).scalar_one_or_none()
         if budget:
             budget.montant_initial = montant
-            budget.cloture = False # On peut rouvrir un budget en le redéfinissant
-            flash(f"Budget {annee}-{annee+1} mis à jour.", "success")
+            budget.cloture = False
+            flash(f"Budget {annee} mis à jour.", "success")
         else:
             db.session.add(Budget(annee=annee, montant_initial=montant, etablissement_id=etablissement_id))
-            flash(f"Budget {annee}-{annee+1} créé.", "success")
-        
+            flash(f"Budget {annee} créé.", "success")
         db.session.commit()
-        
-    except ValueError as ve:
-        flash(f"Erreur de saisie : {ve}", "warning")
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur définition budget: {e}")
+        current_app.logger.error("Erreur définition budget", exc_info=True)
         flash("Erreur technique.", "danger")
-        
     return redirect(url_for('admin.budget', annee=annee if 'annee' in locals() else None))
 
 @admin_bp.route("/budget/depense/ajouter", methods=['POST'])
 @admin_required
 def ajouter_depense():
     etablissement_id = session['etablissement_id']
-    
-    # 1. Récupération sécurisée des données brutes
-    budget_id_raw = request.form.get('budget_id')
-    fournisseur_id_raw = request.form.get('fournisseur_id')
-    est_bon_achat = 'est_bon_achat' in request.form
-    date_str = request.form.get('date_depense')
-    montant_str = request.form.get('montant')
-    contenu = request.form.get('contenu', '').strip()
-    
     try:
-        # 2. Vérification du Budget
-        if not budget_id_raw:
-            raise ValueError("Aucun budget actif sélectionné.")
-            
-        budget = db.session.get(Budget, int(budget_id_raw))
-        if not budget or budget.etablissement_id != etablissement_id:
-            raise ValueError("Budget invalide ou introuvable.")
-        
-        if budget.cloture:
-            raise ValueError("Ce budget est clôturé, impossible d'ajouter une dépense.")
+        budget = db.session.get(Budget, int(request.form.get('budget_id')))
+        if not budget or budget.etablissement_id != etablissement_id or budget.cloture:
+            raise ValueError("Budget invalide ou clôturé.")
 
-        # 3. Gestion du Fournisseur
-        fournisseur_id = None
-        if not est_bon_achat:
-            if not fournisseur_id_raw:
-                raise ValueError("Veuillez sélectionner un fournisseur.")
-            fournisseur_id = int(fournisseur_id_raw)
+        est_bon_achat = 'est_bon_achat' in request.form
+        fournisseur_id = int(request.form.get('fournisseur_id')) if not est_bon_achat else None
+        montant = float(request.form.get('montant').replace(',', '.'))
+        date_depense = datetime.strptime(request.form.get('date_depense'), '%Y-%m-%d').date()
 
-        # 4. Validation Montant et Date
-        if not montant_str: raise ValueError("Montant requis.")
-        montant = float(montant_str.replace(',', '.'))
-        
-        if not date_str: raise ValueError("Date requise.")
-        date_depense = datetime.strptime(date_str, '%Y-%m-%d').date()
-
-        # 5. Création
-        nouvelle = Depense(
-            date_depense=date_depense,
-            contenu=contenu,
-            montant=montant,
-            est_bon_achat=est_bon_achat,
-            fournisseur_id=fournisseur_id,
-            budget_id=budget.id,
-            etablissement_id=etablissement_id
-        )
-        
-        db.session.add(nouvelle)
+        db.session.add(Depense(
+            date_depense=date_depense, contenu=request.form.get('contenu', '').strip(),
+            montant=montant, est_bon_achat=est_bon_achat, fournisseur_id=fournisseur_id,
+            budget_id=budget.id, etablissement_id=etablissement_id
+        ))
         db.session.commit()
-        flash("Dépense ajoutée avec succès.", "success")
-        
-    except ValueError as ve:
-        flash(f"Erreur de saisie : {ve}", "warning")
+        flash("Dépense ajoutée.", "success")
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur ajout dépense: {e}")
+        current_app.logger.error("Erreur ajout dépense", exc_info=True)
         flash("Erreur technique.", "danger")
-        
     return redirect(url_for('admin.budget'))
 
 @admin_bp.route("/budget/depense/supprimer/<int:id>", methods=['POST'])
@@ -1080,21 +800,17 @@ def ajouter_depense():
 def supprimer_depense(id):
     etablissement_id = session['etablissement_id']
     depense = db.session.get(Depense, id)
-    
     if depense and depense.etablissement_id == etablissement_id:
-        # Vérifier si le budget est clôturé avant de supprimer ? 
-        # Généralement oui, mais on laisse la souplesse à l'admin ici.
         try:
             db.session.delete(depense)
             db.session.commit()
             flash("Dépense supprimée.", "success")
-        except Exception as e:
+        except Exception:
             db.session.rollback()
-            current_app.logger.error(f"Erreur suppression dépense {id}: {e}")
+            current_app.logger.error("Erreur suppression dépense", exc_info=True)
             flash("Erreur technique.", "danger")
     else:
         flash("Dépense introuvable.", "danger")
-        
     return redirect(url_for('admin.budget'))
 
 @admin_bp.route("/budget/cloturer", methods=['POST'])
@@ -1102,65 +818,50 @@ def supprimer_depense(id):
 def cloturer_budget():
     etablissement_id = session['etablissement_id']
     try:
-        budget_id = int(request.form.get('budget_id'))
-        budget = db.session.get(Budget, budget_id)
-        
+        budget = db.session.get(Budget, int(request.form.get('budget_id')))
         if budget and budget.etablissement_id == etablissement_id:
             budget.cloture = True
             db.session.commit()
-            flash(f"Le budget {budget.annee}-{budget.annee+1} est maintenant clôturé.", "success")
+            flash("Budget clôturé.", "success")
         else:
             flash("Budget introuvable.", "danger")
-            
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur clôture budget: {e}")
+        current_app.logger.error("Erreur clôture budget", exc_info=True)
         flash("Erreur technique.", "danger")
-        
     return redirect(url_for('admin.budget'))
-
 
 @admin_bp.route("/budget/exporter", methods=['GET'])
 @admin_required
 def exporter_budget():
-    """
-    Export du budget filtré par date en Excel ou PDF.
-    """
     etablissement_id = session['etablissement_id']
-    
-    # 1. Récupération des paramètres
     date_debut_str = request.args.get('date_debut')
     date_fin_str = request.args.get('date_fin')
     format_type = request.args.get('format')
     
     if not all([date_debut_str, date_fin_str, format_type]):
-        flash("Paramètres d'export manquants.", "error")
+        flash("Paramètres manquants.", "error")
         return redirect(url_for('admin.budget'))
     
     try:
-        # 2. Parsing des dates
         date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
         date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
         
-        # 3. Requête Optimisée
         depenses = db.session.execute(
-            db.select(Depense)
-            .options(joinedload(Depense.fournisseur))
+            db.select(Depense).options(joinedload(Depense.fournisseur))
             .filter_by(etablissement_id=etablissement_id)
-            .filter(Depense.date_depense >= date_debut)
-            .filter(Depense.date_depense <= date_fin)
+            .filter(Depense.date_depense >= date_debut, Depense.date_depense <= date_fin)
             .order_by(Depense.date_depense.asc())
         ).scalars().all()
         
         if not depenses:
-            flash("Aucune dépense trouvée pour cette période.", "warning")
+            flash("Aucune dépense sur cette période.", "warning")
             return redirect(url_for('admin.budget'))
         
-        # 4. Préparation des données
         data_export = []
         total = 0.0
         for d in depenses:
-            nom_fournisseur = "Petit matériel (Bon d'achat)" if d.est_bon_achat else (d.fournisseur.nom if d.fournisseur else "Inconnu")
+            nom_fournisseur = "Petit matériel" if d.est_bon_achat else (d.fournisseur.nom if d.fournisseur else "Inconnu")
             data_export.append({
                 'date': d.date_depense.strftime('%d/%m/%Y'),
                 'fournisseur': nom_fournisseur,
@@ -1169,7 +870,6 @@ def exporter_budget():
             })
             total += d.montant
         
-        # 5. Métadonnées
         metadata = {
             'etablissement': session.get('nom_etablissement', 'Mon Établissement'),
             'date_debut': date_debut.strftime('%d/%m/%Y'),
@@ -1179,92 +879,62 @@ def exporter_budget():
             'total': total
         }
 
-        log_action('export_budget', f"Format: {format_type}, Période: {date_debut_str} au {date_fin_str}")
+        log_action('export_budget', f"Format: {format_type}")
         
-        # 6. Génération
-        if format_type == 'excel':
-            return generer_budget_excel_pro(data_export, metadata)
-        else:
-            return generer_budget_pdf_pro(data_export, metadata)
+        if format_type == 'excel': return generer_budget_excel_pro(data_export, metadata)
+        else: return generer_budget_pdf_pro(data_export, metadata)
     
-    except Exception as e:
-        current_app.logger.error(f"Erreur export budget: {e}")
-        flash("Une erreur est survenue lors de l'export.", "error")
+    except Exception:
+        current_app.logger.error("Erreur export budget", exc_info=True)
+        flash("Erreur lors de l'export.", "error")
         return redirect(url_for('admin.budget'))
 
-
-
 # ============================================================
-# GESTION FOURNISSEURS (SÉCURISÉE)
+# GESTION FOURNISSEURS
 # ============================================================
-
 @admin_bp.route("/fournisseurs", methods=['GET'])
 @admin_required
 def gestion_fournisseurs():
     etablissement_id = session['etablissement_id']
-    
-    # Requête optimisée : Récupère le fournisseur ET le nombre de dépenses liées
-    # Cela permet de désactiver le bouton supprimer si des dépenses existent
     fournisseurs = db.session.execute(
         db.select(Fournisseur, func.count(Depense.id).label('depenses_count'))
         .outerjoin(Depense, Fournisseur.id == Depense.fournisseur_id)
         .filter(Fournisseur.etablissement_id == etablissement_id)
-        .group_by(Fournisseur.id)
-        .order_by(Fournisseur.nom)
+        .group_by(Fournisseur.id).order_by(Fournisseur.nom)
     ).all()
-    
-    breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Fournisseurs'}]
-    
-    return render_template("admin_fournisseurs.html", 
-                           fournisseurs=fournisseurs, 
-                           breadcrumbs=breadcrumbs)
+    return render_template("admin_fournisseurs.html", fournisseurs=fournisseurs, breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Fournisseurs'}])
 
 @admin_bp.route("/fournisseurs/ajouter", methods=['POST'])
 @admin_required
 def ajouter_fournisseur():
     etablissement_id = session['etablissement_id']
-    
     nom = request.form.get('nom', '').strip()
     site_web = request.form.get('site_web', '').strip()
     logo_url = request.form.get('logo_url', '').strip()
 
     if not nom:
-        flash("Le nom du fournisseur est obligatoire.", "danger")
+        flash("Nom obligatoire.", "danger")
         return redirect(url_for('admin.gestion_fournisseurs'))
 
-    # SÉCURITÉ : Validation des URLs
     if site_web and not validate_url(site_web):
-        flash("L'URL du site web est invalide (doit commencer par http:// ou https://).", "warning")
+        flash("URL site web invalide.", "warning")
         return redirect(url_for('admin.gestion_fournisseurs'))
         
     if logo_url and not validate_url(logo_url):
-        flash("L'URL du logo est invalide (doit commencer par http:// ou https://).", "warning")
+        flash("URL logo invalide.", "warning")
         return redirect(url_for('admin.gestion_fournisseurs'))
 
     try:
-        nouveau = Fournisseur(
-            nom=nom,
-            site_web=site_web or None,
-            logo=logo_url or None,
-            etablissement_id=etablissement_id
-        )
-        db.session.add(nouveau)
+        db.session.add(Fournisseur(nom=nom, site_web=site_web or None, logo=logo_url or None, etablissement_id=etablissement_id))
         db.session.commit()
-        
-        # Log
-        admin_hash = hash_user_id(session['user_id'])
-        current_app.logger.info(f"Fournisseur {nom} ajouté par admin_{admin_hash}")
-        
-        flash("Fournisseur ajouté avec succès.", "success")
-        
+        flash("Fournisseur ajouté.", "success")
     except IntegrityError:
         db.session.rollback()
-        flash("Un fournisseur portant ce nom existe déjà.", "danger")
-    except Exception as e:
+        flash("Ce fournisseur existe déjà.", "danger")
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur ajout fournisseur: {e}")
+        current_app.logger.error("Erreur ajout fournisseur", exc_info=True)
         flash("Erreur technique.", "danger")
-        
     return redirect(url_for('admin.gestion_fournisseurs'))
 
 @admin_bp.route("/fournisseurs/modifier/<int:id>", methods=['POST'])
@@ -1272,7 +942,6 @@ def ajouter_fournisseur():
 def modifier_fournisseur(id):
     etablissement_id = session['etablissement_id']
     fournisseur = db.session.get(Fournisseur, id)
-    
     if not fournisseur or fournisseur.etablissement_id != etablissement_id:
         flash("Fournisseur introuvable.", "danger")
         return redirect(url_for('admin.gestion_fournisseurs'))
@@ -1282,32 +951,24 @@ def modifier_fournisseur(id):
         site_web = request.form.get('site_web', '').strip()
         logo_url = request.form.get('logo_url', '').strip()
 
-        if not nom: 
-            raise ValueError("Le nom ne peut pas être vide")
-            
-        # SÉCURITÉ : Validation des URLs
-        if site_web and not validate_url(site_web):
-            raise ValueError("URL du site web invalide.")
-        if logo_url and not validate_url(logo_url):
-            raise ValueError("URL du logo invalide.")
+        if not nom: raise ValueError("Nom vide")
+        if site_web and not validate_url(site_web): raise ValueError("URL site invalide")
+        if logo_url and not validate_url(logo_url): raise ValueError("URL logo invalide")
             
         fournisseur.nom = nom
         fournisseur.site_web = site_web or None
         fournisseur.logo = logo_url or None
-        
         db.session.commit()
         flash("Fournisseur modifié.", "success")
-        
     except ValueError as ve:
         flash(str(ve), "warning")
     except IntegrityError:
         db.session.rollback()
-        flash("Ce nom de fournisseur existe déjà.", "danger")
-    except Exception as e:
+        flash("Nom déjà pris.", "danger")
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur modif fournisseur {id}: {e}")
+        current_app.logger.error("Erreur modif fournisseur", exc_info=True)
         flash("Erreur technique.", "danger")
-        
     return redirect(url_for('admin.gestion_fournisseurs'))
 
 @admin_bp.route("/fournisseurs/supprimer/<int:id>", methods=['POST'])
@@ -1315,264 +976,149 @@ def modifier_fournisseur(id):
 def supprimer_fournisseur(id):
     etablissement_id = session['etablissement_id']
     fournisseur = db.session.get(Fournisseur, id)
-    
     if fournisseur and fournisseur.etablissement_id == etablissement_id:
-        # Vérification stricte des dépendances avant suppression
         if fournisseur.depenses:
-            flash("Impossible de supprimer : ce fournisseur est lié à des dépenses budgétaires.", "danger")
+            flash("Impossible : lié à des dépenses.", "danger")
         else:
             try:
                 db.session.delete(fournisseur)
                 db.session.commit()
                 flash("Fournisseur supprimé.", "success")
-            except Exception as e:
+            except Exception:
                 db.session.rollback()
-                current_app.logger.error(f"Erreur suppression fournisseur {id}: {e}")
-                flash("Erreur technique lors de la suppression.", "danger")
+                current_app.logger.error("Erreur suppression fournisseur", exc_info=True)
+                flash("Erreur technique.", "danger")
     else:
         flash("Fournisseur introuvable.", "danger")
-        
     return redirect(url_for('admin.gestion_fournisseurs'))
 
 # ============================================================
-# SAUVEGARDE & RESTAURATION (JSON / SAAS)
+# SAUVEGARDE & RESTAURATION
 # ============================================================
 @admin_bp.route("/sauvegardes")
 @admin_required
 def gestion_sauvegardes():
     etablissement_id = session['etablissement_id']
-    
-    # Vérification Licence PRO
-    param_licence = db.session.execute(
-        db.select(Parametre).filter_by(etablissement_id=etablissement_id, cle='licence_statut')
-    ).scalar_one_or_none()
-    
-    is_pro = param_licence and param_licence.valeur == 'PRO'
-    
-    if not is_pro:
-        flash("L'accès aux sauvegardes est réservé à la version PRO.", "warning")
+    params = get_etablissement_params(etablissement_id)
+    if params.get('licence_statut') != 'PRO':
+        flash("Réservé à la version PRO.", "warning")
         return redirect(url_for('admin.admin'))
-
-    breadcrumbs = [
-        {'text': 'Administration', 'url': url_for('admin.admin')},
-        {'text': 'Sauvegardes', 'url': None}
-    ]
-    
-    return render_template("admin_backup.html",
-                            now=datetime.now(),
-                            breadcrumbs=breadcrumbs)
-
+    return render_template("admin_backup.html", now=datetime.now(), breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Sauvegardes'}])
 
 @admin_bp.route("/telecharger_db")
 @admin_required
 def telecharger_db():
     etablissement_id = session['etablissement_id']
-    
-    # 1. Vérification Licence PRO
-    param_licence = db.session.execute(
-        db.select(Parametre).filter_by(etablissement_id=etablissement_id, cle='licence_statut')
-    ).scalar_one_or_none()
-    
-    if not param_licence or param_licence.valeur != 'PRO':
-        flash("La sauvegarde est réservée à la version PRO.", "warning")
+    params = get_etablissement_params(etablissement_id)
+    if params.get('licence_statut') != 'PRO':
+        flash("Réservé PRO.", "warning")
         return redirect(url_for('admin.gestion_sauvegardes'))
 
     try:
-        # 2. Récupération des données
         data = {
-            'metadata': {
-                'version': '1.0',
-                'date': datetime.now().isoformat(),
-                'etablissement': session.get('nom_etablissement')
-            },
-            'armoires': [],
-            'categories': [],
-            'fournisseurs': [],
-            'objets': [],
-            'budget': [],
-            'depenses': [],
-            'echeances': []
+            'metadata': {'version': '1.0', 'date': datetime.now().isoformat(), 'etablissement': session.get('nom_etablissement')},
+            'armoires': [], 'categories': [], 'fournisseurs': [], 'objets': [], 'budget': [], 'depenses': [], 'echeances': []
         }
-
-        # Armoires
-        armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
-        for a in armoires:
+        
+        # Extraction des données (simplifiée pour la lisibilité)
+        for a in db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars():
             data['armoires'].append({'id': a.id, 'nom': a.nom})
-
-        # Catégories
-        categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
-        for c in categories:
+        for c in db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars():
             data['categories'].append({'id': c.id, 'nom': c.nom})
-
-        # Fournisseurs
-        fournisseurs = db.session.execute(db.select(Fournisseur).filter_by(etablissement_id=etablissement_id)).scalars().all()
-        for f in fournisseurs:
+        for f in db.session.execute(db.select(Fournisseur).filter_by(etablissement_id=etablissement_id)).scalars():
             data['fournisseurs'].append({'id': f.id, 'nom': f.nom, 'site_web': f.site_web, 'logo': f.logo})
-
-        # Objets
-        objets = db.session.execute(db.select(Objet).filter_by(etablissement_id=etablissement_id)).scalars().all()
-        for o in objets:
+        for o in db.session.execute(db.select(Objet).filter_by(etablissement_id=etablissement_id)).scalars():
             data['objets'].append({
-                'id': o.id,
-                'nom': o.nom,
-                'quantite': o.quantite_physique,
-                'seuil': o.seuil,
-                'armoire_id': o.armoire_id,
-                'categorie_id': o.categorie_id,
-                'date_peremption': o.date_peremption,
-                'image_url': o.image_url,
-                'fds_url': o.fds_url
+                'id': o.id, 'nom': o.nom, 'quantite': o.quantite_physique, 'seuil': o.seuil,
+                'armoire_id': o.armoire_id, 'categorie_id': o.categorie_id, 'date_peremption': o.date_peremption,
+                'image_url': o.image_url, 'fds_url': o.fds_url
             })
-            
-        # Budgets & Dépenses
-        budgets = db.session.execute(db.select(Budget).filter_by(etablissement_id=etablissement_id)).scalars().all()
-        for b in budgets:
+        for b in db.session.execute(db.select(Budget).filter_by(etablissement_id=etablissement_id)).scalars():
             b_data = {'id': b.id, 'annee': b.annee, 'montant': b.montant_initial, 'cloture': b.cloture}
             data['budget'].append(b_data)
             for d in b.depenses:
                 data['depenses'].append({
-                    'budget_id': b.id,
-                    'date': d.date_depense,
-                    'contenu': d.contenu,
-                    'montant': d.montant,
-                    'est_bon_achat': d.est_bon_achat,
-                    'fournisseur_id': d.fournisseur_id
+                    'budget_id': b.id, 'date': d.date_depense, 'contenu': d.contenu,
+                    'montant': d.montant, 'est_bon_achat': d.est_bon_achat, 'fournisseur_id': d.fournisseur_id
                 })
+        for e in db.session.execute(db.select(Echeance).filter_by(etablissement_id=etablissement_id)).scalars():
+            data['echeances'].append({'intitule': e.intitule, 'date': e.date_echeance, 'details': e.details, 'traite': e.traite})
 
-        # Échéances
-        echeances = db.session.execute(db.select(Echeance).filter_by(etablissement_id=etablissement_id)).scalars().all()
-        for e in echeances:
-            data['echeances'].append({
-                'intitule': e.intitule,
-                'date': e.date_echeance,
-                'details': e.details,
-                'traite': e.traite
-            })
-
-        # 3. Génération du fichier JSON
         json_str = json.dumps(data, default=json_serial, indent=4)
         buffer = BytesIO()
         buffer.write(json_str.encode('utf-8'))
         buffer.seek(0)
+        log_action('backup_download', "Export JSON")
+        safe_etab = sanitize_filename(session.get('nom_etablissement', 'Backup'))
+        return send_file(buffer, as_attachment=True, download_name=f"Sauvegarde_{safe_etab}_{date.today()}.json", mimetype='application/json')
 
-        # Audit Log
-        from utils import log_action
-        log_action('backup_download', "Export complet JSON")
-
-        # Nom de fichier sécurisé
-        safe_etab = secure_filename(session.get('nom_etablissement', 'Backup'))
-        filename = f"Sauvegarde_{safe_etab}_{date.today()}.json"
-
-        return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/json')
-
-    except Exception as e:
-        current_app.logger.error(f"Erreur backup: {e}")
-        flash("Erreur technique lors de la sauvegarde.", "error")
+    except Exception:
+        current_app.logger.error("Erreur backup", exc_info=True)
+        flash("Erreur technique.", "error")
         return redirect(url_for('admin.gestion_sauvegardes'))
-
 
 @admin_bp.route("/importer_db", methods=["POST"])
 @admin_required
 def importer_db():
     etablissement_id = session['etablissement_id']
-    
     if 'fichier' not in request.files:
-        flash("Aucun fichier sélectionné.", "error")
+        flash("Aucun fichier.", "error")
         return redirect(url_for('admin.gestion_sauvegardes'))
         
     fichier = request.files['fichier']
-    
-    # 1. Vérification Nom vide
-    if fichier.filename == '':
-        flash("Aucun fichier sélectionné.", "error")
-        return redirect(url_for('admin.gestion_sauvegardes'))
-
-    # 2. SÉCURITÉ : Vérification Extension via allowed_file + Check spécifique JSON
-    if not allowed_file(fichier.filename) or not fichier.filename.endswith('.json'):
-        flash("Format invalide. Veuillez fournir un fichier .json autorisé.", "error")
+    if fichier.filename == '' or not allowed_file(fichier.filename) or not fichier.filename.endswith('.json'):
+        flash("Fichier invalide (.json requis).", "error")
         return redirect(url_for('admin.gestion_sauvegardes'))
 
     try:
         data = json.load(fichier)
-        
-        # Mappings (Ancien ID -> Nouvel ID)
         map_armoires = {}
         map_categories = {}
         map_fournisseurs = {}
         map_budgets = {}
 
-        # 1. NETTOYAGE (Ordre strict pour FK)
-        db.session.query(KitObjet).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Historique).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Reservation).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Suggestion).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Depense).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Objet).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Kit).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Budget).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Echeance).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Armoire).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Categorie).filter_by(etablissement_id=etablissement_id).delete()
-        db.session.query(Fournisseur).filter_by(etablissement_id=etablissement_id).delete()
-        
+        # Nettoyage
+        for model in [KitObjet, Historique, Reservation, Suggestion, Depense, Objet, Kit, Budget, Echeance, Armoire, Categorie, Fournisseur]:
+            db.session.query(model).filter_by(etablissement_id=etablissement_id).delete()
         db.session.flush()
 
-        # 2. RECONSTRUCTION (Parents d'abord)
-        
-        # Armoires
+        # Reconstruction
         for a in data.get('armoires', []):
             new_a = Armoire(nom=a['nom'], etablissement_id=etablissement_id)
             db.session.add(new_a)
             db.session.flush()
             map_armoires[a['id']] = new_a.id
 
-        # Catégories
         for c in data.get('categories', []):
             new_c = Categorie(nom=c['nom'], etablissement_id=etablissement_id)
             db.session.add(new_c)
             db.session.flush()
             map_categories[c['id']] = new_c.id
 
-        # Fournisseurs
         for f in data.get('fournisseurs', []):
             new_f = Fournisseur(nom=f['nom'], site_web=f.get('site_web'), logo=f.get('logo'), etablissement_id=etablissement_id)
             db.session.add(new_f)
             db.session.flush()
             map_fournisseurs[f['id']] = new_f.id
 
-        # Objets (Enfants)
         for o in data.get('objets', []):
             new_armoire_id = map_armoires.get(o['armoire_id'])
             new_cat_id = map_categories.get(o['categorie_id'])
-            
             if not new_armoire_id or not new_cat_id: continue 
-
+            
             date_perim = None
             if o.get('date_peremption'):
                 try: date_perim = datetime.fromisoformat(o['date_peremption']).date()
                 except: pass
 
-            new_obj = Objet(
-                nom=o['nom'],
-                quantite_physique=o['quantite'],
-                seuil=o['seuil'],
-                armoire_id=new_armoire_id,
-                categorie_id=new_cat_id,
-                date_peremption=date_perim,
-                image_url=o.get('image_url'),
-                fds_url=o.get('fds_url'),
-                etablissement_id=etablissement_id
-            )
-            db.session.add(new_obj)
+            db.session.add(Objet(
+                nom=o['nom'], quantite_physique=o['quantite'], seuil=o['seuil'],
+                armoire_id=new_armoire_id, categorie_id=new_cat_id, date_peremption=date_perim,
+                image_url=o.get('image_url'), fds_url=o.get('fds_url'), etablissement_id=etablissement_id
+            ))
 
-        # Budgets & Dépenses
         for b in data.get('budget', []):
-            new_b = Budget(
-                annee=b['annee'],
-                montant_initial=b['montant'],
-                cloture=b['cloture'],
-                etablissement_id=etablissement_id
-            )
+            new_b = Budget(annee=b['annee'], montant_initial=b['montant'], cloture=b['cloture'], etablissement_id=etablissement_id)
             db.session.add(new_b)
             db.session.flush()
             map_budgets[b['id']] = new_b.id
@@ -1580,791 +1126,881 @@ def importer_db():
         for d in data.get('depenses', []):
             new_budget_id = map_budgets.get(d['budget_id'])
             if not new_budget_id: continue
-            
             new_fournisseur_id = map_fournisseurs.get(d['fournisseur_id']) if d.get('fournisseur_id') else None
-            
             try: date_dep = datetime.fromisoformat(d['date']).date()
             except: date_dep = date.today()
-
-            new_d = Depense(
-                budget_id=new_budget_id,
-                fournisseur_id=new_fournisseur_id,
-                contenu=d['contenu'],
-                montant=d['montant'],
-                date_depense=date_dep,
-                est_bon_achat=d.get('est_bon_achat', False),
+            db.session.add(Depense(
+                budget_id=new_budget_id, fournisseur_id=new_fournisseur_id, contenu=d['contenu'],
+                montant=d['montant'], date_depense=date_dep, est_bon_achat=d.get('est_bon_achat', False),
                 etablissement_id=etablissement_id
-            )
-            db.session.add(new_d)
+            ))
 
-        # Échéances
         for e in data.get('echeances', []):
             try: date_ech = datetime.fromisoformat(e['date']).date()
             except: continue
-            
-            new_e = Echeance(
-                intitule=e['intitule'],
-                date_echeance=date_ech,
-                details=e.get('details'),
-                traite=e.get('traite', 0),
-                etablissement_id=etablissement_id
-            )
-            db.session.add(new_e)
+            db.session.add(Echeance(intitule=e['intitule'], date_echeance=date_ech, details=e.get('details'), traite=e.get('traite', 0), etablissement_id=etablissement_id))
 
         db.session.commit()
-        
-        # Audit Log
-        from utils import log_action
-        log_action('backup_restore', "Restauration complète depuis JSON")
-        
-        flash("Restauration effectuée avec succès !", "success")
+        log_action('backup_restore', "Import JSON")
+        flash("Restauration réussie !", "success")
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur import DB: {e}")
-        flash(f"Erreur critique lors de l'importation : {str(e)}", "error")
+        current_app.logger.error("Erreur import DB", exc_info=True)
+        flash("Erreur critique lors de l'importation.", "error")
 
     return redirect(url_for('admin.gestion_sauvegardes'))
-        
-        
-        
-# ============================================================
-# GÉNÉRATEUR PDF (ReportLab - Style LabFlow)
-# ============================================================
-# Assure-toi d'ajouter cet import tout en haut du fichier views/admin.py
-from html import escape
-
-def generer_budget_pdf_pro(data_export, metadata):
-    buffer = BytesIO()
-    
-    # Configuration du document
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=1.5*cm,
-        leftMargin=1.5*cm,
-        topMargin=1.5*cm,
-        bottomMargin=1.5*cm,
-        title=f"Budget {metadata['etablissement']}"
-    )
-    
-    elements = []
-    styles = getSampleStyleSheet()
-    
-    # Couleurs
-    LABFLOW_BLUE = colors.HexColor('#1F3B73')
-    
-    # Styles de paragraphes
-    style_titre = ParagraphStyle(
-        'LabFlowTitle',
-        parent=styles['Heading1'],
-        fontSize=22,
-        textColor=LABFLOW_BLUE,
-        spaceAfter=10,
-        alignment=TA_CENTER,
-        fontName='Helvetica-Bold'
-    )
-    
-    style_sous_titre = ParagraphStyle(
-        'LabFlowSubTitle',
-        parent=styles['Normal'],
-        fontSize=12,
-        textColor=colors.HexColor('#6c757d'),
-        spaceAfter=20,
-        alignment=TA_CENTER
-    )
-
-    style_cellule = ParagraphStyle(
-        'CellStyle',
-        parent=styles['Normal'],
-        fontSize=9,
-        leading=11,
-        textColor=colors.black,
-        alignment=TA_LEFT
-    )
-    
-    style_cellule_centre = ParagraphStyle('CellCenter', parent=style_cellule, alignment=TA_CENTER)
-    style_cellule_droite = ParagraphStyle('CellRight', parent=style_cellule, alignment=TA_RIGHT)
-    
-    # --- Construction du contenu ---
-
-    # 1. En-tête
-    elements.append(Paragraph(metadata['etablissement'], style_titre))
-    elements.append(Paragraph(
-        f"Rapport de Dépenses : {metadata['date_debut']} au {metadata['date_fin']}", 
-        style_sous_titre
-    ))
-    elements.append(Spacer(1, 0.5*cm))
-    
-    # 2. Préparation des données du tableau
-    table_data = [['Date', 'Fournisseur', 'Libellé', 'Montant']]
-    
-    for item in data_export:
-        date_para = Paragraph(item['date'], style_cellule_centre)
-        # Sécurité : escape() empêche le crash si le texte contient <, >, &
-        fournisseur_para = Paragraph(escape(item['fournisseur']), style_cellule)
-        libelle_para = Paragraph(escape(item['contenu'] or "Non spécifié"), style_cellule)
-        montant_para = Paragraph(f"{item['montant']:.2f} €", style_cellule_droite)
-        
-        table_data.append([date_para, fournisseur_para, libelle_para, montant_para])
-    
-    # Ligne vide de séparation (Esthétique)
-    table_data.append(['', '', '', ''])
-    
-    # Ligne Total
-    table_data.append([
-        '', 
-        '', 
-        Paragraph('<b>TOTAL</b>', style_cellule_droite), 
-        Paragraph(f"<b>{metadata['total']:.2f} €</b>", style_cellule_droite)
-    ])
-    
-    # 3. Création et Style du Tableau
-    col_widths = [2.5*cm, 6*cm, 7*cm, 2.5*cm]
-    t = Table(table_data, colWidths=col_widths)
-    
-    t.setStyle(TableStyle([
-        # Header
-        ('BACKGROUND', (0, 0), (-1, 0), LABFLOW_BLUE),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-        ('TOPPADDING', (0, 0), (-1, 0), 10),
-        
-        # Alignement vertical global
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        
-        # Grille (sauf sur la ligne vide et le total)
-        # -3 correspond à la dernière ligne de données avant la ligne vide
-        ('GRID', (0, 0), (-1, -3), 0.5, colors.HexColor('#dee2e6')),
-        
-        # Zebra (lignes alternées) sur les données uniquement
-        ('ROWBACKGROUNDS', (0, 1), (-1, -3), [colors.white, colors.HexColor('#f8f9fa')]),
-        
-        # Footer Total (Dernière ligne)
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e9ecef')),
-        ('LINEABOVE', (0, -1), (-1, -1), 1.5, LABFLOW_BLUE), # Ligne épaisse au-dessus du total
-        ('GRID', (2, -1), (-1, -1), 0.5, colors.HexColor('#dee2e6')), # Grille juste pour les cases total
-    ]))
-    
-    elements.append(t)
-    
-    # 4. Footer du document
-    elements.append(Spacer(1, 1*cm))
-    footer_style = ParagraphStyle(
-        'Footer', 
-        parent=styles['Normal'], 
-        fontSize=8, 
-        textColor=colors.grey, 
-        alignment=TA_CENTER
-    )
-    elements.append(Paragraph(
-        f"Généré par LabFlow le {metadata['date_generation']} | "
-        f"{metadata['nombre_depenses']} dépense(s)", 
-        footer_style
-    ))
-    
-    # Génération
-    doc.build(elements)
-    buffer.seek(0)
-    
-    # Nom de fichier sécurisé (remplacement des espaces)
-    safe_etab = sanitize_filename(metadata['etablissement'])
-    safe_debut = sanitize_filename(metadata['date_debut'])
-    safe_fin = sanitize_filename(metadata['date_fin'])
-    
-    filename = f"Budget_{safe_etab}_{safe_debut}_au_{safe_fin}.pdf"
-    
-    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
 
 # ============================================================
-# GÉNÉRATEUR EXCEL (OpenPyXL - Style LabFlow)
+# IMPORT EXCEL
 # ============================================================
-def generer_budget_excel_pro(data_export, metadata):
-    import re
-    
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Budget"
-    
-    # Couleurs LabFlow
-    COLOR_PRIMARY = "1F3B73"
-    COLOR_LIGHT = "F8F9FA"
-    COLOR_BORDER = "DEE2E6"
-    
-    # Styles
-    header_font = Font(bold=True, color="FFFFFF", size=11)
-    header_fill = PatternFill(start_color=COLOR_PRIMARY, end_color=COLOR_PRIMARY, fill_type="solid")
-    center_align = Alignment(horizontal="center", vertical="center")
-    right_align = Alignment(horizontal="right", vertical="center")
-    
-    border_style = Border(
-        left=Side(style='thin', color=COLOR_BORDER),
-        right=Side(style='thin', color=COLOR_BORDER),
-        top=Side(style='thin', color=COLOR_BORDER),
-        bottom=Side(style='thin', color=COLOR_BORDER)
-    )
-    
-    # Titre
-    ws.merge_cells('A1:D1')
-    ws['A1'] = f"Budget : {metadata['etablissement']}"
-    ws['A1'].font = Font(bold=True, size=14, color=COLOR_PRIMARY)
-    ws['A1'].alignment = center_align
-    
-    ws.merge_cells('A2:D2')
-    ws['A2'] = f"Période : {metadata['date_debut']} au {metadata['date_fin']}"
-    ws['A2'].font = Font(italic=True, size=10)
-    ws['A2'].alignment = center_align
-    
-    # En-têtes Colonnes (Ligne 4)
-    headers = ['Date', 'Fournisseur', 'Libellé', 'Montant']
-    for col, text in enumerate(headers, 1):
-        cell = ws.cell(row=4, column=col, value=text)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = center_align
-        cell.border = border_style
-    
-    # Données
-    row_idx = 5
-    for item in data_export:
-        # SÉCURITÉ : Nettoyage anti-injection de formule
-        date_val = sanitize_for_excel(item['date'])
-        fournisseur_val = sanitize_for_excel(item['fournisseur'])
-        contenu_val = sanitize_for_excel(item['contenu'])
-        
-        ws.cell(row=row_idx, column=1, value=date_val).alignment = center_align
-        ws.cell(row=row_idx, column=2, value=fournisseur_val)
-        ws.cell(row=row_idx, column=3, value=contenu_val)
-        
-        # Le montant est un float, donc pas de risque d'injection
-        try:
-            val_montant = float(item['montant'])
-        except (ValueError, TypeError):
-            val_montant = 0.0
-            
-        montant_cell = ws.cell(row=row_idx, column=4, value=val_montant)
-        montant_cell.number_format = '#,##0.00 €'
-        montant_cell.alignment = right_align
-        
-        # Bordures
-        for col in range(1, 5):
-            ws.cell(row=row_idx, column=col).border = border_style
-            
-        # Zebra striping
-        if row_idx % 2 == 0:
-            for col in range(1, 5):
-                ws.cell(row=row_idx, column=col).fill = PatternFill(
-                    start_color=COLOR_LIGHT, end_color=COLOR_LIGHT, fill_type="solid"
-                )
-        
-        row_idx += 1
-    
-    # Total
-    ws.cell(row=row_idx, column=3, value="TOTAL").font = Font(bold=True)
-    ws.cell(row=row_idx, column=3).alignment = right_align
-    ws.cell(row=row_idx, column=3).border = border_style
-    
-    # ⚠️ CORRECTION ICI : Conversion explicite en float
-    total_cell = ws.cell(row=row_idx, column=4, value=float(metadata['total']))
-    total_cell.font = Font(bold=True, color=COLOR_PRIMARY)
-    total_cell.number_format = '#,##0.00 €'
-    total_cell.alignment = right_align
-    total_cell.fill = PatternFill(start_color="E9ECEF", end_color="E9ECEF", fill_type="solid")
-    total_cell.border = border_style
-    
-    # Bordures pour les cellules vides de la ligne total
-    for col in [1, 2]:
-        cell = ws.cell(row=row_idx, column=col)
-        cell.border = border_style
-        cell.fill = PatternFill(start_color="E9ECEF", end_color="E9ECEF", fill_type="solid")
-    
-    # Footer
-    row_idx += 2
-    ws.merge_cells(f'A{row_idx}:D{row_idx}')
-    footer_cell = ws.cell(row=row_idx, column=1)
-    footer_cell.value = f"Généré par LabFlow le {metadata['date_generation']} | {metadata['nombre_depenses']} dépense(s)"
-    footer_cell.font = Font(size=8, color="6C757D", italic=True)
-    footer_cell.alignment = center_align
-    
-    # Largeurs
-    ws.column_dimensions['A'].width = 15
-    ws.column_dimensions['B'].width = 30
-    ws.column_dimensions['C'].width = 50
-    ws.column_dimensions['D'].width = 15
-    
-    # Filtres automatiques sur les en-têtes
-    ws.auto_filter.ref = f"A4:D{row_idx - 3}"
-    
-    # Figer les lignes d'en-tête
-    ws.freeze_panes = "A5"
-    
-    buffer = BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    
-    safe_etab = sanitize_filename(metadata['etablissement'])
-    safe_debut = sanitize_filename(metadata['date_debut'])
-    safe_fin = sanitize_filename(metadata['date_fin'])
-    
-    filename = f"Budget_{safe_etab}_{safe_debut}_au_{safe_fin}.xlsx"
-    
-    return send_file(
-        buffer, 
-        as_attachment=True, 
-        download_name=filename, 
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-
-
-
-# ============================================================
-# IMPORT / EXPORT (SÉCURISÉ)
-# ============================================================
-
 @admin_bp.route("/importer", methods=['GET'])
 @admin_required
 def importer_page():
     etablissement_id = session['etablissement_id']
-    # On récupère les listes pour aider l'utilisateur à vérifier ses noms
     armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
     categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
-    
-    breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Importation en Masse'}]
-    return render_template("admin_import.html", breadcrumbs=breadcrumbs, armoires=armoires, categories=categories, now=datetime.now())
+    return render_template("admin_import.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Import'}], armoires=armoires, categories=categories, now=datetime.now())
 
 @admin_bp.route("/telecharger_modele")
 @admin_required
 def telecharger_modele_excel():
     etablissement_id = session['etablissement_id']
-    
-    # 1. Récupération des données existantes pour les listes déroulantes
-    armoires = db.session.execute(
-        db.select(Armoire.nom).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)
-    ).scalars().all()
-    
-    categories = db.session.execute(
-        db.select(Categorie.nom).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)
-    ).scalars().all()
+    armoires = db.session.execute(db.select(Armoire.nom).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)).scalars().all()
+    categories = db.session.execute(db.select(Categorie.nom).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)).scalars().all()
 
-    # 2. Création du classeur
     wb = Workbook()
     ws = wb.active
-    ws.title = "Inventaire à Importer"
-
-    # 3. En-têtes
-    headers = ["Nom", "Quantité", "Seuil", "Armoire", "Catégorie", "Date Péremption", "Image (URL)"]
-    ws.append(headers)
-
-    # Style Header
-    header_font = Font(name='Calibri', bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="4A5568", end_color="4A5568", fill_type="solid")
-    center_alignment = Alignment(horizontal='center', vertical='center')
-
-    for cell in ws[1]:
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = center_alignment
-
-    # Largeurs
-    ws.column_dimensions['A'].width = 40
-    ws.column_dimensions['B'].width = 15
-    ws.column_dimensions['C'].width = 15
-    ws.column_dimensions['D'].width = 30
-    ws.column_dimensions['E'].width = 30
-    ws.column_dimensions['F'].width = 20
-    ws.column_dimensions['G'].width = 50
-
-    # --- 4. CRÉATION DES LISTES DÉROULANTES (Feuille cachée) ---
+    ws.title = "Inventaire"
+    ws.append(["Nom", "Quantité", "Seuil", "Armoire", "Catégorie", "Date Péremption", "Image (URL)"])
+    
+    # Styles et validations (simplifié)
     ws_data = wb.create_sheet("Data_Listes")
-    ws_data.sheet_state = 'hidden' 
-
-    # Remplissage Armoires (Col A) et Catégories (Col B)
-    for i, nom in enumerate(armoires, start=1):
-        ws_data.cell(row=i, column=1, value=nom)
-    for i, nom in enumerate(categories, start=1):
-        ws_data.cell(row=i, column=2, value=nom)
-
-    # --- 5. APPLICATION DE LA VALIDATION ---
-    # Validation Armoires (Colonne D)
+    ws_data.sheet_state = 'hidden'
+    for i, nom in enumerate(armoires, 1): ws_data.cell(row=i, column=1, value=nom)
+    for i, nom in enumerate(categories, 1): ws_data.cell(row=i, column=2, value=nom)
+    
     if armoires:
-        dv_armoires = DataValidation(type="list", formula1=f"'Data_Listes'!$A$1:$A${len(armoires)}", allow_blank=True)
-        dv_armoires.error = 'Veuillez sélectionner une armoire dans la liste.'
-        dv_armoires.errorTitle = 'Armoire inconnue'
-        ws.add_data_validation(dv_armoires)
-        dv_armoires.add('D2:D1000')
-
-    # Validation Catégories (Colonne E)
+        dv = DataValidation(type="list", formula1=f"'Data_Listes'!$A$1:$A${len(armoires)}", allow_blank=True)
+        ws.add_data_validation(dv)
+        dv.add('D2:D1000')
     if categories:
-        dv_categories = DataValidation(type="list", formula1=f"'Data_Listes'!$B$1:$B${len(categories)}", allow_blank=True)
-        dv_categories.error = 'Veuillez sélectionner une catégorie dans la liste.'
-        dv_categories.errorTitle = 'Catégorie inconnue'
-        ws.add_data_validation(dv_categories)
-        dv_categories.add('E2:E1000')
-
-    # Aide Date
-    ws['F1'].comment = Comment("Format attendu : AAAA-MM-JJ (ex: 2025-12-31)", "LabFlow")
+        dv = DataValidation(type="list", formula1=f"'Data_Listes'!$B$1:$B${len(categories)}", allow_blank=True)
+        ws.add_data_validation(dv)
+        dv.add('E2:E1000')
 
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name='modele_import_inventaire.xlsx',
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+    return send_file(buffer, as_attachment=True, download_name='modele_import.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 @admin_bp.route("/importer", methods=['POST'])
 @admin_required
-@limiter.limit("20 per minute")
+@limiter.limit("10 per minute")
 def importer_fichier():
     etablissement_id = session['etablissement_id']
-    
-    # 1. Vérification présence fichier
     if 'fichier_excel' not in request.files:
-        flash("Aucun fichier sélectionné.", "error")
+        flash("Aucun fichier.", "error")
         return redirect(url_for('admin.importer_page'))
 
     fichier = request.files['fichier_excel']
-    
-    if fichier.filename == '':
-        flash("Aucun fichier sélectionné.", "error")
+    if fichier.filename == '' or not allowed_file(fichier.filename) or not fichier.filename.endswith('.xlsx'):
+        flash("Fichier invalide (.xlsx requis).", "error")
         return redirect(url_for('admin.importer_page'))
 
-    # 2. SÉCURITÉ DoS : Vérification taille fichier (Max 10Mo)
+    # Check size
     fichier.seek(0, 2)
-    size = fichier.tell()
+    if fichier.tell() > MAX_FILE_SIZE:
+        flash("Fichier trop volumineux.", "error")
+        return redirect(url_for('admin.importer_page'))
     fichier.seek(0)
-    
-    if size > MAX_FILE_SIZE:
-        flash(f"Fichier trop volumineux (Max {MAX_FILE_SIZE/1024/1024}MB).", "error")
-        return redirect(url_for('admin.importer_page'))
-
-    # 3. SÉCURITÉ : Vérification Extension via allowed_file + Check spécifique XLSX
-    if not allowed_file(fichier.filename) or not fichier.filename.endswith('.xlsx'):
-        flash("Format invalide. Veuillez utiliser le modèle Excel (.xlsx).", "error")
-        return redirect(url_for('admin.importer_page'))
-
-    errors = []
-    success_count = 0
-    skipped_items = []
-
-    # Chargement des données de référence
-    existing_objets = {o.nom.lower() for o in db.session.execute(db.select(Objet).filter_by(etablissement_id=etablissement_id)).scalars().all()}
-    armoires_map = {a.nom.lower(): a.id for a in db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()}
-    categories_map = {c.nom.lower(): c.id for c in db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()}
 
     try:
-        workbook = load_workbook(fichier)
-        sheet = workbook.active
+        wb = load_workbook(fichier)
+        ws = wb.active
+        existing_objets = {o.nom.lower() for o in db.session.execute(db.select(Objet).filter_by(etablissement_id=etablissement_id)).scalars().all()}
+        armoires_map = {a.nom.lower(): a.id for a in db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()}
+        categories_map = {c.nom.lower(): c.id for c in db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()}
         
-        for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            if not row or all(cell is None for cell in row): continue
+        success_count = 0
+        errors = []
+        
+        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+            if not row or all(c is None for c in row): continue
+            if len(row) < 5: 
+                errors.append(f"Ligne {i}: Colonnes manquantes")
+                continue
+                
+            nom, qte, seuil, arm_nom, cat_nom = row[0], row[1], row[2], row[3], row[4]
+            if not all([nom, qte is not None, seuil is not None]):
+                errors.append(f"Ligne {i}: Données obligatoires manquantes")
+                continue
+                
+            if str(nom).lower() in existing_objets: continue
             
-            if len(row) < 5:
-                errors.append(f"Ligne {i}: Colonnes manquantes.")
+            arm_id = armoires_map.get(str(arm_nom).lower().strip()) if arm_nom else None
+            cat_id = categories_map.get(str(cat_nom).lower().strip()) if cat_nom else None
+            
+            if not arm_id or not cat_id:
+                errors.append(f"Ligne {i}: Armoire ou Catégorie inconnue")
                 continue
+                
+            date_perim = None
+            if len(row) > 5 and row[5]:
+                if isinstance(row[5], datetime): date_perim = row[5].date()
+                elif isinstance(row[5], str):
+                    try: date_perim = datetime.strptime(row[5].split(' ')[0], '%Y-%m-%d').date()
+                    except: pass
 
-            nom, quantite, seuil, armoire_nom, categorie_nom = row[0], row[1], row[2], row[3], row[4]
-            date_peremption = row[5] if len(row) > 5 else None
-            image_url = row[6] if len(row) > 6 else None
-
-            if not all([nom, quantite is not None, seuil is not None]):
-                errors.append(f"Ligne {i}: Nom, Quantité ou Seuil manquant.")
-                continue
-
-            if str(nom).lower() in existing_objets:
-                skipped_items.append(str(nom))
-                continue
-
-            armoire_id = armoires_map.get(str(armoire_nom).lower().strip()) if armoire_nom else None
-            categorie_id = categories_map.get(str(categorie_nom).lower().strip()) if categorie_nom else None
-
-            if not armoire_id:
-                errors.append(f"Ligne {i}: Armoire '{armoire_nom}' inconnue. Créez-la d'abord.")
-                continue
-            if not categorie_id:
-                errors.append(f"Ligne {i}: Catégorie '{categorie_nom}' inconnue. Créez-la d'abord.")
-                continue
-
-            date_peremption_db = None
-            if date_peremption:
-                if isinstance(date_peremption, datetime):
-                    date_peremption_db = date_peremption.date()
-                elif isinstance(date_peremption, str):
-                    try:
-                        date_peremption_db = datetime.strptime(date_peremption.split(' ')[0], '%Y-%m-%d').date()
-                    except ValueError:
-                        pass
-
-            nouvel_objet = Objet(
-                nom=str(nom),
-                quantite_physique=int(quantite),
-                seuil=int(seuil),
-                armoire_id=armoire_id,
-                categorie_id=categorie_id,
-                date_peremption=date_peremption_db,
-                image_url=str(image_url) if image_url else None,
+            db.session.add(Objet(
+                nom=str(nom), quantite_physique=int(qte), seuil=int(seuil),
+                armoire_id=arm_id, categorie_id=cat_id, date_peremption=date_perim,
+                image_url=str(row[6]) if len(row) > 6 and row[6] else None,
                 etablissement_id=etablissement_id
-            )
-            db.session.add(nouvel_objet)
+            ))
             success_count += 1
-
+            
         if errors:
             db.session.rollback()
             for e in errors[:5]: flash(e, "error")
             if len(errors) > 5: flash(f"... et {len(errors)-5} autres erreurs.", "error")
         else:
             db.session.commit()
-            log_action('import_excel', f"Importation de {success_count} objets")
-            if success_count > 0: flash(f"Importation réussie : {success_count} objets ajoutés.", "success")
-            if skipped_items: flash(f"{len(skipped_items)} objets ignorés car déjà existants.", "warning")
+            log_action('import_excel', f"{success_count} objets importés")
+            flash(f"{success_count} objets importés.", "success")
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur critique import Excel: {e}")
-        flash("Une erreur technique est survenue lors de la lecture du fichier.", "error")
+        current_app.logger.error("Erreur import Excel", exc_info=True)
+        flash("Erreur technique.", "error")
 
     return redirect(url_for('admin.importer_page'))
 
+
+
 @admin_bp.route("/exporter_inventaire")
 @admin_required
+@limiter.limit("5 per minute")
 def exporter_inventaire():
     etablissement_id = session['etablissement_id']
     format_type = request.args.get('format')
     
-    # SÉCURITÉ : Limite pour éviter le timeout
-    objets = db.session.execute(
-        db.select(Objet)
-        .options(joinedload(Objet.categorie), joinedload(Objet.armoire))
-        .filter_by(etablissement_id=etablissement_id)
-        .order_by(Objet.nom)
-        .limit(MAX_EXPORT_LIMIT)
-    ).scalars().all()
-    
-    if len(objets) == MAX_EXPORT_LIMIT:
-        flash(f"Export tronqué à {MAX_EXPORT_LIMIT} lignes pour la performance.", "warning")
+    if format_type not in ['excel', 'pdf']:
+        flash("Format non supporté.", "error")
+        return redirect(url_for('admin.admin'))
 
-    if format_type == 'excel':
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Inventaire"
+    try:
+        # 1. Récupération des données (Optimisée avec Jointures)
+        objets = db.session.execute(
+            db.select(Objet)
+            .options(joinedload(Objet.categorie), joinedload(Objet.armoire))
+            .filter_by(etablissement_id=etablissement_id)
+            .order_by(Objet.categorie_id, Objet.nom) # Tri par Catégorie puis Nom
+        ).scalars().all()
         
-        # En-têtes
-        headers = ["Catégorie", "Nom", "Quantité", "Seuil", "Armoire", "Péremption"]
-        ws.append(headers)
-        
-        # Style Header
-        header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(start_color="1F3B73", fill_type="solid")
-        for cell in ws[1]:
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = Alignment(horizontal='center')
-        
-        # Données
+        # 2. Préparation des données pour les générateurs
+        data_export = []
         for obj in objets:
-            date_str = obj.date_peremption.strftime('%Y-%m-%d') if obj.date_peremption else ""
+            data_export.append({
+                'categorie': obj.categorie.nom if obj.categorie else "Sans catégorie",
+                'nom': obj.nom,
+                'quantite': obj.quantite_physique,
+                'seuil': obj.seuil,
+                'armoire': obj.armoire.nom if obj.armoire else "Non rangé",
+                'peremption': obj.date_peremption.strftime('%d/%m/%Y') if obj.date_peremption else "-"
+            })
             
-            # SÉCURITÉ : Nettoyage des champs texte
-            cat_nom = sanitize_for_excel(obj.categorie.nom if obj.categorie else "")
-            obj_nom = sanitize_for_excel(obj.nom)
-            arm_nom = sanitize_for_excel(obj.armoire.nom if obj.armoire else "")
-            
-            ws.append([
-                cat_nom,
-                obj_nom,
-                obj.quantite_physique, # Int, safe
-                obj.seuil,             # Int, safe
-                arm_nom,
-                date_str
-            ])
-            
-        # Ajustement largeurs
-        ws.column_dimensions['A'].width = 25
-        ws.column_dimensions['B'].width = 40
-        ws.column_dimensions['E'].width = 25
-            
-        buffer = BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)
-        
-        # --- SÉCURISATION ---
-        nom_etab = session.get('nom_etablissement', 'Inventaire')
-        safe_etab = sanitize_filename(nom_etab)
-        safe_date = sanitize_filename(str(date.today()))
-        
-        filename = f"Inventaire_{safe_etab}_{safe_date}.xlsx"
-        
-        return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    
-    flash("Format non supporté.", "error")
-    return redirect(url_for('admin.admin'))
-    
-    
+        # 3. Métadonnées
+        metadata = {
+            'etablissement': session.get('nom_etablissement', 'Mon Établissement'),
+            'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
+            'total': len(data_export)
+        }
+
+        log_action('export_inventaire', f"Format: {format_type}, Items: {len(data_export)}")
+
+        # 4. Appel des générateurs
+        if format_type == 'excel':
+            return generer_inventaire_excel(data_export, metadata)
+        else:
+            return generer_inventaire_pdf(data_export, metadata)
+
+    except Exception as e:
+        current_app.logger.error(f"Erreur export inventaire: {e}", exc_info=True)
+        flash("Une erreur technique est survenue lors de l'export.", "error")
+        return redirect(url_for('admin.admin'))
 
 # ============================================================
-# PLACEHOLDERS
+# MODULE RAPPORTS & ACTIVITÉ (Version Durcie)
 # ============================================================
+
+# Constantes de sécurité pour les rapports
+MAX_EXPORT_DAYS = 366      # Limite la plage à 1 an
+MAX_EXPORT_ROWS = 5000     # Limite le nombre de lignes pour éviter le crash RAM (ReportLab/OpenPyXL)
+ALLOWED_FORMATS = {'excel', 'pdf'}
+
 @admin_bp.route("/rapports")
 @admin_required
 def rapports():
-    flash("Fonctionnalité en cours de migration.", "info")
-    return redirect(url_for('admin.admin'))
+    etablissement_id = session['etablissement_id']
+    
+    # Aperçu : 10 dernières actions
+    resultats = db.session.execute(
+        db.select(
+            Historique,
+            Utilisateur.nom_utilisateur,
+            Objet.nom.label('objet_nom')
+        )
+        .outerjoin(Utilisateur, Historique.utilisateur_id == Utilisateur.id)
+        .outerjoin(Objet, Historique.objet_id == Objet.id)
+        .filter(Historique.etablissement_id == etablissement_id)
+        .order_by(Historique.timestamp.desc())
+        .limit(10)
+    ).all()
+
+    dernieres_actions = []
+    for h, user_name, obj_name in resultats:
+        dernieres_actions.append({
+            'timestamp': h.timestamp,
+            'action': h.action,
+            'details': h.details,
+            # Gestion des suppressions en cascade (Affichage seulement)
+            'nom_utilisateur': user_name or "Utilisateur supprimé",
+            'objet_nom': obj_name or "Objet supprimé"
+        })
+
+    return render_template("rapports.html", 
+                           dernieres_actions=dernieres_actions,
+                           breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Rapports'}])
 
 
+@admin_bp.route("/exporter_rapports", methods=['GET'])
+@admin_required
+@limiter.limit("5 per minute")
+def exporter_rapports():
+    etablissement_id = session['etablissement_id']
+    
+    # 1. Récupération des paramètres
+    date_debut_str = request.args.get('date_debut')
+    date_fin_str = request.args.get('date_fin')
+    format_type = request.args.get('format')
+    group_by = request.args.get('group_by', 'date')
+    
+    # NOUVEAU : Récupération des actions cochées (liste)
+    # Flask récupère les checkbox multiples avec getlist
+    selected_actions = request.args.getlist('actions') 
+
+    if not all([date_debut_str, date_fin_str, format_type]):
+        flash("Paramètres manquants.", "warning")
+        return redirect(url_for('admin.rapports'))
+
+    if format_type not in ALLOWED_FORMATS:
+        flash("Format non supporté.", "error")
+        return redirect(url_for('admin.rapports'))
+
+    try:
+        # 2. Parsing Dates
+        date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d')
+        date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d')
+        date_fin = date_fin.replace(hour=23, minute=59, second=59)
+
+        if date_debut > date_fin:
+            flash("Dates incohérentes.", "warning")
+            return redirect(url_for('admin.rapports'))
+            
+        if (date_fin - date_debut).days > MAX_EXPORT_DAYS:
+            flash(f"Période limitée à {MAX_EXPORT_DAYS} jours.", "warning")
+            return redirect(url_for('admin.rapports'))
+
+        # 3. Construction Requête
+        query = db.select(
+            Historique,
+            Utilisateur.nom_utilisateur,
+            Objet.nom.label('objet_nom')
+        ).outerjoin(Utilisateur, Historique.utilisateur_id == Utilisateur.id)\
+         .outerjoin(Objet, Historique.objet_id == Objet.id)\
+         .filter(Historique.etablissement_id == etablissement_id)\
+         .filter(Historique.timestamp >= date_debut)\
+         .filter(Historique.timestamp <= date_fin)
+
+        # --- LOGIQUE DE FILTRE ET TRI ---
+        if group_by == 'action':
+            # Si des actions spécifiques sont cochées, on filtre
+            if selected_actions:
+                query = query.filter(Historique.action.in_(selected_actions))
+            
+            # On trie par Action puis par Date
+            query = query.order_by(Historique.action.asc(), Historique.timestamp.desc())
+        else:
+            # Tri chronologique standard
+            query = query.order_by(Historique.timestamp.desc())
+
+        # Protection RAM
+        query = query.limit(MAX_EXPORT_ROWS)
+        resultats = db.session.execute(query).all()
+
+        if not resultats:
+            flash("Aucune donnée trouvée pour ces critères.", "info")
+            return redirect(url_for('admin.rapports'))
+
+        # 4. Préparation Données
+        data_export = []
+        for h, user_name, obj_name in resultats:
+            data_export.append({
+                'date': h.timestamp.strftime('%d/%m/%Y'),
+                'heure': h.timestamp.strftime('%H:%M'),
+                'utilisateur': user_name or "Inconnu",
+                'action': h.action,
+                'objet': obj_name or "-",
+                'details': h.details or ""
+            })
+
+        # Métadonnées enrichies
+        filtre_info = "Tous types"
+        if group_by == 'action' and selected_actions:
+            filtre_info = ", ".join(selected_actions)
+
+        metadata = {
+            'etablissement': session.get('nom_etablissement', 'LabFlow'),
+            'periode': f"Du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}",
+            'total': len(data_export),
+            'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
+            'filtre': filtre_info # On pourra l'afficher dans le PDF si on veut
+        }
+
+        log_action('export_rapport', f"Format: {format_type}, Rows: {len(data_export)}")
+
+        if format_type == 'excel':
+            return generer_rapport_excel(data_export, metadata)
+        else:
+            return generer_rapport_pdf(data_export, metadata)
+
+    except Exception as e:
+        current_app.logger.error(f"Erreur export: {e}", exc_info=True)
+        flash("Erreur technique lors de la génération.", "error")
+        return redirect(url_for('admin.rapports'))
 
 # ============================================================
-# SÉCURITÉ LICENCE (Rate Limiter Optimisé)
+# LICENCE (Rate Limit Custom)
 # ============================================================
 class RateLimiter:
-    def __init__(self, window_minutes=15, max_attempts=5):
+    def __init__(self):
         self.attempts = defaultdict(list)
-        self.window = timedelta(minutes=window_minutes)
-        self.max_attempts = max_attempts
-    
     def is_allowed(self, key):
-        """Vérifie si l'action est autorisée et nettoie l'historique."""
         now = datetime.now()
-        
-        # 1. Nettoyage : on ne garde que les tentatives récentes (fenêtre glissante)
-        # Cela résout la fuite de mémoire
-        self.attempts[key] = [
-            ts for ts in self.attempts[key] 
-            if now - ts < self.window
-        ]
-        
-        # 2. Vérification
-        if len(self.attempts[key]) >= self.max_attempts:
-            # Calcul du temps d'attente restant pour l'utilisateur
-            oldest_attempt = self.attempts[key][0]
-            wait_seconds = (self.window - (now - oldest_attempt)).total_seconds()
-            return False, int(wait_seconds / 60) + 1
-        
-        # 3. Enregistrement de la tentative
+        self.attempts[key] = [t for t in self.attempts[key] if now - t < timedelta(minutes=15)]
+        if len(self.attempts[key]) >= 5: return False
         self.attempts[key].append(now)
-        return True, 0
-
+        return True
     def reset(self, key):
-        """Réinitialise le compteur en cas de succès."""
-        if key in self.attempts:
-            del self.attempts[key]
+        if key in self.attempts: del self.attempts[key]
 
-# Instance globale du limiteur
-license_limiter = RateLimiter(window_minutes=15, max_attempts=5)
+license_limiter = RateLimiter()
 
 def rate_limit_license(f):
-    """Décorateur utilisant la classe RateLimiter"""
     @wraps(f)
     def wrapped(*args, **kwargs):
-        etablissement_id = session.get('etablissement_id')
-        if not etablissement_id:
-            flash("Session invalide", "error")
-            return redirect(url_for('main.index'))
-        
-        # On utilise l'ID établissement comme clé unique
-        allowed, wait_minutes = license_limiter.is_allowed(etablissement_id)
-        
-        if not allowed:
-            flash(f"Trop de tentatives incorrectes. Veuillez patienter {wait_minutes} minutes.", "error")
+        eid = session.get('etablissement_id')
+        if not eid: return redirect(url_for('main.index'))
+        if not license_limiter.is_allowed(eid):
+            flash("Trop de tentatives. Réessayez dans 15 min.", "error")
             return redirect(url_for('main.a_propos'))
-        
         return f(*args, **kwargs)
     return wrapped
 
-# ============================================================
-# ROUTE D'ACTIVATION SÉCURISÉE
-# ============================================================
 @admin_bp.route("/activer_licence", methods=["POST"])
 @admin_required
-@rate_limit_license # Utilise notre nouveau décorateur
+@rate_limit_license
 def activer_licence():
     etablissement_id = session.get('etablissement_id')
-    
-    # Nettoyer et valider l'input
     cle_fournie = request.form.get('licence_cle', '').strip().upper()
     
     if not cle_fournie or len(cle_fournie) < 10:
-        flash("Format de clé invalide.", "error")
+        flash("Clé invalide.", "error")
         return redirect(url_for('main.a_propos'))
     
     try:
-        # 1. Récupérer l'instance_id
-        param_instance = db.session.execute(
-            db.select(Parametre).filter_by(
-                etablissement_id=etablissement_id, 
-                cle='instance_id'
-            )
-        ).scalar_one_or_none()
-        
-        if not param_instance or not param_instance.valeur:
-            flash("Erreur critique : Identifiant d'instance introuvable.", "error")
+        param_instance = db.session.execute(db.select(Parametre).filter_by(etablissement_id=etablissement_id, cle='instance_id')).scalar_one_or_none()
+        if not param_instance:
+            flash("Erreur critique : Instance ID manquant.", "error")
             return redirect(url_for('main.a_propos'))
         
-        instance_id = param_instance.valeur.strip()
-        
-        # 2. Calculer la clé attendue
-        cle_attendue = calculate_license_key(instance_id)
-        
-        # 3. Comparaison sécurisée
+        cle_attendue = calculate_license_key(param_instance.valeur.strip())
         if not secrets.compare_digest(cle_fournie, cle_attendue):
-            flash("Clé de licence incorrecte.", "error")
+            flash("Clé incorrecte.", "error")
             return redirect(url_for('main.a_propos'))
         
-        # --- SUCCÈS ---
-        
-        # 4. Mise à jour du statut
-        param_statut = db.session.execute(
-            db.select(Parametre).filter_by(
-                etablissement_id=etablissement_id, 
-                cle='licence_statut'
-            )
-        ).scalar_one_or_none()
-        
-        if not param_statut:
-            param_statut = Parametre(etablissement_id=etablissement_id, cle='licence_statut', valeur='PRO')
-            db.session.add(param_statut)
-        else:
-            if param_statut.valeur == 'PRO':
-                flash("Cette licence est déjà active.", "info")
-                return redirect(url_for('main.a_propos'))
-            param_statut.valeur = 'PRO'
-        
-        # 5. Enregistrement de la date d'activation
-        param_date = db.session.execute(
-            db.select(Parametre).filter_by(etablissement_id=etablissement_id, cle='licence_date_activation')
-        ).scalar_one_or_none()
-        
-        date_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        if param_date:
-            param_date.valeur = date_str
-        else:
-            db.session.add(Parametre(etablissement_id=etablissement_id, cle='licence_date_activation', valeur=date_str))
+        # Activation
+        param_statut = db.session.execute(db.select(Parametre).filter_by(etablissement_id=etablissement_id, cle='licence_statut')).scalar_one_or_none()
+        if not param_statut: db.session.add(Parametre(etablissement_id=etablissement_id, cle='licence_statut', valeur='PRO'))
+        else: param_statut.valeur = 'PRO'
         
         db.session.commit()
-
-        # --- INVALIDATION DU CACHE (AJOUTÉ ICI) ---
-        # On force l'application à relire la base de données pour cet établissement
-        # sinon l'utilisateur verra encore "GRATUIT" pendant 5 minutes.
-        try:
-            cache.delete_memoized(get_etablissement_params, etablissement_id)
-        except Exception as e:
-            current_app.logger.warning(f"Impossible d'invalider le cache : {e}")
-        # ------------------------------------------
-        
-        # 6. Reset du compteur de tentatives (Succès = on efface l'ardoise)
+        try: cache.delete_memoized(get_etablissement_params, etablissement_id)
+        except: pass
         license_limiter.reset(etablissement_id)
+        flash("Licence PRO activée !", "success")
         
-        flash("Félicitations ! Votre licence PRO est activée.", "success")
-        
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur activation licence: {str(e)}")
-        flash("Une erreur technique est survenue.", "error")
+        current_app.logger.error("Erreur activation licence", exc_info=True)
+        flash("Erreur technique.", "error")
     
     return redirect(url_for('main.a_propos'))
+
+
+# ============================================================
+# GÉNÉRATEURS RAPPORTS PROFESSIONNELS (PDF/EXCEL) - VERSION FINALE
+# ============================================================
+
+# Imports spécifiques aux rapports (à laisser ici pour ne pas polluer le haut du fichier)
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+from html import escape
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from io import BytesIO
+from datetime import date
+import re
+
+
+# ============================================================
+# UTILITAIRES INTERNES AUX RAPPORTS
+# ============================================================
+
+def sanitize_filename_report(text):
+    """Nettoie un nom de fichier pour éviter les caractères problématiques."""
+    if not text: return "Rapport"
+    # On garde uniquement alphanumérique, tirets et underscores
+    return re.sub(r'[^\w\s-]', '', str(text)).strip().replace(' ', '_')
+
+
+def sanitize_for_excel_report(text):
+    """Prépare le texte pour Excel (évite les formules injection)."""
+    if not text:
+        return ""
+    text = str(text)
+    # Empêche l'injection de formules (=, +, -, @)
+    if text.startswith(('=', '+', '-', '@')):
+        text = "'" + text
+    return text
+
+
+# ============================================================
+# GÉNÉRATEUR PDF AVEC LOGO VECTORIEL
+# ============================================================
+
+class LogoGraphique(Flowable):
+    """Dessine un petit graphique vectoriel (Logo) directement en PDF."""
+    def __init__(self, width=40, height=40):
+        Flowable.__init__(self)
+        self.width = width
+        self.height = height
+
+    def draw(self):
+        # Couleurs
+        bleu_fonce = colors.HexColor('#1F3B73')
+        bleu_clair = colors.HexColor('#4facfe')
+        
+        # Barres du graphique
+        self.canv.setFillColor(bleu_fonce)
+        self.canv.rect(0, 0, 8, 15, fill=1, stroke=0)  # Barre 1
+        self.canv.rect(12, 0, 8, 25, fill=1, stroke=0) # Barre 2
+        
+        self.canv.setFillColor(bleu_clair)
+        self.canv.rect(24, 0, 8, 35, fill=1, stroke=0) # Barre 3 (La plus haute)
+        
+        # Ligne de tendance (Flèche)
+        self.canv.setStrokeColor(colors.HexColor('#FFD700')) # Or
+        self.canv.setLineWidth(2)
+        self.canv.line(-5, 5, 35, 40) # Ligne montante
+
+def generer_rapport_pdf(data, metadata):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=1.0*cm, leftMargin=1.0*cm, topMargin=1.0*cm, bottomMargin=1.0*cm,
+        title=f"Rapport - {metadata['etablissement']}"
+    )
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # --- EN-TÊTE AVEC LOGO ---
+    # On crée un tableau invisible pour mettre le Logo à gauche et le Titre au centre
+    logo = LogoGraphique(width=40, height=40)
+    
+    titre_style = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1F3B73'), alignment=TA_LEFT)
+    sous_titre_style = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray, alignment=TA_LEFT)
+    
+    titre_bloc = [
+        Paragraph(f"RAPPORT D'ACTIVITÉ", titre_style),
+        Paragraph(f"{escape(metadata['etablissement'])}", sous_titre_style)
+    ]
+    
+    # Tableau d'en-tête : [Logo | Textes]
+    header_table_data = [[logo, titre_bloc]]
+    header_table = Table(header_table_data, colWidths=[1.5*cm, 20*cm])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    elements.append(header_table)
+    
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # --- MÉTADONNÉES (Cadre Gris) ---
+    meta_style = ParagraphStyle('Meta', parent=styles['Normal'], fontSize=10, textColor=colors.black)
+    meta_label = ParagraphStyle('MetaLabel', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor('#1F3B73'), fontName='Helvetica-Bold')
+    
+    meta_data = [
+        [Paragraph('Période :', meta_label), Paragraph(metadata['periode'], meta_style),
+         Paragraph('Généré le :', meta_label), Paragraph(metadata['date_generation'], meta_style)],
+        [Paragraph('Total :', meta_label), Paragraph(f"{metadata['total']} entrées", meta_style), '', '']
+    ]
+    
+    meta_table = Table(meta_data, colWidths=[2.5*cm, 8*cm, 2.5*cm, 8*cm])
+    meta_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8F9FA')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
+        ('PADDING', (0,0), (-1,-1), 6),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    elements.append(meta_table)
+    elements.append(Spacer(1, 0.8*cm))
+    
+    # --- TABLEAU DE DONNÉES ---
+    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_CENTER)
+    cell_style = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9, textColor=colors.black)
+    
+    headers = [
+        Paragraph('Date', header_style),
+        Paragraph('Heure', header_style),
+        Paragraph('Utilisateur', header_style),
+        Paragraph('Action', header_style),
+        Paragraph('Objet', header_style),
+        Paragraph('Détails', header_style)
+    ]
+    
+    table_data = [headers]
+    for row in data:
+        table_data.append([
+            Paragraph(row['date'], cell_style),
+            Paragraph(row['heure'], cell_style),
+            Paragraph(escape(row['utilisateur']), cell_style),
+            Paragraph(escape(row['action']), cell_style),
+            Paragraph(escape(row['objet']), cell_style),
+            Paragraph(escape(row['details']) if row['details'] else '-', cell_style)
+        ])
+        
+    col_widths = [2.5*cm, 1.5*cm, 4.0*cm, 3.0*cm, 6.5*cm, 10.0*cm]
+    t = Table(table_data, colWidths=col_widths, repeatRows=1)
+    
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F3B73')), # En-tête Bleu
+        ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('VALIGN', (0, 1), (-1, -1), 'TOP'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F4F6F9')]), # Zebra
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
+        ('LINEBELOW', (0, 0), (-1, 0), 2, colors.HexColor('#1F3B73')), # Ligne forte sous header
+    ]))
+    
+    elements.append(t)
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"Rapport_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.pdf"
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
+
+
+# ============================================================
+# GÉNÉRATEUR EXCEL (DESIGN TABLEAU DE BORD)
+# ============================================================
+
+def generer_rapport_excel(data, metadata):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Activité"
+    
+    # --- STYLES ---
+    # Titre
+    font_titre = Font(name='Segoe UI', size=18, bold=True, color="1F3B73")
+    
+    # En-têtes Tableau
+    fill_header = PatternFill(start_color="1F3B73", end_color="1F3B73", fill_type="solid")
+    font_header = Font(name='Segoe UI', size=11, bold=True, color="FFFFFF")
+    align_center = Alignment(horizontal="center", vertical="center")
+    
+    # Données
+    font_data = Font(name='Segoe UI', size=10)
+    align_top = Alignment(vertical="top", wrap_text=True)
+    border_thin = Border(left=Side(style='thin', color='D9D9D9'), 
+                         right=Side(style='thin', color='D9D9D9'), 
+                         bottom=Side(style='thin', color='D9D9D9'))
+
+    # --- MISE EN PAGE ---
+    
+    # 1. Titre et Logo (Simulé par emoji pour Excel)
+    ws.merge_cells('A1:F1')
+    ws['A1'] = f"📊 RAPPORT D'ACTIVITÉ - {metadata['etablissement']}"
+    ws['A1'].font = font_titre
+    ws['A1'].alignment = Alignment(horizontal="left", vertical="center")
+    ws.row_dimensions[1].height = 40
+    
+    # 2. Métadonnées (Cadre gris clair)
+    ws.merge_cells('A2:F4')
+    meta_text = (f"Période : {metadata['periode']}\n"
+                 f"Généré le : {metadata['date_generation']}\n"
+                 f"Total : {metadata['total']} enregistrements")
+    
+    ws['A2'] = meta_text
+    ws['A2'].font = Font(name='Segoe UI', size=10, italic=True, color="555555")
+    ws['A2'].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws['A2'].fill = PatternFill(start_color="F8F9FA", fill_type="solid")
+    ws.row_dimensions[2].height = 60 # Hauteur pour les 3 lignes
+    
+    # 3. En-têtes du tableau (Ligne 6)
+    headers = ["Date", "Heure", "Utilisateur", "Action", "Objet", "Détails"]
+    ws.append([]) # Ligne 5 vide
+    ws.append(headers) # Ligne 6
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=6, column=col_num)
+        cell.fill = fill_header
+        cell.font = font_header
+        cell.alignment = align_center
+    
+    ws.row_dimensions[6].height = 30
+    
+    # 4. Données
+    for row in data:
+        ws.append([
+            row['date'],
+            row['heure'],
+            sanitize_for_excel_report(row['utilisateur']),
+            sanitize_for_excel_report(row['action']),
+            sanitize_for_excel_report(row['objet']),
+            sanitize_for_excel_report(row['details']) if row['details'] else '-'
+        ])
+        
+    # 5. Finitions (Bordures et Largeurs)
+    # Largeurs optimisées
+    ws.column_dimensions['A'].width = 12
+    ws.column_dimensions['B'].width = 10
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 18
+    ws.column_dimensions['E'].width = 35
+    ws.column_dimensions['F'].width = 60
+    
+    # Appliquer styles aux données
+    for row in ws.iter_rows(min_row=7, max_row=ws.max_row):
+        for cell in row:
+            cell.font = font_data
+            cell.alignment = align_top
+            cell.border = border_thin
+            
+    # Filtres automatiques
+    ws.auto_filter.ref = f"A6:F{ws.max_row}"
+    
+    # Figer les volets
+    ws.freeze_panes = "A7"
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"Rapport_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.xlsx"
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+# ============================================================
+# GÉNÉRATEURS INVENTAIRE (PDF/EXCEL)
+# ============================================================
+
+def generer_inventaire_pdf(data, metadata):
+    """Génère un PDF propre de l'inventaire complet (Paysage)."""
+    buffer = BytesIO()
+    
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=1.0*cm, leftMargin=1.0*cm, topMargin=1.0*cm, bottomMargin=1.0*cm,
+        title=f"Inventaire - {metadata['etablissement']}"
+    )
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    
+    # --- EN-TÊTE (Réutilisation du style Rapport) ---
+    logo = LogoGraphique(width=40, height=40) # Utilise la classe existante
+    
+    titre_style = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1F3B73'), alignment=TA_LEFT)
+    sous_titre_style = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray, alignment=TA_LEFT)
+    
+    titre_bloc = [
+        Paragraph(f"ÉTAT DE L'INVENTAIRE", titre_style),
+        Paragraph(f"{escape(metadata['etablissement'])}", sous_titre_style)
+    ]
+    
+    header_table = Table([[logo, titre_bloc]], colWidths=[1.5*cm, 20*cm])
+    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
+    elements.append(header_table)
+    
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # --- INFO BARRE ---
+    info_text = f"<b>Généré le :</b> {metadata['date_generation']}  |  <b>Total références :</b> {metadata['total']}"
+    elements.append(Paragraph(info_text, ParagraphStyle('Info', parent=styles['Normal'], fontSize=10, alignment=TA_RIGHT, textColor=colors.HexColor('#1F3B73'))))
+    elements.append(Spacer(1, 0.3*cm))
+
+    # --- TABLEAU ---
+    header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_CENTER)
+    cell_style = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9, textColor=colors.black)
+    cell_center = ParagraphStyle('CellCenter', parent=cell_style, alignment=TA_CENTER)
+    
+    headers = [
+        Paragraph('Catégorie', header_style),
+        Paragraph('Désignation', header_style),
+        Paragraph('Qté', header_style),
+        Paragraph('Seuil', header_style),
+        Paragraph('Emplacement', header_style),
+        Paragraph('Péremption', header_style)
+    ]
+    
+    table_data = [headers]
+    
+    for row in data:
+        # Alerte visuelle pour le stock bas (Rouge si Qté <= Seuil)
+        qty_style = cell_center
+        if row['quantite'] <= row['seuil']:
+            qty_style = ParagraphStyle('Alert', parent=cell_center, textColor=colors.red, fontName='Helvetica-Bold')
+
+        table_data.append([
+            Paragraph(escape(row['categorie']), cell_style),
+            Paragraph(escape(row['nom']), cell_style),
+            Paragraph(str(row['quantite']), qty_style),
+            Paragraph(str(row['seuil']), cell_center),
+            Paragraph(escape(row['armoire']), cell_style),
+            Paragraph(row['peremption'], cell_center)
+        ])
+    
+    # Largeurs optimisées pour Paysage (Total ~27.5cm)
+    col_widths = [
+        5.0*cm,  # Catégorie
+        9.5*cm,  # Nom (Large)
+        2.0*cm,  # Qté
+        2.0*cm,  # Seuil
+        5.0*cm,  # Armoire
+        4.0*cm   # Péremption
+    ]
+    
+    t = Table(table_data, colWidths=col_widths, repeatRows=1)
+    
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F3B73')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F4F6F9')]),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')),
+        ('LINEBELOW', (0, 0), (-1, 0), 2, colors.HexColor('#1F3B73')),
+    ]))
+    
+    elements.append(t)
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"Inventaire_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.pdf"
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
+
+
+def generer_inventaire_excel(data, metadata):
+    """Génère un Excel propre de l'inventaire."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Inventaire"
+    
+    # Styles
+    font_titre = Font(name='Segoe UI', size=16, bold=True, color="1F3B73")
+    fill_header = PatternFill(start_color="1F3B73", end_color="1F3B73", fill_type="solid")
+    font_header = Font(name='Segoe UI', size=11, bold=True, color="FFFFFF")
+    align_center = Alignment(horizontal="center", vertical="center")
+    border_thin = Border(left=Side(style='thin', color='D9D9D9'), right=Side(style='thin', color='D9D9D9'), bottom=Side(style='thin', color='D9D9D9'))
+    font_alert = Font(color="DC3545", bold=True) # Rouge pour stock bas
+
+    # 1. En-tête
+    ws.merge_cells('A1:F1')
+    ws['A1'] = f"📦 ÉTAT DE L'INVENTAIRE - {metadata['etablissement']}"
+    ws['A1'].font = font_titre
+    ws['A1'].alignment = Alignment(horizontal="left", vertical="center")
+    ws.row_dimensions[1].height = 35
+    
+    ws['A2'] = f"Généré le : {metadata['date_generation']}"
+    ws['A2'].font = Font(italic=True, color="666666")
+    
+    # 2. Tableau
+    headers = ["Catégorie", "Désignation", "Quantité", "Seuil", "Emplacement", "Péremption"]
+    ws.append([])
+    ws.append(headers) # Ligne 4
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col_num)
+        cell.value = header
+        cell.fill = fill_header
+        cell.font = font_header
+        cell.alignment = align_center
+    
+    ws.row_dimensions[4].height = 30
+    
+    # 3. Données
+    for row in data:
+        ws.append([
+            row['categorie'],
+            row['nom'],
+            row['quantite'],
+            row['seuil'],
+            row['armoire'],
+            row['peremption']
+        ])
+        
+        current_row = ws.max_row
+        
+        # Style des cellules
+        for col in range(1, 7):
+            cell = ws.cell(row=current_row, column=col)
+            cell.border = border_thin
+            cell.alignment = Alignment(vertical="center")
+            
+            # Centrer Qté, Seuil, Date
+            if col in [3, 4, 6]:
+                cell.alignment = align_center
+                
+        # Alerte Stock Bas (Rouge)
+        if row['quantite'] <= row['seuil']:
+            ws.cell(row=current_row, column=3).font = font_alert
+
+    # 4. Largeurs
+    ws.column_dimensions['A'].width = 25 # Cat
+    ws.column_dimensions['B'].width = 40 # Nom
+    ws.column_dimensions['C'].width = 12 # Qté
+    ws.column_dimensions['D'].width = 12 # Seuil
+    ws.column_dimensions['E'].width = 25 # Armoire
+    ws.column_dimensions['F'].width = 15 # Date
+    
+    # Filtres
+    ws.auto_filter.ref = f"A4:F{ws.max_row}"
+    ws.freeze_panes = "A5"
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"Inventaire_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.xlsx"
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

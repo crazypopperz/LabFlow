@@ -9,10 +9,9 @@
     <!-- Fil d'ariane -->
      {% include '_breadcrumb.html' %}
 
-    <!-- En-tête Panier (Style Premium) -->
+    <!-- En-tête Panier -->
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-            <!-- Icône Panier (Dégradé Indigo/Violet) -->
             <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
                  style="width: 48px; height: 48px; background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart-fill" viewBox="0 0 16 16">
@@ -26,25 +25,28 @@
     <!-- Carte Principale -->
     <div class="card border-0 shadow-sm rounded-3">
         
-        <!-- Zone du contenu (Liste) -->
-        <div id="cart-summary-list" class="cart-list-wrapper">
-            <!-- Le JS va injecter les items ici -->
+        <!-- Zone du contenu (Liste chargée par JS) -->
+        <div id="cart-items-container" class="cart-list-wrapper p-3">
+            <!-- Spinner initial -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+            </div>
         </div>
 
-        <!-- Message Panier Vide (Caché/Affiché par JS) -->
-        <div id="empty-cart-message" class="empty-cart-container" style="display: none;">
-            <div class="empty-cart-icon">
-                <i class="bi bi-cart-x"></i>
+        <!-- Message Panier Vide (Caché par défaut) -->
+        <div id="empty-cart-message" class="empty-cart-container text-center py-5" style="display: none;">
+            <div class="mb-3">
+                <i class="bi bi-cart-x display-1 text-muted opacity-25"></i>
             </div>
             <h3 class="h5 fw-bold text-dark">Votre panier est vide</h3>
-            <p class="mb-4">Sélectionnez des objets dans le calendrier ou l'inventaire pour commencer une réservation.</p>
+            <p class="mb-4 text-muted">Sélectionnez des objets dans le calendrier ou l'inventaire pour commencer.</p>
             <a href="{{ url_for('main.calendrier') }}" class="btn btn-primary">
                 <i class="bi bi-calendar-week me-2"></i>Aller au calendrier
             </a>
         </div>
 
         <!-- Actions (Footer) -->
-        <div id="cart-actions" class="cart-footer d-flex justify-content-between align-items-center" style="display: none;">
+        <div id="cart-actions" class="card-footer bg-white d-flex justify-content-between align-items-center p-3" style="display: none;">
             <button id="clear-cart-btn" class="btn btn-outline-danger">
                 <i class="bi bi-trash me-2"></i>Vider le panier
             </button>
@@ -58,44 +60,6 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- On garde le module JS existant qui gère la logique -->
+<!-- Import du module JS qui gère tout -->
 <script src="{{ url_for('static', filename='js/modules/cart-summary.js') }}" type="module"></script>
-
-<script>
-// Script d'affichage conditionnel (Vide / Plein)
-document.addEventListener('DOMContentLoaded', function() {
-    const cartList = document.getElementById('cart-summary-list');
-    const emptyMessage = document.getElementById('empty-cart-message');
-    const cartActions = document.getElementById('cart-actions');
-    
-    // Fonction de mise à jour de l'interface
-    function updateCartUI() {
-        // On vérifie s'il y a des enfants dans la liste (les items injectés par le module)
-        // Note: Le module cart-summary.js met un peu de temps à charger le sessionStorage
-        // On utilise un petit délai ou on vérifie le sessionStorage directement
-        const cart = JSON.parse(sessionStorage.getItem('reservationCart')) || {};
-        const hasItems = Object.keys(cart).length > 0;
-        
-        if (hasItems) {
-            emptyMessage.style.display = 'none';
-            cartActions.style.display = 'flex';
-            cartList.style.display = 'block';
-        } else {
-            emptyMessage.style.display = 'block';
-            cartActions.style.display = 'none';
-            cartList.style.display = 'none';
-        }
-    }
-
-    // Observer les changements dans le DOM (quand le module JS injecte le HTML)
-    const observer = new MutationObserver(updateCartUI);
-    observer.observe(cartList, { childList: true, subtree: true });
-    
-    // Vérification initiale
-    updateCartUI();
-    
-    // Écouteur sur le stockage (si on vide le panier depuis un autre onglet/endroit)
-    window.addEventListener('storage', updateCartUI);
-});
-</script>
 {% endblock %}

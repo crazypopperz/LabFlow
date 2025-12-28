@@ -6,53 +6,71 @@
 
     <div class="main-container" data-add-url="{{ url_for('inventaire.ajouter_objet') }}">
         
-        <div class="filtres-section">
-            <div class="filter-group">
-                <label for="search-input">
-                    <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>
-                    <span>Rechercher</span>
-                </label>
-                <input type="search" id="search-input" name="q" placeholder="Nom de l'objet..." value="{{ request.args.get('q', '') }}">
-            </div>
-            
-            <div class="filter-group">
-                <label for="filtre-armoire">
-                    <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M600-40q-33 0-56.5-23.5T520-120q0-23 11-41t29-29v-221q-18-11-29-28.5T520-480q0-33 23.5-56.5T600-560q33 0 56.5 23.5T680-480q0 23-11 40.5T640-411v115l160-53v-62q-18-11-29-28.5T760-480q0-33 23.5-56.5T840-560q33 0 56.5 23.5T920-480q0 23-11 40.5T880-411v119l-240 80v22q18 11 29 29t11 41q0 33-23.5 56.5T600-40ZM160-160v-560 560Zm0 0q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h240l80 80h320q33 0 56.5 23.5T880-640H447l-80-80H160v480h280v80H160Z"/></svg>
-                    <span>Armoire</span>
-                </label>
-                <select id="filtre-armoire" name="armoire">
-                    <option value="">Toutes</option>
-                    {% for a in armoires %}<option value="{{ a.id }}" {% if request.args.get('armoire') == a.id|string %}selected{% endif %}>{{ a.nom }}</option>{% endfor %}
-                </select>
-            </div>
-            
-            <div class="filter-group">
-                <label for="filtre-categorie">
-                    <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M160-480v240-480 240Zm400 360q17 0 28.5-11.5T600-160q0-17-11.5-28.5T560-200q-17 0-28.5 11.5T520-160q0 17 11.5 28.5T560-120Zm240-400q17 0 28.5-11.5T840-560q0-17-11.5-28.5T800-600q-17 0-28.5 11.5T760-560q0 17 11.5 28.5T800-520Zm-560 0h200v-80H240v80Zm0 160h200v-80H240v80Zm-80 200q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720H160v480h200v80H160ZM560-40q-50 0-85-35t-35-85q0-39 22.5-70t57.5-43v-127h240v-47q-35-12-57.5-43T680-560q0-50 35-85t85-35q50 0 85 35t35 85q0 39-22.5 70T840-447v127H600v47q35 12 57.5 43t22.5 70q0 50-35 85t-85 35Z"/></svg>
-                    <span>Catégorie</span>
-                </label>
-                <select id="filtre-categorie" name="categorie">
-                    <option value="">Toutes</option>
-                    {% for c in categories %}<option value="{{ c.id }}" {% if request.args.get('categorie') == c.id|string %}selected{% endif %}>{{ c.nom }}</option>{% endfor %}
-                </select>
-            </div>
+        <!-- BARRE DE FILTRES PREMIUM -->
+		<div class="filter-bar-container mb-4 fade-in-down">
+			<div class="filter-bar">
+				
+				<!-- Filtre Armoire -->
+				<div class="filter-group">
+					<div class="filter-icon">
+						<i class="bi bi-archive"></i>
+					</div>
+					<div class="filter-content">
+						<label for="filtre-armoire" class="filter-label">Armoire</label>
+						<select id="filtre-armoire" class="filter-select">
+							<option value="">Toutes</option>
+							{% for a in armoires %}
+								<option value="{{ a.id }}" {% if armoire_id == a.id %}selected{% endif %}>{{ a.nom }}</option>
+							{% endfor %}
+						</select>
+					</div>
+				</div>
 
-            <div class="filter-group">
-                <label for="filtre-etat">
-                    <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M450-420q38 0 64-26t26-64q0-38-26-64t-64-26q-38 0-64 26t-26 64q0 38 26 64t64 26Zm193 160L538-365q-20 13-42.5 19t-45.5 6q-71 0-120.5-49.5T280-510q0-71 49.5-120.5T450-680q71 0 120.5 49.5T620-510q0 23-6.5 45.5T594-422l106 106-57 56ZM200-120q-33 0-56.5-23.5T120-200v-160h80v160h160v80H200Zm400 0v-80h160v-160h80v160q0 33-23.5 56.5T760-120H600ZM120-600v-160q0-33 23.5-56.5T200-840h160v80H200v160h-80Zm640 0v-160H600v-80h160q33 0 56.5 23.5T840-760v160h-80Z"/></svg>
-                    <span>État</span>
-                </label>
-                <select id="filtre-etat" name="etat">
-                    <option value="">Tous</option>
-                    <option value="perime" {% if request.args.get('etat') == 'perime' %}selected{% endif %}>Périmés</option>
-                    <option value="bientot" {% if request.args.get('etat') == 'bientot' %}selected{% endif %}>Expire bientôt</option>
-                    <option value="stock" {% if request.args.get('etat') == 'stock' %}selected{% endif %}>Stock bas</option>
-                    <option value="ok" {% if request.args.get('etat') == 'ok' %}selected{% endif %}>OK</option>
-                </select>
-            </div>
+				<div class="filter-separator"></div>
 
-            <a href="{{ url_for('inventaire.inventaire') }}" class="btn-reset">Réinitialiser</a>
-        </div>
+				<!-- Filtre Catégorie -->
+				<div class="filter-group">
+					<div class="filter-icon">
+						<i class="bi bi-tags"></i>
+					</div>
+					<div class="filter-content">
+						<label for="filtre-categorie" class="filter-label">Catégorie</label>
+						<select id="filtre-categorie" class="filter-select">
+							<option value="">Toutes</option>
+							{% for c in categories %}
+								<option value="{{ c.id }}" {% if categorie_id == c.id %}selected{% endif %}>{{ c.nom }}</option>
+							{% endfor %}
+						</select>
+					</div>
+				</div>
+
+				<div class="filter-separator"></div>
+
+				<!-- Filtre État -->
+				<div class="filter-group">
+					<div class="filter-icon">
+						<i class="bi bi-heart-pulse"></i>
+					</div>
+					<div class="filter-content">
+						<label for="filtre-etat" class="filter-label">État</label>
+						<select id="filtre-etat" class="filter-select">
+							<option value="">Tous</option>
+							<option value="stock" {% if request.args.get('etat') == 'stock' %}selected{% endif %}>Stock bas</option>
+							<option value="bientot" {% if request.args.get('etat') == 'bientot' %}selected{% endif %}>Péremption proche</option>
+							<option value="perime" {% if request.args.get('etat') == 'perime' %}selected{% endif %}>Périmé</option>
+						</select>
+					</div>
+				</div>
+
+				<!-- Bouton Reset -->
+				<div class="filter-actions">
+					<a href="{{ url_for('inventaire.inventaire') }}" class="btn-reset-filters" title="Réinitialiser les filtres">
+						<i class="bi bi-arrow-counterclockwise"></i>
+					</a>
+				</div>
+
+			</div>
+		</div>
 
         <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
 			<h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
@@ -96,155 +114,6 @@
         {% endif %}
     </div>
 
-    <!-- La modale d'ajout d'objet est maintenant ici -->
-    <div class="modal fade" id="addObjectModal" tabindex="-1" aria-labelledby="addObjectModalLabel" aria-hidden="true">
-		<div class="modal-dialog modal-lg modal-dialog-centered"> <!-- modal-lg pour plus d'espace -->
-			<div class="modal-content border-0 shadow-lg">
-				
-				<!-- Header Stylisé -->
-				<div class="modal-header bg-primary text-white">
-					<h5 class="modal-title fw-bold" id="addObjectModalLabel">
-						<i class="bi bi-box-seam-fill me-2"></i>Ajouter un matériel
-					</h5>
-					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-
-				<form action="{{ url_for('inventaire.ajouter_objet') }}" method="post" enctype="multipart/form-data">
-					<div class="modal-body p-4 bg-light"> <!-- Fond gris léger pour faire ressortir les inputs -->
-						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-						
-						<div class="row g-4">
-							
-							<!-- COLONNE GAUCHE : IDENTITÉ & STOCK -->
-							<div class="col-md-6">
-								<h6 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Informations Générales</h6>
-								
-								<!-- Nom -->
-								<div class="mb-3">
-									<label for="nom" class="form-label fw-bold small">Nom de l'objet <span class="text-danger">*</span></label>
-									<div class="input-group shadow-sm">
-										<span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
-										<input type="text" class="form-control border-start-0 ps-0" id="nom" name="nom" placeholder="Ex: Bécher 50ml" required>
-									</div>
-								</div>
-
-								<!-- Quantité & Seuil (Côte à côte) -->
-								<div class="row g-2 mb-3">
-									<div class="col-6">
-										<label for="quantite" class="form-label fw-bold small">Quantité <span class="text-danger">*</span></label>
-										<div class="input-group shadow-sm">
-											<input type="number" class="form-control text-center fw-bold" id="quantite" name="quantite" value="1" min="0" required>
-										</div>
-									</div>
-									<div class="col-6">
-										<label for="seuil" class="form-label fw-bold small text-danger">Seuil Alerte <span class="text-danger">*</span></label>
-										<div class="input-group shadow-sm">
-											<span class="input-group-text bg-white text-danger"><i class="bi bi-bell"></i></span>
-											<input type="number" class="form-control border-start-0 ps-0" id="seuil" name="seuil" value="5" min="0" required>
-										</div>
-									</div>
-								</div>
-
-								<!-- Date Péremption -->
-								<div class="mb-3">
-									<label for="date_peremption" class="form-label fw-bold small">Date de péremption</label>
-									<div class="input-group shadow-sm">
-										<span class="input-group-text bg-white"><i class="bi bi-calendar-event"></i></span>
-										<input type="date" class="form-control border-start-0 ps-0" id="date_peremption" name="date_peremption">
-									</div>
-								</div>
-							</div>
-
-							<!-- COLONNE DROITE : CLASSEMENT & MÉDIA -->
-							<div class="col-md-6">
-								<h6 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Classement & Média</h6>
-
-								<!-- Armoire & Catégorie -->
-								<div class="mb-3">
-									<label for="armoire_id" class="form-label fw-bold small">Armoire <span class="text-danger">*</span></label>
-									<div class="input-group shadow-sm">
-										<span class="input-group-text bg-white"><i class="bi bi-archive"></i></span>
-										<select class="form-select border-start-0 ps-0" id="armoire_id" name="armoire_id" required>
-											{% for a in all_armoires %}<option value="{{ a.id }}">{{ a.nom }}</option>{% endfor %}
-										</select>
-									</div>
-								</div>
-
-								<div class="mb-3">
-									<label for="categorie_id" class="form-label fw-bold small">Catégorie <span class="text-danger">*</span></label>
-									<div class="input-group shadow-sm">
-										<span class="input-group-text bg-white"><i class="bi bi-bookmarks"></i></span>
-										<select class="form-select border-start-0 ps-0" id="categorie_id" name="categorie_id" required>
-											{% for c in all_categories %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}
-										</select>
-									</div>
-								</div>
-
-								<!-- SECTION IMAGE UNIFIÉE -->
-								<div class="card border-0 shadow-sm mb-3">
-									<div class="card-body p-2 bg-white rounded">
-										<label class="form-label fw-bold small mb-2">Image de l'objet</label>
-										
-										<!-- Onglets simplifiés pour choisir la source -->
-										<ul class="nav nav-pills nav-fill small mb-2" id="pills-tab" role="tablist">
-											<li class="nav-item" role="presentation">
-												<button class="nav-link active py-1" id="pills-file-tab" data-bs-toggle="pill" data-bs-target="#pills-file" type="button" role="tab">
-													<i class="bi bi-upload me-1"></i>Fichier
-												</button>
-											</li>
-											<li class="nav-item" role="presentation">
-												<button class="nav-link py-1" id="pills-url-tab" data-bs-toggle="pill" data-bs-target="#pills-url" type="button" role="tab">
-													<i class="bi bi-link-45deg me-1"></i>URL / Web
-												</button>
-											</li>
-										</ul>
-
-										<div class="tab-content" id="pills-tabContent">
-											<!-- Option 1 : Upload Fichier -->
-											<div class="tab-pane fade show active" id="pills-file" role="tabpanel">
-												<input type="file" class="form-control form-control-sm" id="image" name="image" accept="image/*">
-												<div class="form-text x-small mt-1">Format JPG, PNG. Max 5 Mo.</div>
-											</div>
-											
-											<!-- Option 2 : URL Web -->
-											<div class="tab-pane fade" id="pills-url" role="tabpanel">
-												<div class="input-group input-group-sm">
-													<input type="text" class="form-control" id="image_url" name="image_url" placeholder="https://...">
-													<button class="btn btn-outline-secondary" type="button" id="btn-search-pexels">
-														<i class="bi bi-search"></i>
-													</button>
-												</div>
-												<!-- Zone résultats Pexels (cachée par défaut) -->
-												<div id="pexels-results" class="d-flex gap-2 mt-2 overflow-auto" style="display:none; white-space: nowrap;"></div>
-											</div>
-										</div>
-									</div>
-								</div>
-
-								<!-- FDS -->
-								<div class="mb-0">
-									<label for="fds_url" class="form-label fw-bold small">Fiche Sécurité (PDF)</label>
-									<div class="input-group input-group-sm shadow-sm">
-										<span class="input-group-text bg-white"><i class="bi bi-file-pdf text-danger"></i></span>
-										<input type="text" class="form-control border-start-0 ps-0" id="fds_url" name="fds_url" placeholder="URL du PDF...">
-									</div>
-								</div>
-
-							</div>
-						</div>
-					</div>
-					
-					<!-- Footer Actions -->
-					<div class="modal-footer bg-white border-top-0">
-						<button type="button" class="btn btn-light text-muted fw-bold" data-bs-dismiss="modal">Annuler</button>
-						<button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
-							<i class="bi bi-check-lg me-2"></i>Enregistrer
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
 	{% include '_modale_danger.html' %}
 {% endblock %}
 

@@ -6472,3 +6472,266 @@ max-width: 450px;
 .cal-day:hover .btn-add-fast {
     opacity: 1;
 }
+
+
+
+/* ============================================================
+   CORRECTION ALIGNEMENT TABLEAU (V3 - FINALE)
+   ============================================================ */
+
+/* 1. Base : Centrage vertical et horizontal pour tout le monde */
+.objet-table th,
+.objet-table td {
+    vertical-align: middle !important;
+    text-align: center !important;
+    padding: 12px 8px !important;
+}
+
+/* 2. Exception NOM : Alignement à gauche */
+.objet-table th:first-child,
+.objet-table td[data-field="nom"] {
+    text-align: left !important;
+    padding-left: 20px !important;
+}
+
+/* 3. Exception IMAGE : Largeur fixe */
+.objet-table .image-cell {
+    width: 80px;
+    min-width: 80px;
+}
+
+/* 4. CORRECTION PÉREMPTION (Le point critique) */
+/* On force le centrage même si la cellule a une classe de couleur */
+.objet-table td[data-field="date_peremption"],
+.objet-table td[data-field="date_peremption"].texte-perime,
+.objet-table td[data-field="date_peremption"].texte-perime-bientot {
+    text-align: center !important;
+    font-family: 'Consolas', 'Monaco', monospace; /* Chiffres alignés */
+    font-weight: 600;
+    white-space: nowrap;
+    display: table-cell !important; /* S'assure que ce n'est pas un block */
+}
+
+/* 5. Liens de tri dans les en-têtes */
+.objet-table th a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    width: 100%;
+}
+
+/* Le lien "Nom" doit rester à gauche */
+.objet-table th:first-child a {
+    text-align: left !important;
+}
+
+
+
+/* ============================================================
+   CORRECTION ALIGNEMENT DATE (MODALE)
+   ============================================================ */
+
+/* On force le conteneur à rester en ligne (Flexbox) */
+#addObjectModal .input-group {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    width: 100%;
+}
+
+/* On s'assure que l'icône ne prend que la place nécessaire */
+#addObjectModal .input-group-text {
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+/* On force l'input date à prendre tout l'espace restant sans casser la ligne */
+#addObjectModal input[type="date"] {
+    flex: 1 1 auto !important;
+    width: 1% !important; /* Hack standard Bootstrap pour forcer le calcul de largeur */
+    min-width: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    margin-left: -1px; /* Pour coller à la bordure de l'icône */
+}
+
+
+/* ============================================================
+   CORRECTION FOCUS CHAMP SEUIL (ROUGE)
+   ============================================================ */
+#addObjectModal #seuil:focus {
+    /* 1. On remplace le bleu Bootstrap par du rouge */
+    border-color: #dc3545 !important; 
+    
+    /* 2. On ajoute un petit halo rouge (optionnel, ou mettre 'none') */
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+    
+    /* 3. CRITIQUE : On empêche la bordure gauche de réapparaître */
+    border-left: 0 !important;
+}
+
+/* Astuce pour que l'icône reste bien "collée" visuellement */
+#addObjectModal .input-group:focus-within .input-group-text.text-danger {
+    border-color: #dc3545 !important;
+    z-index: 5; /* On fait passer l'icône au-dessus du champ pour masquer la jonction */
+}
+
+
+/* ============================================================
+   BARRE DE FILTRES PREMIUM
+   ============================================================ */
+
+.filter-bar-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.filter-bar {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    padding: 10px 20px;
+    border-radius: 16px; /* Arrondi moderne */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Ombre douce */
+    border: 1px solid rgba(0,0,0,0.04);
+    gap: 0; /* On gère l'espace avec le padding interne */
+}
+
+/* Groupe (Icône + Select) */
+.filter-group {
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.filter-icon {
+    width: 36px;
+    height: 36px;
+    background: #f8f9fa;
+    color: #6c757d;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+}
+
+.filter-group:hover .filter-icon {
+    background: #e7f1ff;
+    color: #0d6efd;
+}
+
+.filter-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.filter-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #adb5bd;
+    margin-bottom: 0;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+}
+
+/* Le Select "Invisible" mais stylé */
+.filter-select {
+    border: none;
+    background: transparent;
+    font-weight: 600;
+    color: #212529;
+    font-size: 0.95rem;
+    padding: 0;
+    cursor: pointer;
+    outline: none;
+    min-width: 120px;
+    /* Hack pour enlever l'apparence par défaut tout en gardant la flèche */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0 center;
+    background-size: 10px;
+    padding-right: 15px;
+}
+
+.filter-select:focus {
+    color: #0d6efd;
+}
+
+/* Séparateur Vertical */
+.filter-separator {
+    width: 1px;
+    height: 40px;
+    background: #e9ecef;
+    margin: 0 5px;
+}
+
+/* Bouton Reset */
+.filter-actions {
+    padding-left: 20px;
+    border-left: 1px solid #e9ecef;
+    margin-left: 5px;
+}
+
+.btn-reset-filters {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #fff0f3; /* Rouge très pâle */
+    color: #dc3545;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 1.2rem;
+}
+
+.btn-reset-filters:hover {
+    background: #dc3545;
+    color: white;
+    transform: rotate(-180deg);
+    box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3);
+}
+
+/* Responsive : Sur mobile, on empile */
+@media (max-width: 768px) {
+    .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+        padding: 20px;
+    }
+    .filter-separator { display: none; }
+    .filter-actions { 
+        border-left: none; 
+        padding-left: 0; 
+        display: flex; 
+        justify-content: center; 
+        margin-top: 10px;
+    }
+    .filter-group { padding: 0; }
+    .filter-select { width: 100%; }
+}
+
+
+/* ============================================================
+   CORRECTION ALIGNEMENT BARRE DE FILTRES
+   ============================================================ */
+.filter-icon {
+    /* On pousse l'icône vers le bas pour l'aligner avec le Select, pas le Label */
+    margin-top: 12px; 
+}

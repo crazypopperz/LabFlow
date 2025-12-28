@@ -233,11 +233,17 @@ def alertes():
         .filter_by(etablissement_id=etablissement_id, statut='En attente')
         .order_by(Suggestion.date_demande.desc())
     ).scalars().all()
-
+    
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Centre d\'Alertes', 'url': None}
+    ]
+    
     return render_template("alertes.html",
                            objets_stock=objets_stock_results,
                            objets_peremption=objets_peremption,
                            suggestions=suggestions,
+                           breadcrumbs=breadcrumbs,
                            date_actuelle=now,
                            now=now)
 
@@ -256,7 +262,14 @@ def voir_fournisseurs():
         .order_by(Fournisseur.nom)
     ).scalars().all()
     
-    return render_template("fournisseurs.html", fournisseurs=fournisseurs)
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Annuaire Fournisseurs', 'url': None}
+    ]
+    
+    return render_template("fournisseurs.html", 
+                           fournisseurs=fournisseurs,
+                           breadcrumbs=breadcrumbs)
 
 #================================================================
 #  GESTION PANIER
@@ -302,6 +315,69 @@ def a_propos():
                            breadcrumbs=breadcrumbs,
                            licence=licence_info,
                            now=datetime.now())
+
+
+
+# ================================================================
+# GESTION BUDGET (Lecture pour tous, Admin pour modifs)
+# ================================================================
+@main_bp.route("/budget")
+@login_required
+def voir_budget():
+    etablissement_id = session['etablissement_id']
+    
+    # 1. Déterminer l'année scolaire
+    now = datetime.now()
+    annee_courante = now.year if now.month >= 9 else now.year - 1
+    
+    # 2. Récupérer le budget
+    budget = db.session.execute(
+        db.select(Budget).filter_by(
+            etablissement_id=etablissement_id,
+            annee=annee_courante
+        )
+    ).scalar_one_or_none()
+    
+    # 3. Calculs
+    depenses = []
+    total_depense = 0
+    solde = 0
+    
+    if budget:
+        # Récupérer les dépenses liées
+        depenses = db.session.execute(
+            db.select(Depense)
+            .options(joinedload(Depense.fournisseur))
+            .filter_by(budget_id=budget.id)
+            .order_by(Depense.date_depense.desc())
+        ).scalars().all()
+        
+        total_depense = sum(d.montant for d in depenses)
+        solde = budget.montant_initial - total_depense
+
+    # 4. Fil d'ariane
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Suivi Budgétaire', 'url': None}
+    ]
+
+    # 5. Liste des fournisseurs (pour la modale d'ajout, si admin)
+    fournisseurs = []
+    if session.get('user_role') == 'admin':
+        fournisseurs = db.session.execute(
+            db.select(Fournisseur).filter_by(etablissement_id=etablissement_id).order_by(Fournisseur.nom)
+        ).scalars().all()
+
+    return render_template("budget.html",
+                           budget=budget,
+                           depenses=depenses,
+                           total_depense=total_depense,
+                           solde=solde,
+                           annee=annee_courante,
+                           fournisseurs=fournisseurs,
+                           breadcrumbs=breadcrumbs,
+                           now=now)
+
 
 #================================================================
 #  GESTION FAVICON

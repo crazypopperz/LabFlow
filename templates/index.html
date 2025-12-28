@@ -102,7 +102,9 @@
                     {% endif %}
                 </div>
                 <div class="p-3 bg-light border-top">
-                    <a href="{{ url_for('admin.budget') }}" class="btn-dashboard w-100">Accéder</a>
+                    <a href="{{ url_for('main.voir_budget') }}" class="btn-dashboard w-100">
+						<i class="bi bi-eye me-2"></i>Consulter le budget
+					</a>
                 </div>
             </div>
         </div>
@@ -242,7 +244,10 @@
                 
                 <!-- Footer -->
                 <div class="p-3 bg-light border-top">
-                    <a href="{{ url_for('admin.gestion_fournisseurs') }}" class="btn btn-dashboard w-100">Gérer l'annuaire</a>
+                    <!-- Tout le monde peut cliquer ici -->
+					<a href="{{ url_for('main.voir_fournisseurs') }}" class="btn btn-dashboard w-100">
+						<i class="bi bi-eye me-2"></i>Voir l'annuaire
+					</a>
                 </div>
             </div>
         </div>

@@ -3,7 +3,7 @@
 		<tr>
 			{% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}<th class="checkbox-column"><input type="checkbox" id="select-all-checkbox" title="Tout sélectionner"></th>{% endif %}
 			
-			{# --- LIENS DE TRI (Conservés) --- #}
+			{# --- CORRECTION ICI : On utilise directement les variables IDs passées par la vue --- #}
 			<th class="sortable {% if sort_by == 'nom' %}th-sort-{{ direction }}{% endif %}">
 				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='nom', direction='desc' if sort_by == 'nom' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Nom</a>
 			</th>
@@ -34,6 +34,7 @@
         {# --- LOGIQUE ÉTAT (Design conservé) --- #}
         {% set perime, perime_bientot, statut = False, False, 'ok' %}
         
+        {# 1. Péremption #}
         {% if objet.date_peremption %}
             {% if objet.date_peremption < date_actuelle.date() %}
                 {% set perime, statut = True, 'perime' %}
@@ -42,9 +43,15 @@
             {% endif %}
         {% endif %}
         
-        {# Utilisation de quantite_disponible du DTO #}
-        {% if statut == 'ok' and objet.quantite_disponible <= objet.seuil %}
-            {% set statut = 'stock' %}
+        {# 2. Stock (Seulement si pas de problème de péremption) #}
+        {% if statut == 'ok' %}
+            {% if objet.quantite_disponible <= objet.seuil %}
+                {# Cas ROUGE : Sous le seuil #}
+                {% set statut = 'stock_critique' %}
+            {% elif objet.quantite_disponible <= (objet.seuil + 2) %}
+                {# Cas ORANGE : Proche du seuil (Marge de 2 unités) #}
+                {% set statut = 'stock_bas' %}
+            {% endif %}
         {% endif %}
 
         <tr class="{{ 'row-perime' if perime else 'row-perime-bientot' if perime_bientot }}" data-objet-id="{{ objet.id }}">
@@ -85,8 +92,15 @@
                     <span class="texte-perime" title="Produit périmé"><i class="bi bi-x-circle-fill"></i></span>
                 {% elif statut == 'bientot' %}
                     <span class="texte-perime-bientot" title="Expire bientôt"><i class="bi bi-exclamation-circle-fill"></i></span>
-                {% elif statut == 'stock' %}
-                    <span class="texte-alerte" title="Stock bas"><i class="bi bi-exclamation-triangle-fill"></i></span>
+                
+                {# NOUVEAU : Stock Critique (Rouge) #}
+                {% elif statut == 'stock_critique' %}
+                    <span class="text-danger" title="Stock critique (Sous le seuil)"><i class="bi bi-exclamation-octagon-fill"></i></span>
+                
+                {# NOUVEAU : Stock Bas (Orange) #}
+                {% elif statut == 'stock_bas' %}
+                    <span class="text-warning" title="Stock bas (Proche du seuil)"><i class="bi bi-exclamation-triangle-fill"></i></span>
+                
                 {% else %}
                     <span class="texte-ok" title="OK"><i class="bi bi-check-circle-fill"></i></span>
                 {% endif %}

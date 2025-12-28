@@ -1,0 +1,42 @@
+<!-- Modale Ajout Fournisseur -->
+<div class="modal fade" id="addFournisseurModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Nouveau Fournisseur</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <!-- Attention : enctype="multipart/form-data" est requis pour l'upload de logo -->
+            <form action="{{ url_for('admin.ajouter_fournisseur') }}" method="POST" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="mb-3">
+                        <label for="nom" class="form-label fw-bold">Nom du fournisseur *</label>
+                        <input type="text" class="form-control" id="nom" name="nom" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="site_web" class="form-label">Site Internet</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-globe"></i></span>
+                            <input type="url" class="form-control" id="site_web" name="site_web" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="logo" class="form-label">Logo (Optionnel)</label>
+                        <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                        <div class="form-text small">Format JPG ou PNG recommandé.</div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

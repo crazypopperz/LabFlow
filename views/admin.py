@@ -904,72 +904,97 @@ def gestion_fournisseurs():
     ).all()
     return render_template("admin_fournisseurs.html", fournisseurs=fournisseurs, breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Fournisseurs'}])
 
-@admin_bp.route("/fournisseurs/ajouter", methods=['POST'])
+@admin_bp.route("/fournisseurs/ajouter", methods=["POST"])
 @admin_required
 def ajouter_fournisseur():
     etablissement_id = session['etablissement_id']
-    nom = request.form.get('nom', '').strip()
-    site_web = request.form.get('site_web', '').strip()
-    logo_url = request.form.get('logo_url', '').strip()
+    nom = request.form.get("nom")
+    site_web = request.form.get("site_web")
+    
+    # Gestion Logo (Priorité : Fichier > URL)
+    logo_filename = None
+    
+    # 1. Vérification Fichier
+    if 'logo_file' in request.files:
+        file = request.files['logo_file']
+        if file and file.filename != '' and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            ts = datetime.now().strftime("%Y%m%d%H%M%S")
+            unique_filename = f"{ts}_{filename}"
+            
+            # Dossier spécifique fournisseurs
+            upload_folder = os.path.join(current_app.root_path, 'static', 'images', 'fournisseurs')
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
+                
+            file.save(os.path.join(upload_folder, unique_filename))
+            logo_filename = unique_filename
 
-    if not nom:
-        flash("Nom obligatoire.", "danger")
-        return redirect(url_for('admin.gestion_fournisseurs'))
-
-    if site_web and not validate_url(site_web):
-        flash("URL site web invalide.", "warning")
-        return redirect(url_for('admin.gestion_fournisseurs'))
-        
-    if logo_url and not validate_url(logo_url):
-        flash("URL logo invalide.", "warning")
-        return redirect(url_for('admin.gestion_fournisseurs'))
+    # 2. Si pas de fichier, on regarde l'URL
+    if not logo_filename:
+        logo_url = request.form.get("logo_url", "").strip()
+        if logo_url:
+            logo_filename = logo_url # On stocke l'URL directement dans le champ logo
 
     try:
-        db.session.add(Fournisseur(nom=nom, site_web=site_web or None, logo=logo_url or None, etablissement_id=etablissement_id))
+        new_fournisseur = Fournisseur(
+            nom=nom,
+            site_web=site_web,
+            logo=logo_filename,
+            etablissement_id=etablissement_id
+        )
+        db.session.add(new_fournisseur)
         db.session.commit()
-        flash("Fournisseur ajouté.", "success")
-    except IntegrityError:
+        flash("Fournisseur ajouté avec succès.", "success")
+    except Exception as e:
         db.session.rollback()
-        flash("Ce fournisseur existe déjà.", "danger")
-    except Exception:
-        db.session.rollback()
-        current_app.logger.error("Erreur ajout fournisseur", exc_info=True)
-        flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.gestion_fournisseurs'))
+        flash(f"Erreur lors de l'ajout : {e}", "error")
 
-@admin_bp.route("/fournisseurs/modifier/<int:id>", methods=['POST'])
+    return redirect(url_for('main.voir_fournisseurs'))
+
+@admin_bp.route("/fournisseurs/modifier/<int:id>", methods=["POST"])
 @admin_required
 def modifier_fournisseur(id):
     etablissement_id = session['etablissement_id']
     fournisseur = db.session.get(Fournisseur, id)
+    
     if not fournisseur or fournisseur.etablissement_id != etablissement_id:
-        flash("Fournisseur introuvable.", "danger")
-        return redirect(url_for('admin.gestion_fournisseurs'))
+        flash("Fournisseur introuvable.", "error")
+        return redirect(url_for('main.voir_fournisseurs'))
+
+    fournisseur.nom = request.form.get("nom")
+    fournisseur.site_web = request.form.get("site_web")
+
+    # Gestion Logo
+    # 1. Fichier
+    if 'logo_file' in request.files:
+        file = request.files['logo_file']
+        if file and file.filename != '' and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            ts = datetime.now().strftime("%Y%m%d%H%M%S")
+            unique_filename = f"{ts}_{filename}"
+            
+            upload_folder = os.path.join(current_app.root_path, 'static', 'images', 'fournisseurs')
+            if not os.path.exists(upload_folder):
+                os.makedirs(upload_folder)
+                
+            file.save(os.path.join(upload_folder, unique_filename))
+            fournisseur.logo = unique_filename # Remplace l'ancien
+    
+    # 2. URL (Seulement si renseignée et pas de fichier uploadé cette fois-ci)
+    # Note : Si l'utilisateur laisse tout vide, on garde l'ancien logo
+    logo_url = request.form.get("logo_url", "").strip()
+    if logo_url and 'logo_file' in request.files and request.files['logo_file'].filename == '':
+        fournisseur.logo = logo_url
 
     try:
-        nom = request.form.get('nom', '').strip()
-        site_web = request.form.get('site_web', '').strip()
-        logo_url = request.form.get('logo_url', '').strip()
-
-        if not nom: raise ValueError("Nom vide")
-        if site_web and not validate_url(site_web): raise ValueError("URL site invalide")
-        if logo_url and not validate_url(logo_url): raise ValueError("URL logo invalide")
-            
-        fournisseur.nom = nom
-        fournisseur.site_web = site_web or None
-        fournisseur.logo = logo_url or None
         db.session.commit()
         flash("Fournisseur modifié.", "success")
-    except ValueError as ve:
-        flash(str(ve), "warning")
-    except IntegrityError:
+    except Exception as e:
         db.session.rollback()
-        flash("Nom déjà pris.", "danger")
-    except Exception:
-        db.session.rollback()
-        current_app.logger.error("Erreur modif fournisseur", exc_info=True)
-        flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.gestion_fournisseurs'))
+        flash(f"Erreur : {e}", "error")
+
+    return redirect(url_for('main.voir_fournisseurs'))
 
 @admin_bp.route("/fournisseurs/supprimer/<int:id>", methods=['POST'])
 @admin_required

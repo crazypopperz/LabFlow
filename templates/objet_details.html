@@ -7,15 +7,7 @@
 <div class="main-container">
     
     <!-- Fil d'ariane -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('inventaire.index') }}" class="text-decoration-none">Inventaire</a></li>
-            {% if objet.categorie %}
-            <li class="breadcrumb-item"><a href="#" class="text-decoration-none">{{ objet.categorie.nom }}</a></li>
-            {% endif %}
-            <li class="breadcrumb-item active" aria-current="page">{{ objet.nom }}</li>
-        </ol>
-    </nav>
+    {% include '_breadcrumb.html' %}
 
     <div class="row g-4">
         

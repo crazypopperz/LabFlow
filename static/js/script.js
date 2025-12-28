@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				params.set('etat', etatFilter.value);
 			}
 
-			const apiUrl = `/api/inventaire/?${params.toString()}`;
+			const apiUrl = `/api/inventaire?${params.toString()}`;
 
 			fetch(apiUrl)
 			.then(response => response.json())
@@ -967,12 +967,18 @@ document.addEventListener("DOMContentLoaded", function () {
 				};
 				
 				// Remplissage sécurisé de tous les champs
-				for (const [fieldId, value] of Object.entries(fields)) {
+				for (const [fieldId, rawValue] of Object.entries(fields)) {
 					const input = form.querySelector(`#${fieldId}`);
 					if (input) {
-						input.value = value || '';
+                        // CORRECTION : On nettoie la valeur
+                        // Si c'est "None" (texte), null ou undefined -> on met une chaîne vide
+                        let value = rawValue;
+                        if (value === 'None' || value === null || value === undefined) {
+                            value = '';
+                        }
+						input.value = value;
 					} else {
-						console.warn(`Champ #${fieldId} introuvable dans le formulaire`);
+						// console.warn(`Champ #${fieldId} introuvable`); // Optionnel
 					}
 				}
 				

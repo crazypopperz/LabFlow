@@ -98,7 +98,9 @@ class InventoryService:
                         Objet.date_peremption <= today + timedelta(days=30)
                     )
                 elif filters['etat'] == 'stock':
-                    query = query.filter(Objet.quantite_physique <= Objet.seuil)
+                    # CORRECTION : On inclut le seuil critique ET la marge de sécurité (+2)
+                    # Cela permet d'afficher les items Oranges ET Rouges quand on filtre
+                    query = query.filter(Objet.quantite_physique <= Objet.seuil + 2)
 
             # 3. Tri
             ALLOWED_SORT = {

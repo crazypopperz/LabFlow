@@ -102,86 +102,171 @@
 </div>
 
 <!-- ================================================================= -->
-<!-- 4. MODALE D'AJOUT/MODIF OBJET -->
+<!-- 4. MODALE D'AJOUT/MODIF OBJET (DESIGN PREMIUM) -->
 <!-- ================================================================= -->
-<div class="modal fade" id="addObjectModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
+<div class="modal fade" id="addObjectModal" tabindex="-1" aria-labelledby="addObjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            
+            <!-- Header Stylisé -->
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="modal-objet-title"><i class="bi bi-box-seam me-2"></i>Gérer un objet</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title fw-bold" id="modal-objet-title">
+                    <i class="bi bi-box-seam-fill me-2"></i>Ajouter un matériel
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ url_for('inventaire.ajouter_objet') }}" method="post">
-                <div class="modal-body p-4">
+
+            <form action="{{ url_for('inventaire.ajouter_objet') }}" method="post" enctype="multipart/form-data">
+                <div class="modal-body p-4 bg-light">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
                     <div class="row g-4">
-                        <!-- Colonne Gauche -->
-                        <div class="col-md-6">
-                            <div class="form-floating mb-3">
-                                <input type="text" class="form-control" id="nom" name="nom" required placeholder="Nom">
-                                <label for="nom">Nom de l'objet</label>
-                            </div>
-                            <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <div class="form-floating">
-                                        <input type="number" class="form-control" id="quantite" name="quantite" required placeholder="Qté">
-                                        <label for="quantite">Quantité</label>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="form-floating">
-                                        <input type="number" class="form-control" id="seuil" name="seuil" required placeholder="Seuil">
-                                        <label for="seuil">Seuil d'alerte</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-floating mb-3">
-                                <input type="date" class="form-control" id="date_peremption" name="date_peremption">
-                                <label for="date_peremption">Date de péremption (Optionnel)</label>
-                            </div>
-                            <div class="form-floating mb-3">
-                                <select class="form-select" id="armoire_id" name="armoire_id" required>
-                                    {% for a in all_armoires %}<option value="{{ a.id }}">{{ a.nom }}</option>{% endfor %}
-                                </select>
-                                <label for="armoire_id">Armoire</label>
-                            </div>
-                            <div class="form-floating">
-                                <select class="form-select" id="categorie_id" name="categorie_id" required>
-                                    {% for c in all_categories %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}
-                                </select>
-                                <label for="categorie_id">Catégorie</label>
-                            </div>
-                        </div>
                         
-                        <!-- Colonne Droite (Image & FDS) -->
-                        <div class="col-md-6 border-start ps-4">
-                            <label class="form-label fw-bold text-muted small">IMAGE DE L'OBJET</label>
-                            <div class="input-group mb-2">
-                                <input type="text" class="form-control" id="image_url" name="image_url" placeholder="URL de l'image">
-                                <button class="btn btn-outline-secondary" type="button" id="btn-search-pexels">
-                                    <i class="bi bi-search"></i> Pexels
-                                </button>
-                            </div>
+                        <!-- COLONNE GAUCHE : IDENTITÉ & STOCK -->
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Informations Générales</h6>
                             
-                            <!-- Zone de résultats Pexels -->
-                            <div id="pexels-results" class="d-flex gap-2 overflow-auto py-2" style="display: none;"></div>
-                            
-                            <!-- Aperçu -->
-                            <div id="image-preview-container" class="bg-light rounded d-flex align-items-center justify-content-center mb-3" style="height: 150px; display: none;">
-                                <img id="image-preview" src="" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                            <!-- Nom -->
+                            <div class="mb-3">
+                                <label for="nom" class="form-label fw-bold small">Nom de l'objet <span class="text-danger">*</span></label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
+                                    <input type="text" class="form-control border-start-0 ps-0" id="nom" name="nom" placeholder="Ex: Bécher 50ml" required>
+                                </div>
                             </div>
 
-                            <label class="form-label fw-bold text-muted small mt-3">SÉCURITÉ</label>
-                            <div class="form-floating">
-                                <input type="text" class="form-control" id="fds_url" name="fds_url" placeholder="URL FDS">
-                                <label for="fds_url">Lien vers la Fiche de Sécurité (PDF)</label>
+                            <!-- Quantité & Seuil -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label for="quantite" class="form-label fw-bold small">Quantité <span class="text-danger">*</span></label>
+                                    <div class="input-group shadow-sm">
+                                        <input type="number" class="form-control text-center fw-bold" id="quantite" name="quantite" value="1" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label for="seuil" class="form-label fw-bold small text-danger">Seuil Alerte <span class="text-danger">*</span></label>
+                                    <div class="input-group shadow-sm">
+                                        <span class="input-group-text bg-white text-danger"><i class="bi bi-bell"></i></span>
+                                        <input type="number" class="form-control border-start-0 ps-0" id="seuil" name="seuil" value="5" min="0" required>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- Date Péremption -->
+                            <div class="mb-3">
+                                <label for="date_peremption" class="form-label fw-bold small">Date de péremption</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-calendar-event"></i></span>
+                                    <input type="date" class="form-control border-start-0 ps-0" id="date_peremption" name="date_peremption">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COLONNE DROITE : CLASSEMENT & MÉDIA -->
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Classement & Média</h6>
+
+                            <!-- Armoire & Catégorie -->
+                            <div class="mb-3">
+                                <label for="armoire_id" class="form-label fw-bold small">Armoire <span class="text-danger">*</span></label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-archive"></i></span>
+                                    <select class="form-select border-start-0 ps-0" id="armoire_id" name="armoire_id" required>
+                                        {% for a in all_armoires %}<option value="{{ a.id }}">{{ a.nom }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="categorie_id" class="form-label fw-bold small">Catégorie <span class="text-danger">*</span></label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-bookmarks"></i></span>
+                                    <select class="form-select border-start-0 ps-0" id="categorie_id" name="categorie_id" required>
+                                        {% for c in all_categories %}<option value="{{ c.id }}">{{ c.nom }}</option>{% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- SECTION IMAGE (Ton design conservé) -->
+                            <div class="card border-0 shadow-sm mb-3">
+                                <div class="card-body p-2 bg-white rounded">
+                                    <label class="form-label fw-bold small mb-2">Image de l'objet</label>
+                                    <ul class="nav nav-pills nav-fill small mb-2" id="pills-tab-img" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active py-1" id="pills-file-tab" data-bs-toggle="pill" data-bs-target="#pills-file" type="button">
+                                                <i class="bi bi-upload me-1"></i>Fichier
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link py-1" id="pills-url-tab" data-bs-toggle="pill" data-bs-target="#pills-url" type="button">
+                                                <i class="bi bi-link-45deg me-1"></i>URL / Web
+                                            </button>
+                                        </li>
+                                    </ul>
+                                    <div class="tab-content">
+                                        <div class="tab-pane fade show active" id="pills-file">
+                                            <input type="file" class="form-control form-control-sm" id="image" name="image" accept="image/*">
+                                        </div>
+                                        <div class="tab-pane fade" id="pills-url">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="image_url" name="image_url" placeholder="https://...">
+                                                <button class="btn btn-outline-secondary" type="button" id="btn-search-pexels"><i class="bi bi-search"></i></button>
+                                            </div>
+                                            <div id="pexels-results" class="d-flex gap-2 mt-2 overflow-auto" style="display:none;"></div>
+                                        </div>
+                                    </div>
+                                    <!-- Aperçu Image -->
+                                    <div id="image-preview-container" class="mt-2 text-center" style="display:none;">
+                                        <img id="image-preview" src="" style="max-height: 100px; max-width: 100%; object-fit: contain;" class="rounded border">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION FDS (NOUVEAU : Design intégré) -->
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-body p-2 bg-white rounded">
+                                    <label class="form-label fw-bold small mb-2">Fiche Sécurité (PDF)</label>
+                                    
+                                    <ul class="nav nav-pills nav-fill small mb-2" id="pills-tab-fds" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active py-1" data-bs-toggle="pill" data-bs-target="#pills-fds-file" type="button">
+                                                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link py-1" data-bs-toggle="pill" data-bs-target="#pills-fds-url" type="button">
+                                                <i class="bi bi-link-45deg me-1"></i>Lien
+                                            </button>
+                                        </li>
+                                    </ul>
+
+                                    <div class="tab-content">
+                                        <!-- Onglet Fichier PDF -->
+                                        <div class="tab-pane fade show active" id="pills-fds-file">
+                                            <input type="file" class="form-control form-control-sm" name="fds_file" accept="application/pdf">
+                                        </div>
+                                        
+                                        <!-- Onglet URL -->
+                                        <div class="tab-pane fade" id="pills-fds-url">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-white"><i class="bi bi-globe"></i></span>
+                                                <input type="url" class="form-control" id="fds_url" name="fds_url" placeholder="https://...">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary" id="modal-submit-btn">Enregistrer</button>
+                
+                <!-- Footer Actions -->
+                <div class="modal-footer bg-white border-top-0">
+                    <button type="button" class="btn btn-light text-muted fw-bold" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm" id="modal-submit-btn">
+                        <i class="bi bi-check-lg me-2"></i>Enregistrer
+                    </button>
                 </div>
             </form>
         </div>

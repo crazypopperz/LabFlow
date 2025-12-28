@@ -264,25 +264,45 @@ def ajouter_objet():
     user_id = session.get('user_id')
 
     try:
+        # --- GESTION IMAGE (Code existant) ---
         image_path_db = None
         if 'image' in request.files:
             file = request.files['image']
-            if file and file.filename != '':
-                if allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                    unique_filename = f"{ts}_{filename}"
-                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-                    if not os.path.exists(upload_folder):
-                        os.makedirs(upload_folder)
-                    file.save(os.path.join(upload_folder, unique_filename))
-                    image_path_db = f"uploads/{unique_filename}"
-                else:
-                    flash("Format d'image non autorisé (JPG, PNG uniquement).", "warning")
-
+            if file and file.filename != '' and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                unique_filename = f"{ts}_{filename}"
+                upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                if not os.path.exists(upload_folder): os.makedirs(upload_folder)
+                file.save(os.path.join(upload_folder, unique_filename))
+                image_path_db = f"uploads/{unique_filename}"
+        
         if not image_path_db:
             image_path_db = request.form.get("image_url", "").strip() or None
 
+        # --- GESTION FDS (NOUVEAU) ---
+        fds_path_db = None
+        
+        # 1. Priorité au fichier PDF uploadé
+        if 'fds_file' in request.files:
+            file = request.files['fds_file']
+            if file and file.filename != '' and file.filename.lower().endswith('.pdf'):
+                filename = secure_filename(file.filename)
+                ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                unique_filename = f"FDS_{ts}_{filename}"
+                
+                # Dossier spécifique pour les FDS
+                fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
+                if not os.path.exists(fds_folder): os.makedirs(fds_folder)
+                
+                file.save(os.path.join(fds_folder, unique_filename))
+                fds_path_db = f"uploads/fds/{unique_filename}"
+
+        # 2. Sinon, on prend l'URL
+        if not fds_path_db:
+            fds_path_db = request.form.get("fds_url", "").strip() or None
+
+        # --- CRÉATION OBJET ---
         new_objet = Objet(
             nom=request.form.get("nom", "").strip(),
             quantite_physique=int(request.form.get("quantite")),
@@ -291,12 +311,12 @@ def ajouter_objet():
             categorie_id=int(request.form.get("categorie_id")),
             date_peremption=request.form.get("date_peremption") or None,
             image_url=image_path_db,
-            fds_url=request.form.get("fds_url", "").strip() or None,
+            fds_url=fds_path_db, # <--- On enregistre le chemin/URL
             etablissement_id=etablissement_id
         )
         db.session.add(new_objet)
         db.session.flush() 
-
+        
         hist = Historique(
             objet_id=new_objet.id,
             utilisateur_id=user_id,
@@ -306,13 +326,12 @@ def ajouter_objet():
             timestamp=datetime.now()
         )
         db.session.add(hist)
-
         db.session.commit()
         flash(f"L'objet '{new_objet.nom}' a été ajouté avec succès !", "success")
         
     except (ValueError, TypeError):
         db.session.rollback()
-        flash("Données invalides. Veuillez vérifier les champs numériques.", "error")
+        flash("Données invalides.", "error")
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erreur ajout objet: {e}")
@@ -326,7 +345,7 @@ def ajouter_objet():
 def modifier_objet(id_objet):
     objet = db.session.get(Objet, id_objet)
     if not objet or objet.etablissement_id != session['etablissement_id']:
-        flash("Objet non trouvé ou accès non autorisé.", "error")
+        flash("Objet non trouvé.", "error")
         return redirect(url_for('inventaire.index'))
 
     user_id = session.get('user_id')
@@ -341,44 +360,58 @@ def modifier_objet(id_objet):
             'categorie': objet.categorie_id
         }
 
+        # --- GESTION IMAGE ---
         if 'image' in request.files:
             file = request.files['image']
-            if file and file.filename != '':
-                if allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                    unique_filename = f"{ts}_{filename}"
-                    upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-                    if not os.path.exists(upload_folder):
-                        os.makedirs(upload_folder)
-                    file.save(os.path.join(upload_folder, unique_filename))
-                    objet.image_url = f"uploads/{unique_filename}"
-                else:
-                    flash("Format d'image non autorisé.", "warning")
+            if file and file.filename != '' and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                unique_filename = f"{ts}_{filename}"
+                upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                if not os.path.exists(upload_folder): os.makedirs(upload_folder)
+                file.save(os.path.join(upload_folder, unique_filename))
+                objet.image_url = f"uploads/{unique_filename}"
         
         url_externe = request.form.get("image_url", "").strip()
-        if url_externe:
-            objet.image_url = url_externe
+        if url_externe: objet.image_url = url_externe
 
+        # --- GESTION FDS (NOUVEAU) ---
+        # 1. Fichier PDF
+        if 'fds_file' in request.files:
+            file = request.files['fds_file']
+            if file and file.filename != '' and file.filename.lower().endswith('.pdf'):
+                filename = secure_filename(file.filename)
+                ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                unique_filename = f"FDS_{ts}_{filename}"
+                
+                fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
+                if not os.path.exists(fds_folder): os.makedirs(fds_folder)
+                
+                file.save(os.path.join(fds_folder, unique_filename))
+                objet.fds_url = f"uploads/fds/{unique_filename}" # Mise à jour
+        
+        # 2. URL (Seulement si renseignée explicitement)
+        fds_url_input = request.form.get("fds_url", "").strip()
+        if fds_url_input:
+            objet.fds_url = fds_url_input
+
+        # --- MISE À JOUR CHAMPS ---
         objet.nom = request.form.get("nom", "").strip()
         objet.quantite_physique = int(request.form.get("quantite"))
         objet.seuil = int(request.form.get("seuil"))
         objet.armoire_id = int(request.form.get("armoire_id"))
         objet.categorie_id = int(request.form.get("categorie_id"))
         objet.date_peremption = request.form.get("date_peremption") or None
-        objet.fds_url = request.form.get("fds_url", "").strip() or None
         
+        # --- HISTORIQUE ---
         details_modif = []
         if anciens['quantite'] != objet.quantite_physique:
             diff = objet.quantite_physique - anciens['quantite']
             signe = "+" if diff > 0 else ""
             details_modif.append(f"Stock: {anciens['quantite']} ➝ {objet.quantite_physique} ({signe}{diff})")
             
-        if anciens['nom'] != objet.nom:
-            details_modif.append(f"Nom changé")
-            
-        if anciens['armoire'] != objet.armoire_id:
-            details_modif.append("Déplacé (Armoire)")
+        if anciens['nom'] != objet.nom: details_modif.append(f"Nom changé")
+        if anciens['armoire'] != objet.armoire_id: details_modif.append("Déplacé (Armoire)")
 
         if details_modif or anciens['seuil'] != objet.seuil:
             msg = ", ".join(details_modif) if details_modif else "Mise à jour des détails"
@@ -393,17 +426,16 @@ def modifier_objet(id_objet):
             db.session.add(hist)
 
         db.session.commit()
-        flash(f"L'objet '{objet.nom}' a été mis à jour avec succès !", "success")
-        
+        flash(f"L'objet '{objet.nom}' a été mis à jour.", "success")
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erreur modif objet: {e}")
         flash(f"Une erreur est survenue.", "error")
 
     return redirect(request.referrer or url_for('inventaire.index'))
-
-
-@inventaire_bp.route("/objet/supprimer/<int:id_objet>", methods=["POST"])
+    
+    
 @admin_required
 def supprimer_objet(id_objet):
     objet = db.session.get(Objet, id_objet)
@@ -433,6 +465,8 @@ def supprimer_objet(id_objet):
         flash(f"Une erreur est survenue lors de la suppression.", "error")
 
     return redirect(request.referrer or url_for('inventaire.inventaire'))
+
+
 
 @inventaire_bp.route("/objet/<int:objet_id>")
 @login_required
@@ -475,11 +509,27 @@ def voir_objet(objet_id):
     armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
     categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
 
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Inventaire', 'url': url_for('inventaire.inventaire')},
+    ]
+    
+    # Si l'objet a une catégorie, on l'ajoute pour faciliter la navigation
+    if objet.categorie:
+        breadcrumbs.append({
+            'text': objet.categorie.nom, 
+            'url': url_for('inventaire.voir_categorie', categorie_id=objet.categorie.id)
+        })
+    
+    # L'objet lui-même (non cliquable)
+    breadcrumbs.append({'text': objet.nom, 'url': None})
+
     return render_template("objet_details.html",
                            objet=objet,
                            historique=historique,
                            armoires=armoires,
                            categories=categories,
+                           breadcrumbs=breadcrumbs,
                            now=datetime.now())
 
 #==============================================================================
@@ -538,7 +588,7 @@ def voir_armoire(armoire_id):
                            direction=direction,
                            autres_armoires=autres_armoires,
                            breadcrumbs=breadcrumbs,
-                           now=datetime.now(),
+                           date_actuelle=datetime.now(),
                            armoire_id=armoire_id,
                            categorie_id=None
                            )
@@ -599,7 +649,7 @@ def voir_categorie(categorie_id):
                            direction=direction,
                            categories_list=categories_list,
                            breadcrumbs=breadcrumbs,
-                           now=datetime.now(),
+                           date_actuelle=datetime.now(),
                            armoire_id=None,
                            categorie_id=categorie_id
                            )

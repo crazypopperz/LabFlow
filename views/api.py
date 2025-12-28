@@ -232,6 +232,7 @@ def search():
 def api_inventaire():
     services = get_services()
     
+    # 1. Récupération des filtres
     filters = {
         'q': request.args.get('q'),
         'armoire_id': request.args.get('armoire', type=int),
@@ -239,6 +240,7 @@ def api_inventaire():
         'etat': request.args.get('etat')
     }
     
+    # 2. Appel Service
     dto = services.inventory.get_paginated_inventory(
         page=request.args.get('page', 1, type=int),
         sort_by=request.args.get('sort_by', 'nom'),
@@ -246,16 +248,24 @@ def api_inventaire():
         filters=filters
     )
     
+    # 3. Rendu HTML pour le JS
     html = render_template(
         '_inventaire_content.html', 
         objets=dto.items, 
         pagination={'page': dto.current_page, 'total_pages': dto.total_pages, 'endpoint': 'inventaire.inventaire'}, 
         sort_by=request.args.get('sort_by', 'nom'), 
         direction=request.args.get('direction', 'asc'), 
+        
+        # Contexte d'affichage (Noms)
         armoire=dto.context.armoire_nom, 
         categorie=dto.context.categorie_nom, 
-        etat=filters['etat'], 
-        date_actuelle=datetime.now()
+        
+        # --- CORRECTIONS CRITIQUES ICI ---
+        armoire_id=filters['armoire_id'],
+        categorie_id=filters['categorie_id'],
+        date_actuelle=datetime.now(),
+        
+        etat=filters['etat']
     )
     return jsonify({'html': html})
 

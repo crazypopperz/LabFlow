@@ -517,128 +517,151 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	// =======================================================================
-	// SECTION 4 : RECHERCHE GLOBALE (HEADER) - VERSION CORRIGÉE
-	// =======================================================================
-	const globalSearchInput = document.getElementById('globalSearchInput');
-	const resultsContainer = document.getElementById('globalSearchResults');
-	const searchWrapper = document.getElementById('search-wrapper-dropdown');
-	const clearBtn = document.getElementById('clear-btn-dropdown');
+    // SECTION 4 : RECHERCHE GLOBALE (HEADER) - VERSION FINALE AVEC FLAG
+    // =======================================================================
+    const globalSearchInput = document.getElementById('globalSearchInput');
+    const resultsContainer = document.getElementById('globalSearchResults');
+    const searchWrapper = document.getElementById('search-wrapper-dropdown');
+    const clearBtn = document.getElementById('clear-btn-dropdown');
 
-	if (globalSearchInput && resultsContainer && searchWrapper) {
-		let searchTimeoutHeader;
-		
-		// 1. Gestion visuelle (Focus)
-		globalSearchInput.addEventListener('focus', () => {
-			searchWrapper.classList.add('focused');
-			globalSearchInput.classList.add('expanded');
-			// Si on a déjà une recherche, on réaffiche les résultats
-			if (globalSearchInput.value.length >= 2 && resultsContainer.innerHTML !== '') {
-				resultsContainer.style.display = 'block';
-				resultsContainer.classList.add('visible');
-			}
-		});
+    if (globalSearchInput && resultsContainer && searchWrapper) {
+        let searchTimeoutHeader;
+        let searchController = null;
+        let hasValidResults = false; // ✅ Nouveau flag d'état
 
-		// 2. Gestion de la frappe
-		globalSearchInput.addEventListener('input', function(e) {
-			const query = e.target.value.trim();
-			clearTimeout(searchTimeoutHeader);
-			
-			// Gestion du bouton croix
-			if (clearBtn) {
-				if (query) clearBtn.classList.add('visible');
-				else clearBtn.classList.remove('visible');
-			}
-			
-			// Si vide ou trop court, on cache tout
-			if (query.length < 2) {
-				resultsContainer.classList.remove('visible');
-				resultsContainer.style.display = 'none';
-				return;
-			}
-			
-			// Délai (Debounce)
-			searchTimeoutHeader = setTimeout(() => {
-				console.log("Recherche lancée pour :", query); // DEBUG
-				
-				// Afficher chargement
-				resultsContainer.style.display = 'block';
-				resultsContainer.classList.add('visible');
-				resultsContainer.innerHTML = '<div class="search-status"><div class="spinner-border spinner-border-sm text-white me-2"></div>Recherche...</div>';
-				
-				// Appel API
-				fetch(`/api/search?q=${encodeURIComponent(query)}`)
-					.then(response => {
-						console.log("Statut réponse API :", response.status); // DEBUG
-						if (!response.ok) throw new Error('Erreur réseau');
-						return response.json();
-					})
-					.then(data => {
-						console.log("Données reçues :", data); // DEBUG
-						
-						if (data.length === 0) {
-							resultsContainer.innerHTML = '<div class="search-status">Aucun résultat trouvé.</div>';
-						} else {
-							let html = '';
-							data.forEach(item => {
-								// 1. Correction du nom de la clé (l'API renvoie 'image', pas 'image_url')
-								const rawImage = item.image || item.image_url; 
-								
-								// 2. Logique Hybride : URL Externe vs Fichier Local
-								let imgUrl = 'https://via.placeholder.com/40?text=IMG'; // Image par défaut
-								
-								if (rawImage) {
-									if (rawImage.startsWith('http')) {
-										imgUrl = rawImage; // C'est une URL web (Pexels, etc.)
-									} else {
-										imgUrl = `/static/${rawImage}`; // C'est un fichier local -> on ajoute /static/
-									}
-								}
+        // ---------------------------------------------------------
+        // 1. GESTION VISUELLE (FOCUS)
+        // ---------------------------------------------------------
+        globalSearchInput.addEventListener('focus', () => {
+            searchWrapper.classList.add('focused');
+            globalSearchInput.classList.add('expanded');
+            
+            // On ne réaffiche que si on a des résultats valides en mémoire
+            // et que l'input n'a pas changé entre temps
+            if (globalSearchInput.value.trim().length >= 2 && hasValidResults) {
+                resultsContainer.style.display = 'block';
+                resultsContainer.classList.add('visible');
+            }
+        });
 
-								// Sécurisation des valeurs nulles
-								const armoire = item.armoire || 'Sans armoire';
-								const quantite = item.quantite !== undefined ? item.quantite : '?';
-								
-								html += `
-									<a href="/objet/${item.id}" class="search-result-item">
-										<img src="${imgUrl}" alt="Img" class="search-result-img">
-										<div class="search-result-info">
-											<h6>${item.nom}</h6>
-											<small>${armoire} • Qté: ${quantite}</small>
-										</div>
-									</a>
-								`;
-							});
-							resultsContainer.innerHTML = html;
-						}
-					})
-					.catch(error => {
-						console.error('Erreur JS recherche:', error);
-						resultsContainer.innerHTML = '<div class="search-status text-danger">Erreur technique.</div>';
-					});
-			}, 300);
-		});
-		
-		// 3. Bouton Clear
-		if (clearBtn) {
-			clearBtn.addEventListener('click', function() {
-				globalSearchInput.value = '';
-				clearBtn.classList.remove('visible');
-				resultsContainer.classList.remove('visible');
-				resultsContainer.style.display = 'none';
-				globalSearchInput.focus();
-			});
-		}
-		
-		// 4. Fermeture au clic extérieur (INDISPENSABLE)
-		document.addEventListener('click', function(e) {
-			if (!searchWrapper.contains(e.target)) {
-				searchWrapper.classList.remove('focused');
-				globalSearchInput.classList.remove('expanded');
-				resultsContainer.classList.remove('visible');
-				resultsContainer.style.display = 'none';
-			}
-		});
-	}
+        // ---------------------------------------------------------
+        // 2. GESTION DE LA FRAPPE (INPUT)
+        // ---------------------------------------------------------
+        globalSearchInput.addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            
+            if (searchTimeoutHeader) clearTimeout(searchTimeoutHeader);
+
+            // Gestion bouton croix
+            if (clearBtn) {
+                if (query.length > 0) clearBtn.classList.add('visible');
+                else clearBtn.classList.remove('visible');
+            }
+
+            // Nettoyage si trop court
+            if (query.length < 2) {
+                resultsContainer.classList.remove('visible');
+                resultsContainer.style.display = 'none';
+                hasValidResults = false; // ✅ Reset du flag
+                return;
+            }
+
+            searchTimeoutHeader = setTimeout(() => {
+                if (searchController) searchController.abort();
+                searchController = new AbortController();
+                const signal = searchController.signal;
+
+                // UI Chargement
+                resultsContainer.style.display = 'block';
+                resultsContainer.classList.add('visible');
+                resultsContainer.innerHTML = '<div class="search-status"><div class="spinner-border spinner-border-sm text-white me-2"></div>Recherche...</div>';
+                // On ne met pas hasValidResults à true ici, on attend la réponse
+
+                fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Erreur réseau');
+                        return response.json();
+                    })
+                    .then(json => {
+                        const data = Array.isArray(json) ? json : (json.data || []);
+
+                        if (data.length === 0) {
+                            resultsContainer.innerHTML = '<div class="search-status">Aucun résultat trouvé.</div>';
+                            // On considère "0 résultat" comme un état valide (l'utilisateur peut vouloir revoir ça)
+                            hasValidResults = true; 
+                        } else {
+                            let html = '';
+                            data.forEach(item => {
+                                const rawImage = item.image || item.image_url;
+                                let imgUrl = 'https://via.placeholder.com/40?text=IMG';
+
+                                if (rawImage) {
+                                    imgUrl = rawImage.startsWith('http') ? rawImage : `/static/${rawImage}`;
+                                }
+
+                                const armoire = item.armoire || 'Sans armoire';
+                                const quantite = item.quantite !== undefined ? item.quantite : '?';
+
+                                html += `
+                                    <a href="/objet/${item.id}" class="search-result-item">
+                                        <img src="${imgUrl}" alt="${item.nom}" class="search-result-img">
+                                        <div class="search-result-info">
+                                            <h6>${item.nom}</h6>
+                                            <small>${armoire} • Qté: ${quantite}</small>
+                                        </div>
+                                    </a>
+                                `;
+                            });
+                            resultsContainer.innerHTML = html;
+                            hasValidResults = true; // ✅ Résultats chargés avec succès
+                        }
+                    })
+                    .catch(error => {
+                        if (error.name === 'AbortError') {
+                            console.log('Recherche annulée');
+                        } else {
+                            console.error('Erreur JS recherche:', error);
+                            resultsContainer.innerHTML = '<div class="search-status text-danger">Erreur technique.</div>';
+                            hasValidResults = false; // ✅ En cas d'erreur, on ne veut pas réafficher ça au focus
+                        }
+                    });
+            }, 300);
+        });
+
+        // ---------------------------------------------------------
+        // 3. BOUTON CLEAR
+        // ---------------------------------------------------------
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                globalSearchInput.value = '';
+                clearBtn.classList.remove('visible');
+                resultsContainer.classList.remove('visible');
+                resultsContainer.style.display = 'none';
+                globalSearchInput.focus();
+                
+                hasValidResults = false; // ✅ Reset du flag
+                
+                if (searchTimeoutHeader) clearTimeout(searchTimeoutHeader);
+                if (searchController) searchController.abort();
+            });
+        }
+
+        // ---------------------------------------------------------
+        // 4. FERMETURE AU CLIC EXTÉRIEUR
+        // ---------------------------------------------------------
+        document.addEventListener('click', function(e) {
+            if (!searchWrapper.contains(e.target)) {
+                searchWrapper.classList.remove('focused');
+                globalSearchInput.classList.remove('expanded');
+                resultsContainer.classList.remove('visible');
+                resultsContainer.style.display = 'none';
+                // Note : On ne reset PAS hasValidResults ici, 
+                // pour permettre de réafficher les résultats si on re-clique dans l'input
+            }
+        });
+    }
+	
+	
     // =====================================================================
 	// SECTION 5 : GESTION DEPLACEMENT EN MASSE
 	// =====================================================================

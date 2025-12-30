@@ -771,27 +771,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ===================================================================
-	// SECTION 9 : EXPORT DU BUDGET
-	// ===================================================================
-    const dateDebutExport = document.getElementById('date_debut_export');
-    if (dateDebutExport) {
-        const dateFinExport = document.getElementById('date_fin_export');
-        const pdfLink = document.getElementById('export-pdf-link');
-        const excelLink = document.getElementById('export-excel-link');
-        function updateExportLinks() {
-            const dateDebut = dateDebutExport.value;
-            const dateFin = dateFinExport.value;
-            const exportUrl = '/admin/exporter_budget';
-            const paramsPdf = new URLSearchParams({ format: 'pdf', date_debut: dateDebut, date_fin: dateFin });
-            pdfLink.href = `${exportUrl}?${paramsPdf.toString()}`;
-            const paramsExcel = new URLSearchParams({ format: 'excel', date_debut: dateDebut, date_fin: dateFin });
-            excelLink.href = `${exportUrl}?${paramsExcel.toString()}`;
-        }
-        dateDebutExport.addEventListener('change', updateExportLinks);
-        dateFinExport.addEventListener('change', updateExportLinks);
-        updateExportLinks();
-    }
 
     // ====================================================================
 	// SECTION 10 : MODALE DES DEPENSES

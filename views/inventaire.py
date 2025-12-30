@@ -84,23 +84,40 @@ def index():
 
     now = datetime.now()
     
-    reservations = db.session.execute(
-        db.select(
-            Reservation.groupe_id,
-            Reservation.debut_reservation,
-            func.count(Reservation.objet_id).label('item_count')
-        )
+    raw_reservations = db.session.execute(
+        db.select(Reservation)
+        .options(joinedload(Reservation.objet), joinedload(Reservation.kit))
         .filter(
             Reservation.etablissement_id == etablissement_id,
             Reservation.utilisateur_id == user_id,
             Reservation.debut_reservation >= now
         )
-        .group_by(Reservation.groupe_id, Reservation.debut_reservation)
         .order_by(Reservation.debut_reservation.asc())
-        .limit(5)
-    ).mappings().all()
-    
-    dashboard_data['reservations'] = reservations
+    ).scalars().all()
+
+    # 2. Regroupement intelligent en Python
+    reservations_map = {}
+    for r in raw_reservations:
+        if r.groupe_id not in reservations_map:
+            reservations_map[r.groupe_id] = {
+                'groupe_id': r.groupe_id,
+                'debut': r.debut_reservation,
+                'fin': r.fin_reservation,
+                'liste_items': [] # On utilise 'liste_items' pour éviter le conflit Jinja
+            }
+        
+        # On détermine le nom et le type
+        is_kit = r.kit_id is not None
+        nom = r.kit.nom if is_kit else (r.objet.nom if r.objet else "Inconnu")
+        
+        reservations_map[r.groupe_id]['liste_items'].append({
+            'nom': nom,
+            'type': 'kit' if is_kit else 'objet',
+            'quantite': r.quantite_reservee
+        })
+
+    # 3. On transforme en liste et on garde les 5 prochaines
+    dashboard_data['reservations'] = list(reservations_map.values())[:5]
 
     annee_scolaire_actuelle = now.year if now.month >= 9 else now.year - 1
 
@@ -122,53 +139,51 @@ def index():
 
     dashboard_data['solde_budget'] = solde_actuel
 
-    recent_reservations = db.session.execute(
-        db.select(
-            Reservation.groupe_id,
-            Reservation.debut_reservation.label('timestamp')
-        )
-        .filter_by(utilisateur_id=user_id, etablissement_id=etablissement_id)
-        .group_by(Reservation.groupe_id, Reservation.debut_reservation)
-        .order_by(Reservation.debut_reservation.desc())
-        .limit(5)
-    ).mappings().all()
+    # --- LOGIQUE HISTORIQUE ADMINISTRATEUR (Catégorisé) ---
+    historique_groupe = {
+        'creations': [],
+        'modifications': [],
+        'deplacements': [],
+        'suppressions': []
+    }
 
-    other_actions = db.session.execute(
-        db.select(
-            Historique.action,
-            Historique.timestamp,
-            Historique.details,
-            Objet.nom.label('objet_nom')
-        )
-        .join(Objet, Historique.objet_id == Objet.id)
-        .filter(
-            Historique.utilisateur_id == user_id,
-            Historique.etablissement_id == etablissement_id
-        )
-        .where(Historique.action.notlike('%Réservation%'))
-        .order_by(Historique.timestamp.desc())
-        .limit(5)
-    ).mappings().all()
+    if session.get('user_role') == 'admin':
+        mouvements = db.session.execute(
+            db.select(Historique, Objet.nom.label('nom_actuel'), Utilisateur.nom_utilisateur)
+            .outerjoin(Objet, Historique.objet_id == Objet.id)
+            .outerjoin(Utilisateur, Historique.utilisateur_id == Utilisateur.id)
+            .filter(Historique.etablissement_id == etablissement_id)
+            .order_by(Historique.timestamp.desc())
+            .limit(50)
+        ).all()
 
-    all_actions = list(recent_reservations) + list(other_actions)
-    all_actions.sort(key=lambda x: x['timestamp'], reverse=True)
-    top_5_actions = all_actions[:5]
+        for h, nom_obj, nom_user in mouvements:
+            nom_affichage = nom_obj if nom_obj else "Objet supprimé"
+            
+            item = {
+                'id': h.id,
+                'objet': nom_affichage,
+                'user': nom_user or "Inconnu",
+                'date': h.timestamp,
+                'details': h.details
+            }
 
-    historique_enrichi = []
-    for action in top_5_actions:
-        entry = {'timestamp': action['timestamp']}
-        if 'groupe_id' in action: 
-            entry['type'] = 'reservation'
-            entry['action'] = 'Réservation'
-            entry['kits'] = []
-            entry['objets_manuels'] = ["Détails en cours de migration..."]
-        else: 
-            entry['type'] = 'autre'
-            entry['action'] = action['action']
-            entry['details'] = f"{action['objet_nom']}"
-        historique_enrichi.append(entry)
+            if h.action == 'Création':
+                historique_groupe['creations'].append(item)
+            elif h.action == 'Suppression':
+                if "de :" in h.details:
+                    try:
+                        item['objet'] = h.details.split("de :")[1].strip()
+                    except IndexError:
+                        pass
+                historique_groupe['suppressions'].append(item)
+            elif h.action == 'Modification':
+                if "Déplacé" in h.details or "Armoire" in h.details:
+                    historique_groupe['deplacements'].append(item)
+                else:
+                    historique_groupe['modifications'].append(item)
 
-    dashboard_data['historique_recent'] = historique_enrichi
+    dashboard_data['historique_groupe'] = historique_groupe
     
     fournisseurs = db.session.execute(
         db.select(Fournisseur)
@@ -436,15 +451,20 @@ def modifier_objet(id_objet):
     return redirect(request.referrer or url_for('inventaire.index'))
     
     
+@inventaire_bp.route("/objet/supprimer/<int:id_objet>", methods=["POST"])
 @admin_required
 def supprimer_objet(id_objet):
     objet = db.session.get(Objet, id_objet)
+    
+    # Vérification d'appartenance
     if not objet or objet.etablissement_id != session['etablissement_id']:
         flash("Objet non trouvé ou accès non autorisé.", "error")
-        return redirect(url_for('inventaire.inventaire'))
+        return redirect(url_for('inventaire.index'))
 
     try:
         nom_objet = objet.nom
+        
+        # Historique
         hist = Historique(
             objet_id=None, 
             utilisateur_id=session.get('user_id'),
@@ -455,6 +475,7 @@ def supprimer_objet(id_objet):
         )
         db.session.add(hist)
         
+        # Suppression
         db.session.delete(objet)
         db.session.commit()
         flash(f"L'objet '{nom_objet}' a été supprimé.", "success")

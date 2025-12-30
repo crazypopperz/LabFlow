@@ -1,0 +1,216 @@
+/* static/css/_pages.css */
+
+/* ===============================================
+   PAGE INVENTAIRE & RECHERCHE
+   =============================================*/
+.inventory-controls {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1.5rem;
+    box-shadow: var(--card-shadow);
+    border: 1px solid #e3e6f0;
+}
+
+.search-container {
+    position: relative;
+    max-width: 400px;
+}
+
+.search-container i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--secondary);
+    z-index: 10;
+}
+
+.search-container .form-control {
+    padding-left: 2.8rem;
+    border-radius: 25px;
+    border: 1px solid #d1d3e2;
+}
+
+/* --- INDICATEURS DE STOCK (Spécifiques Inventaire) --- */
+.stock-badge {
+    padding: 0.5em 1em;
+    font-weight: 700;
+    border-radius: 50px;
+}
+
+.stock-low {
+    background-color: #ffebee;
+    color: var(--danger);
+}
+
+.stock-ok {
+    background-color: #e8f5e9;
+    color: var(--success);
+}
+
+/* --- DASHBOARD WIDGETS (Index) --- */
+.widget-card {
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+    color: white;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.widget-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+
+.widget-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+/* --- AUTHENTIFICATION --- */
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-primary);
+}
+
+.auth-card {
+    border: none;
+    border-radius: 1.5rem;
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+}
+
+
+/* ========================================================
+   DASHBOARD GRADIENTS (Extraits de index.html)
+   ======================================================*/
+.bg-grad-indigo { 
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important; 
+    color: white !important;
+}
+.bg-grad-blue { 
+    background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%) !important; 
+    color: white !important;
+}
+.bg-grad-emerald { 
+    background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%) !important; 
+    color: white !important;
+}
+.bg-grad-orange { 
+    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%) !important; 
+    color: white !important;
+}
+
+/* Style des icônes dans les cartes */
+.widget-icon-wrapper i {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+
+/* ========================================================
+   PAGE PROFIL
+   ======================================================*/
+.profile-header {
+    background: var(--gradient-primary);
+    height: 150px;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.profile-avatar-container {
+    margin-top: -75px;
+    text-align: center;
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 5px solid #fff;
+    box-shadow: var(--card-shadow);
+    object-fit: cover;
+}
+
+
+
+/* =========================================================
+   ADMINISTRATION
+   =======================================================*/
+.admin-stat-card {
+    border-left: 0.25rem solid var(--primary);
+}
+
+.log-container {
+    background-color: #f8f9fc;
+    border: 1px solid #e3e6f0;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.85rem;
+}
+
+.log-entry {
+    border-bottom: 1px solid #e3e6f0;
+    padding: 0.5rem 0;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+
+/* =========================================================
+   CALENDRIER (FullCalendar Overrides) 
+   =======================================================*/
+.fc {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+}
+
+.fc-header-toolbar {
+    margin-bottom: 1.5rem !important;
+}
+
+.fc-event {
+    cursor: pointer;
+    padding: 2px 5px;
+    border: none;
+    border-radius: 3px;
+}
+
+.fc-daygrid-day.fc-day-today {
+    background-color: rgba(78, 115, 223, 0.05) !important;
+}
+
+
+/* ==========================================================
+   RAPPORTS & BUDGET
+   ========================================================*/
+.chart-area {
+    position: relative;
+    height: 10rem;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .chart-area {
+        height: 20rem;
+    }
+}
+
+.budget-progress {
+    height: 0.5rem;
+    border-radius: 10px;
+}

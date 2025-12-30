@@ -63,12 +63,12 @@
                     </button>
                     
                     <button class="btn btn-success w-100" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#depenseModal"
-                            onclick="resetDepenseModal()"
-                            {% if not budget_actuel_pour_modales %}disabled{% endif %}>
-                        <i class="bi bi-plus-circle me-2"></i>Ajouter une Dépense
-                    </button>
+							data-bs-toggle="modal" 
+							data-bs-target="#depenseModal"
+							onclick="resetDepenseModal()"
+							{% if not budget_affiche or budget_affiche.cloture %}disabled{% endif %}>
+						<i class="bi bi-plus-circle me-2"></i>Ajouter une Dépense
+					</button>
 
                     {% if budget_affiche and not budget_affiche.cloture %}
                         {% if cloture_autorisee %}
@@ -98,14 +98,20 @@
                 <div class="export-zone">
                     <div class="mb-2">
                         <label class="form-label small text-muted">Période</label>
+                        
                         <div class="input-group input-group-sm mb-2">
                             <span class="input-group-text">Du</span>
                             {% set annee_debut = now.year if now.month >= 8 else now.year - 1 %}
-                            <input type="date" id="date_debut_export" class="form-control" value="{{ '%s-09-01'|format(annee_debut) }}">
+                            <input type="date" id="date_debut_export" class="form-control" 
+                                   value="{{ '%s-09-01'|format(annee_debut) }}" 
+                                   aria-label="Date de début">
                         </div>
+                        
                         <div class="input-group input-group-sm">
                             <span class="input-group-text">Au</span>
-                            <input type="date" id="date_fin_export" class="form-control" value="{{ now.strftime('%Y-%m-%d') }}">
+                            <input type="date" id="date_fin_export" class="form-control" 
+                                   value="{{ now.strftime('%Y-%m-%d') }}" 
+                                   aria-label="Date de fin">
                         </div>
                     </div>
                     <div class="d-flex gap-2 mt-3">

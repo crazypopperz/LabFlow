@@ -1,11 +1,12 @@
 # ============================================================
-# FICHIER : views/admin.py (Version Durcie & Sécurisée)
+# FICHIER : views/admin.py (Complet avec Exports Pro)
 # ============================================================
 import json
 import hashlib
 import secrets
 import re
 import logging
+import io
 from io import BytesIO
 from urllib.parse import urlparse
 from html import escape
@@ -14,21 +15,14 @@ from collections import defaultdict
 from functools import wraps
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, session, jsonify, send_file, current_app, abort)
+                   flash, session, jsonify, send_file, current_app, abort, make_response)
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
-# Pour Excel
-import openpyxl
-from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.comments import Comment
-from openpyxl.worksheet.datavalidation import DataValidation
-
-# Pour PDF
+# --- IMPORTS POUR EXPORT PDF (ReportLab) ---
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -38,9 +32,16 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from reportlab.graphics.shapes import Drawing, Rect, Line
 from reportlab.graphics import renderPDF
 
+# --- IMPORTS POUR EXPORT EXCEL (OpenPyXL) ---
+import openpyxl
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.comments import Comment
+from openpyxl.worksheet.datavalidation import DataValidation
+
 # Imports Locaux
 from extensions import limiter, cache
-from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Historique, Reservation, Suggestion
+from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Reservation, Suggestion
 from utils import calculate_license_key, admin_required, login_required, log_action, get_etablissement_params, allowed_file
 
 # ============================================================
@@ -109,6 +110,201 @@ def sanitize_filename(name):
     safe = re.sub(r'[^\w\s-]', '', str(name))
     cleaned = secure_filename(safe)
     return cleaned[:100] if cleaned else "Export"
+
+
+# ============================================================
+# FONCTIONS GÉNÉRATEURS (CE QU'IL MANQUAIT)
+# ============================================================
+
+def generer_budget_pdf_pro(data_export, metadata):
+    """Génère un PDF stylisé avec ReportLab."""
+    buffer = BytesIO()
+    
+    # Configuration du document
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm,
+        title=f"Budget {metadata['etablissement']}"
+    )
+    
+    elements = []
+    styles = getSampleStyleSheet()
+    LABFLOW_BLUE = colors.HexColor('#1F3B73')
+    
+    # Styles
+    style_titre = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=LABFLOW_BLUE, alignment=TA_CENTER)
+    style_normal = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=10)
+    style_cell = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9)
+    
+    # En-tête
+    elements.append(Paragraph(metadata['etablissement'], style_titre))
+    elements.append(Spacer(1, 0.5*cm))
+    elements.append(Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Tableau
+    table_data = [['Date', 'Fournisseur', 'Libellé', 'Montant']]
+    for item in data_export:
+        table_data.append([
+            Paragraph(item['date'], style_cell),
+            Paragraph(escape(item['fournisseur']), style_cell),
+            Paragraph(escape(item['contenu']), style_cell),
+            Paragraph(f"{item['montant']:.2f} €", style_cell)
+        ])
+    
+    # Total
+    table_data.append(['', '', 'TOTAL', f"{metadata['total']:.2f} €"])
+
+    # Style du tableau
+    t = Table(table_data, colWidths=[2.5*cm, 5*cm, 8*cm, 3*cm])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), LABFLOW_BLUE),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.whitesmoke]),
+    ]))
+    
+    elements.append(t)
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"Budget_{sanitize_filename(metadata['etablissement'])}.pdf"
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
+
+def generer_budget_excel_pro(data_export, metadata):
+    """Génère un Excel stylisé 'Tableau de Bord' avec OpenPyXL."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Budget"
+    
+    # --- PALETTE DE COULEURS ---
+    COLOR_PRIMARY = "1F3B73"
+    COLOR_HEADER_TEXT = "FFFFFF"
+    COLOR_ZEBRA = "F2F4F8"
+    COLOR_BORDER = "D9D9D9"
+    
+    # --- STYLES ---
+    # Titre Principal
+    style_title = Font(name='Calibri', size=16, bold=True, color=COLOR_PRIMARY)
+    
+    # CORRECTION ICI : On centre le titre horizontalement
+    align_title = Alignment(horizontal="center", vertical="center")
+    
+    # Sous-titre
+    style_subtitle = Font(name='Calibri', size=10, italic=True, color="666666")
+    
+    # En-têtes
+    style_header_font = Font(name='Calibri', size=11, bold=True, color=COLOR_HEADER_TEXT)
+    style_header_fill = PatternFill(start_color=COLOR_PRIMARY, end_color=COLOR_PRIMARY, fill_type="solid")
+    
+    # Cellules
+    style_cell_font = Font(name='Calibri', size=11)
+    align_center = Alignment(horizontal="center", vertical="center")
+    align_right = Alignment(horizontal="right", vertical="center")
+    align_left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    
+    border_thin = Border(
+        left=Side(style='thin', color=COLOR_BORDER),
+        right=Side(style='thin', color=COLOR_BORDER),
+        top=Side(style='thin', color=COLOR_BORDER),
+        bottom=Side(style='thin', color=COLOR_BORDER)
+    )
+
+    # --- MISE EN PAGE ---
+
+    # 1. TITRE & INFO (Centrés sur la largeur du tableau)
+    ws.merge_cells('A1:D1')
+    ws['A1'] = f"Rapport Budgétaire - {metadata['etablissement']}"
+    ws['A1'].font = style_title
+    ws['A1'].alignment = align_title # Applique le centrage
+    ws.row_dimensions[1].height = 30
+
+    ws.merge_cells('A2:D2')
+    ws['A2'] = f"Période : {metadata['date_debut']} au {metadata['date_fin']}"
+    ws['A2'].font = style_subtitle
+    ws['A2'].alignment = align_title # Applique le centrage
+    
+    ws.merge_cells('A3:D3')
+    ws['A3'] = f"Généré le {metadata['date_generation']} | {metadata['nombre_depenses']} écritures"
+    ws['A3'].font = style_subtitle
+    ws['A3'].alignment = align_title # Applique le centrage
+    ws.row_dimensions[3].height = 20
+
+    # 2. EN-TÊTES
+    headers = ['Date', 'Fournisseur', 'Libellé', 'Montant']
+    ws.append([]) 
+    ws.append(headers) 
+    
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=5, column=col_num)
+        cell.fill = style_header_fill
+        cell.font = style_header_font
+        cell.alignment = align_center
+        cell.border = border_thin
+    
+    ws.row_dimensions[5].height = 25
+
+    # 3. DONNÉES
+    current_row = 6
+    for item in data_export:
+        c1 = ws.cell(row=current_row, column=1, value=item['date'])
+        c1.alignment = align_center
+        
+        c2 = ws.cell(row=current_row, column=2, value=item['fournisseur'])
+        c2.alignment = align_left
+        
+        c3 = ws.cell(row=current_row, column=3, value=item['contenu'])
+        c3.alignment = align_left
+        
+        try:
+            val_montant = float(item['montant'])
+        except (ValueError, TypeError):
+            val_montant = 0.0
+        
+        c4 = ws.cell(row=current_row, column=4, value=val_montant)
+        c4.number_format = '#,##0.00 €'
+        c4.alignment = align_right
+
+        for col in range(1, 5):
+            cell = ws.cell(row=current_row, column=col)
+            cell.border = border_thin
+            cell.font = style_cell_font
+            if current_row % 2 == 0:
+                cell.fill = PatternFill(start_color=COLOR_ZEBRA, end_color=COLOR_ZEBRA, fill_type="solid")
+        
+        current_row += 1
+
+    # 4. TOTAL
+    total_row = current_row
+    ws.cell(row=total_row, column=3, value="TOTAL DÉPENSES").font = Font(bold=True)
+    ws.cell(row=total_row, column=3).alignment = align_right
+    
+    c_total = ws.cell(row=total_row, column=4, value=float(metadata['total']))
+    c_total.font = Font(bold=True, color=COLOR_PRIMARY, size=12)
+    c_total.number_format = '#,##0.00 €'
+    c_total.alignment = align_right
+    c_total.border = Border(top=Side(style='thick', color=COLOR_PRIMARY), bottom=Side(style='double', color=COLOR_PRIMARY))
+
+    # 5. FINITIONS
+    ws.column_dimensions['A'].width = 15
+    ws.column_dimensions['B'].width = 30
+    ws.column_dimensions['C'].width = 60
+    ws.column_dimensions['D'].width = 18
+
+    ws.auto_filter.ref = f"A5:D{total_row - 1}"
+    ws.freeze_panes = "A6"
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    
+    filename = f"Budget_{sanitize_filename(metadata['etablissement'])}.xlsx"
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 
 # ============================================================
 # ROUTE PRINCIPALE
@@ -839,9 +1035,11 @@ def exporter_budget():
     date_fin_str = request.args.get('date_fin')
     format_type = request.args.get('format')
     
+    redirect_url = url_for('main.voir_budget')
+
     if not all([date_debut_str, date_fin_str, format_type]):
         flash("Paramètres manquants.", "error")
-        return redirect(url_for('admin.budget'))
+        return redirect(redirect_url)
     
     try:
         date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
@@ -856,7 +1054,7 @@ def exporter_budget():
         
         if not depenses:
             flash("Aucune dépense sur cette période.", "warning")
-            return redirect(url_for('admin.budget'))
+            return redirect(redirect_url)
         
         data_export = []
         total = 0.0
@@ -878,16 +1076,16 @@ def exporter_budget():
             'nombre_depenses': len(data_export),
             'total': total
         }
-
-        log_action('export_budget', f"Format: {format_type}")
         
-        if format_type == 'excel': return generer_budget_excel_pro(data_export, metadata)
-        else: return generer_budget_pdf_pro(data_export, metadata)
+        if format_type == 'excel': 
+            return generer_budget_excel_pro(data_export, metadata)
+        else: 
+            return generer_budget_pdf_pro(data_export, metadata)
     
-    except Exception:
-        current_app.logger.error("Erreur export budget", exc_info=True)
-        flash("Erreur lors de l'export.", "error")
-        return redirect(url_for('admin.budget'))
+    except Exception as e:
+        current_app.logger.error(f"Erreur export budget: {e}", exc_info=True)
+        flash("Erreur technique lors de l'export.", "error")
+        return redirect(redirect_url)
 
 # ============================================================
 # GESTION FOURNISSEURS

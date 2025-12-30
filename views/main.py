@@ -340,7 +340,7 @@ def voir_budget():
     
     # 3. Calculs
     depenses = []
-    total_depense = 0
+    total_depenses = 0
     solde = 0
     
     if budget:
@@ -352,8 +352,8 @@ def voir_budget():
             .order_by(Depense.date_depense.desc())
         ).scalars().all()
         
-        total_depense = sum(d.montant for d in depenses)
-        solde = budget.montant_initial - total_depense
+        total_depenses = sum(d.montant for d in depenses)
+        solde = budget.montant_initial - total_depenses
 
     # 4. Fil d'ariane
     breadcrumbs = [
@@ -369,9 +369,9 @@ def voir_budget():
         ).scalars().all()
 
     return render_template("budget.html",
-                           budget=budget,
+                           budget_affiche=budget,
                            depenses=depenses,
-                           total_depense=total_depense,
+                           total_depenses=total_depenses,
                            solde=solde,
                            annee=annee_courante,
                            fournisseurs=fournisseurs,

@@ -66,6 +66,41 @@ a {
 }
 .header-right { display: flex; align-items: center; gap: 1.25rem; }
 
+.header-brand a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+	transition: transform 0.2s ease;
+}
+
+.header-brand a:hover .brand-logo {
+    transform: scale(1.05);
+}
+
+.brand-logo {
+    width: 70px;  /* au lieu de 50px */
+    height: 70px;
+    flex-shrink: 0;
+	border-radius: 12px;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-text h1 {
+    margin: 0;
+    line-height: 1;
+}
+
+.brand-subtitle {
+    margin: 0;
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
 /* ==========================
    DROPDOWN EXPANDABLE SEARCH
    ========================== */
@@ -6735,3 +6770,31 @@ max-width: 450px;
     /* On pousse l'icône vers le bas pour l'aligner avec le Select, pas le Label */
     margin-top: 12px; 
 }
+
+
+/* ==============================================================
+   ONGLETS CARTE HISTORIQUE RECENT VUE Admin
+   =========================================================== */
+.nav-pills .nav-link {
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border-radius: 20px;
+    transition: all 0.2s;
+}
+
+.nav-pills .nav-link:hover {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+.nav-pills .nav-link.active {
+    background-color: #343a40; /* Gris foncé pro */
+    color: white;
+}
+
+/* Couleurs spécifiques pour l'icône active */
+.nav-pills .nav-link.active i.text-warning { color: #ffc107 !important; }
+.nav-pills .nav-link.active i.text-info { color: #0dcaf0 !important; }
+.nav-pills .nav-link.active i.text-success { color: #198754 !important; }
+.nav-pills .nav-link.active i.text-danger { color: #dc3545 !important; }

@@ -160,19 +160,56 @@
                 </div>
                 <div class="p-0 flex-grow-1">
                     {% if data.reservations %}
-                        <ul class="list-group list-group-flush">
+                        <div class="list-group list-group-flush">
                         {% for resa in data.reservations %}
-                            <li class="list-group-item p-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="fw-bold text-primary">{{ resa.debut_reservation|strftime_fr('%A %d %B') }}</span>
-                                    <span class="badge bg-light text-dark border">{{ resa.debut_reservation|strftime('%H:%M') }}</span>
+                            <!-- CORRECTION : C'est maintenant un lien (a) vers la vue jour -->
+                            <a href="{{ url_for('main.vue_jour', date_str=resa.debut.strftime('%Y-%m-%d')) }}" 
+                               class="list-group-item list-group-item-action p-3 border-bottom text-decoration-none">
+                                
+                                <!-- En-tête : Date et Heure -->
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <!-- L'icône date devient implicitement cliquable car elle est dans le lien -->
+                                        <div class="bg-primary-subtle text-primary rounded px-2 py-1 fw-bold small">
+                                            {{ resa.debut|strftime('%d') }}
+                                            <span class="text-uppercase" style="font-size: 0.7em;">{{ resa.debut|strftime('%b') }}</span>
+                                        </div>
+                                        <span class="fw-bold text-dark">{{ resa.debut|strftime_fr('%A') }}</span>
+                                    </div>
+                                    <span class="badge bg-light text-dark border font-monospace">
+                                        {{ resa.debut|strftime('%H:%M') }} - {{ resa.fin|strftime('%H:%M') }}
+                                    </span>
                                 </div>
-                                <small class="text-muted">{{ resa.item_count }} article(s)</small>
-                            </li>
+
+                                <!-- Liste des items (Compacte) -->
+                                <div class="d-flex flex-column gap-1 mt-2">
+                                    {% for item in resa.liste_items %} 
+                                        <div class="d-flex align-items-center justify-content-between" style="font-size: 0.8rem;"> <!-- Police réduite ici -->
+                                            <div class="d-flex align-items-center gap-2 text-truncate">
+                                                {% if item.type == 'kit' %}
+                                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle p-1" style="font-size: 0.7em;" title="Kit">
+                                                        <i class="bi bi-box-seam"></i>
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle p-1" style="font-size: 0.7em;" title="Objet">
+                                                        <i class="bi bi-eyedropper"></i>
+                                                    </span>
+                                                {% endif %}
+                                                
+                                                <span class="text-muted text-truncate">{{ item.nom }}</span>
+                                            </div>
+                                            <span class="fw-bold text-dark">x{{ item.quantite }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </a>
                         {% endfor %}
-                        </ul>
+                        </div>
                     {% else %}
-                        <p class="text-center text-muted py-5 mb-0">Aucune réservation.</p>
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-calendar-x display-4 opacity-25"></i>
+                            <p class="mb-0 mt-2">Aucune réservation à venir.</p>
+                        </div>
                     {% endif %}
                 </div>
                 <div class="p-3 bg-light border-top">
@@ -252,36 +289,143 @@
             </div>
         </div>
 
-        <!-- Widget Mon Historique Récent -->
+        <!-- Widget Mouvements de Stock (ADMIN ONLY) -->
+        {% if session.user_role == 'admin' %}
         <div class="col-12 col-md-6 col-lg-4">
-            <div class="widget-card shadow-sm">
-                <div class="bg-white border-bottom p-3 d-flex align-items-center gap-3">
-                    <div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-                            <path d="M2.5 15a.5.5 0 1 1 0-1h1v-1a4.5 4.5 0 0 1 2.557-4.06c.29-.139.443-.377.443-.59v-.7c0-.213-.154-.451-.443-.59A4.5 4.5 0 0 1 3.5 3V2h-1a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-1v1a4.5 4.5 0 0 1-2.557 4.06c-.29.139-.443.377-.443.59v.7c0 .213.154.451.443.59A4.5 4.5 0 0 1 12.5 13v1h1a.5.5 0 0 1 0 1zm2-13v1c0 .537.12 1.045.337 1.5h6.326c.216-.455.337-.963.337-1.5V2zm3 6.35c0 .701-.478 1.236-1.011 1.492A3.5 3.5 0 0 0 4.5 13s.866-1.299 3-1.48zm1 0v3.17c2.134.181 3 1.48 3 1.48a3.5 3.5 0 0 0-1.989-3.158C8.978 9.586 8.5 9.052 8.5 8.351z"/>
-                        </svg>
+            <div class="widget-card shadow-sm h-100">
+                <!-- Header avec Onglets intégrés -->
+                <div class="bg-white border-bottom p-3">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <!-- Fond Dégradé Rose/Rouge Vif pour le côté "Pulse/Urgence" -->
+						<div class="widget-icon-wrapper" style="background: linear-gradient(135deg, #FF416C 0%, #FF4B2B 100%);">
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-clipboard-pulse" viewBox="0 0 16 16">
+								<path fill-rule="evenodd" d="M10 1.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5zm-5 0A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5v1A1.5 1.5 0 0 1 9.5 4h-3A1.5 1.5 0 0 1 5 2.5zm-2 0h1v1H3a1 1 0 0 0-1 1V14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V3.5a1 1 0 0 0-1-1h-1v-1h1a2 2 0 0 1 2 2V14a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3.5a2 2 0 0 1 2-2m6.979 3.856a.5.5 0 0 0-.968.04L7.92 10.49l-.94-3.135a.5.5 0 0 0-.895-.133L4.232 10H3.5a.5.5 0 0 0 0 1h1a.5.5 0 0 0 .416-.223l1.41-2.115 1.195 3.982a.5.5 0 0 0 .968-.04L9.58 7.51l.94 3.135A.5.5 0 0 0 11 11h1.5a.5.5 0 0 0 0-1h-1.128z"/>
+							</svg>
+						</div>
+                        <h3 class="h5 mb-0 fw-bold text-dark">Mouvements</h3>
                     </div>
-                    <h3 class="h5 mb-0 fw-bold text-dark">Mon Historique</h3>
+
+                    <!-- Navigation des Onglets -->
+                    <ul class="nav nav-pills nav-fill small gap-1" id="historyTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-1 px-2" id="tab-modif" data-bs-toggle="tab" data-bs-target="#content-modif" type="button">
+                                <i class="bi bi-pencil-square text-warning"></i> <span class="d-none d-sm-inline">Modifs</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1 px-2" id="tab-move" data-bs-toggle="tab" data-bs-target="#content-move" type="button">
+                                <i class="bi bi-arrow-left-right text-info"></i> <span class="d-none d-sm-inline">Déplac.</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1 px-2" id="tab-add" data-bs-toggle="tab" data-bs-target="#content-add" type="button">
+                                <i class="bi bi-plus-circle-fill text-success"></i> <span class="d-none d-sm-inline">Ajouts</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1 px-2" id="tab-del" data-bs-toggle="tab" data-bs-target="#content-del" type="button">
+                                <i class="bi bi-trash-fill text-danger"></i> <span class="d-none d-sm-inline">Suppr.</span>
+                            </button>
+                        </li>
+                    </ul>
                 </div>
-                <div class="p-0 flex-grow-1">
-                    {% if data.historique_recent %}
-                        <ul class="list-group list-group-flush">
-                        {% for action in data.historique_recent %}
-                            <li class="list-group-item p-3">
-                                <div class="d-flex justify-content-between">
-                                    <span class="fw-bold text-dark small">{{ action.action }}</span>
-                                    <small class="text-muted">{{ action.timestamp|strftime('%d/%m %H:%M') }}</small>
-                                </div>
-                                <small class="text-muted d-block text-truncate">{{ action.details }}</small>
-                            </li>
-                        {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="text-center text-muted py-5 mb-0">Aucune activité.</p>
-                    {% endif %}
+
+                <!-- Contenu des Onglets -->
+                <div class="tab-content flex-grow-1 p-0" id="historyTabContent" style="max-height: 350px; overflow-y: auto;">
+                    
+                    <!-- 1. MODIFICATIONS -->
+                    <div class="tab-pane fade show active" id="content-modif" role="tabpanel">
+                        {% if data.historique_groupe.modifications %}
+                            <ul class="list-group list-group-flush">
+                            {% for h in data.historique_groupe.modifications %}
+                                <li class="list-group-item p-3 border-bottom-0 border-top">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <span class="fw-bold text-dark small">{{ h.objet }}</span>
+                                        <small class="text-muted" style="font-size: 0.7rem;">{{ h.date|strftime('%d/%m') }}</small>
+                                    </div>
+                                    <div class="text-muted small mt-1"><i class="bi bi-person-circle me-1"></i>{{ h.user }}</div>
+                                    <div class="mt-1 badge bg-warning-subtle text-dark border border-warning-subtle text-wrap text-start fw-normal w-100">
+                                        {{ h.details }}
+                                    </div>
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-center py-5 text-muted small">Aucune modification récente.</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 2. DÉPLACEMENTS -->
+                    <div class="tab-pane fade" id="content-move" role="tabpanel">
+                        {% if data.historique_groupe.deplacements %}
+                            <ul class="list-group list-group-flush">
+                            {% for h in data.historique_groupe.deplacements %}
+                                <li class="list-group-item p-3 border-bottom-0 border-top">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <span class="fw-bold text-dark small">{{ h.objet }}</span>
+                                        <small class="text-muted" style="font-size: 0.7rem;">{{ h.date|strftime('%d/%m') }}</small>
+                                    </div>
+                                    <div class="mt-1 text-info small">
+                                        <i class="bi bi-arrow-left-right me-1"></i>{{ h.details }}
+                                    </div>
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-center py-5 text-muted small">Aucun déplacement récent.</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 3. CRÉATIONS -->
+                    <div class="tab-pane fade" id="content-add" role="tabpanel">
+                        {% if data.historique_groupe.creations %}
+                            <ul class="list-group list-group-flush">
+                            {% for h in data.historique_groupe.creations %}
+                                <li class="list-group-item p-3 border-bottom-0 border-top">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-dark small">{{ h.objet }}</div>
+                                            <div class="text-muted x-small">{{ h.date|strftime('%d/%m %H:%M') }} par {{ h.user }}</div>
+                                        </div>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-center py-5 text-muted small">Aucun ajout récent.</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 4. SUPPRESSIONS -->
+                    <div class="tab-pane fade" id="content-del" role="tabpanel">
+                        {% if data.historique_groupe.suppressions %}
+                            <ul class="list-group list-group-flush">
+                            {% for h in data.historique_groupe.suppressions %}
+                                <li class="list-group-item p-3 border-bottom-0 border-top bg-danger-subtle bg-opacity-10">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded-circle bg-white text-danger border border-danger d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                            <i class="bi bi-trash"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-danger small text-decoration-line-through">{{ h.objet }}</div>
+                                            <div class="text-danger-emphasis x-small">{{ h.date|strftime('%d/%m') }} par {{ h.user }}</div>
+                                        </div>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-center py-5 text-muted small">Aucune suppression récente.</div>
+                        {% endif %}
+                    </div>
+
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Widget Nouveautés & Contact -->
         <div class="col-12 col-md-6 col-lg-4">

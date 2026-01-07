@@ -135,7 +135,7 @@ def register():
             new_user = Utilisateur(
                 nom_utilisateur=username,
                 email=email,
-                mot_de_passe=generate_password_hash(password, method='scrypt'),
+                mot_de_passe=generate_password_hash(password, method='pbkdf2:sha256'),
                 role='utilisateur',
                 etablissement_id=etablissement.id
             )

@@ -1,0 +1,167 @@
+### 📂 STRUCTURE RÉELLE DU PROJET
+/
+│   ├── .env
+│   ├── Mode-Emploi.pdf
+│   ├── README.md
+│   ├── api_pexels.txt
+│   ├── app.py
+│   ├── backup.sql
+│   ├── code_bundle_complet.txt
+│   ├── config.py
+│   ├── db.py
+│   ├── docker-compose.yml
+│   ├── extensions.py
+│   ├── forms.py
+│   ├── main.exe
+│   ├── requirements.txt
+│   ├── run.py
+│   ├── run.spec
+│   ├── utils.py
+│   ├── 📂 services/
+│   │   ├── inventory_service.py
+│   │   ├── kit_service.py
+│   │   ├── panier_service.py
+│   │   ├── stock_service.py
+│   ├── 📂 static/
+│   │   ├── logo.png
+│   │   ├── 📂 css/
+│   │   │   ├── base.css
+│   │   │   ├── bootstrap-icons.css
+│   │   │   ├── bootstrap.min.css
+│   │   │   ├── components.css
+│   │   │   ├── layout.css
+│   │   │   ├── style.css
+│   │   │   ├── 📂 modules/
+│   │   │   │   ├── admin.css
+│   │   │   │   ├── alerts.css
+│   │   │   │   ├── auth.css
+│   │   │   │   ├── calendar.css
+│   │   │   │   ├── cart.css
+│   │   │   │   ├── dashboard.css
+│   │   │   │   ├── inventory.css
+│   │   │   │   ├── profile.css
+│   │   │   │   ├── reports.css
+│   │   │   │   ├── tour.css
+│   │   ├── 📂 icons/
+│   │   │   ├── ajout.png
+│   │   │   ├── by-nc-nd.eu.svg
+│   │   │   ├── cart-grey.svg
+│   │   │   ├── cart-orange.svg
+│   │   │   ├── cart-red.svg
+│   │   │   ├── favicon.ico
+│   │   │   ├── logo.svg
+│   │   ├── 📂 images/
+│   │   │   ├── Cc_by-nc-nd_icon.svg
+│   │   │   ├── apple-touch-icon.png
+│   │   │   ├── favicon.png
+│   │   │   ├── favicon.svg
+│   │   │   ├── 📂 fournisseurs/
+│   │   │   │   ├── avec56y7b.webp
+│   │   │   │   ├── biolab.jpg
+│   │   │   │   ├── images.png
+│   │   │   │   ├── logo_sordalab.png
+│   │   │   ├── 📂 objets/
+│   │   │   │   ├── 16006587-lame_couvre_objet_pour_microscope.jpg
+│   │   │   │   ├── 395000.webp
+│   │   │   │   ├── Appareil_de_Berlese.jpg
+│   │   │   │   ├── Cuve_cuvette_a_dissection.jpg
+│   │   │   │   ├── baguette-verre.jpg
+│   │   │   │   ├── becher-forme-basse.jpg
+│   │   │   │   ├── coton.jpeg
+│   │   │   │   ├── couelle.jpg
+│   │   │   │   ├── d029acf1-fc4f-4c57-a2c7-cd8970ee2f44.avif
+│   │   │   │   ├── dd7bc02d-1c1e-4ad9-a211-931169ee470c.avif
+│   │   │   │   ├── e469ec17-a6da-4e4d-b488-d034edf2ab04.avif
+│   │   │   │   ├── entonnoir.jpg
+│   │   │   │   ├── fehling.png
+│   │   │   │   ├── imagemagic.jpeg
+│   │   │   │   ├── lame.jpg
+│   │   │   │   ├── lames-oignon.webp
+│   │   │   │   ├── mortier.jpeg
+│   │   │   │   ├── pilon.webp
+│   │   │   │   ├── racine_jacinthe_cl_mitoses_he_small.jpg
+│   │   │   │   ├── shopping.webp
+│   │   │   │   ├── sonde-cannelee.jpg
+│   │   │   │   ├── tube-a-essai-en-verre-borosilicate-3-3-type-1-011753150-product_zoom-1-300x300.jpg
+│   │   │   │   ├── verre-montre.jpg
+│   │   │   │   ├── vert-de-methyle-acetique-125-ml.jpg
+│   │   ├── 📂 js/
+│   │   │   ├── bootstrap.bundle.min.js
+│   │   │   ├── script.js
+│   │   │   ├── 📂 modules/
+│   │   │   │   ├── booking-modal.js
+│   │   │   │   ├── calendar-daily.js
+│   │   │   │   ├── calendar-monthly.js
+│   │   │   │   ├── cart-summary.js
+│   │   │   │   ├── cart-utils.js
+│   │   │   │   ├── import_feedback.js
+│   │   │   │   ├── toast.js
+│   │   │   │   ├── tour.js
+│   │   ├── 📂 uploads/
+│   │   │   ├── 📂 fds/
+│   ├── 📂 templates/
+│   │   ├── Licence.txt
+│   │   ├── _add_object_modal.html
+│   │   ├── _breadcrumb.html
+│   │   ├── _inventaire_content.html
+│   │   ├── _modale_danger.html
+│   │   ├── _modale_fournisseur_add.html
+│   │   ├── _modale_fournisseur_edit.html
+│   │   ├── _modale_suggestion.html
+│   │   ├── _modale_warning.html
+│   │   ├── _modals.html
+│   │   ├── _pagination.html
+│   │   ├── _table_objets.html
+│   │   ├── a_propos.html
+│   │   ├── admin.html
+│   │   ├── admin_backup.html
+│   │   ├── admin_echeances.html
+│   │   ├── admin_fournisseurs.html
+│   │   ├── admin_import.html
+│   │   ├── admin_kit_modifier.html
+│   │   ├── admin_kits.html
+│   │   ├── admin_utilisateurs.html
+│   │   ├── alertes.html
+│   │   ├── armoire.html
+│   │   ├── base.html
+│   │   ├── budget.html
+│   │   ├── calendrier.html
+│   │   ├── categorie.html
+│   │   ├── documentation.html
+│   │   ├── dormants.html
+│   │   ├── footer.html
+│   │   ├── fournisseurs.html
+│   │   ├── gestion_armoires.html
+│   │   ├── gestion_categories.html
+│   │   ├── header.html
+│   │   ├── index.html
+│   │   ├── inventaire.html
+│   │   ├── legal.html
+│   │   ├── login.html
+│   │   ├── modale_objet.html
+│   │   ├── objet_details.html
+│   │   ├── panier.html
+│   │   ├── profil.html
+│   │   ├── rapports.html
+│   │   ├── register.html
+│   │   ├── setup.html
+│   │   ├── sub_header.html
+│   │   ├── vue_jour.html
+│   │   ├── 📂 errors/
+│   │   │   ├── 404.html
+│   │   │   ├── 429.html
+│   │   │   ├── 500.html
+│   ├── 📂 tools/
+│   │   ├── Keys.txt
+│   │   ├── Secret_Key-GMLCL_Key.txt
+│   │   ├── generer_cle.py
+│   │   ├── keygen.py
+│   │   ├── keygen_ui.py
+│   ├── 📂 views/
+│   │   ├── __init__.py
+│   │   ├── admin.py
+│   │   ├── api.py
+│   │   ├── auth.py
+│   │   ├── inventaire.py
+│   │   ├── main.py
+│   ├── 📂 _trash/

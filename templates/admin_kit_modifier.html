@@ -21,6 +21,37 @@
         </a>
     </div>
 
+    <!-- 1. NOUVEAU : PARAMÈTRES DU KIT (NOM & DESCRIPTION) -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-sliders me-2"></i>Paramètres du Kit</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="row g-3 align-items-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <!-- Champ Nom -->
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Nom du Kit <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="nom_kit" value="{{ kit.nom }}" required>
+                </div>
+                
+                <!-- Champ Description -->
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-muted">Description</label>
+                    <input type="text" class="form-control" name="description_kit" value="{{ kit.description or '' }}" placeholder="Description optionnelle...">
+                </div>
+                
+                <!-- Bouton Enregistrer -->
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">
+                        <i class="bi bi-save me-2"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="row g-4">
         
         <!-- COLONNE GAUCHE : Objets DANS le kit -->

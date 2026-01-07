@@ -4,7 +4,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, send_from_directory, current_app)
 from sqlalchemy import func, desc
 from sqlalchemy.orm import joinedload
-from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre, Suggestion
+from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre, Suggestion, MaintenanceLog, EquipementSecurite
 from utils import login_required
 
 main_bp = Blueprint(
@@ -103,12 +103,18 @@ def calendrier():
     # 2. Transformation en Dictionnaire pour accès rapide dans le template
     # Format : {'2025-12-28': 2, '2025-12-29': 1}
     reservations_map = {str(row.jour): row.total for row in stats_res}
+    
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Calendrier', 'url': None}
+    ]
 
     return render_template(
         'calendrier.html', 
         year=year, 
         month=month, 
-        reservations_map=reservations_map, # <--- On passe ça au template
+        reservations_map=reservations_map,
+        breadcrumbs=breadcrumbs,
         now=datetime.now()
     )
 
@@ -239,12 +245,22 @@ def alertes():
         {'text': 'Centre d\'Alertes', 'url': None}
     ]
     
+    signalements_securite = []
+    signalements_securite = db.session.execute(
+        db.select(MaintenanceLog)
+        .join(EquipementSecurite)
+        .filter(EquipementSecurite.etablissement_id == etablissement_id)
+        .filter(MaintenanceLog.resultat == 'signalement')
+        .order_by(MaintenanceLog.date_intervention.desc())
+    ).scalars().all()
+    
     return render_template("alertes.html",
                            objets_stock=objets_stock_results,
                            objets_peremption=objets_peremption,
                            suggestions=suggestions,
                            breadcrumbs=breadcrumbs,
                            date_actuelle=now,
+                           signalements_securite=signalements_securite,
                            now=now)
 
 #================================================================
@@ -377,6 +393,28 @@ def voir_budget():
                            fournisseurs=fournisseurs,
                            breadcrumbs=breadcrumbs,
                            now=now)
+
+
+#================================================================
+# PAGES DU FOOTER
+#================================================================
+@main_bp.route("/documentation")
+@login_required
+def documentation():
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Documentation', 'url': None}
+    ]
+    return render_template("documentation.html", breadcrumbs=breadcrumbs)
+
+@main_bp.route("/legal")
+# Pas de @login_required ici, les mentions légales doivent être publiques
+def legal():
+    breadcrumbs = [
+        {'text': 'Accueil', 'url': url_for('inventaire.index')},
+        {'text': 'Mentions Légales', 'url': None}
+    ]
+    return render_template("legal.html", breadcrumbs=breadcrumbs)
 
 
 #================================================================

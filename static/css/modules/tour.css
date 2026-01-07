@@ -1,0 +1,128 @@
+/* =====================================================================
+   MODULE : VISITE GUIDÉE (TOUR)
+   ================================================================== */
+
+/* L'écran noir semi-transparent */
+.tour-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.75); /* Plus sombre pour le contraste */
+    z-index: 1080; /* Au-dessus de la navbar (1030) */
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(2px); /* Petit effet flou moderne */
+}
+
+.tour-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* L'élément mis en valeur (Spotlight) */
+.tour-highlight {
+    position: relative;
+    z-index: 1090 !important; /* Au-dessus de l'overlay */
+    background-color: white; /* Force un fond blanc si l'élément est transparent */
+    box-shadow: 0 0 0 4px #0d6efd, 0 0 30px rgba(0,0,0,0.5); /* Halo bleu */
+    border-radius: 8px;
+    pointer-events: none; /* On empêche le clic sur l'élément pendant le tuto */
+    transition: all 0.3s ease;
+}
+
+/* La bulle d'explication */
+.tour-tooltip {
+    position: absolute;
+    background-color: #ffffff;
+    width: 340px;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    z-index: 1100; /* Au-dessus de tout */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    
+    /* Bordure supérieure colorée */
+    border-top: 5px solid #0d6efd;
+}
+
+.tour-tooltip.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Typographie */
+.tour-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1F3B73; /* Bleu LabFlow */
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+
+.tour-content {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #495057;
+    margin-bottom: 24px;
+}
+
+/* Actions (Boutons) */
+.tour-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid #f1f3f5;
+}
+
+.tour-btn-skip {
+    background: none;
+    border: none;
+    color: #adb5bd;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.tour-btn-skip:hover {
+    color: #6c757d;
+    text-decoration: underline;
+}
+
+.tour-btn-next {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+    transition: all 0.2s ease;
+}
+
+.tour-btn-next:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4);
+}
+
+a[href*='/panier'].tour-highlight {
+    background-color: #1F3B73 !important; /* Bleu LabFlow */
+    border-radius: 50% !important; /* Rond */
+    box-shadow: 0 0 0 4px #0d6efd, 0 0 30px rgba(0,0,0,0.5) !important;
+}
+
+a[href*='/alertes'].tour-highlight {
+    background-color: #1F3B73 !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 0 4px #0d6efd, 0 0 30px rgba(0,0,0,0.5) !important;
+}

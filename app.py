@@ -1,5 +1,5 @@
 # ============================================================
-# FICHIER : app.py (Version Finale Validée & Sécurisée)
+# FICHIER : app.py (Version Compatible Système Maison)
 # ============================================================
 import os
 import secrets
@@ -12,7 +12,7 @@ from flask_talisman import Talisman
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 
-# Extensions (Cache & Rate Limit)
+# Extensions (Cache & Rate Limit) - PAS DE LOGIN_MANAGER
 from extensions import limiter, cache
 
 # Imports locaux
@@ -25,6 +25,7 @@ from views.inventaire import inventaire_bp
 from views.admin import admin_bp
 from views.main import main_bp
 from views.api import api_bp
+from views.securite import securite_bp
 
 # Chargement .env
 load_dotenv()
@@ -52,7 +53,6 @@ def create_app():
     is_production = os.environ.get('FLASK_ENV') == 'production'
     REQUIRED_VARS = ['DATABASE_URL', 'GMLCL_PRO_KEY']
     
-    # En PROD, SECRET_KEY est obligatoire. En DEV, on peut s'en passer (voir plus bas).
     if is_production:
         REQUIRED_VARS.append('SECRET_KEY')
 
@@ -65,33 +65,24 @@ def create_app():
     # ============================================================
     app.config.from_object('config') 
 
-    # Secret Key (Fixe en DEV pour éviter la déconnexion au reload)
     secret_key = os.environ.get('SECRET_KEY')
     if not secret_key:
-        # Clé fixe pour le développement local uniquement
         secret_key = 'dev-key-stable-pour-eviter-deconnexion'
         if not is_production:
             print("⚠️  MODE DEV : Utilisation d'une SECRET_KEY fixe par défaut.")
     app.config['SECRET_KEY'] = secret_key
     
-    # Session
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
-    # Database
     db_url = os.environ.get('DATABASE_URL')
     if db_url and db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    # Sécurité Upload (10 MB)
     app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 
-
-    # Cache (SimpleCache par défaut, évolutif vers Redis si besoin)
     app.config['CACHE_TYPE'] = 'SimpleCache'
     app.config['CACHE_DEFAULT_TIMEOUT'] = 300
 
-    # Sécurité Cookies (Prod uniquement)
     if is_production:
         app.config['SESSION_COOKIE_HTTPONLY'] = True
         app.config['SESSION_COOKIE_SECURE'] = True
@@ -99,7 +90,7 @@ def create_app():
     
     if os.environ.get('FLASK_ENV') == 'testing':
         app.config['TESTING'] = True
-        app.config['WTF_CSRF_ENABLED'] = False # Désactive CSRF pour faciliter les tests API
+        app.config['WTF_CSRF_ENABLED'] = False
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         logging.warning("⚠️  MODE TESTING ACTIVÉ : Base de données en mémoire.")
 
@@ -118,36 +109,11 @@ def create_app():
     if is_production:
         csp = {
             'default-src': "'self'",
-            'script-src': [
-                "'self'", 
-                "'unsafe-inline'", # Nécessaire tant qu'on n'a pas de système de Nonce
-                "cdn.jsdelivr.net"
-            ],
-            'style-src': [
-                "'self'", 
-                "'unsafe-inline'",
-                "cdn.jsdelivr.net",
-                "fonts.googleapis.com",
-                "fonts.gstatic.com"
-            ],
-            'font-src': [
-                "'self'", 
-                "data:", 
-                "cdn.jsdelivr.net", 
-                "fonts.gstatic.com"
-            ],
-            'img-src': [
-                "'self'", 
-                "data:",
-                "blob:",
-                "https:",
-                "images.pexels.com",
-                "*.pexels.com"
-            ],
-            'connect-src': [
-                "'self'",
-                "cdn.jsdelivr.net"
-            ]
+            'script-src': ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net"],
+            'style-src': ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"],
+            'font-src': ["'self'", "data:", "cdn.jsdelivr.net", "fonts.gstatic.com"],
+            'img-src': ["'self'", "data:", "blob:", "https:", "images.pexels.com", "*.pexels.com"],
+            'connect-src': ["'self'", "cdn.jsdelivr.net"]
         }
 
         Talisman(app, 
@@ -166,6 +132,7 @@ def create_app():
     app.register_blueprint(admin_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(securite_bp)
 
     # ============================================================
     # 5. GESTION ERREURS
@@ -176,7 +143,7 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_error(error):
-        db.session.rollback() # CRITIQUE : Libère la transaction bloquée
+        db.session.rollback()
         app.logger.error(f"Server Error: {error}")
         return render_template('errors/500.html'), 500
 
@@ -207,7 +174,6 @@ def create_app():
         jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
         mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
         
-        # Note: weekday() renvoie 0 pour lundi, 6 pour dimanche
         format_fr = fmt.replace('%A', jours[value.weekday()].capitalize())
         format_fr = format_fr.replace('%B', mois[value.month - 1])
         return value.strftime(format_fr)
@@ -219,7 +185,6 @@ def create_app():
     # ============================================================
     @app.before_request
     def check_setup():
-        # Redirection vers le setup si aucun établissement n'existe
         if is_setup_needed(current_app) and request.endpoint not in ['auth.setup', 'static']:
             return redirect(url_for('auth.setup'))
 
@@ -235,7 +200,6 @@ def create_app():
         if not etablissement_id: return context
             
         try:
-            # 1. Données dynamiques (Menu)
             context['all_armoires'] = db.session.execute(
                 db.select(Armoire).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)
             ).scalars().all()
@@ -244,11 +208,9 @@ def create_app():
                 db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)
             ).scalars().all()
             
-            # 2. Alertes
             alert_info = get_alerte_info()
             context['alertes_total'] = alert_info.get('alertes_total', 0)
             
-            # 3. Paramètres & Licence
             params_dict = get_etablissement_params(etablissement_id)
             
             if params_dict.get('licence_statut') == 'PRO':
@@ -263,8 +225,7 @@ def create_app():
             return context
             
         except SQLAlchemyError as e:
-            # Log l'erreur mais ne plante pas l'application
-            current_app.logger.error(f"Erreur context_processor (DB potentiellement inaccessible) : {e}")
+            current_app.logger.error(f"Erreur context_processor : {e}")
             return context
         except Exception as e:
             current_app.logger.error(f"Erreur inattendue context_processor : {e}")
@@ -273,4 +234,5 @@ def create_app():
     return app
 
 if __name__ == '__main__':
+    app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=True)

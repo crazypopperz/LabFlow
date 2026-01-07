@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Mentions Légales & Confidentialité - LabFlow{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <div class="row justify-content-center fade-in-up">
+        <div class="col-lg-10">
+            
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+                <!-- En-tête des Onglets -->
+                <div class="card-header bg-white border-bottom pt-4 px-4 pb-0">
+                    <ul class="nav nav-tabs card-header-tabs border-bottom-0" id="legalTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold py-3 px-4" id="mentions-tab" 
+                                    data-bs-toggle="tab" data-bs-target="#mentions" type="button" role="tab">
+                                <i class="bi bi-building me-2"></i>Mentions Légales
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-3 px-4" id="privacy-tab" 
+                                    data-bs-toggle="tab" data-bs-target="#privacy" type="button" role="tab">
+                                <i class="bi bi-shield-lock me-2"></i>Confidentialité (RGPD)
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold py-3 px-4" id="cgu-tab" 
+                                    data-bs-toggle="tab" data-bs-target="#cgu" type="button" role="tab">
+                                <i class="bi bi-file-text me-2"></i>CGU
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Contenu -->
+                <div class="card-body p-5">
+                    <div class="tab-content" id="legalTabContent">
+                        
+                        <!-- 1. MENTIONS LÉGALES (ID="mentions") -->
+                        <div class="tab-pane fade show active" id="mentions" role="tabpanel">
+                            <h3 class="h4 fw-bold text-primary mb-4">Éditeur du service</h3>
+                            <div class="ps-3 border-start border-4 border-primary mb-4">
+                                <p class="mb-1"><strong>Nom du service :</strong> LabFlow</p>
+                                <p class="mb-1"><strong>Développeurs :</strong> Xavier De Baudry d'Asson & Yll Basha</p>
+                                <p class="mb-1"><strong>Contact :</strong> <a href="mailto:contact.gmlcl@gmail.com">contact.gmlcl@gmail.com</a></p>
+                                <p class="mb-0"><strong>Hébergement :</strong> Serveurs académiques / Local</p>
+                            </div>
+                            
+                            <h4 class="h5 fw-bold mt-5 mb-3">Propriété Intellectuelle</h4>
+                            <p class="text-muted">
+                                L'ensemble de ce site relève de la législation française et internationale sur le droit d'auteur et la propriété intellectuelle. 
+                                Tous les droits de reproduction sont réservés, y compris pour les documents téléchargeables et les représentations iconographiques et photographiques.
+                            </p>
+                        </div>
+
+                        <!-- 2. CONFIDENTIALITÉ (ID="privacy") -->
+                        <div class="tab-pane fade" id="privacy" role="tabpanel">
+                            <h3 class="h4 fw-bold text-primary mb-4">Politique de Confidentialité</h3>
+                            
+                            <div class="alert alert-info border-0 shadow-sm d-flex align-items-center mb-4">
+                                <i class="bi bi-shield-check fs-3 me-3"></i>
+                                <div>
+                                    <strong>Respect de la vie privée</strong>
+                                    <div class="small">LabFlow est conçu selon le principe de "Privacy by Design". Aucune donnée n'est revendue.</div>
+                                </div>
+                            </div>
+
+                            <h5 class="fw-bold mt-4">1. Données collectées</h5>
+                            <ul class="text-muted">
+                                <li><strong>Identité :</strong> Nom, Prénom, Email (pour l'authentification).</li>
+                                <li><strong>Activités :</strong> Historique des réservations et mouvements de stock (pour la traçabilité interne).</li>
+                            </ul>
+
+                            <h5 class="fw-bold mt-4">2. Cookies</h5>
+                            <p class="text-muted">
+                                Nous utilisons un unique cookie de session (<code>session_id</code>) strictement nécessaire au fonctionnement de l'application. 
+                                Aucun traceur publicitaire ou analytique tiers n'est utilisé.
+                            </p>
+
+                            <h5 class="fw-bold mt-4">3. Vos Droits (RGPD)</h5>
+                            <p class="text-muted">
+                                Conformément au Règlement Général sur la Protection des Données, vous disposez d'un droit d'accès, de rectification et de suppression de vos données.
+                                Pour exercer ce droit, veuillez contacter l'administrateur de votre établissement.
+                            </p>
+                        </div>
+
+                        <!-- 3. CGU (ID="cgu") -->
+                        <div class="tab-pane fade" id="cgu" role="tabpanel">
+                            <h3 class="h4 fw-bold text-primary mb-4">Conditions Générales d'Utilisation</h3>
+                            <p class="text-muted">
+                                L'accès et l'utilisation de l'application LabFlow impliquent l'acceptation sans réserve des présentes conditions.
+                            </p>
+                            
+                            <div class="row mt-4 g-4">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded h-100">
+                                        <h6 class="fw-bold"><i class="bi bi-person-check me-2"></i>Responsabilité</h6>
+                                        <p class="small text-muted mb-0">Chaque utilisateur est responsable de la confidentialité de ses identifiants et des actions effectuées sur son compte.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded h-100">
+                                        <h6 class="fw-bold"><i class="bi bi-hdd-network me-2"></i>Disponibilité</h6>
+                                        <p class="small text-muted mb-0">L'application est fournie "telle quelle". L'équipe de développement ne saurait être tenue responsable en cas d'indisponibilité temporaire.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- SCRIPT DE GESTION DES ONGLETS VIA URL -->
+<!-- SCRIPT DE GESTION DES ANCRES (V2 - ROBUSTE) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Fonction centrale pour activer l'onglet
+    function activateTabFromHash() {
+        const hash = window.location.hash;
+        if (hash) {
+            // On cherche le bouton qui cible cet ID (ex: data-bs-target="#privacy")
+            const triggerEl = document.querySelector(`button[data-bs-target="${hash}"]`);
+            
+            if (triggerEl) {
+                // On utilise getOrCreateInstance pour éviter les conflits
+                const tab = bootstrap.Tab.getOrCreateInstance(triggerEl);
+                tab.show(); // Active l'onglet
+                
+                // Petit scroll pour bien centrer l'onglet sélectionné
+                setTimeout(() => {
+                    triggerEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
+            }
+        }
+    }
+
+    // 1. Exécuter au chargement initial de la page
+    activateTabFromHash();
+
+    // 2. Exécuter quand l'URL change (ex: clic footer alors qu'on est déjà sur la page)
+    window.addEventListener('hashchange', activateTabFromHash);
+
+    // 3. Mettre à jour l'URL quand on clique manuellement sur un onglet
+    // (Pour que si on rafraîchit, on reste sur le bon onglet)
+    const tabButtons = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabButtons.forEach(btn => {
+        btn.addEventListener('shown.bs.tab', event => {
+            const targetId = event.target.getAttribute('data-bs-target');
+            // history.replaceState change l'URL sans recharger et sans déclencher hashchange
+            history.replaceState(null, null, targetId);
+        });
+    });
+});
+</script>
+{% endblock %}

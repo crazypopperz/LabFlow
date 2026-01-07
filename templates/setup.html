@@ -11,33 +11,84 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
     <style>
-        /* --- MAGIE DES ICÔNES DANS LES INPUTS --- */
-        .form-floating-icon {
-            position: relative;
-        }
-        
-        /* L'icône à gauche */
-        .form-floating-icon > i {
-            position: absolute;
-            top: 50%;
-            left: 1rem;
-            transform: translateY(-50%);
-            color: #6c757d; /* Couleur discrète */
-            z-index: 5;
-            font-size: 1.1rem;
+        /* --- STYLE SPÉCIFIQUE SETUP (Pour écraser tout le reste) --- */
+        body.login-page-body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
-        /* On décale le texte de l'input vers la droite */
-        .form-floating-icon > .form-control {
-            padding-left: 3rem;
+        .setup-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            border: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* On décale aussi le label pour qu'il ne soit pas sur l'icône */
-        .form-floating-icon > label {
-            padding-left: 3rem;
+        .setup-header {
+            text-align: center;
+            margin-bottom: 2rem;
         }
 
-        /* --- STYLES VALIDATION (Inchangés) --- */
+        .setup-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #1F3B73 0%, #2c3e50 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 10px rgba(31, 59, 115, 0.3);
+        }
+
+        /* --- INPUTS MATÉRIALISÉS (Gris clair + Bordure) --- */
+        .form-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #495057;
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group-text {
+            background-color: #f1f3f5;
+            border: 1px solid #ced4da;
+            border-right: none;
+            color: #6c757d;
+        }
+
+        .form-control {
+            background-color: #f1f3f5;
+            border: 1px solid #ced4da;
+            border-left: none;
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+            color: #212529;
+            font-weight: 500;
+        }
+
+        .form-control:focus {
+            background-color: #ffffff;
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+        }
+
+        .input-group:focus-within .input-group-text {
+            background-color: #ffffff;
+            border-color: #0d6efd;
+        }
+
+        /* --- BARRE DE FORCE --- */
         .strength-bar {
             height: 4px;
             background: #e9ecef;
@@ -50,95 +101,118 @@
             width: 0;
             transition: width 0.3s ease, background-color 0.3s ease;
         }
+        
         .password-requirements {
             font-size: 0.75rem;
-            background: rgba(255, 255, 255, 0.5);
+            background: #f8f9fa;
             padding: 10px;
             border-radius: 8px;
-            margin-top: 5px;
-            border: 1px solid var(--couleur-bordure);
+            margin-top: 10px;
+            border: 1px solid #e9ecef;
         }
+        
         .requirement-item {
             margin-bottom: 2px;
-            color: var(--texte-discret);
+            color: #adb5bd;
             transition: color 0.2s;
         }
         .requirement-item.met {
-            color: var(--couleur-succes);
-            font-weight: 600;
+            color: #198754;
+            font-weight: 700;
         }
         .requirement-item i {
             font-size: 0.8rem;
             margin-right: 4px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            border-radius: 8px;
+            background: #1F3B73;
+            border: none;
+            color: white;
+            margin-top: 1rem;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover {
+            background: #0d6efd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
         }
     </style>
 </head>
 
 <body class="login-page-body">
 
-    <div class="login-form-container" style="max-width: 600px;">
+    <div class="setup-card">
         <!-- En-tête -->
-        <div class="login-header">
-            <div class="login-icon-wrapper" style="background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="white" viewBox="0 0 16 16">
-                    <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
-                </svg>
+        <div class="setup-header">
+            <div class="setup-icon">
+                <i class="bi bi-rocket-takeoff-fill"></i>
             </div>
-            <h2>Bienvenue sur LabFlow</h2>
-            <p class="text-muted">Configuration de votre établissement</p>
+            <h2 class="fw-bold text-dark mb-1">Bienvenue sur LabFlow</h2>
+            <p class="text-muted small">Configuration initiale de votre établissement</p>
         </div>
 
         <!-- Messages Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm border-0 mb-4">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm border-0 mb-4 py-2 small">
                         <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
-        <form action="{{ url_for('auth.setup') }}" method="post" id="setupForm" class="login-form" novalidate>
+        <form action="{{ url_for('auth.setup') }}" method="post" id="setupForm" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <!-- Nom Établissement -->
-            <div class="form-floating form-floating-icon mb-3">
-                <i class="bi bi-building"></i>
-                <input type="text" class="form-control" id="nom_etablissement" name="nom_etablissement" placeholder="Nom" required autocomplete="organization">
-                <label for="nom_etablissement">Nom de l'établissement</label>
+            <div class="mb-3">
+                <label for="nom_etablissement" class="form-label">Nom de l'établissement</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                    <input type="text" class="form-control" id="nom_etablissement" name="nom_etablissement" placeholder="Ex: Lycée Victor Hugo" required autocomplete="organization">
+                </div>
             </div>
 
             <!-- Admin User -->
-            <div class="form-floating form-floating-icon mb-3">
-                <i class="bi bi-person-badge"></i>
-                <input type="text" class="form-control" id="username" name="username" placeholder="Admin" required autocomplete="username">
-                <label for="username">Nom d'utilisateur Admin</label>
+            <div class="mb-3">
+                <label for="username" class="form-label">Nom d'utilisateur Admin</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Ex: Admin" required autocomplete="username">
+                </div>
             </div>
 
             <!-- Email -->
-            <div class="form-floating form-floating-icon mb-3">
-                <i class="bi bi-envelope"></i>
-                <input type="email" class="form-control" id="email" name="email" placeholder="Email" required autocomplete="email">
-                <label for="email">Email Administrateur</label>
+            <div class="mb-3">
+                <label for="email" class="form-label">Email Administrateur</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="admin@ecole.fr" required autocomplete="email">
+                </div>
             </div>
 
             <!-- Mot de passe -->
-            <div class="mb-2 position-relative">
-                <div class="form-floating form-floating-icon">
-                    <i class="bi bi-lock"></i>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Mot de passe" required autocomplete="new-password">
-                    <label for="password">Mot de passe</label>
+            <div class="mb-2">
+                <label for="password" class="form-label">Mot de passe</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="••••••••••••" required autocomplete="new-password">
+                    <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePassword" style="border-color: #ced4da;">
+                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                    </button>
                 </div>
-                <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y text-decoration-none text-muted" 
-                        id="togglePassword" style="z-index: 10; padding-right: 15px;">
-                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
-                </button>
-            </div>
-
-            <!-- Barre de force -->
-            <div class="strength-bar mb-2">
-                <div class="strength-bar-fill" id="strengthBar"></div>
+                
+                <!-- Barre de force -->
+                <div class="strength-bar">
+                    <div class="strength-bar-fill" id="strengthBar"></div>
+                </div>
             </div>
 
             <!-- Exigences -->
@@ -148,27 +222,28 @@
                     <div class="col-6 requirement-item" id="req-uppercase"><i class="bi bi-circle"></i> 1 Majuscule</div>
                     <div class="col-6 requirement-item" id="req-lowercase"><i class="bi bi-circle"></i> 1 Minuscule</div>
                     <div class="col-6 requirement-item" id="req-number"><i class="bi bi-circle"></i> 1 Chiffre</div>
-                    <div class="col-6 requirement-item" id="req-special"><i class="bi bi-circle"></i> 1 Caractère spécial</div>
+                    <div class="col-6 requirement-item" id="req-special"><i class="bi bi-circle"></i> 1 Caractère</div>
                     <div class="col-6 requirement-item" id="req-match"><i class="bi bi-circle"></i> Identiques</div>
                 </div>
             </div>
 
             <!-- Confirmation -->
-            <div class="form-floating form-floating-icon mb-4">
-                <i class="bi bi-check2-circle"></i>
-                <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Confirmation" required autocomplete="new-password">
-                <label for="password_confirm">Confirmer le mot de passe</label>
-                <div class="invalid-feedback">Les mots de passe ne correspondent pas</div>
+            <div class="mb-4">
+                <label for="password_confirm" class="form-label">Confirmer le mot de passe</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-check2-circle"></i></span>
+                    <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="••••••••••••" required autocomplete="new-password">
+                </div>
+                <div class="invalid-feedback d-block" id="matchError" style="display: none !important;">Les mots de passe ne correspondent pas</div>
             </div>
 
-            <button type="submit" class="btn-login mt-2">
-                <i class="bi bi-rocket-takeoff-fill me-2"></i>
+            <button type="submit" class="btn-submit">
                 Créer et Démarrer
             </button>
         </form>
     </div>
 
-    <!-- Script de Validation (Identique) -->
+    <!-- Script de Validation -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('setupForm');
@@ -177,6 +252,7 @@
             const togglePassword = document.getElementById('togglePassword');
             const togglePasswordIcon = document.getElementById('togglePasswordIcon');
             const strengthBar = document.getElementById('strengthBar');
+            const matchError = document.getElementById('matchError');
 
             // Toggle Password Visibility
             togglePassword.addEventListener('click', function() {
@@ -197,8 +273,10 @@
 
                 if (valConf.length > 0 && valPass !== valConf) {
                     passwordConfirm.classList.add('is-invalid');
+                    matchError.style.display = 'block';
                 } else {
                     passwordConfirm.classList.remove('is-invalid');
+                    matchError.style.display = 'none';
                 }
                 return isMatch;
             }
@@ -229,11 +307,11 @@
                 strengthBar.style.width = strength + '%';
                 
                 if (strength <= 40) {
-                    strengthBar.style.backgroundColor = 'var(--couleur-erreur, #dc3545)'; 
+                    strengthBar.style.backgroundColor = '#dc3545'; 
                 } else if (strength <= 80) {
-                    strengthBar.style.backgroundColor = 'var(--couleur-avertissement, #ffc107)'; 
+                    strengthBar.style.backgroundColor = '#ffc107'; 
                 } else {
-                    strengthBar.style.backgroundColor = 'var(--couleur-succes, #198754)'; 
+                    strengthBar.style.backgroundColor = '#198754'; 
                 }
 
                 checkMatch();
@@ -260,6 +338,7 @@
                     event.stopPropagation();
                     if (password.value !== passwordConfirm.value) {
                         passwordConfirm.classList.add('is-invalid');
+                        matchError.style.display = 'block';
                     }
                 }
                 form.classList.add('was-validated');

@@ -60,9 +60,11 @@ class StockService:
             raise StockServiceError(f"La durée maximale d'une réservation est de {self.MAX_RESERVATION_DURATION_HOURS} heures.")
 
     def _get_reservations_actives(self, start_dt: datetime, end_dt: datetime) -> List[Reservation]:
-        """Récupère les réservations actives (chevauchement de dates)."""
+        """
+        Récupère les réservations actives qui CHEVAUCHENT le créneau demandé.
+        Logique de chevauchement : (StartA < EndB) et (EndA > StartB)
+        """
         try:
-            # ⚠️ IMPORTANT : Vérifiez que Reservation.statut existe dans db.py
             stmt = (
                 select(Reservation)
                 .options(
@@ -72,8 +74,9 @@ class StockService:
                 .filter(
                     Reservation.etablissement_id == self.etablissement_id,
                     Reservation.statut == 'confirmée', 
-                    Reservation.debut_reservation < end_dt,
-                    Reservation.fin_reservation > start_dt
+                    # --- FILTRE TEMPOREL CRUCIAL ---
+                    Reservation.debut_reservation < end_dt, # La résa commence avant la fin demandée
+                    Reservation.fin_reservation > start_dt  # La résa finit après le début demandé
                 )
             )
             return db.session.execute(stmt).unique().scalars().all()
@@ -90,6 +93,7 @@ class StockService:
     ) -> Dict[str, Any]:
         """
         Vérifie le stock ET verrouille les lignes (SELECT FOR UPDATE NOWAIT).
+        Utilisé lors de la validation finale (Checkout).
         """
         # 1. Validations
         self._validate_dates(start_dt, end_dt)
@@ -99,12 +103,12 @@ class StockService:
             return {'objets_map': {}, 'besoins': {}}
 
         try:
-            # 2. Calcul des besoins
+            # 2. Calcul des besoins de la NOUVELLE réservation
             besoins_demandes = KitService.decomposer_items(items_propres, self.etablissement_id)
             if not besoins_demandes:
                 return {'objets_map': {}, 'besoins': {}}
 
-            # 3. Lecture de l'existant
+            # 3. Lecture de l'existant (Ce qui est DÉJÀ réservé sur ce créneau)
             reservations_existantes = self._get_reservations_actives(start_dt, end_dt)
             
             items_reserves_existants = []
@@ -116,7 +120,7 @@ class StockService:
 
             conso_existante = KitService.decomposer_items(items_reserves_existants, self.etablissement_id)
 
-            # 4. Verrouillage Pessimiste (Trié + NoWait)
+            # 4. Verrouillage Pessimiste (Trié + NoWait) pour éviter les Race Conditions
             objet_ids_to_lock = sorted(list(besoins_demandes.keys()))
             
             stmt = (
@@ -137,7 +141,7 @@ class StockService:
                 logger.warning(f"SECURITY: IDOR Attempt? User {user_id} Etab {self.etablissement_id} requested missing objects: {missing}")
                 raise StockServiceError("Certains objets demandés sont introuvables ou non autorisés.")
 
-            # 6. Vérification Quantités
+            # 6. Vérification Quantités (Stock Physique - (Déjà Réservé + Demande Actuelle))
             for obj_id, qte_demandee in besoins_demandes.items():
                 obj = objets_map[obj_id]
                 stock_total = obj.quantite_physique
@@ -167,27 +171,37 @@ class StockService:
 
     def get_disponibilites(self, start_dt: datetime, end_dt: datetime, panier_items: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
-        Calcule les stocks disponibles (Lecture seule).
+        Calcule les stocks disponibles pour l'affichage (Lecture seule).
+        Prend en compte :
+        1. Le stock physique total.
+        2. Les réservations existantes SUR CE CRÉNEAU.
+        3. Les items du panier (déjà filtrés par date par l'API).
         """
-        # Validation des dates identique à la réservation
+        # Validation des dates
         self._validate_dates(start_dt, end_dt)
 
         try:
+            # 1. Récupération des réservations en conflit (Chevauchement temporel)
             reservations = self._get_reservations_actives(start_dt, end_dt)
             
-            items_reserves = []
+            items_a_deduire = []
+            
+            # Ajout des réservations existantes en base
             for r in reservations:
                 if r.kit_id:
-                    items_reserves.append({'type': 'kit', 'id': r.kit_id, 'quantite': r.quantite_reservee})
+                    items_a_deduire.append({'type': 'kit', 'id': r.kit_id, 'quantite': r.quantite_reservee})
                 elif r.objet_id:
-                    items_reserves.append({'type': 'objet', 'id': r.objet_id, 'quantite': r.quantite_reservee})
+                    items_a_deduire.append({'type': 'objet', 'id': r.objet_id, 'quantite': r.quantite_reservee})
 
+            # Ajout des items du panier (s'ils ont été passés et filtrés par l'API)
             if panier_items:
                 panier_propre = self._normalize_items(panier_items)
-                items_reserves.extend(panier_propre)
+                items_a_deduire.extend(panier_propre)
 
-            conso_totale = KitService.decomposer_items(items_reserves, self.etablissement_id)
+            # 2. Calcul de la consommation totale par objet (décomposition des kits)
+            conso_totale = KitService.decomposer_items(items_a_deduire, self.etablissement_id)
 
+            # 3. Récupération de tout l'inventaire
             all_objets = db.session.execute(
                 select(Objet)
                 .options(joinedload(Objet.armoire))
@@ -195,8 +209,9 @@ class StockService:
             ).scalars().all()
 
             objets_data = []
-            stock_map = {}
+            stock_map = {} # Pour le calcul des kits ensuite
 
+            # 4. Calcul du disponible par objet
             for obj in all_objets:
                 conso = conso_totale.get(obj.id, 0)
                 dispo = max(0, obj.quantite_physique - conso)
@@ -211,6 +226,7 @@ class StockService:
                     'armoire': obj.armoire.nom if obj.armoire else "Non rangé"
                 })
 
+            # 5. Calcul du disponible par kit (basé sur le stock objet restant)
             all_kits = db.session.execute(
                 select(Kit)
                 .options(joinedload(Kit.objets_assoc))
@@ -240,15 +256,12 @@ class StockService:
             return {'objets': objets_data, 'kits': kits_data}
 
         except KitServiceError as e:
-            # Erreur métier connue
             raise StockServiceError(str(e))
             
         except SQLAlchemyError as e:
-            # Erreur DB
             logger.error(f"DB Error in get_disponibilites: {e}")
             raise StockServiceError("Erreur d'accès aux données de stock.")
             
         except Exception as e:
-            # Erreur inconnue (Code, Logique, etc.)
             logger.exception("Erreur inattendue dans get_disponibilites")
             raise StockServiceError("Une erreur interne est survenue.") from e

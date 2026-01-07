@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}{{ equipement.nom }} - Sécurité{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-3 mb-1">
+                <h2 class="h3 mb-0 fw-bold text-dark">{{ equipement.nom }}</h2>
+                {% if equipement.en_service %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">En service</span>
+                {% else %}
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Hors service</span>
+                {% endif %}
+            </div>
+            <div class="text-muted small">
+                <i class="bi bi-grid me-1"></i>{{ equipement.type_equipement }} 
+                <span class="mx-2">•</span> 
+                <i class="bi bi-geo-alt me-1"></i>{{ equipement.localisation or 'Non localisé' }}
+            </div>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <!-- BOUTON VERT : NOUVELLE INTERVENTION (Toujours visible) -->
+            {% if session.user_role == 'admin' %}
+            <button class="btn btn-success shadow-sm fw-bold" onclick="openLogModal()">
+                <i class="bi bi-clipboard-check me-2"></i>Nouvelle Intervention
+            </button>
+            
+            <button class="btn btn-outline-danger" onclick="confirmDelete()">
+                <i class="bi bi-trash"></i>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4 align-items-stretch">
+        
+        <!-- COLONNE GAUCHE : FICHE TECHNIQUE -->
+        <div class="col-lg-4 d-flex flex-column gap-4">
+            
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-light fw-bold text-uppercase small py-3">
+                    Fiche Technique
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span class="text-muted">Numéro de série</span>
+                            <span class="fw-bold font-monospace">{{ equipement.numero_serie or '-' }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span class="text-muted">Date installation</span>
+                            <span class="fw-bold">
+                                {% if equipement.date_installation %}
+                                    {{ equipement.date_installation.strftime('%d/%m/%Y') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span class="text-muted">État général</span>
+                            {% if equipement.etat_general == 'neuf' %}
+                                <span class="text-success fw-bold"><i class="bi bi-stars me-1"></i>Neuf</span>
+                            {% elif equipement.etat_general == 'bon' %}
+                                <span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>Bon</span>
+                            {% elif equipement.etat_general == 'moyen' %}
+                                <span class="text-warning fw-bold"><i class="bi bi-exclamation-circle me-1"></i>Usagé</span>
+                            {% else %}
+                                <span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Critique</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                    
+                    {% if session.user_role == 'admin' %}
+                    <div class="d-grid mt-3">
+                        <button class="btn btn-light border text-muted btn-sm" data-bs-toggle="modal" data-bs-target="#editEquipementModal">
+                            <i class="bi bi-pencil me-2"></i>Modifier la fiche
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Widget Conformité -->
+            <div class="card shadow-sm border-0 bg-primary text-white mt-auto">
+                <div class="card-body text-center p-4">
+                    <div class="mb-2 opacity-75 text-uppercase small fw-bold">Prochaine échéance</div>
+                    {% set next_plan = equipement.plans_maintenance|sort(attribute='date_prochaine_action')|first %}
+                    {% if next_plan %}
+                        <h3 class="fw-bold mb-0">{{ next_plan.date_prochaine_action.strftime('%d %b') }}</h3>
+                        <div class="small opacity-75">{{ next_plan.titre }}</div>
+                    {% else %}
+                        <h3 class="fw-bold mb-0">-</h3>
+                        <div class="small opacity-75">Aucun plan défini</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DROITE : GESTION -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
+                    <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fw-bold" id="planning-tab" data-bs-toggle="tab" data-bs-target="#planning" type="button">
+                                <i class="bi bi-calendar-week me-2"></i>Planification
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fw-bold" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button">
+                                <i class="bi bi-clock-history me-2"></i>Historique
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="card-body p-4">
+                    <div class="tab-content" id="myTabContent">
+                        
+                        <!-- ONGLET 1 : PLANIFICATION -->
+                        <div class="tab-pane fade show active" id="planning" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="card-title mb-0">Règles de maintenance</h5>
+                                {% if session.user_role == 'admin' %}
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPlanModal">
+                                    <i class="bi bi-plus-lg me-1"></i>Ajouter une règle
+                                </button>
+                                {% endif %}
+                            </div>
+
+                            {% if equipement.plans_maintenance %}
+                                <div class="list-group">
+                                    {% for plan in equipement.plans_maintenance %}
+                                    <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ plan.titre }}</div>
+                                            <div class="text-muted small">
+                                                <i class="bi bi-arrow-repeat me-1"></i>Tous les {{ plan.periodicite_jours }} jours
+                                                <span class="mx-1">•</span>
+                                                {{ plan.type_prestataire|capitalize }}
+                                            </div>
+                                        </div>
+                                        <div class="text-end d-flex align-items-center gap-3">
+                                            <div>
+                                                {% set days_left = (plan.date_prochaine_action - now.date()).days %}
+                                                <div class="badge {% if days_left < 0 %}bg-danger{% elif days_left < 30 %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %} mb-1">
+                                                    {{ plan.date_prochaine_action.strftime('%d/%m/%Y') }}
+                                                </div>
+                                                <div class="small text-muted">
+                                                    {% if days_left < 0 %}Retard de {{ days_left|abs }}j{% else %}Dans {{ days_left }}j{% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- BOUTON VALIDER RAPIDE -->
+                                            {% if session.user_role == 'admin' %}
+                                            <button class="btn btn-sm btn-outline-success" onclick="openLogModal({{ plan.id }})" title="Valider cette maintenance">
+                                                <i class="bi bi-check-lg"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5 bg-light rounded border border-dashed">
+                                    <i class="bi bi-calendar-plus text-muted display-6"></i>
+                                    <p class="text-muted mt-3 mb-0">Aucune règle de maintenance définie.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- ONGLET 2 : HISTORIQUE -->
+                        <div class="tab-pane fade" id="history" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="card-title mb-0">Carnet d'interventions</h5>
+                            </div>
+
+                            {% if equipement.historique %}
+                                <div class="timeline">
+                                    {% for log in equipement.historique|sort(attribute='date_intervention', reverse=True) %}
+                                    <div class="border-start border-2 ps-3 pb-4 ms-2 position-relative">
+                                        <div class="position-absolute top-0 start-0 translate-middle rounded-circle bg-white border border-2 {% if log.resultat == 'conforme' %}border-success{% elif log.resultat == 'signalement' %}border-warning{% else %}border-danger{% endif %}" style="width: 12px; height: 12px;"></div>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="fw-bold text-dark">{{ log.date_intervention.strftime('%d/%m/%Y') }}</span>
+                                            {% if log.resultat == 'conforme' %}
+                                                <span class="badge bg-success-subtle text-success">Conforme</span>
+                                            {% elif log.resultat == 'signalement' %}
+                                                <span class="badge bg-warning-subtle text-warning-emphasis">Signalement</span>
+                                            {% else %}
+                                                <span class="badge bg-danger-subtle text-danger">Non Conforme</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small text-muted mt-1">
+                                            <i class="bi bi-person me-1"></i>{{ log.operateur }}
+                                        </div>
+                                        {% if log.observations %}
+                                        <div class="mt-2 p-2 bg-light rounded small text-muted fst-italic">
+                                            "{{ log.observations }}"
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5 bg-light rounded border border-dashed">
+                                    <i class="bi bi-clipboard-data text-muted display-6"></i>
+                                    <p class="text-muted mt-3 mb-0">Aucune intervention enregistrée.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALES (ADMIN ONLY) ================= -->
+{% if session.user_role == 'admin' %}
+
+<!-- 1. MODALE ÉDITION FICHE -->
+<div class="modal fade" id="editEquipementModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold">Modifier la fiche</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitForm(event, '{{ url_for('securite.update_equipement', id=equipement.id) }}')">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nom</label>
+                        <input type="text" class="form-control" name="nom" value="{{ equipement.nom }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Numéro de série</label>
+                        <input type="text" class="form-control" name="numero_serie" value="{{ equipement.numero_serie or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Date d'installation</label>
+                        <input type="date" class="form-control" name="date_installation" value="{{ equipement.date_installation }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">État général</label>
+                        <select class="form-select" name="etat_general">
+                            <option value="neuf" {% if equipement.etat_general == 'neuf' %}selected{% endif %}>Neuf</option>
+                            <option value="bon" {% if equipement.etat_general == 'bon' %}selected{% endif %}>Bon état</option>
+                            <option value="moyen" {% if equipement.etat_general == 'moyen' %}selected{% endif %}>Usagé / Moyen</option>
+                            <option value="critique" {% if equipement.etat_general == 'critique' %}selected{% endif %}>Critique / À remplacer</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 2. MODALE AJOUT RÈGLE -->
+<div class="modal fade" id="addPlanModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-calendar-plus me-2"></i>Nouvelle Règle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitForm(event, '{{ url_for('securite.add_plan', id=equipement.id) }}')">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Titre de l'opération</label>
+                        <input type="text" class="form-control" name="titre" placeholder="Ex: Vérification annuelle flux d'air" required>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Périodicité (Jours)</label>
+                            <input type="number" class="form-control" name="periodicite_jours" value="365" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Prestataire</label>
+                            <select class="form-select" name="type_prestataire">
+                                <option value="externe">Organisme Externe</option>
+                                <option value="interne">Interne (Labo)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer la règle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3. MODALE AJOUT INTERVENTION (Celle qui manquait !) -->
+<div class="modal fade" id="addLogModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-clipboard-check me-2"></i>Saisir Intervention</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form onsubmit="submitForm(event, '{{ url_for('securite.add_log', id=equipement.id) }}')">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Date</label>
+                        <input type="date" class="form-control" name="date_intervention" value="{{ now.strftime('%Y-%m-%d') }}" required>
+                    </div>
+                    
+                    <!-- Lien avec un plan existant -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Concerne la règle (Optionnel)</label>
+                        <select class="form-select" name="plan_id" id="selectPlanId">
+                            <option value="">-- Intervention hors planning --</option>
+                            {% for plan in equipement.plans_maintenance %}
+                            <option value="{{ plan.id }}">{{ plan.titre }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text x-small">Si sélectionné, la date de prochaine échéance sera mise à jour.</div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Opérateur</label>
+                            <input type="text" class="form-control" name="operateur" placeholder="Ex: Bureau Veritas" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Résultat</label>
+                            <select class="form-select" name="resultat">
+                                <option value="conforme">Conforme</option>
+                                <option value="non_conforme">Non Conforme</option>
+                                <option value="repare">Réparé</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Observations</label>
+                        <textarea class="form-control" name="observations" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<script>
+// Fonction pour ouvrir la modale d'intervention (avec pré-sélection optionnelle)
+function openLogModal(planId = null) {
+    const modalEl = document.getElementById('addLogModal');
+    const selectEl = document.getElementById('selectPlanId');
+    
+    if(modalEl) {
+        if(selectEl) {
+            selectEl.value = planId || ""; // Pré-sélectionne la règle si on a cliqué sur "Valider"
+        }
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+}
+
+// Fonction générique pour soumettre les formulaires en AJAX
+function submitForm(event, url) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    const btn = form.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(res => {
+        if(res.success) {
+            window.location.reload();
+        } else {
+            alert("Erreur: " + res.error);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    })
+    .catch(err => {
+        alert("Erreur technique");
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+
+function confirmDelete() {
+    if(confirm("Voulez-vous vraiment supprimer cet équipement et tout son historique ?")) {
+        alert("Fonction de suppression à venir.");
+    }
+}
+</script>
+{% endblock %}

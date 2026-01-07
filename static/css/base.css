@@ -1,0 +1,44 @@
+/* =================================================================
+   BASE.CSS (Version Compatible Bootstrap)
+   ================================================================= */
+
+:root {
+  /* Tes couleurs personnalisées LabFlow */
+  --couleur-principale: #1f3b73;
+  --couleur-secondaire: #01257d;
+  --couleur-accent: #a7d3f2;
+  --texte-principal: #2c3e50;
+  --texte-inverse: #ffffff;
+  --texte-lien: var(--couleur-principale);
+  --texte-discret: #6c7a89;
+  --fond-page: #f8f9fa;
+  --fond-element: #ffffff;
+  --couleur-succes: #28a745;
+  --couleur-erreur: #dc3545;
+  --couleur-avertissement: #ffc107;
+  --couleur-bordure: #dee2e6;
+  --ombre-legere: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --ombre-moyenne: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* On laisse Bootstrap gérer le box-sizing et le body margin */
+
+body {
+  /* On surcharge juste la police et la couleur de fond si nécessaire */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--fond-page);
+  color: var(--texte-principal);
+}
+
+/* On force tes liens à utiliser ta couleur, sinon Bootstrap met son bleu par défaut */
+/* --- LIENS --- */
+a {
+  color: var(--texte-lien);
+  text-decoration: none; /* Pas de soulignement au repos */
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--couleur-secondaire);
+  text-decoration: none !important;
+}

@@ -1,0 +1,240 @@
+/* =================================================================
+   AUTH.CSS - Version Réparée & Unifiée
+   Gère à la fois le Login (Input Groups) et le Register (Floating)
+   ================================================================= */
+
+/* --- STRUCTURE GLOBALE --- */
+.login-page-body {
+    background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* --- CARTES (Login & Register) --- */
+.login-form-container, .register-card {
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 420px; /* Largeur idéale pour le login */
+    padding: 2.5rem;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(30, 41, 59, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Si c'est la carte register, on peut la vouloir un peu plus large */
+.register-card {
+    max-width: 480px;
+}
+
+/* --- EN-TÊTES --- */
+.login-header, .register-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-icon-wrapper, .register-logo {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 16px; /* Carré arrondi moderne */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    color: var(--couleur-principale, #1F3B73);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+}
+
+.login-icon-wrapper svg, .register-logo svg {
+    width: 32px;
+    height: 32px;
+    fill: currentColor;
+}
+
+.login-header h2, .register-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.register-header p {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* =================================================================
+   STYLE 1 : INPUT GROUPS (Pour la page LOGIN)
+   C'est ici que ça cassait. On fusionne l'icône et l'input.
+   ================================================================= */
+
+/* Le conteneur global de l'input devient la "fausse" bordure */
+.login-form .input-group {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 4px; /* Petit padding interne */
+    transition: all 0.2s ease;
+    margin-bottom: 1rem; /* Espacement entre les champs */
+    display: flex;
+    align-items: center;
+}
+
+/* Quand on clique dedans, tout le bloc s'illumine */
+.login-form .input-group:focus-within {
+    background-color: #ffffff;
+    border-color: var(--couleur-principale, #1F3B73);
+    box-shadow: 0 0 0 4px rgba(31, 59, 115, 0.1);
+}
+
+/* L'icône à gauche */
+.login-form .input-group-text {
+    background-color: transparent;
+    border: none;
+    color: #64748b;
+    padding-left: 12px;
+    padding-right: 8px;
+}
+
+/* L'input lui-même : transparent et sans bordure */
+.login-form .form-control {
+    border: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    color: #0f172a;
+    font-weight: 500;
+    padding: 10px 0;
+    height: auto;
+}
+
+.login-form .form-control:focus {
+    outline: none;
+}
+
+/* =================================================================
+   STYLE 2 : FLOATING LABELS (Pour la page REGISTER)
+   ================================================================= */
+
+.form-floating {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+/* Ici, l'input a sa propre bordure */
+.form-floating > .form-control {
+    background-color: #f8fafc !important; /* Force le fond */
+    border: 1px solid #cbd5e1 !important; /* Force la bordure */
+    border-radius: 8px;
+    padding-top: 1.625rem;
+    padding-bottom: 0.625rem;
+    padding-left: 1rem; /* Remet du padding gauche */
+    height: 52px;
+}
+
+.form-floating > .form-control:focus {
+    background-color: #ffffff !important;
+    border-color: var(--couleur-principale, #1F3B73) !important;
+    box-shadow: 0 0 0 4px rgba(31, 59, 115, 0.1) !important;
+}
+
+.form-floating > label {
+    color: #64748b;
+    padding-left: 1rem;
+}
+
+/* =================================================================
+   BOUTONS & LIENS
+   ================================================================= */
+
+/* Bouton pleine largeur */
+.btn-login, .btn-register {
+    width: 100%; /* Répare le bouton tout petit */
+    display: block;
+    background-color: var(--couleur-principale, #1F3B73);
+    color: white;
+    font-weight: 600;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-top: 1rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(31, 59, 115, 0.2);
+}
+
+.btn-login:hover, .btn-register:hover {
+    background-color: #162a52;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(31, 59, 115, 0.3);
+    color: white;
+}
+
+/* Liens du bas */
+.login-footer, .register-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.login-footer a, .register-footer a {
+    color: var(--couleur-principale, #1F3B73);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.login-footer a:hover, .register-footer a:hover {
+    text-decoration: underline;
+}
+
+/* --- BARRE DE FORCE (Register) --- */
+.strength-bar {
+    height: 4px;
+    background-color: #e2e8f0;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+.strength-bar-fill {
+    height: 100%;
+    width: 0;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* --- EXIGENCES (Register) --- */
+.password-requirements {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+}
+.requirement-item {
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.requirement-item.met { color: #10b981; font-weight: 600; }
+
+/* --- RESPONSIVE --- */
+@media (max-width: 576px) {
+    .login-form-container, .register-card {
+        padding: 1.5rem;
+        box-shadow: none;
+        border: none;
+        background: transparent;
+    }
+    .login-page-body {
+        background: #ffffff;
+        align-items: flex-start;
+        padding-top: 2rem;
+    }
+}

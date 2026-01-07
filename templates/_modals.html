@@ -225,35 +225,45 @@
                             <!-- SECTION FDS (NOUVEAU : Design intégré) -->
                             <div class="card border-0 shadow-sm">
                                 <div class="card-body p-2 bg-white rounded">
-                                    <label class="form-label fw-bold small mb-2">Fiche Sécurité (PDF)</label>
-                                    
-                                    <ul class="nav nav-pills nav-fill small mb-2" id="pills-tab-fds" role="tablist">
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link active py-1" data-bs-toggle="pill" data-bs-target="#pills-fds-file" type="button">
-                                                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
-                                            </button>
-                                        </li>
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link py-1" data-bs-toggle="pill" data-bs-target="#pills-fds-url" type="button">
-                                                <i class="bi bi-link-45deg me-1"></i>Lien
-                                            </button>
-                                        </li>
-                                    </ul>
+                                     <label class="form-label fw-bold text-muted small mt-3">SÉCURITÉ (FDS)</label>
+                            
+									<!-- ZONE INFO ÉTAT ACTUEL (Cachée par défaut) -->
+									<div id="fds-current-status" class="alert alert-success d-flex align-items-center justify-content-between p-2 mb-2" style="display: none;">
+										<div class="d-flex align-items-center gap-2">
+											<i class="bi bi-check-circle-fill fs-5"></i>
+											<div style="line-height: 1.2;">
+												<div class="small fw-bold">FDS Active</div>
+												<div class="x-small opacity-75" id="fds-current-type">Fichier local</div>
+											</div>
+										</div>
+										<a href="#" target="_blank" id="fds-current-link" class="btn btn-sm btn-light text-success fw-bold py-0" style="font-size: 0.75rem;">
+											Voir
+										</a>
+									</div>
 
-                                    <div class="tab-content">
-                                        <!-- Onglet Fichier PDF -->
-                                        <div class="tab-pane fade show active" id="pills-fds-file">
-                                            <input type="file" class="form-control form-control-sm" name="fds_file" accept="application/pdf">
-                                        </div>
-                                        
-                                        <!-- Onglet URL -->
-                                        <div class="tab-pane fade" id="pills-fds-url">
-                                            <div class="input-group input-group-sm">
-                                                <span class="input-group-text bg-white"><i class="bi bi-globe"></i></span>
-                                                <input type="url" class="form-control" id="fds_url" name="fds_url" placeholder="https://...">
-                                            </div>
-                                        </div>
-                                    </div>
+									<!-- ONGLETS -->
+									<div class="nav nav-tabs mb-2" id="nav-tab-fds" role="tablist">
+										<button class="nav-link active py-1 px-3 small" data-bs-toggle="tab" data-bs-target="#nav-file-fds" type="button">
+											<i class="bi bi-file-earmark-pdf me-1"></i>Fichier PDF
+										</button>
+										<button class="nav-link py-1 px-3 small" data-bs-toggle="tab" data-bs-target="#nav-url-fds" type="button">
+											<i class="bi bi-link-45deg me-1"></i>Lien Web
+										</button>
+									</div>
+									
+									<div class="tab-content">
+										<div class="tab-pane fade show active" id="nav-file-fds">
+											<input type="file" class="form-control form-control-sm" name="fds_file" accept="application/pdf">
+										</div>
+										<div class="tab-pane fade" id="nav-url-fds">
+											<input type="url" class="form-control form-control-sm" id="fds_url" name="fds_url" placeholder="https://...">
+										</div>
+									</div>
+									
+									<!-- TEXTE D'AIDE DYNAMIQUE -->
+									<div class="form-text x-small text-muted mt-2" id="fds-help-text">
+										Ajoutez un fichier ou un lien pour la sécurité.
+									</div>
                                 </div>
                             </div>
 
@@ -379,6 +389,111 @@
                     Confirmer
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ================================================================= -->
+<!-- 9. MODALE AJOUT ÉQUIPEMENT SÉCURITÉ (NOUVEAU) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="addSecurityModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            
+            <!-- Header Vert Sarcelle pour la Sécurité -->
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #20c997 0%, #198754 100%);">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-shield-plus me-2"></i>Nouvel Équipement
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form id="formAddSecurity">
+                <div class="modal-body p-4 bg-light">
+                    <!-- Zone de message d'erreur JS -->
+                    <div id="security-error-msg" class="alert alert-danger d-none"></div>
+
+                    <div class="row g-4">
+                        <!-- COLONNE GAUCHE : IDENTITÉ -->
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Identification</h6>
+                            
+                            <!-- Nom -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Nom de l'équipement <span class="text-danger">*</span></label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-tag"></i></span>
+                                    <input type="text" class="form-control border-start-0 ps-0" name="nom" placeholder="Ex: Sorbonne Salle 204" required>
+                                </div>
+                            </div>
+
+                            <!-- Type -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Type <span class="text-danger">*</span></label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-grid"></i></span>
+                                    <select class="form-select border-start-0 ps-0" name="type_equipement" required>
+                                        <option value="" selected disabled>Choisir...</option>
+                                        <option value="Hotte">Hotte Aspirante / Sorbonne</option>
+                                        <option value="Armoire Ventilée">Armoire Ventilée</option>
+                                        <option value="Extincteur">Extincteur</option>
+                                        <option value="Douche">Douche de sécurité / Lave-yeux</option>
+                                        <option value="Détecteur">Détecteur de Gaz</option>
+                                        <option value="Autre">Autre</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Localisation -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Localisation</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-geo-alt"></i></span>
+                                    <input type="text" class="form-control border-start-0 ps-0" name="localisation" placeholder="Ex: Salle TP Chimie">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COLONNE DROITE : TECHNIQUE -->
+                        <div class="col-md-6">
+                            <h6 class="text-uppercase text-muted fw-bold small mb-3 border-bottom pb-2">Données Techniques</h6>
+
+                            <!-- Numéro de Série -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Numéro de Série / Inventaire</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-upc-scan"></i></span>
+                                    <input type="text" class="form-control border-start-0 ps-0" name="numero_serie" placeholder="Optionnel">
+                                </div>
+                            </div>
+
+                            <!-- Date Installation -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Date d'installation</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-calendar-check"></i></span>
+                                    <input type="date" class="form-control border-start-0 ps-0" name="date_installation">
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info small mt-4 mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Vous pourrez configurer les plans de maintenance (vérifications périodiques) une fois l'équipement créé.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Footer Actions -->
+                <div class="modal-footer bg-white border-top-0">
+                    <button type="button" class="btn btn-light text-muted fw-bold" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm" id="btnSaveSecurity">
+                        <i class="bi bi-check-lg me-2"></i>Créer l'équipement
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

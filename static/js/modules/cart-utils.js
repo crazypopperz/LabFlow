@@ -17,23 +17,29 @@ export function escapeHtml(text) {
  */
 export async function updateCartBadge() {
     const badge = document.getElementById('cart-count-badge');
+	badge.classList.add('pulse-ring');
     if (!badge) return;
 
     try {
         const response = await fetch('/api/panier');
         if (response.ok) {
             const json = await response.json();
-            // L'API retourne { success: true, data: { items: [], total: X } }
             const count = json.data.total || 0;
 
+            // 1. Mise à jour du texte
             badge.textContent = count > 99 ? '99+' : count;
             
+            // 2. Gestion de la visibilité (C'est ici que ça se joue)
             if (count > 0) {
+                // S'il y a des articles, on affiche la pastille
                 badge.style.display = 'flex';
+                
+                // Petite animation "Pulse" pour attirer l'attention lors d'un ajout
+                badge.classList.remove('pulse'); // Reset pour rejouer l'anim
+                void badge.offsetWidth; // Force le reflow (hack CSS)
                 badge.classList.add('pulse');
-                // On retire l'anim après 1s
-                setTimeout(() => badge.classList.remove('pulse'), 1000);
             } else {
+                // Si 0, on cache complètement la pastille
                 badge.style.display = 'none';
             }
         }

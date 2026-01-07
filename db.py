@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
 from flask_login import UserMixin
@@ -26,6 +26,8 @@ class Etablissement(db.Model):
     kits = db.relationship('Kit', backref='etablissement', lazy=True)
     armoires = db.relationship('Armoire', backref='etablissement', lazy=True)
     categories = db.relationship('Categorie', backref='etablissement', lazy=True)
+    # Relation Sécurité
+    equipements_securite = db.relationship('EquipementSecurite', backref='etablissement', lazy=True)
 
 class Utilisateur(UserMixin, db.Model):
     __tablename__ = 'utilisateurs'
@@ -120,13 +122,13 @@ class KitObjet(db.Model):
     )
 
 # ============================================================
-# 3. SYSTÈME DE RÉSERVATION & PANIER (NOUVEAU)
+# 3. SYSTÈME DE RÉSERVATION & PANIER
 # ============================================================
 
 class Panier(db.Model):
     __tablename__ = 'paniers'
     
-    # UUID stocké en String(36) pour compatibilité maximale (SQLite/Postgres)
+    # UUID stocké en String(36)
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     id_utilisateur = db.Column(db.Integer, db.ForeignKey('utilisateurs.id', ondelete='CASCADE'), nullable=False)
     date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
@@ -195,7 +197,6 @@ class Reservation(db.Model):
     utilisateur = db.relationship('Utilisateur')
 
     __table_args__ = (
-        # Contrainte XOR : Soit objet_id, soit kit_id, mais pas les deux (ni aucun)
         db.CheckConstraint(
             '(objet_id IS NOT NULL AND kit_id IS NULL) OR (objet_id IS NULL AND kit_id IS NOT NULL)',
             name='check_objet_ou_kit'
@@ -233,10 +234,7 @@ class AuditLog(db.Model):
     )
 
 class Historique(db.Model):
-    """
-    DEPRECATED: Utilisez AuditLog pour les nouveaux enregistrements.
-    Cette table est conservée pour les données historiques existantes.
-    """
+    """DEPRECATED: Utilisez AuditLog pour les nouveaux enregistrements."""
     __tablename__ = 'historique'
     id = db.Column(db.Integer, primary_key=True)
     objet_id = db.Column(db.Integer, nullable=True)
@@ -309,3 +307,60 @@ class Suggestion(db.Model):
     etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
     objet = db.relationship('Objet')
     utilisateur = db.relationship('Utilisateur')
+
+# ============================================================
+# 6. SÉCURITÉ & INFRASTRUCTURE (NOUVEAU)
+# ============================================================
+
+class EquipementSecurite(db.Model):
+    __tablename__ = 'equipements_securite'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    
+    nom = db.Column(db.String(100), nullable=False)  # ex: Sorbonne 2
+    type_equipement = db.Column(db.String(50), nullable=False) # ex: 'Hotte', 'Extincteur', 'Douche'
+    localisation = db.Column(db.String(100)) # ex: Salle 204
+    numero_serie = db.Column(db.String(100))
+    date_installation = db.Column(db.Date)
+    
+    # Statut opérationnel
+    en_service = db.Column(db.Boolean, default=True)
+    etat_general = db.Column(db.String(20), default='bon') # 'bon', 'moyen', 'critique'
+    
+    # Relations
+    plans_maintenance = db.relationship('MaintenancePlan', backref='equipement', cascade="all, delete-orphan")
+    historique = db.relationship('MaintenanceLog', backref='equipement', cascade="all, delete-orphan")
+
+class MaintenancePlan(db.Model):
+    """Définit la règle : Ce qu'il faut faire et tous les combien"""
+    __tablename__ = 'maintenance_plans'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    equipement_id = db.Column(db.Integer, db.ForeignKey('equipements_securite.id'), nullable=False)
+    
+    titre = db.Column(db.String(100), nullable=False) # ex: Vérification annuelle flux d'air
+    periodicite_jours = db.Column(db.Integer, nullable=False) # ex: 365
+    type_prestataire = db.Column(db.String(20)) # 'interne', 'externe'
+    
+    # Calculé automatiquement par le Service
+    date_derniere_action = db.Column(db.Date)
+    date_prochaine_action = db.Column(db.Date, nullable=False)
+    
+    alerte_active = db.Column(db.Boolean, default=True)
+
+class MaintenanceLog(db.Model):
+    """La preuve de l'intervention"""
+    __tablename__ = 'maintenance_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    equipement_id = db.Column(db.Integer, db.ForeignKey('equipements_securite.id'), nullable=False)
+    plan_id = db.Column(db.Integer, db.ForeignKey('maintenance_plans.id'), nullable=True)
+    
+    date_intervention = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    operateur = db.Column(db.String(100)) # Qui a fait l'action
+    resultat = db.Column(db.String(20)) # 'conforme', 'non_conforme', 'repare'
+    observations = db.Column(db.Text)
+    
+    # Gestion documentaire (GED)
+    fichier_rapport = db.Column(db.String(255)) # Chemin vers le PDF stocké

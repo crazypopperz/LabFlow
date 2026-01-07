@@ -3,8 +3,7 @@ import logging
 import uuid
 import re
 import json
-# AJOUT DE 'timezone' DANS LES IMPORTS
-from datetime import datetime, timedelta, date, time, timezone
+from datetime import datetime, timedelta, date, timezone
 from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
@@ -23,17 +22,18 @@ class PanierServiceError(Exception):
 class PanierService:
     PANIER_TTL_HOURS = 24
     MAX_ITEMS_PANIER = 50
-    MAX_QTY_PER_ITEM = KitService.MAX_QTY_PER_ITEM
+    MAX_QTY_PER_ITEM = 9999 # Valeur par défaut si KitService non dispo
+    MAX_CRENEAUX = 10       # Limite de créneaux simultanés
 
     def __init__(self, etablissement_id: int):
         self.etablissement_id = etablissement_id
         self.stock_service = StockService(etablissement_id)
+        # On récupère la constante de KitService si disponible
+        if hasattr(KitService, 'MAX_QTY_PER_ITEM'):
+            self.MAX_QTY_PER_ITEM = KitService.MAX_QTY_PER_ITEM
 
     def _get_active_panier(self, user_id: int, create_if_missing: bool = True, with_lock: bool = False) -> Optional[Panier]:
-        """
-        Récupère le panier actif.
-        """
-        # CORRECTION CRITIQUE : On utilise une date "Aware" (UTC) pour matcher la DB
+        """Récupère le panier actif avec gestion d'expiration."""
         now = datetime.now(timezone.utc)
         
         stmt = select(Panier).filter_by(
@@ -50,7 +50,6 @@ class PanierService:
         # Rotation si expiré
         if panier and panier.date_expiration < now:
             panier.statut = 'expiré'
-            # On ne commit pas ici pour laisser la transaction appelante gérer
             panier = None
 
         if not panier and create_if_missing:
@@ -63,6 +62,9 @@ class PanierService:
             )
             db.session.add(panier)
             db.session.flush()
+        elif panier:
+            # Refresh TTL
+            panier.date_expiration = now + timedelta(hours=self.PANIER_TTL_HOURS)
             
         return panier
 
@@ -103,10 +105,7 @@ class PanierService:
             raise PanierServiceError("Début doit être avant Fin.")
 
         # Règles métier StockService
-        # Ici on utilise datetime.now() simple car StockService attend du Naive (par défaut)
-        # ou gère lui-même la conversion. Pour être sûr, on reste en Naive pour la logique métier locale.
-        now = datetime.now() 
-        
+        now = datetime.now()
         if start_dt < now - timedelta(minutes=StockService.PAST_BUFFER_MINUTES):
             raise PanierServiceError("Impossible de réserver dans le passé.")
         if start_dt > now + timedelta(days=StockService.MAX_FUTURE_DAYS):
@@ -119,33 +118,31 @@ class PanierService:
         return start_dt, end_dt
 
     def get_contenu(self, user_id: int) -> Dict[str, Any]:
-        """Récupère le contenu (Lecture Seule)."""
+        """
+        Récupère le contenu (Lecture Seule).
+        CORRECTION : Le total compte les CRÉNEAUX UNIQUES.
+        """
         panier = self._get_active_panier(user_id, create_if_missing=False)
         
         if not panier or not panier.items:
-            return {
-                'panier_id': None,
-                'expiration': None,
-                'items': [],
-                'total': 0
-            }
+            return {'panier_id': None, 'items': [], 'total': 0}
 
+        # Optimisation : Chargement en lot des noms
         objet_ids = [i.id_item for i in panier.items if i.type == 'objet']
         kit_ids = [i.id_item for i in panier.items if i.type == 'kit']
-
+        
         objets_map = {}
-        kits_map = {}
-
         if objet_ids:
             objs = db.session.execute(select(Objet).filter(Objet.id.in_(objet_ids))).scalars().all()
             objets_map = {o.id: o for o in objs}
-        
+            
+        kits_map = {}
         if kit_ids:
             kits = db.session.execute(select(Kit).filter(Kit.id.in_(kit_ids))).scalars().all()
             kits_map = {k.id: k for k in kits}
 
         items_data = []
-        total_items = 0
+        creneaux_uniques = set()
 
         for item in panier.items:
             nom = "Élément supprimé"
@@ -158,8 +155,7 @@ class PanierService:
                     image = obj.image_url
             elif item.type == 'kit':
                 kit = kits_map.get(item.id_item)
-                if kit:
-                    nom = kit.nom
+                if kit: nom = kit.nom
 
             items_data.append({
                 'id': item.id,
@@ -168,17 +164,19 @@ class PanierService:
                 'nom': nom,
                 'image': image,
                 'quantite': item.quantite,
-                'date': item.date_reservation.isoformat(),
+                'date_reservation': item.date_reservation.isoformat(),
                 'heure_debut': item.heure_debut,
                 'heure_fin': item.heure_fin
             })
-            total_items += item.quantite
+            
+            # Signature unique du créneau
+            creneaux_uniques.add((item.date_reservation, item.heure_debut, item.heure_fin))
 
         return {
-            'panier_id': panier.id,
+            'id_panier': panier.id,
             'expiration': panier.date_expiration.isoformat(),
             'items': items_data,
-            'total': total_items
+            'total': len(creneaux_uniques) # C'est ici que ça change tout !
         }
 
     def ajouter_item(self, user_id: int, item_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -187,9 +185,6 @@ class PanierService:
             required = ['type', 'id', 'quantite', 'date', 'heure_debut', 'heure_fin']
             if not all(k in item_data for k in required):
                 raise PanierServiceError("Données manquantes.")
-
-            if not isinstance(item_data['type'], str):
-                raise PanierServiceError("Format type invalide.")
 
             try:
                 qte = int(item_data['quantite'])
@@ -212,24 +207,40 @@ class PanierService:
 
             panier = self._get_active_panier(user_id, create_if_missing=True)
             
+            # Vérification limite items
             if len(panier.items) >= self.MAX_ITEMS_PANIER:
                 raise PanierServiceError(f"Panier plein (Max {self.MAX_ITEMS_PANIER}).")
 
+            # Vérification limite créneaux
+            creneaux_actuels = set((i.date_reservation, i.heure_debut, i.heure_fin) for i in panier.items)
+            nouveau_creneau = (start_dt.date(), item_data['heure_debut'], item_data['heure_fin'])
+            if nouveau_creneau not in creneaux_actuels and len(creneaux_actuels) >= self.MAX_CRENEAUX:
+                raise PanierServiceError(f"Limite de {self.MAX_CRENEAUX} créneaux atteinte.")
+
+            # Vérification Stock
             check_item = [{'type': item_type, 'id': item_id, 'quantite': qte}]
             try:
-                self.stock_service.get_disponibilites(start_dt, end_dt, panier_items=check_item)
+                # On passe le panier actuel pour déduire ce qu'on a déjà pris
+                # (Attention : il faut convertir les items du panier au format attendu par get_disponibilites)
+                panier_items_fmt = []
+                for pi in panier.items:
+                    panier_items_fmt.append({
+                        'type': pi.type, 'id': pi.id_item, 'quantite': pi.quantite,
+                        'date_reservation': pi.date_reservation.isoformat(),
+                        'heure_debut': pi.heure_debut, 'heure_fin': pi.heure_fin
+                    })
+                
+                self.stock_service.get_disponibilites(start_dt, end_dt, panier_items=panier_items_fmt)
             except StockServiceError as e:
                 raise PanierServiceError(f"Indisponible : {str(e)}")
 
-            existing_item = None
-            for it in panier.items:
-                if (it.type == item_type and 
-                    it.id_item == item_id and
-                    it.date_reservation.isoformat() == item_data['date'] and
-                    it.heure_debut == item_data['heure_debut'] and
-                    it.heure_fin == item_data['heure_fin']):
-                    existing_item = it
-                    break
+            # Ajout ou Mise à jour
+            existing_item = next((i for i in panier.items if 
+                           i.id_item == item_id and 
+                           i.type == item_type and
+                           i.date_reservation == start_dt.date() and
+                           i.heure_debut == item_data['heure_debut'] and
+                           i.heure_fin == item_data['heure_fin']), None)
             
             if existing_item:
                 new_total = existing_item.quantite + qte
@@ -248,12 +259,8 @@ class PanierService:
                 )
                 db.session.add(new_item)
 
-            # Refresh TTL (UTC)
-            panier.date_expiration = datetime.now(timezone.utc) + timedelta(hours=self.PANIER_TTL_HOURS)
-            db.session.flush()
-            
             db.session.commit()
-            return {"success": True, "message": "Ajouté"}
+            return self.get_contenu(user_id)
 
         except PanierServiceError:
             db.session.rollback()
@@ -267,17 +274,12 @@ class PanierService:
         """Retire un item (Sécurisé)."""
         try:
             panier = self._get_active_panier(user_id, create_if_missing=False)
-            if not panier:
-                raise PanierServiceError("Panier introuvable.")
+            if not panier: raise PanierServiceError("Panier introuvable.")
 
             item = db.session.get(PanierItem, item_id)
-            if not item:
+            if not item or item.id_panier != panier.id:
                 raise PanierServiceError("Item introuvable.")
             
-            if item.id_panier != panier.id:
-                logger.warning(f"SECURITY: IDOR Delete Attempt User {user_id} Item {item_id}")
-                raise PanierServiceError("Action interdite.")
-
             db.session.delete(item)
             db.session.commit()
             return {"success": True}
@@ -305,82 +307,72 @@ class PanierService:
             if not panier or not panier.items:
                 raise PanierServiceError("Panier vide ou expiré.")
 
-            creneaux: Dict[Tuple[date, str, str], List[Dict[str, Any]]] = {}
+            # Groupement par créneau
+            creneaux = {}
             for item in panier.items:
                 key = (item.date_reservation, item.heure_debut, item.heure_fin)
-                if key not in creneaux:
-                    creneaux[key] = []
-                creneaux[key].append({
-                    'type': item.type,
-                    'id': item.id_item,
-                    'quantite': item.quantite
-                })
+                if key not in creneaux: creneaux[key] = []
+                creneaux[key].append(item)
 
-            groupe_id = str(uuid.uuid4())
-            reservations_created = []
+            resultats = []
             audit_details = []
 
             for (d_res, h_deb, h_fin), items_list in creneaux.items():
-                start_dt, end_dt = self._parse_and_validate_dates(
-                    d_res.isoformat(), h_deb, h_fin
-                )
+                start_dt, end_dt = self._parse_and_validate_dates(d_res.isoformat(), h_deb, h_fin)
 
+                # Vérification IDOR
                 for it in items_list:
-                    self._verify_item_ownership(it['type'], it['id'])
+                    self._verify_item_ownership(it.type, it.id_item)
 
-                self.stock_service.verify_stock_atomic(
-                    items=items_list,
-                    start_dt=start_dt,
-                    end_dt=end_dt,
-                    user_id=user_id
-                )
+                # Préparation données pour StockService
+                items_dict = [{'type': i.type, 'id': i.id_item, 'quantite': i.quantite} for i in items_list]
 
-                for it in items_list:
+                # 1. Vérification Atomique (Lock DB)
+                self.stock_service.verify_stock_atomic(items_dict, start_dt, end_dt, user_id)
+                
+                # 2. Création Réservation
+                groupe_id = str(uuid.uuid4())
+                
+                for item in items_list:
                     resa = Reservation(
                         utilisateur_id=user_id,
                         etablissement_id=self.etablissement_id,
-                        quantite_reservee=it['quantite'],
+                        quantite_reservee=item.quantite,
                         debut_reservation=start_dt,
                         fin_reservation=end_dt,
                         groupe_id=groupe_id,
                         statut='confirmée'
                     )
-                    if it['type'] == 'kit':
-                        resa.kit_id = it['id']
-                    else:
-                        resa.objet_id = it['id']
+                    if item.type == 'kit': resa.kit_id = item.id_item
+                    else: resa.objet_id = item.id_item
                     
                     db.session.add(resa)
-                    reservations_created.append(resa)
-                    audit_details.append(f"{it['type']}#{it['id']} (x{it['quantite']}) [{h_deb}-{h_fin}]")
+                    audit_details.append(f"{item.type}#{item.id_item} (x{item.quantite}) [{h_deb}-{h_fin}]")
+                
+                resultats.append(groupe_id)
 
+            # 3. Nettoyage
             db.session.execute(delete(PanierItem).where(PanierItem.id_panier == panier.id))
             
+            # Audit
             audit_json = json.dumps(audit_details)
             audit = AuditLog(
                 id_utilisateur=user_id,
                 etablissement_id=self.etablissement_id,
                 action="CHECKOUT",
                 table_cible="reservations",
-                id_enregistrement=groupe_id,
-                details=f"Items: {len(reservations_created)}. Détails: {audit_json}"
+                id_enregistrement=resultats[0] if resultats else None,
+                details=f"Items: {len(audit_details)}. Groupes: {len(resultats)}"
             )
             db.session.add(audit)
 
             db.session.commit()
-            
-            logger.info(f"Checkout SUCCESS | User {user_id} | Group {groupe_id}")
-            return {
-                "success": True, 
-                "reservations_count": len(reservations_created),
-                "groupe_id": groupe_id
-            }
+            return {"success": True, "groupes": resultats}
 
         except (PanierServiceError, StockServiceError) as e:
             db.session.rollback()
             logger.warning(f"Checkout FAILED | User {user_id} | {e}")
             raise PanierServiceError(str(e))
-            
         except SQLAlchemyError as e:
             db.session.rollback()
             logger.error(f"Checkout CRITICAL DB ERROR | User {user_id} | {e}")

@@ -1,26 +1,6 @@
 // =================================================================
 // FONCTION GLOBALE POUR AFFICHER LA MODALE D'INFORMATION
 // =================================================================
-function updateCartIcon() {
-    const badge = document.getElementById('cart-count-badge');
-    if (!badge) return;
-    
-    const cart = JSON.parse(sessionStorage.getItem('reservationCart')) || {};
-    const cartCount = Object.keys(cart).length;
-    
-    if (cartCount > 0) {
-        // Formatage du nombre (99+ si > 99)
-        badge.textContent = cartCount > 99 ? '99+' : cartCount;
-        
-        // Ajout de classes CSS selon la quantité
-        badge.classList.toggle('large', cartCount > 99);
-        
-        badge.style.display = 'flex';
-    } else {
-        badge.style.display = 'none';
-    }
-}
-
 function showInfoModal(title, message) {
     const modal = document.getElementById('info-modal');
     if (modal) {
@@ -87,10 +67,11 @@ function showToast(message, type = 'success') {
 }
 
 // =================================================================
-// POINT D'ENTRÉE UNIQUE : TOUT LE CODE EST DANS CE BLOC
+// POINT D'ENTRÉE UNIQUE
 // =================================================================
 document.addEventListener("DOMContentLoaded", function () {
-	updateCartIcon();
+    // --- SUPPRESSION ICI : updateCartIcon() a été retiré ---
+    
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
     // =================================================================
@@ -180,20 +161,15 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
         }
 
-        // --- DÉBUT DE LA CORRECTION POUR LA MODALE DE DANGER ---
+        // --- MODALE DE DANGER ---
         const openModalButton = e.target.closest('.btn-open-danger-modal, .delete-btn, .btn-delete-objet');
 		if (openModalButton) {
 			e.preventDefault();
 
             const dangerModalElement = document.getElementById('dangerModal');
-            if (!dangerModalElement) {
-                console.error("L'élément de la modale de danger (#dangerModal) est introuvable.");
-                return;
-            }
+            if (!dangerModalElement) return;
             
-            // On utilise la méthode Bootstrap pour éviter les conflits
             const dangerModal = bootstrap.Modal.getOrCreateInstance(dangerModalElement);
-
 			const modalText = dangerModalElement.querySelector('#dangerModalText');
 			const modalForm = dangerModalElement.querySelector('#dangerModalForm');
 
@@ -215,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			if (modalForm) modalForm.action = actionUrl;
 			
             dangerModal.show();
-            return; // On arrête le traitement ici
+            return;
 		}
 
 		const editBtn = e.target.closest('.edit-btn');
@@ -269,15 +245,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 		const trigger = e.target.closest('[data-modal-trigger]');
 		if (trigger) {
-			console.log("Élément déclencheur trouvé (trigger) :", trigger);
 			const modalId = trigger.dataset.modalTrigger;
-			console.log("Tentative d'ouverture de la modale avec l'ID :", modalId);
-
 			const modal = document.getElementById(modalId);
-			if (!modal) {
-				console.error(`Modale non trouvée avec l'ID : ${modalId}`);
-				return;
-			}
+			if (!modal) return;
 			
 			if (trigger.dataset.modalTitle) {
 				const modalTitle = modal.querySelector('#' + modalId + '-title span');
@@ -297,13 +267,13 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 
 			if (modalId === 'add-object-modal') {
-				const addObjectModalElement = document.getElementById('add-object-modal');
+				const addObjectModalElement = document.getElementById('addObjectModal'); // Correction ID
 				if (!addObjectModalElement) return;
 				
 				const addObjectModalInstance = bootstrap.Modal.getOrCreateInstance(addObjectModalElement);
 				const form = addObjectModalElement.querySelector('form');
-				const modalTitle = addObjectModalElement.querySelector('#modal-objet-title');
-				const submitBtn = addObjectModalElement.querySelector('#modal-submit-btn');
+				const modalTitle = addObjectModalElement.querySelector('.modal-title');
+				const submitBtn = form.querySelector('button[type="submit"]');
 				const imagePreviewContainer = addObjectModalElement.querySelector('#image-preview-container');
 				const imagePreview = imagePreviewContainer?.querySelector('img');
 				
@@ -311,54 +281,94 @@ document.addEventListener("DOMContentLoaded", function () {
 				
 				if (objetId) {
 					// --- MODE MODIFICATION ---
-					if (modalTitle) modalTitle.textContent = "Modifier l'objet";
-					if (submitBtn) submitBtn.textContent = "Mettre à jour";
-					if (form) form.action = `/modifier_objet/${objetId}`;
+					modalTitle.textContent = "Modifier l'objet";
+					form.action = `/modifier_objet/${objetId}`;
 					
-					// Pré-remplissage des champs
-					const fields = {
-						'nom': trigger.dataset.nom,
-						'quantite': trigger.dataset.quantite,
-						'seuil': trigger.dataset.seuil,
-						'date_peremption': trigger.dataset.datePeremption,
-						'armoire_id': trigger.dataset.armoireId,
-						'categorie_id': trigger.dataset.categorieId,
-						'image_url': trigger.dataset.imageUrl,
-						'fds_url': trigger.dataset.fdsUrl
-					};
+					// 1. Récupération des données brutes
+                    const rawImg = trigger.dataset.imageUrl || '';
+                    const rawFds = trigger.dataset.fdsUrl || '';
+
+                    // 2. Pré-remplissage des champs standards
+                    const fields = {
+                        'nom': trigger.dataset.nom,
+                        'quantite': trigger.dataset.quantite,
+                        'seuil': trigger.dataset.seuil,
+                        'date_peremption': trigger.dataset.datePeremption,
+                        'armoire_id': trigger.dataset.armoireId,
+                        'categorie_id': trigger.dataset.categorieId
+                    };
+                    
+                    for (const [fieldId, rawValue] of Object.entries(fields)) {
+                        const input = form.querySelector(`#${fieldId}`);
+                        if (input) {
+                            let value = rawValue;
+                            if (value === 'None' || value === null || value === undefined) value = '';
+                            input.value = value;
+                        }
+                    }
+
+                    // 3. GESTION INTELLIGENTE DES ONGLETS (IMAGE)
+                    const tabImgFile = new bootstrap.Tab(document.querySelector('#pills-file-tab'));
+                    const tabImgUrl = new bootstrap.Tab(document.querySelector('#pills-url-tab'));
+                    const inputImgUrl = form.querySelector('#image_url');
+                    const inputImgFile = form.querySelector('#image');
+
+                    if (rawImg.startsWith('http')) {
+                        tabImgUrl.show();
+                        if (inputImgUrl) inputImgUrl.value = rawImg;
+                        if (inputImgFile) inputImgFile.value = '';
+                    } else {
+                        tabImgFile.show();
+                        if (inputImgUrl) inputImgUrl.value = '';
+                    }
+
+                    // 4. GESTION INTELLIGENTE DES ONGLETS (FDS)
+                    const btnTabFdsFile = document.querySelector('button[data-bs-target="#nav-file-fds"]');
+                    const btnTabFdsUrl = document.querySelector('button[data-bs-target="#nav-url-fds"]');
+                    const inputFdsUrl = form.querySelector('#fds_url');
+                    const inputFdsFile = form.querySelector('input[name="fds_file"]');
+
+                    if (rawFds.startsWith('http')) {
+                        if (btnTabFdsUrl) new bootstrap.Tab(btnTabFdsUrl).show();
+                        if (inputFdsUrl) inputFdsUrl.value = rawFds;
+                        if (inputFdsFile) inputFdsFile.value = '';
+                    } else {
+                        if (btnTabFdsFile) new bootstrap.Tab(btnTabFdsFile).show();
+                        if (inputFdsUrl) inputFdsUrl.value = '';
+                    }
 					
-					for (const [fieldId, value] of Object.entries(fields)) {
-						const input = form?.querySelector(`#${fieldId}`);
-						if (input) input.value = value || '';
-					}
-					
-					// Gestion de l'image
-					const imageUrl = trigger.dataset.imageUrl;
-					if (imageUrl && imagePreview && imagePreviewContainer) {
-						imagePreview.src = imageUrl;
+					// 5. Aperçu Image
+					if (rawImg && imagePreview && imagePreviewContainer) {
+						if (rawImg.startsWith('http')) {
+							imagePreview.src = rawImg;
+						} else {
+							imagePreview.src = `/static/${rawImg}`;
+						}
 						imagePreviewContainer.style.display = 'block';
 					} else if (imagePreviewContainer) {
 						imagePreviewContainer.style.display = 'none';
 					}
 					
+					if (submitBtn) {
+						submitBtn.textContent = 'Mettre à jour';
+						submitBtn.className = 'btn btn-primary';
+					}
+					
 				} else {
 					// --- MODE AJOUT ---
-					if (modalTitle) modalTitle.textContent = "Ajouter un nouvel objet";
-					if (submitBtn) submitBtn.textContent = "Enregistrer l'objet";
-					if (form) {
-						form.action = document.body.dataset.addUrl || '/ajouter_objet';
-						form.reset();
-					}
+					modalTitle.textContent = "Ajouter un nouvel objet";
+					form.action = document.body.dataset.addUrl || '/ajouter_objet';
+					form.reset();
 					if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+					if (submitBtn) {
+						submitBtn.textContent = 'Enregistrer l\'objet';
+						submitBtn.className = 'btn btn-success';
+					}
 				}
 				
-				// Ouvrir la modale Bootstrap
 				addObjectModalInstance.show();
-				
-				// Initialisation Pexels
 				setupPexelsSearch();
-				
-				return; // Important : arrêter ici
+				return;
 			}
 
 			if (trigger.dataset.formUsername) {
@@ -376,7 +386,15 @@ document.addEventListener("DOMContentLoaded", function () {
 				form.action = `/admin/fournisseurs/modifier/${id}`;
 				form.querySelector('#edit_nom').value = trigger.dataset.nom;
 				form.querySelector('#edit_site_web').value = trigger.dataset.siteWeb;
-				form.querySelector('#edit_logo_url').value = trigger.dataset.logoUrl;
+				
+                // Gestion Logo URL
+                const logo = trigger.dataset.logo;
+                const urlInput = document.getElementById('edit_logo_url_input');
+                if (logo && logo.startsWith('http')) {
+                    urlInput.value = logo;
+                } else {
+                    urlInput.value = '';
+                }
 			}
 			if (modalId === 'delete-user-modal') {
 				const username = trigger.dataset.formUsername;
@@ -392,19 +410,11 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 			if (modalId === 'depense-modal') {
 				const form = modal.querySelector('form');
-				if (form) {
-					form.reset();
-				}
-
+				if (form) form.reset();
 				const dateInput = modal.querySelector('#date_depense');
-				if (dateInput) {
-					dateInput.value = new Date().toISOString().split('T')[0];
-				}
-
+				if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
 				const fournisseurSelect = modal.querySelector('#fournisseur_id');
-				if (fournisseurSelect) {
-					fournisseurSelect.disabled = false;
-				}
+				if (fournisseurSelect) fournisseurSelect.disabled = false;
 			}
 			if (modalId === 'edit-depense-modal') {
 				const depenseId = trigger.dataset.depenseId;
@@ -731,7 +741,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	if (alertIcon) {
 		const alertCount = parseInt(alertIcon.dataset.alertCount, 10);
 
-		if (alertCount > 3) {
+		if (alertCount >= 3) {
 			alertIcon.classList.add('has-alerts-high');
 		} else if (alertCount > 0) {
 			alertIcon.classList.add('has-alerts-medium');
@@ -904,113 +914,143 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 	
 	// =================================================================
-	// NOUVELLE SECTION : GESTION DE LA MODALE D'AJOUT/MODIFICATION D'OBJET
+	// GESTION MODALE AJOUT/MODIF (VERSION FINALE & INFAILLIBLE)
 	// =================================================================
 	const addObjectModalElement = document.getElementById('addObjectModal');
 	if (addObjectModalElement) {
 		addObjectModalElement.addEventListener('show.bs.modal', function (event) {
-			const button = event.relatedTarget; // Le bouton qui a ouvert la modale
-			
-			// Sécurité : vérifier que le bouton existe bien
-			if (!button) {
-				console.error("Aucun bouton déclencheur trouvé pour la modale");
-				return;
-			}
+			const button = event.relatedTarget; 
+			if (!button) return;
 			
 			const form = addObjectModalElement.querySelector('form');
 			const modalTitle = addObjectModalElement.querySelector('.modal-title');
 			const submitBtn = form.querySelector('button[type="submit"]');
-			const imagePreviewContainer = addObjectModalElement.querySelector('#image-preview-container');
-			const imagePreview = imagePreviewContainer?.querySelector('img');
 			
-			// On vérifie si on est en mode "Modification"
+            // --- RÉCUPÉRATION PAR ID (PLUS FIABLE) ---
+			const imagePreviewContainer = document.getElementById('image-preview-container');
+			const imagePreview = document.getElementById('image-preview');
+            const fdsStatusDiv = document.getElementById('fds-current-status');
+            const fdsLinkBtn = document.getElementById('fds-current-link');
+            const fdsTypeLabel = document.getElementById('fds-current-type');
+            const fdsHelpText = document.getElementById('fds-help-text');
+
+            // =========================================================
+            // 1. LE GRAND NETTOYAGE (RESET FORCÉ)
+            // =========================================================
+            console.log("🧹 Nettoyage de la modale...");
+
+            // Reset Image
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (imagePreview) imagePreview.src = '';
+            
+            // Reset FDS (C'est ici que ça coinçait avant)
+            if (fdsStatusDiv) {
+                fdsStatusDiv.style.display = 'none'; // On cache la barre verte
+                fdsStatusDiv.classList.remove('d-flex'); // On retire la classe flex au cas où
+            }
+            if (fdsLinkBtn) fdsLinkBtn.href = '#';
+            if (fdsTypeLabel) fdsTypeLabel.textContent = '';
+            if (fdsHelpText) fdsHelpText.innerHTML = 'Ajoutez un fichier ou un lien pour la sécurité.';
+            
+            // Reset Onglets (Retour sur le 1er onglet par défaut)
+            const tabImgFile = new bootstrap.Tab(document.querySelector('#pills-file-tab'));
+            if (tabImgFile) tabImgFile.show();
+            
+            const btnTabFdsFile = document.querySelector('button[data-bs-target="#nav-file-fds"]');
+            if (btnTabFdsFile) new bootstrap.Tab(btnTabFdsFile).show();
+
+            // Reset Inputs cachés et visibles
+            form.reset(); 
+            const inputImgUrl = form.querySelector('#image_url');
+            const inputFdsUrl = form.querySelector('#fds_url');
+            if (inputImgUrl) inputImgUrl.value = '';
+            if (inputFdsUrl) inputFdsUrl.value = '';
+            // =========================================================
+			
 			const objetId = button.dataset.objetId;
 			
 			if (objetId) {
 				// --- MODE MODIFICATION ---
-				console.log("Mode MODIFICATION - Objet ID:", objetId);
-				
 				modalTitle.textContent = "Modifier l'objet";
 				form.action = `/modifier_objet/${objetId}`;
 				
-				// Pré-remplissage des champs avec validation
+				// Données brutes
+				const rawImg = (button.dataset.imageUrl || '').trim();
+				const rawFds = (button.dataset.fdsUrl || '').trim();
+                
+                console.log(`Objet ID: ${objetId}, FDS: ${rawFds}`); // Debug
+
+				// Remplissage Champs Standards
 				const fields = {
 					'nom': button.dataset.nom,
 					'quantite': button.dataset.quantite,
 					'seuil': button.dataset.seuil,
 					'date_peremption': button.dataset.datePeremption,
 					'armoire_id': button.dataset.armoireId,
-					'categorie_id': button.dataset.categorieId,
-					'image_url': button.dataset.imageUrl,
-					'fds_url': button.dataset.fdsUrl
+					'categorie_id': button.dataset.categorieId
 				};
 				
-				// Remplissage sécurisé de tous les champs
 				for (const [fieldId, rawValue] of Object.entries(fields)) {
 					const input = form.querySelector(`#${fieldId}`);
 					if (input) {
-                        // CORRECTION : On nettoie la valeur
-                        // Si c'est "None" (texte), null ou undefined -> on met une chaîne vide
                         let value = rawValue;
-                        if (value === 'None' || value === null || value === undefined) {
-                            value = '';
-                        }
+                        if (value === 'None' || value === null || value === undefined) value = '';
 						input.value = value;
-					} else {
-						// console.warn(`Champ #${fieldId} introuvable`); // Optionnel
 					}
 				}
+
+				// Gestion Image
+                const tabImgUrl = new bootstrap.Tab(document.querySelector('#pills-url-tab'));
+                if (rawImg.startsWith('http')) {
+                    tabImgUrl.show();
+                    if (inputImgUrl) inputImgUrl.value = rawImg;
+                }
 				
-				// Gestion de l'aperçu d'image
-				const imageUrl = button.dataset.imageUrl;
-				if (imageUrl && imagePreview && imagePreviewContainer) {
-					// Vérification si URL externe ou fichier local
-					if (imageUrl.startsWith('http')) {
-						imagePreview.src = imageUrl;
-					} else {
-						imagePreview.src = `/static/${imageUrl}`;
-					}
+				if (rawImg && rawImg !== 'None' && imagePreview) {
+					imagePreview.src = rawImg.startsWith('http') ? rawImg : `/static/${rawImg}`;
 					imagePreviewContainer.style.display = 'block';
-				} else if (imagePreviewContainer) {
-					imagePreviewContainer.style.display = 'none';
 				}
 				
-				// Bouton de soumission
+                // --- GESTION FDS (LOGIQUE CORRIGÉE) ---
+                // On n'affiche la barre verte QUE si une FDS existe vraiment
+                if (rawFds && rawFds !== 'None' && fdsStatusDiv) {
+                    console.log("✅ FDS détectée, affichage de la barre verte.");
+                    fdsStatusDiv.style.display = 'flex'; // On réaffiche
+                    
+                    if (fdsHelpText) {
+                        fdsHelpText.innerHTML = '<i class="bi bi-info-circle me-1"></i>Une FDS est active. Utilisez ces champs uniquement pour la <strong>remplacer</strong>.';
+                    }
+
+                    if (rawFds.startsWith('http')) {
+                        fdsTypeLabel.textContent = 'Lien Web Externe';
+                        fdsLinkBtn.href = rawFds;
+                        
+                        const btnTabFdsUrl = document.querySelector('button[data-bs-target="#nav-url-fds"]');
+                        if (btnTabFdsUrl) new bootstrap.Tab(btnTabFdsUrl).show();
+                        if (inputFdsUrl) inputFdsUrl.value = rawFds;
+                    } else {
+                        fdsTypeLabel.textContent = 'Fichier PDF Hébergé';
+                        fdsLinkBtn.href = `/static/${rawFds}`;
+                    }
+                }
+
 				if (submitBtn) {
 					submitBtn.textContent = 'Mettre à jour';
-					submitBtn.className = 'btn btn-primary'; // Optionnel : changer le style
+					submitBtn.className = 'btn btn-primary';
 				}
 				
 			} else {
 				// --- MODE AJOUT ---
-				console.log("Mode AJOUT - Nouveau objet");
-				
 				modalTitle.textContent = "Ajouter un nouvel objet";
-				
-				// URL d'ajout depuis data-attribute ou URL par défaut
 				form.action = document.body.dataset.addUrl || '/ajouter_objet';
 				
-				// Réinitialisation complète du formulaire
-				form.reset();
-				
-				// Masquer l'aperçu d'image
-				if (imagePreviewContainer) {
-					imagePreviewContainer.style.display = 'none';
-				}
-				
-				// Bouton de soumission
 				if (submitBtn) {
 					submitBtn.textContent = 'Enregistrer l\'objet';
-					submitBtn.className = 'btn btn-success'; // Optionnel : changer le style
+					submitBtn.className = 'btn btn-success';
 				}
 			}
 			
-			// Initialisation de la recherche Pexels
-			if (typeof setupPexelsSearch === 'function') {
-				setupPexelsSearch();
-			} else {
-				console.warn("setupPexelsSearch n'est pas définie");
-			}
+			if (typeof setupPexelsSearch === 'function') setupPexelsSearch();
 		});
 	}
 	
@@ -1178,6 +1218,31 @@ document.addEventListener("DOMContentLoaded", function () {
                     separator.style.color = '#d1d5db';
                     separator.style.fontWeight = '300';
                 }
+            });
+        });
+    }
+	
+	// =================================================================
+    // SECTION 16 : BOUTON RETOUR HAUT (Back To Top)
+    // =================================================================
+    const backToTopBtn = document.getElementById('backToTopBtn');
+    
+    if (backToTopBtn) {
+        // 1. Gestion de l'apparition au scroll
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) { // Apparaît après 300px de descente
+                backToTopBtn.classList.add('show');
+            } else {
+                backToTopBtn.classList.remove('show');
+            }
+        });
+
+        // 2. Action de remontée fluide
+        backToTopBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth' // C'est ça qui fait l'effet "Premium"
             });
         });
     }

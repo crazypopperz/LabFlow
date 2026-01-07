@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Stocks Dormants - LabFlow{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                <i class="bi bi-hourglass-bottom fs-4"></i>
+            </div>
+            <div>
+                <span class="fw-bold">Stocks Dormants</span>
+                <div class="text-muted small fw-normal">Objets non utilisés depuis plus d'un an</div>
+            </div>
+        </h2>
+        <span class="badge bg-secondary rounded-pill">{{ objets|length }} objets détectés</span>
+    </div>
+
+    {% if objets %}
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Objet</th>
+                        <th>Emplacement</th>
+                        <th class="text-center">Stock</th>
+                        <th>Dernière Utilisation</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obj in objets %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                {% if obj['image'] %}
+                                    {% if obj['image'].startswith('http') %}
+                                        <img src="{{ obj['image'] }}" class="rounded border" style="width: 40px; height: 40px; object-fit: contain;">
+                                    {% else %}
+                                        <img src="{{ url_for('static', filename=obj['image']) }}" class="rounded border" style="width: 40px; height: 40px; object-fit: contain;">
+                                    {% endif %}
+                                {% else %}
+                                    <div class="rounded bg-light d-flex align-items-center justify-content-center border" style="width: 40px; height: 40px;">
+                                        <i class="bi bi-box text-muted"></i>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold text-dark">{{ obj['nom'] }}</div>
+                                    <div class="small text-muted">{{ obj['categorie'] }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-archive me-1"></i>{{ obj['armoire'] }}
+                            </span>
+                        </td>
+                        <td class="text-center fw-bold">{{ obj['quantite'] }}</td>
+                        <td>
+                            {% if obj['derniere_utilisation'] %}
+                                <span class="text-warning fw-bold">
+                                    {{ obj['derniere_utilisation'].strftime('%d/%m/%Y') }}
+                                </span>
+                                <div class="x-small text-muted">
+                                    il y a {{ ((now - obj['derniere_utilisation']).days / 365)|round(1) }} ans
+                                </div>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Jamais utilisé</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{{ url_for('inventaire.voir_objet', objet_id=obj['id']) }}" class="btn btn-sm btn-outline-secondary" title="Voir la fiche">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                
+                                <!-- BOUTON D'ACTION (Avec data-nom pour la modale) -->
+                                <button class="btn btn-sm btn-success btn-open-validate" 
+                                        data-id="{{ obj['id'] }}" 
+                                        data-nom="{{ obj['nom'] }}"
+                                        title="Marquer comme vérifié (Garder)">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="mb-3">
+            <i class="bi bi-stars display-1 text-warning opacity-50"></i>
+        </div>
+        <h4 class="fw-bold text-dark">Optimisation parfaite !</h4>
+        <p class="text-muted">Tous vos objets ont été utilisés au moins une fois cette année.</p>
+        <a href="{{ url_for('inventaire.index') }}" class="btn btn-primary mt-3">Retour au tableau de bord</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- MODALE DE VALIDATION (Bootstrap) -->
+<div class="modal fade" id="validateDormantModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-check-circle-fill me-2"></i>Validation de stock</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="fs-5 mb-2">Confirmer que cet objet est toujours utile ?</p>
+                <p class="fw-bold text-primary mb-3" id="modal-object-name">Nom de l'objet</p>
+                <p class="text-muted small mb-0">
+                    En validant, une entrée "Vérification" sera ajoutée à l'historique et l'objet disparaîtra de cette liste pour un an.
+                </p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success px-4" id="btn-confirm-validate">
+                    <i class="bi bi-check-lg me-2"></i>Oui, garder cet objet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = "{{ csrf_token() }}";
+    
+    // Éléments de la modale
+    const modalEl = document.getElementById('validateDormantModal');
+    const modal = new bootstrap.Modal(modalEl);
+    const modalObjectName = document.getElementById('modal-object-name');
+    const confirmBtn = document.getElementById('btn-confirm-validate');
+    
+    let currentId = null;
+    let currentRow = null;
+
+    // 1. Ouverture de la modale
+    document.querySelectorAll('.btn-open-validate').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentId = this.dataset.id;
+            currentRow = this.closest('tr');
+            
+            // Injection du nom dans la modale
+            modalObjectName.textContent = this.dataset.nom;
+            
+            modal.show();
+        });
+    });
+
+    // 2. Confirmation
+    confirmBtn.addEventListener('click', async function() {
+        if (!currentId) return;
+        
+        // UI Loading
+        const originalText = this.innerHTML;
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Traitement...';
+        
+        try {
+            const res = await fetch(`/api/valider_dormant/${currentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({})
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+                modal.hide();
+                
+                // Animation de suppression de la ligne
+                if (currentRow) {
+                    currentRow.style.transition = "all 0.5s";
+                    currentRow.style.opacity = "0";
+                    currentRow.style.transform = "translateX(20px)";
+                    setTimeout(() => currentRow.remove(), 500);
+                }
+                
+                // Mise à jour du compteur
+                const badge = document.querySelector('.badge.bg-secondary');
+                if(badge) {
+                    const count = parseInt(badge.textContent) - 1;
+                    badge.textContent = count + " objets détectés";
+                }
+            } else {
+                alert("Erreur : " + (data.error || "Inconnue"));
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Erreur technique");
+        } finally {
+            this.disabled = false;
+            this.innerHTML = originalText;
+        }
+    });
+});
+</script>
+{% endblock %}

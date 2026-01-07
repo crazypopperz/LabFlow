@@ -70,10 +70,23 @@
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                             <span class="text-muted">Fiche Sécurité (FDS)</span>
-                            {% if objet.fds_url %}
-                                <a href="{{ objet.fds_url }}" target="_blank" class="text-decoration-none">
-                                    <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Voir
-                                </a>
+                            
+                            {% if objet.fds_url and objet.fds_url != 'None' %}
+                                
+                                {% set fds_clean = objet.fds_url.strip() %}
+
+                                {% if fds_clean.lower().startswith('http') %}
+                                    <!-- Cas URL Externe -->
+                                    <a href="{{ fds_clean }}" target="_blank" class="text-decoration-none fw-bold text-danger">
+                                        <i class="bi bi-file-earmark-pdf-fill"></i> Voir (Web)
+                                    </a>
+                                {% else %}
+                                    <!-- Cas Fichier Local -->
+                                    <a href="{{ url_for('static', filename=fds_clean) }}" target="_blank" class="text-decoration-none fw-bold text-danger">
+                                        <i class="bi bi-file-earmark-pdf-fill"></i> Voir (PDF)
+                                    </a>
+                                {% endif %}
+
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
@@ -203,7 +216,5 @@
         </div>
     </div>
 </div>
-
-{% include '_modals.html' %}
 
 {% endblock %}

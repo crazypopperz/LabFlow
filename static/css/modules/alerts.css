@@ -1,0 +1,162 @@
+/* ============================================================
+   CENTRE D'ALERTES (alerts.css)
+   ========================================================= */
+   
+.alerts-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3rem; gap: 2rem; flex-wrap: wrap; }
+.alerts-title-section { flex: 1; min-width: 300px; }
+.alerts-subtitle { color: var(--texte-discret); font-size: 1rem; margin-top: 0.5rem; }
+.alerts-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+
+/* Anciennes Stat Cards (Gardées pour compatibilité si besoin) */
+.stat-card {
+    background: white; border-radius: 12px; padding: 1.5rem; display: flex; align-items: center; gap: 1rem;
+    min-width: 180px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); border-left: 4px solid; transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.stat-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); }
+.stat-card.stat-warning { border-left-color: #ed8936; background: linear-gradient(135deg, #fff 0%, #fff5ee 100%); }
+.stat-card.stat-danger { border-left-color: #e53e3e; background: linear-gradient(135deg, #fff 0%, #fff5f5 100%); }
+.stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stat-card.stat-warning .stat-icon { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
+.stat-card.stat-danger .stat-icon { background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); }
+.stat-icon svg { fill: white; }
+.stat-content { display: flex; flex-direction: column; }
+.stat-label { font-size: 0.875rem; color: var(--texte-discret); margin-top: 0.25rem; font-weight: 500; }
+
+.alert-section { margin-bottom: 4rem; }
+.section-header { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--couleur-bordure); }
+.section-title-wrapper { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.section-icon { width: 24px; height: 24px; fill: var(--couleur-principale); }
+.section-title { font-size: 1.5rem; font-weight: 700; color: var(--texte-principal); margin: 0; }
+.section-badge {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;
+    padding: 0 12px; border-radius: 16px; font-size: 0.875rem; font-weight: 700; color: white;
+}
+.section-badge.badge-warning { background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%); }
+.section-badge.badge-danger { background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); }
+.section-description { color: var(--texte-discret); font-size: 0.95rem; margin: 0; }
+.alerts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
+
+/* Cartes d'alerte individuelles */
+.alert-card {
+    background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 2px solid transparent; transition: all 0.3s ease; display: flex; flex-direction: column;
+}
+.alert-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+.alert-card.alert-card-warning { border-color: #ed8936; }
+.alert-card.alert-card-critical { border-color: #e53e3e; }
+.alert-card.alert-card-resolved { opacity: 0.7; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
+.alert-card-image {
+    position: relative; width: 100%; height: 180px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); overflow: hidden;
+}
+.alert-card-image img { width: 100%; height: 100%; object-fit: cover; }
+.alert-card-image-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.alert-card-image-placeholder svg { fill: #adb5bd; opacity: 0.5; }
+.alert-resolved-badge {
+    position: absolute; top: 12px; right: 12px; background: #28a745; color: white; padding: 6px 12px;
+    border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+}
+.alert-resolved-badge svg { fill: white; }
+.alert-card-content { padding: 1.25rem; flex: 1; }
+.alert-card-title { font-size: 1.125rem; font-weight: 600; margin: 0 0 0.75rem 0; }
+.alert-card-title a { color: var(--texte-principal); text-decoration: none; transition: color 0.2s; }
+.alert-card-title a:hover { color: var(--couleur-principale); }
+.alert-card-meta { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+.meta-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--texte-discret); }
+.meta-item svg { fill: var(--texte-discret); }
+.alert-card-metrics { display: flex; gap: 1.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--couleur-bordure); }
+.metric { display: flex; flex-direction: column; }
+.metric-label { font-size: 0.75rem; color: var(--texte-discret); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+.metric-value { font-size: 1.5rem; font-weight: 700; color: var(--texte-principal); }
+.metric.metric-critical .metric-value { color: #e53e3e; }
+.alert-expiry-info { margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; }
+.expiry-date { display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+.expiry-date.expiry-critical { color: #e53e3e; }
+.expiry-date.expiry-warning { color: #ed8936; }
+.expiry-date svg { fill: currentColor; }
+.expiry-status { font-size: 0.875rem; padding: 6px 12px; border-radius: 6px; display: inline-block; }
+.expiry-status.status-critical { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
+.expiry-status.status-warning { background: #fffaf0; color: #c05621; border: 1px solid #fbd38d; }
+.alert-quantity-badge {
+    margin-top: 0.75rem; display: inline-block; background: var(--couleur-principale); color: white;
+    padding: 4px 12px; border-radius: 12px; font-size: 0.875rem; font-weight: 600;
+}
+.alert-card-actions {
+    padding: 1rem 1.25rem; background: #f8f9fa; border-top: 1px solid var(--couleur-bordure); display: flex; flex-direction: column; gap: 0.75rem;
+}
+.checkbox-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--texte-principal); cursor: pointer; user-select: none; }
+.checkbox-label input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--couleur-principale); }
+.checkbox-label span { font-weight: 500; }
+.empty-alerts { text-align: center; padding: 4rem 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+.empty-alerts svg { fill: var(--couleur-succes); opacity: 0.3; margin-bottom: 1.5rem; }
+.empty-alerts h4 { font-size: 1.25rem; font-weight: 600; color: var(--texte-principal); margin: 0 0 0.5rem 0; }
+.empty-alerts p { color: var(--texte-discret); margin: 0; }
+
+@media (max-width: 1200px) { .alerts-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); } }
+@media (max-width: 768px) {
+    .alerts-header { flex-direction: column; }
+    .alerts-stats { width: 100%; justify-content: space-between; }
+    .stat-card { flex: 1; min-width: 0; }
+    .alerts-grid { grid-template-columns: 1fr; }
+    .alert-card-metrics { gap: 1rem; }
+}
+@media (max-width: 480px) { .alerts-stats { flex-direction: column; } .stat-card { width: 100%; } }
+
+
+/* ============================================================
+   NOUVEAU : NAVIGATION ONGLETS KPI (Pour alertes.html)
+   ========================================================= */
+
+/* Utilitaires */
+.cursor-pointer { cursor: pointer; }
+.x-small { font-size: 0.7rem; }
+
+/* Effet de survol sur les cartes */
+.card-hover-effect {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover-effect:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+}
+
+/* Style des Cartes KPI (Onglets) */
+.kpi-card {
+    background-color: #f8f9fa; /* Gris clair par défaut (inactif) */
+    border: 1px solid #dee2e6;
+    border-left-width: 4px !important; /* Garde la bordure colorée à gauche */
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card:hover {
+    background-color: #fff;
+}
+
+/* Indicateur actif (Barre du bas) */
+.active-indicator {
+    height: 4px;
+    width: 100%;
+    background-color: transparent;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    transition: background-color 0.2s;
+}
+
+/* ÉTAT ACTIF (Quand l'onglet est sélectionné) */
+.nav-link.active .kpi-card {
+    background-color: #ffffff;
+    border-color: #dee2e6; /* Bordure standard */
+    border-bottom: 1px solid white; /* L'astuce : efface la bordure du bas pour fusionner */
+    box-shadow: 0 -6px 15px rgba(0,0,0,0.05); /* Ombre légère vers le haut */
+    margin-bottom: -1px; /* Chevauchement physique avec le contenu */
+    z-index: 10; /* Passe au-dessus du contenu */
+    border-radius: 0.375rem 0.375rem 0 0; /* Arrondi seulement en haut */
+}
+
+/* Couleurs de la barre indicateur selon le contexte */
+.nav-link.active .border-danger .active-indicator { background-color: #dc3545; }
+.nav-link.active .border-warning .active-indicator { background-color: #ffc107; }
+.nav-link.active .border-success .active-indicator { background-color: #198754; }
+.nav-link.active .border-primary .active-indicator { background-color: #0d6efd; }

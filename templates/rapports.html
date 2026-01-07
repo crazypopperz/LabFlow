@@ -1,22 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Rapports d'Activité - LabFlow{% endblock %}
+{% block title %}Rapports & Historique - LabFlow{% endblock %}
 
 {% block content %}
-
 <div class="main-container">
     {% include '_breadcrumb.html' %}
 
-    <!-- En-tête (Style identique à Import mais avec le SVG et la couleur de Admin > Rapports) -->
+    <!-- En-tête -->
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-            <!-- Dégradé Pink (fa709a -> fee140) correspondant à la carte Admin -->
             <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
                  style="width: 48px; height: 48px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-                <!-- Le SVG exact de ta page Admin -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
-                    <path d="m105-399-65-47 200-320 120 140 160-260 120 180 135-214 65 47-198 314-119-179-152 247-121-141-145 233Zm475 159q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Z"/>
-                </svg>
+                <i class="bi bi-file-earmark-text fs-4"></i>
             </div>
             <span class="fw-bold">Rapports d'Activité</span>
         </h2>
@@ -24,152 +19,204 @@
 
     <div class="row g-4">
         
-    <!-- COLONNE GAUCHE : Configuration & Export -->
-	<div class="col-lg-5">
-		<div class="import-card h-100">
-			
-			<!-- ÉTAPE 1 : CONFIGURATION -->
-			<h4 class="mb-4 d-flex align-items-center text-dark fw-bold">
-				<span class="step-number">1</span>
-				Configuration
-			</h4>
-
-			<form action="{{ url_for('admin.exporter_rapports') }}" method="GET">
-				
-				<!-- Période -->
-				<div class="mb-4">
-					<label class="form-label fw-bold text-muted small text-uppercase">Période d'analyse</label>
-					<div class="row g-2">
-						<div class="col-6">
-							<div class="form-floating">
-								<input type="date" class="form-control" id="date_debut" name="date_debut" required>
-								<label for="date_debut">Début</label>
-							</div>
-						</div>
-						<div class="col-6">
-							<div class="form-floating">
-								<input type="date" class="form-control" id="date_fin" name="date_fin" required>
-								<label for="date_fin">Fin</label>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Type de rapport (Avec Filtres) -->
-				<div class="mb-4">
-					<label class="form-label fw-bold text-muted small text-uppercase mb-2">Type de rapport</label>
-					
-					<!-- Choix Principal -->
-					<div class="btn-group w-100 mb-3" role="group">
-						<input type="radio" class="btn-check" name="group_by" id="group_date" value="date" checked onchange="toggleActionFilters(false)">
-						<label class="btn btn-outline-secondary" for="group_date">
-							<i class="bi bi-calendar-event me-2"></i>Chronologique
-						</label>
-
-						<input type="radio" class="btn-check" name="group_by" id="group_action" value="action" onchange="toggleActionFilters(true)">
-						<label class="btn btn-outline-secondary" for="group_action">
-							<i class="bi bi-filter-circle me-2"></i>Par Action
-						</label>
-					</div>
-
-					<!-- Zone de filtres (Cachée par défaut) -->
-					<div id="action-filters" class="p-3 bg-light border rounded" style="display: none;">
-						<label class="form-label fw-bold small text-dark mb-2">Inclure uniquement :</label>
-						<div class="d-flex flex-wrap gap-2">
-							<div class="form-check form-check-inline">
-								<input class="form-check-input" type="checkbox" name="actions" value="Création" id="act_creation" checked>
-								<label class="form-check-label small" for="act_creation">Création</label>
-							</div>
-							<div class="form-check form-check-inline">
-								<input class="form-check-input" type="checkbox" name="actions" value="Modification" id="act_modif" checked>
-								<label class="form-check-label small" for="act_modif">Modification</label>
-							</div>
-							<div class="form-check form-check-inline">
-								<input class="form-check-input" type="checkbox" name="actions" value="Suppression" id="act_suppr" checked>
-								<label class="form-check-label small" for="act_suppr">Suppression</label>
-							</div>
-							<div class="form-check form-check-inline">
-								<input class="form-check-input" type="checkbox" name="actions" value="Initialisation" id="act_init" checked>
-								<label class="form-check-label small" for="act_init">Initialisation</label>
-							</div>
-						</div>
-						<div class="mt-2">
-							<small class="text-muted fst-italic" style="font-size: 0.75rem;">Décochez pour exclure certains types.</small>
-						</div>
-					</div>
-				</div>
-
-				<hr class="my-4 text-muted opacity-25">
-
-				<!-- ÉTAPE 2 : EXPORT (C'est ce qui manquait !) -->
-				<h4 class="mb-3 d-flex align-items-center text-dark fw-bold">
-					<span class="step-number">2</span>
-					Exporter
-				</h4>
-
-				<div class="d-grid gap-2">
-					<button type="submit" name="format" value="excel" class="btn btn-success py-2 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm">
-						<i class="bi bi-file-earmark-excel-fill"></i> Télécharger Excel
-					</button>
-					<button type="submit" name="format" value="pdf" class="btn btn-danger py-2 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm">
-						<i class="bi bi-file-earmark-pdf-fill"></i> Télécharger PDF
-					</button>
-				</div>
-
-			</form>
-		</div>
-	</div>
-
-        <!-- COLONNE DROITE : Aperçu (Timeline) -->
-        <div class="col-lg-7">
-            <div class="import-card h-100">
-                <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-                    <h4 class="mb-0 d-flex align-items-center text-dark fw-bold">
-                        <i class="bi bi-clock-history me-2 text-primary"></i>
-                        Dernières activités
-                    </h4>
-                    <span class="badge bg-light text-dark border">10 derniers</span>
+        <!-- COLONNE GAUCHE : CONFIGURATION EXPORT -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-sliders me-2"></i>Configuration Export</h5>
                 </div>
-
-                {% if dernieres_actions %}
-                    <div class="timeline-container">
-                        {% for action in dernieres_actions %}
-                        <div class="d-flex gap-3 mb-3 pb-3 border-bottom border-light last-no-border">
-                            <!-- Date Box -->
-                            <div class="text-center pt-1" style="min-width: 60px;">
-                                <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ action.timestamp.strftime('%d/%m') }}</div>
-                                <div class="text-muted small">{{ action.timestamp.strftime('%H:%M') }}</div>
-                            </div>
-
-                            <!-- Content -->
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-1 rounded-pill">
-                                            {{ action.action }}
-                                        </span>
-                                        <h6 class="mb-1 text-dark fw-bold" style="font-size: 0.95rem;">{{ action.objet_nom }}</h6>
+                <div class="card-body">
+                    <form action="{{ url_for('admin.exporter_rapports') }}" method="GET">
+                        
+                        <!-- 1. Période -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Période</label>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="form-floating">
+                                        <input type="date" class="form-control" id="date_debut" name="date_debut" required>
+                                        <label for="date_debut">Début</label>
                                     </div>
-                                    <small class="text-muted fst-italic d-flex align-items-center">
-                                        <i class="bi bi-person-circle me-1"></i>{{ action.nom_utilisateur }}
-                                    </small>
                                 </div>
-                                <p class="mb-0 small text-secondary mt-1">{{ action.details }}</p>
+                                <div class="col-6">
+                                    <div class="form-floating">
+                                        <input type="date" class="form-control" id="date_fin" name="date_fin" required>
+                                        <label for="date_fin">Fin</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- CSS Inline pour retirer la bordure du dernier élément -->
-                    <style>
-                        .last-no-border:last-child { border-bottom: none !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }
-                    </style>
 
-                {% else %}
-                    <div class="text-center py-5 text-muted">
-                        <i class="bi bi-inbox display-1 d-block mb-3 opacity-25"></i>
-                        <p class="fs-5">Aucune activité récente enregistrée.</p>
+                        <!-- 2. Filtres d'Export -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-muted small text-uppercase mb-2">Contenu du rapport</label>
+                            
+                            <!-- Mode de regroupement -->
+                            <div class="btn-group w-100 mb-3" role="group">
+                                <input type="radio" class="btn-check" name="group_by" id="group_date" value="date" checked onchange="toggleActionFilters(false)">
+                                <label class="btn btn-outline-secondary" for="group_date">
+                                    <i class="bi bi-calendar-event me-2"></i>Chronologique
+                                </label>
+
+                                <input type="radio" class="btn-check" name="group_by" id="group_action" value="action" onchange="toggleActionFilters(true)">
+                                <label class="btn btn-outline-secondary" for="group_action">
+                                    <i class="bi bi-filter-circle me-2"></i>Par Action
+                                </label>
+                            </div>
+
+                            <!-- Filtres spécifiques (Cachés par défaut) -->
+                            <div id="action-filters" class="p-3 bg-light border rounded" style="display: none;">
+                                <label class="form-label fw-bold small text-dark mb-2">Inclure uniquement :</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="actions" value="Création" id="act_creation" checked>
+                                        <label class="form-check-label small" for="act_creation">Créations</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="actions" value="Modification" id="act_modif" checked>
+                                        <label class="form-check-label small" for="act_modif">Modifications</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="actions" value="Suppression" id="act_suppr" checked>
+                                        <label class="form-check-label small" for="act_suppr">Suppressions</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4 opacity-10">
+
+                        <!-- 3. Boutons d'action -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="format" value="excel" class="btn btn-success fw-bold py-2">
+                                <i class="bi bi-file-earmark-excel me-2"></i>Télécharger Excel
+                            </button>
+                            <button type="submit" name="format" value="pdf" class="btn btn-danger fw-bold py-2">
+                                <i class="bi bi-file-earmark-pdf me-2"></i>Télécharger PDF
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DROITE : LISTE CONSULTABLE -->
+        <div class="col-lg-8">
+            
+            <!-- Barre de recherche & Filtres Rapides (Pour l'affichage écran) -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-2">
+                    <form method="GET" class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        
+                        <!-- Onglets de filtres visuels -->
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('admin.rapports', action='all', q=search_query) }}" 
+                               class="btn btn-sm {{ 'btn-primary' if filtre_actif == 'all' else 'btn-outline-secondary' }}">Tout</a>
+                            <a href="{{ url_for('admin.rapports', action='creation', q=search_query) }}" 
+                               class="btn btn-sm {{ 'btn-success' if filtre_actif == 'creation' else 'btn-outline-secondary' }}">Ajouts</a>
+                            <a href="{{ url_for('admin.rapports', action='modification', q=search_query) }}" 
+                               class="btn btn-sm {{ 'btn-warning' if filtre_actif == 'modification' else 'btn-outline-secondary' }}">Modifs</a>
+                            <a href="{{ url_for('admin.rapports', action='suppression', q=search_query) }}" 
+                               class="btn btn-sm {{ 'btn-danger' if filtre_actif == 'suppression' else 'btn-outline-secondary' }}">Suppr.</a>
+                        </div>
+
+                        <!-- Recherche -->
+                        <div class="input-group input-group-sm" style="max-width: 250px;">
+                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                            <input type="text" name="q" class="form-control bg-light" 
+                                   placeholder="Rechercher..." value="{{ search_query }}">
+                            <input type="hidden" name="action" value="{{ filtre_actif }}">
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tableau des Logs -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Date</th>
+                                    <th>Utilisateur</th>
+                                    <th>Action</th>
+                                    <th>Objet</th>
+                                    <th>Détails</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td class="ps-4 text-muted small" style="white-space: nowrap;">
+                                        <div class="fw-bold">{{ log.date.strftime('%d/%m/%Y') }}</div>
+                                        <div>{{ log.date.strftime('%H:%M') }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center text-secondary" style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                                {{ log.user[0]|upper }}
+                                            </div>
+                                            <span class="small fw-medium">{{ log.user }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if log.action == 'Création' %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">Ajout</span>
+                                        {% elif log.action == 'Suppression' %}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Suppr.</span>
+                                        {% elif 'Déplacé' in (log.details or '') %}
+                                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">Déplac.</span>
+                                        {% else %}
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Modif.</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold text-dark small">{{ log.objet }}</td>
+                                    <td class="text-muted small text-truncate" style="max-width: 200px;" title="{{ log.details }}">{{ log.details }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="bi bi-search display-6 mb-3 d-block opacity-25"></i>
+                                        Aucun historique trouvé.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                </div>
+                
+                <!-- Pagination -->
+                {% if pagination.pages > 1 %}
+                <div class="card-footer bg-white border-top-0 py-3">
+                    <nav aria-label="Navigation">
+                        <ul class="pagination justify-content-center mb-0 pagination-sm">
+                            <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+                                <a class="page-link" href="{{ url_for('admin.rapports', page=pagination.prev_num, action=filtre_actif, q=search_query) }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                                {% if page_num %}
+                                    <li class="page-item {{ 'active' if page_num == pagination.page }}">
+                                        <a class="page-link" href="{{ url_for('admin.rapports', page=page_num, action=filtre_actif, q=search_query) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+                                <a class="page-link" href="{{ url_for('admin.rapports', page=pagination.next_num, action=filtre_actif, q=search_query) }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -177,47 +224,44 @@
 </div>
 
 <script>
-    // Petit script pour pré-remplir les dates (Mois en cours)
+    // Script pour pré-remplir les dates et gérer l'affichage des filtres
     document.addEventListener('DOMContentLoaded', function() {
         const dateDebut = document.getElementById('date_debut');
         const dateFin = document.getElementById('date_fin');
         
+        // Pré-remplissage dates (Mois en cours) si vide
         if (!dateDebut.value) {
             const now = new Date();
             const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Dernier jour du mois
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
             
-            // Format YYYY-MM-DD
             const formatDate = (date) => {
                 const d = new Date(date);
                 let month = '' + (d.getMonth() + 1);
                 let day = '' + d.getDate();
                 const year = d.getFullYear();
-
                 if (month.length < 2) month = '0' + month;
                 if (day.length < 2) day = '0' + day;
-
                 return [year, month, day].join('-');
             };
 
             dateDebut.value = formatDate(firstDay);
             dateFin.value = formatDate(lastDay);
         }
-    })
-	function toggleActionFilters(show) {
-		const filterBox = document.getElementById('action-filters');
-		if (show) {
-			filterBox.style.display = 'block';
-			// Petite animation d'apparition
-			filterBox.style.opacity = 0;
-			setTimeout(() => {
-				filterBox.style.transition = 'opacity 0.3s ease';
-				filterBox.style.opacity = 1;
-			}, 10);
-		} else {
-			filterBox.style.display = 'none';
-		}
-	};
-</script>
+    });
 
+    function toggleActionFilters(show) {
+        const filterBox = document.getElementById('action-filters');
+        if (show) {
+            filterBox.style.display = 'block';
+            filterBox.style.opacity = 0;
+            setTimeout(() => {
+                filterBox.style.transition = 'opacity 0.3s ease';
+                filterBox.style.opacity = 1;
+            }, 10);
+        } else {
+            filterBox.style.display = 'none';
+        }
+    };
+</script>
 {% endblock %}

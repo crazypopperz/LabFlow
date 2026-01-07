@@ -3,12 +3,14 @@
 # ============================================================
 import math
 import os
+from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, jsonify, current_app)
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, desc, or_
 from sqlalchemy.orm import joinedload
+from sqlalchemy.exc import IntegrityError
 
 # IMPORTS DB
 from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget, Depense, Fournisseur, Suggestion
@@ -18,12 +20,56 @@ from utils import login_required, admin_required, limit_objets_required, allowed
 
 # --- CORRECTION ICI : On importe le Service au lieu de la fonction API ---
 from services.inventory_service import InventoryService, InventoryServiceError
+from services.security_service import SecurityService
 
 inventaire_bp = Blueprint(
     'inventaire', 
     __name__,
     template_folder='../templates'
 )
+
+
+# ============================================================
+# UTILITAIRES INTERNES (Sécurité & Nettoyage)
+# ============================================================
+
+def is_valid_url(url):
+    """Vérifie si une chaîne est une URL valide (http/https)."""
+    try:
+        result = urlparse(url)
+        return all([result.scheme in ['http', 'https'], result.netloc])
+    except:
+        return False
+
+def cleanup_old_file(relative_path):
+    """
+    Supprime un fichier local de manière sécurisée.
+    Empêche la traversée de répertoire (Path Traversal).
+    """
+    if not relative_path or not relative_path.startswith('uploads/'):
+        return
+    
+    try:
+        # 1. Normalisation du chemin
+        safe_path = os.path.normpath(relative_path)
+        
+        # 2. Vérification que le chemin reste dans 'static/uploads'
+        root_uploads = os.path.join(current_app.root_path, 'static', 'uploads')
+        full_path = os.path.join(current_app.root_path, 'static', safe_path)
+        
+        # On compare les chemins absolus pour être sûr
+        if not os.path.abspath(full_path).startswith(os.path.abspath(root_uploads)):
+            current_app.logger.warning(f"SECURITY: Tentative de suppression hors uploads : {relative_path}")
+            return
+        
+        if os.path.exists(full_path):
+            os.remove(full_path)
+            current_app.logger.info(f"Fichier orphelin supprimé : {full_path}")
+            
+    except Exception as e:
+        current_app.logger.warning(f"Echec suppression fichier {relative_path}: {e}")
+
+
 
 # ============================================================
 # ROUTES
@@ -204,6 +250,15 @@ def index():
     
     dashboard_data['suggestions'] = suggestions_dashboard
     
+    # --- NOUVEAU : WIDGET SÉCURITÉ ---
+    try:
+        sec_service = SecurityService()
+        dashboard_data['securite'] = sec_service.get_dashboard_stats(etablissement_id)
+    except Exception as e:
+        current_app.logger.error(f"Erreur chargement widget sécurité: {str(e)}")
+        dashboard_data['securite'] = None
+    # ---------------------------------
+
     start_tour = db.session.query(Armoire).filter_by(etablissement_id=etablissement_id).count() == 0
     
     return render_template("index.html", start_tour=start_tour, now=datetime.now(), data=dashboard_data)
@@ -279,54 +334,91 @@ def ajouter_objet():
     user_id = session.get('user_id')
 
     try:
-        # --- GESTION IMAGE (Code existant) ---
+        # 1. Validation Nom
+        nom = request.form.get("nom", "").strip()
+        if not nom:
+            flash("Le nom de l'objet est obligatoire.", "error")
+            return redirect(request.referrer)
+
+        # 2. Validation Numérique
+        quantite = int(request.form.get("quantite", 0))
+        seuil = int(request.form.get("seuil", 0))
+        if quantite < 0 or seuil < 0:
+            raise ValueError("Valeurs négatives interdites.")
+
+        # 3. Validation Foreign Keys (Intégrité)
+        armoire_id = int(request.form.get("armoire_id"))
+        categorie_id = int(request.form.get("categorie_id"))
+
+        armoire = db.session.get(Armoire, armoire_id)
+        if not armoire or armoire.etablissement_id != etablissement_id:
+            flash("Armoire invalide.", "error")
+            return redirect(request.referrer)
+
+        categorie = db.session.get(Categorie, categorie_id)
+        if not categorie or categorie.etablissement_id != etablissement_id:
+            flash("Catégorie invalide.", "error")
+            return redirect(request.referrer)
+
+        # --- GESTION IMAGE ---
         image_path_db = None
         if 'image' in request.files:
             file = request.files['image']
-            if file and file.filename != '' and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                unique_filename = f"{ts}_{filename}"
-                upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-                if not os.path.exists(upload_folder): os.makedirs(upload_folder)
-                file.save(os.path.join(upload_folder, unique_filename))
-                image_path_db = f"uploads/{unique_filename}"
+            if file and file.filename != '':
+                # Check taille (5 Mo)
+                file.seek(0, 2)
+                if file.tell() > 5 * 1024 * 1024:
+                    flash("Image trop volumineuse (Max 5 Mo).", "warning")
+                else:
+                    file.seek(0)
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                        unique_filename = f"{ts}_{filename}"
+                        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                        if not os.path.exists(upload_folder): os.makedirs(upload_folder)
+                        file.save(os.path.join(upload_folder, unique_filename))
+                        image_path_db = f"uploads/{unique_filename}"
         
         if not image_path_db:
-            image_path_db = request.form.get("image_url", "").strip() or None
+            url_input = request.form.get("image_url", "").strip()
+            if url_input and is_valid_url(url_input):
+                image_path_db = url_input
 
-        # --- GESTION FDS (NOUVEAU) ---
+        # --- GESTION FDS ---
         fds_path_db = None
-        
-        # 1. Priorité au fichier PDF uploadé
         if 'fds_file' in request.files:
             file = request.files['fds_file']
-            if file and file.filename != '' and file.filename.lower().endswith('.pdf'):
-                filename = secure_filename(file.filename)
-                ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                unique_filename = f"FDS_{ts}_{filename}"
-                
-                # Dossier spécifique pour les FDS
-                fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
-                if not os.path.exists(fds_folder): os.makedirs(fds_folder)
-                
-                file.save(os.path.join(fds_folder, unique_filename))
-                fds_path_db = f"uploads/fds/{unique_filename}"
+            if file and file.filename != '':
+                file.seek(0, 2)
+                if file.tell() > 5 * 1024 * 1024:
+                    flash("FDS trop volumineuse (Max 5 Mo).", "warning")
+                else:
+                    file.seek(0)
+                    if file.filename.lower().endswith('.pdf'):
+                        filename = secure_filename(file.filename)
+                        ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                        unique_filename = f"FDS_{ts}_{filename}"
+                        fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
+                        if not os.path.exists(fds_folder): os.makedirs(fds_folder)
+                        file.save(os.path.join(fds_folder, unique_filename))
+                        fds_path_db = f"uploads/fds/{unique_filename}"
 
-        # 2. Sinon, on prend l'URL
         if not fds_path_db:
-            fds_path_db = request.form.get("fds_url", "").strip() or None
+            url_input = request.form.get("fds_url", "").strip()
+            if url_input and is_valid_url(url_input):
+                fds_path_db = url_input
 
-        # --- CRÉATION OBJET ---
+        # --- CRÉATION ---
         new_objet = Objet(
-            nom=request.form.get("nom", "").strip(),
-            quantite_physique=int(request.form.get("quantite")),
-            seuil=int(request.form.get("seuil")),
-            armoire_id=int(request.form.get("armoire_id")),
-            categorie_id=int(request.form.get("categorie_id")),
+            nom=nom,
+            quantite_physique=quantite,
+            seuil=seuil,
+            armoire_id=armoire_id,
+            categorie_id=categorie_id,
             date_peremption=request.form.get("date_peremption") or None,
             image_url=image_path_db,
-            fds_url=fds_path_db, # <--- On enregistre le chemin/URL
+            fds_url=fds_path_db,
             etablissement_id=etablissement_id
         )
         db.session.add(new_objet)
@@ -360,13 +452,46 @@ def ajouter_objet():
 def modifier_objet(id_objet):
     objet = db.session.get(Objet, id_objet)
     if not objet or objet.etablissement_id != session['etablissement_id']:
-        flash("Objet non trouvé.", "error")
+        flash("Objet non trouvé ou accès interdit.", "error")
         return redirect(url_for('inventaire.index'))
 
     user_id = session.get('user_id')
     etablissement_id = session['etablissement_id']
 
+    # Liste des fichiers à supprimer APRÈS le commit réussi (Race condition fix)
+    files_to_cleanup = []
+
     try:
+        # 1. Validation Nom
+        nom = request.form.get("nom", "").strip()
+        if not nom:
+            flash("Le nom ne peut pas être vide.", "error")
+            return redirect(request.referrer)
+
+        # 2. Validation Numérique
+        try:
+            quantite = int(request.form.get("quantite", 0))
+            seuil = int(request.form.get("seuil", 0))
+            if quantite < 0 or seuil < 0: raise ValueError
+        except ValueError:
+            flash("Quantité et seuil doivent être positifs.", "error")
+            return redirect(request.referrer)
+
+        # 3. Validation FK
+        armoire_id = int(request.form.get("armoire_id", 0))
+        categorie_id = int(request.form.get("categorie_id", 0))
+
+        armoire = db.session.get(Armoire, armoire_id)
+        if not armoire or armoire.etablissement_id != etablissement_id:
+            flash("Armoire invalide.", "error")
+            return redirect(request.referrer)
+
+        categorie = db.session.get(Categorie, categorie_id)
+        if not categorie or categorie.etablissement_id != etablissement_id:
+            flash("Catégorie invalide.", "error")
+            return redirect(request.referrer)
+
+        # Capture état avant modif
         anciens = {
             'nom': objet.nom,
             'quantite': objet.quantite_physique,
@@ -376,46 +501,93 @@ def modifier_objet(id_objet):
         }
 
         # --- GESTION IMAGE ---
+        is_image_updated = False
         if 'image' in request.files:
             file = request.files['image']
-            if file and file.filename != '' and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                unique_filename = f"{ts}_{filename}"
-                upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-                if not os.path.exists(upload_folder): os.makedirs(upload_folder)
-                file.save(os.path.join(upload_folder, unique_filename))
-                objet.image_url = f"uploads/{unique_filename}"
-        
-        url_externe = request.form.get("image_url", "").strip()
-        if url_externe: objet.image_url = url_externe
+            if file and file.filename != '':
+                file.seek(0, 2)
+                if file.tell() > 5 * 1024 * 1024:
+                    flash("Image trop volumineuse (Max 5 Mo).", "warning")
+                else:
+                    file.seek(0)
+                    if allowed_file(file.filename):
+                        # On marque l'ancien fichier pour suppression future
+                        if objet.image_url and objet.image_url.startswith('uploads/'):
+                            files_to_cleanup.append(objet.image_url)
+                        
+                        filename = secure_filename(file.filename)
+                        ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                        unique_filename = f"{ts}_{filename}"
+                        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
+                        if not os.path.exists(upload_folder): os.makedirs(upload_folder)
+                        file.save(os.path.join(upload_folder, unique_filename))
+                        
+                        objet.image_url = f"uploads/{unique_filename}"
+                        is_image_updated = True
 
-        # --- GESTION FDS (NOUVEAU) ---
-        # 1. Fichier PDF
+        if not is_image_updated:
+            url_input = request.form.get("image_url")
+            if url_input is not None: # Champ présent
+                url_clean = url_input.strip()
+                if url_clean:
+                    if is_valid_url(url_clean):
+                        if objet.image_url and objet.image_url.startswith('uploads/'):
+                            files_to_cleanup.append(objet.image_url)
+                        objet.image_url = url_clean
+                    else:
+                        flash("URL image invalide.", "warning")
+                else:
+                    # Suppression demandée (champ vide)
+                    if objet.image_url and objet.image_url.startswith('uploads/'):
+                        files_to_cleanup.append(objet.image_url)
+                    objet.image_url = None
+
+        # --- GESTION FDS ---
+        is_fds_updated = False
         if 'fds_file' in request.files:
             file = request.files['fds_file']
-            if file and file.filename != '' and file.filename.lower().endswith('.pdf'):
-                filename = secure_filename(file.filename)
-                ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                unique_filename = f"FDS_{ts}_{filename}"
-                
-                fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
-                if not os.path.exists(fds_folder): os.makedirs(fds_folder)
-                
-                file.save(os.path.join(fds_folder, unique_filename))
-                objet.fds_url = f"uploads/fds/{unique_filename}" # Mise à jour
-        
-        # 2. URL (Seulement si renseignée explicitement)
-        fds_url_input = request.form.get("fds_url", "").strip()
-        if fds_url_input:
-            objet.fds_url = fds_url_input
+            if file and file.filename != '':
+                file.seek(0, 2)
+                if file.tell() > 5 * 1024 * 1024:
+                    flash("FDS trop volumineuse (Max 5 Mo).", "warning")
+                else:
+                    file.seek(0)
+                    if file.filename.lower().endswith('.pdf'):
+                        if objet.fds_url and objet.fds_url.startswith('uploads/'):
+                            files_to_cleanup.append(objet.fds_url)
+                        
+                        filename = secure_filename(file.filename)
+                        ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                        unique_filename = f"FDS_{ts}_{filename}"
+                        fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
+                        if not os.path.exists(fds_folder): os.makedirs(fds_folder)
+                        file.save(os.path.join(fds_folder, unique_filename))
+                        
+                        objet.fds_url = f"uploads/fds/{unique_filename}"
+                        is_fds_updated = True
 
-        # --- MISE À JOUR CHAMPS ---
-        objet.nom = request.form.get("nom", "").strip()
-        objet.quantite_physique = int(request.form.get("quantite"))
-        objet.seuil = int(request.form.get("seuil"))
-        objet.armoire_id = int(request.form.get("armoire_id"))
-        objet.categorie_id = int(request.form.get("categorie_id"))
+        if not is_fds_updated:
+            fds_input = request.form.get("fds_url")
+            if fds_input is not None:
+                url_clean = fds_input.strip()
+                if url_clean:
+                    if is_valid_url(url_clean):
+                        if objet.fds_url and objet.fds_url.startswith('uploads/'):
+                            files_to_cleanup.append(objet.fds_url)
+                        objet.fds_url = url_clean
+                    else:
+                        flash("URL FDS invalide.", "warning")
+                else:
+                    if objet.fds_url and objet.fds_url.startswith('uploads/'):
+                        files_to_cleanup.append(objet.fds_url)
+                    objet.fds_url = None
+
+        # --- MISE À JOUR ---
+        objet.nom = nom
+        objet.quantite_physique = quantite
+        objet.seuil = seuil
+        objet.armoire_id = armoire_id
+        objet.categorie_id = categorie_id
         objet.date_peremption = request.form.get("date_peremption") or None
         
         # --- HISTORIQUE ---
@@ -427,6 +599,7 @@ def modifier_objet(id_objet):
             
         if anciens['nom'] != objet.nom: details_modif.append(f"Nom changé")
         if anciens['armoire'] != objet.armoire_id: details_modif.append("Déplacé (Armoire)")
+        if anciens['categorie'] != objet.categorie_id: details_modif.append("Catégorie modifiée")
 
         if details_modif or anciens['seuil'] != objet.seuil:
             msg = ", ".join(details_modif) if details_modif else "Mise à jour des détails"
@@ -441,12 +614,17 @@ def modifier_objet(id_objet):
             db.session.add(hist)
 
         db.session.commit()
+        
+        # --- NETTOYAGE POST-COMMIT (SÉCURISÉ) ---
+        for old_path in files_to_cleanup:
+            cleanup_old_file(old_path)
+
         flash(f"L'objet '{objet.nom}' a été mis à jour.", "success")
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur modif objet: {e}")
-        flash(f"Une erreur est survenue.", "error")
+        current_app.logger.exception(f"Erreur critique modif objet {id_objet}")
+        flash("Une erreur technique est survenue.", "error")
 
     return redirect(request.referrer or url_for('inventaire.index'))
     
@@ -715,3 +893,27 @@ def maj_commande(objet_id):
     except Exception as e:
         db.session.rollback()
         return jsonify(success=False, error=str(e)), 500
+
+
+#=================================================================
+# ROUTE GESTION STOCK DORMANT
+#=================================================================
+@inventaire_bp.route("/dormants")
+@login_required
+def objets_dormants():
+    etablissement_id = session['etablissement_id']
+    service = InventoryService(etablissement_id)
+    
+    # On récupère les objets non utilisés depuis 1 an (365 jours)
+    dormants = service.get_dormant_objects(days=365)
+    
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Centre d\'Alertes', 'url': url_for('main.alertes')},
+        {'text': 'Stocks Dormants', 'url': None}
+    ]
+    
+    return render_template("dormants.html", 
+                           objets=dormants, 
+                           breadcrumbs=breadcrumbs,
+                           now=datetime.now())

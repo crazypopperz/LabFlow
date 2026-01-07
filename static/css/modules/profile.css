@@ -1,0 +1,55 @@
+/* =========================================================
+   PROFIL & A PROPOS
+   ====================================================== */
+   
+.profile-page-container { display: flex; justify-content: center; padding-top: 2rem; }
+.profile-form-wrapper {
+    width: 100%; max-width: 500px; background-color: var(--fond-element); border-radius: 8px;
+    box-shadow: var(--ombre-legere); border: 1px solid var(--couleur-bordure); overflow: hidden;
+}
+.profile-header { text-align: center; padding: 1.5rem; border-bottom: 1px solid var(--couleur-bordure); }
+.profile-header h2 { margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 600; }
+.profile-form { padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* Page A Propos */
+.fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.about-hero {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); border-radius: 20px; padding: 3rem 2rem;
+    text-align: center; border: 1px solid #e9ecef; box-shadow: 0 10px 30px rgba(31, 59, 115, 0.05);
+    margin-bottom: 2rem; position: relative; overflow: hidden;
+}
+.about-hero::before {
+    content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(31, 59, 115, 0.03) 0%, transparent 70%); z-index: 0;
+}
+.logo-container {
+    width: 100px; height: 100px; background: white; border-radius: 24px; display: inline-flex; align-items: center;
+    justify-content: center; box-shadow: 0 8px 24px rgba(0,0,0,0.08); margin-bottom: 1.5rem; position: relative; z-index: 1;
+}
+.dev-card {
+    background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid #e9ecef;
+    transition: transform 0.3s ease, box-shadow 0.3s ease; height: 100%; text-align: center;
+}
+.dev-card:hover { transform: translateY(-5px); box-shadow: 0 12px 24px rgba(31, 59, 115, 0.1); border-color: var(--couleur-principale); }
+.dev-avatar {
+    width: 64px; height: 64px; background: linear-gradient(135deg, var(--couleur-principale) 0%, #667eea 100%);
+    color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; margin-bottom: 1rem; box-shadow: 0 4px 12px rgba(31, 59, 115, 0.2);
+}
+.license-box {
+    background: #152952; color: white; border-radius: 16px; padding: 2rem; position: relative; overflow: hidden;
+}
+.license-badge-pro {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #000; font-weight: 800;
+    padding: 0.5rem 1rem; border-radius: 30px; display: inline-block; box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+.license-badge-free {
+    background: rgba(255, 255, 255, 0.2); color: white; font-weight: 600; padding: 0.5rem 1rem;
+    border-radius: 30px; display: inline-block; border: 1px solid rgba(255,255,255,0.3);
+}
+.instance-code {
+    font-family: 'Courier New', monospace; background: rgba(0, 0, 0, 0.3); padding: 0.5rem 1rem;
+    border-radius: 8px; color: #a7d3f2; letter-spacing: 1px; cursor: pointer; transition: background 0.2s;
+}
+.instance-code:hover { background: rgba(0, 0, 0, 0.5); color: white; }

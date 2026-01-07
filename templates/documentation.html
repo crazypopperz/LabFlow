@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Centre d'Aide - LabFlow{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- HERO SEARCH -->
+    <div class="text-center mb-5 fade-in-up">
+        <h1 class="fw-bold text-dark mb-3">Comment pouvons-nous vous aider ?</h1>
+        <div class="position-relative mx-auto" style="max-width: 600px;">
+            <input type="text" id="docSearch" class="form-control form-control-lg shadow-sm ps-5 rounded-pill" placeholder="Rechercher une fonctionnalité (ex: réservation, budget, fds...)">
+            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-4 text-muted"></i>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- 1. INVENTAIRE -->
+            <div class="doc-section mb-5 fade-in-up" style="animation-delay: 0.1s;">
+                <h3 class="h5 fw-bold text-primary mb-3 d-flex align-items-center">
+                    <div class="icon-box bg-primary-subtle text-primary me-2"><i class="bi bi-box-seam"></i></div>
+                    Gestion de l'Inventaire
+                </h3>
+                <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden" id="accInventaire">
+                    
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv1">
+                                Comment ajouter un nouvel objet ?
+                            </button>
+                        </h2>
+                        <div id="inv1" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
+                            <div class="accordion-body text-muted">
+                                Cliquez sur le bouton bleu <strong>"Ajouter un matériel"</strong> en haut à droite de l'inventaire.
+                                <ul>
+                                    <li><strong>Image :</strong> Vous pouvez uploader une photo depuis votre PC ou rechercher directement une image libre de droits via l'intégration <strong>Pexels</strong>.</li>
+                                    <li><strong>Sécurité :</strong> Vous pouvez joindre une Fiche de Données de Sécurité (FDS) soit par upload PDF, soit via un lien web.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv2">
+                                Que signifient les icônes d'état (Vert, Orange, Rouge) ?
+                            </button>
+                        </h2>
+                        <div id="inv2" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
+                            <div class="accordion-body text-muted">
+                                Le système surveille automatiquement le stock et les dates :
+                                <ul class="mt-2">
+                                    <li><i class="bi bi-check-circle-fill text-success"></i> <strong>Vert :</strong> Tout va bien.</li>
+                                    <li><i class="bi bi-exclamation-triangle-fill text-warning"></i> <strong>Orange (Stock Bas) :</strong> La quantité approche du seuil d'alerte (+2 unités).</li>
+                                    <li><i class="bi bi-exclamation-octagon-fill text-danger"></i> <strong>Rouge (Critique) :</strong> La quantité est inférieure ou égale au seuil.</li>
+                                    <li><i class="bi bi-x-circle-fill text-danger"></i> <strong>Périmé :</strong> La date de péremption est dépassée.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv3">
+                                Comment déplacer des objets en masse ?
+                            </button>
+                        </h2>
+                        <div id="inv3" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
+                            <div class="accordion-body text-muted">
+                                <span class="badge bg-dark mb-2">Admin uniquement</span><br>
+                                Dans la liste d'inventaire, cochez les cases à gauche des objets. Une barre d'action apparaîtra en bas de l'écran. Sélectionnez la nouvelle armoire ou catégorie et validez pour déplacer tous les objets sélectionnés d'un coup.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 2. RÉSERVATIONS -->
+            <div class="doc-section mb-5 fade-in-up" style="animation-delay: 0.2s;">
+                <h3 class="h5 fw-bold text-success mb-3 d-flex align-items-center">
+                    <div class="icon-box bg-success-subtle text-success me-2"><i class="bi bi-calendar-check"></i></div>
+                    Réservations & Panier
+                </h3>
+                <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden" id="accResa">
+                    
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#res1">
+                                Comment réserver du matériel ?
+                            </button>
+                        </h2>
+                        <div id="res1" class="accordion-collapse collapse" data-bs-parent="#accResa">
+                            <div class="accordion-body text-muted">
+                                Allez sur le <strong>Calendrier</strong> et cliquez sur le jour souhaité (ou le bouton "+").
+                                <ol>
+                                    <li>Choisissez votre créneau horaire.</li>
+                                    <li>Ajoutez les objets ou kits au panier. Le stock est vérifié en temps réel.</li>
+                                    <li>Cliquez sur <strong>"Voir mon panier"</strong> pour finaliser.</li>
+                                    <li>Validez le panier pour confirmer la réservation.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#res2">
+                                Puis-je modifier une réservation existante ?
+                            </button>
+                        </h2>
+                        <div id="res2" class="accordion-collapse collapse" data-bs-parent="#accResa">
+                            <div class="accordion-body text-muted">
+                                Oui. Depuis le calendrier (vue jour) ou votre tableau de bord :
+                                <ul>
+                                    <li>Cliquez sur l'icône <strong>Crayon</strong> de la réservation.</li>
+                                    <li>Vous pouvez ajouter/retirer des objets instantanément.</li>
+                                    <li>Vous pouvez changer l'horaire (un bouton "Mettre à jour l'heure" apparaîtra).</li>
+                                </ul>
+                                <em>Note : Si vous retirez le dernier objet, la réservation sera annulée.</em>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 3. BUDGET & COMMANDES -->
+            <div class="doc-section mb-5 fade-in-up" style="animation-delay: 0.3s;">
+                <h3 class="h5 fw-bold text-info mb-3 d-flex align-items-center">
+                    <div class="icon-box bg-info-subtle text-info me-2"><i class="bi bi-wallet2"></i></div>
+                    Budget & Commandes
+                </h3>
+                <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden" id="accBudget">
+                    
+                    <div class="accordion-item border-0 border-bottom">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#bud1">
+                                Comment suggérer une commande ?
+                            </button>
+                        </h2>
+                        <div id="bud1" class="accordion-collapse collapse" data-bs-parent="#accBudget">
+                            <div class="accordion-body text-muted">
+                                Sur la fiche d'un objet (ou dans la liste), cliquez sur le bouton jaune <strong>"Suggérer une commande"</strong>.
+                                Si le stock est bas, le système vous proposera automatiquement une quantité pour remonter le stock de sécurité.
+                                L'administrateur recevra votre demande dans son tableau de bord.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#bud2">
+                                Export des données (Excel / PDF)
+                            </button>
+                        </h2>
+                        <div id="bud2" class="accordion-collapse collapse" data-bs-parent="#accBudget">
+                            <div class="accordion-body text-muted">
+                                <span class="badge bg-dark mb-2">Admin uniquement</span><br>
+                                Vous pouvez exporter :
+                                <ul>
+                                    <li><strong>L'inventaire complet :</strong> Depuis le menu Administration > Exports.</li>
+                                    <li><strong>Le suivi budgétaire :</strong> Depuis la page Budget (boutons PDF/Excel).</li>
+                                    <li><strong>Les rapports d'activité :</strong> Depuis la page Rapports.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Contact Support -->
+            <div class="card border-0 bg-primary text-white mt-5 shadow fade-in-up" style="animation-delay: 0.4s;">
+                <div class="card-body p-5 text-center">
+                    <h4 class="fw-bold mb-2">Vous ne trouvez pas la réponse ?</h4>
+                    <p class="opacity-75 mb-4">Notre équipe de support est disponible pour vous aider.</p>
+                    <a href="mailto:contact.gmlcl@gmail.com" class="btn btn-light text-primary fw-bold px-5 rounded-pill shadow-sm">
+                        <i class="bi bi-envelope-fill me-2"></i>Contacter le support
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .icon-box {
+        width: 32px; height: 32px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 8px;
+    }
+    .accordion-button:not(.collapsed) {
+        background-color: #f8f9fa;
+        color: var(--bs-primary);
+    }
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: rgba(0,0,0,.125);
+    }
+</style>
+
+<script>
+    // Moteur de recherche simple pour la documentation
+    document.getElementById('docSearch').addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        const items = document.querySelectorAll('.accordion-item');
+        
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(term)) {
+                item.style.display = 'block';
+                // Optionnel : Ouvrir l'accordéon si match
+                if (term.length > 2) {
+                    const collapse = item.querySelector('.accordion-collapse');
+                    if (collapse) collapse.classList.add('show');
+                    const btn = item.querySelector('.accordion-button');
+                    if (btn) btn.classList.remove('collapsed');
+                }
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Gérer la visibilité des titres de section
+        document.querySelectorAll('.doc-section').forEach(section => {
+            const visibleItems = section.querySelectorAll('.accordion-item[style="display: block;"]');
+            // Si on filtre (term n'est pas vide) et qu'il n'y a pas d'items visibles, on cache le titre
+            if (term !== '' && visibleItems.length === 0 && section.querySelectorAll('.accordion-item').length > 0) {
+                section.style.display = 'none';
+            } else {
+                section.style.display = 'block';
+            }
+        });
+    });
+</script>
+{% endblock %}

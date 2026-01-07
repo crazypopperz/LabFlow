@@ -1,5 +1,5 @@
 # ============================================================
-# FICHIER : utils.py (Version Finale Corrigée)
+# FICHIER : utils.py (Version Finale Corrigée - Cloche OK)
 # ============================================================
 import hashlib
 import os
@@ -13,8 +13,8 @@ from flask import session, flash, redirect, url_for, request, current_app
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 
-# Imports Locaux
-from db import db, Utilisateur, Parametre, Objet, Reservation, AuditLog
+# Imports Locaux (Ajout de Suggestion ici)
+from db import db, Utilisateur, Parametre, Objet, Reservation, AuditLog, MaintenanceLog, EquipementSecurite, Suggestion
 from extensions import cache
 
 # -----------------------------------------------------------------------------
@@ -130,10 +130,10 @@ def limit_objets_required(f):
 # LOGIQUE MÉTIER
 # -----------------------------------------------------------------------------
 def get_alerte_info():
-    """Calcule les alertes de stock et de péremption."""
+    """Calcule les alertes de stock, péremption, sécurité ET suggestions."""
     etablissement_id = session.get('etablissement_id')
     if not etablissement_id:
-        return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0}
+        return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0, 'alertes_securite': 0}
 
     try:
         now = datetime.now()
@@ -180,15 +180,29 @@ def get_alerte_info():
                 current_app.logger.warning(f"Skip objet {objet.id} alert check: {e}")
                 pass
 
+        # 2. Alertes Sécurité (Signalements non traités)
+        count_securite = db.session.query(MaintenanceLog).join(EquipementSecurite).filter(
+            EquipementSecurite.etablissement_id == etablissement_id,
+            MaintenanceLog.resultat == 'signalement'
+        ).count()
+
+        # 3. Suggestions (NOUVEAU : Ajouté pour la cloche)
+        count_suggestions = db.session.query(Suggestion).filter_by(
+            etablissement_id=etablissement_id, 
+            statut='En attente'
+        ).count()
+
         return {
             "alertes_stock": count_stock,
             "alertes_peremption": count_peremption,
-            "alertes_total": count_stock + count_peremption
+            "alertes_securite": count_securite,
+            "alertes_suggestions": count_suggestions, # Ajouté
+            "alertes_total": count_stock + count_peremption + count_securite + count_suggestions # Total complet
         }
 
     except SQLAlchemyError as e:
         current_app.logger.error(f"ERREUR DB dans get_alerte_info: {e}")
-        return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0}
+        return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0, 'alertes_securite': 0}
 
 def annee_scolaire_format(year):
     if isinstance(year, int):

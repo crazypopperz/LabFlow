@@ -31,10 +31,10 @@
     <tbody>
         {% for objet in objets %}
         
-        {# --- LOGIQUE ÉTAT (Design conservé) --- #}
+        {# --- LOGIQUE ÉTAT (HIERARCHIE STRICTE) --- #}
         {% set perime, perime_bientot, statut = False, False, 'ok' %}
         
-        {# 1. Péremption #}
+        {# 1. PRIORITÉ ABSOLUE : Péremption #}
         {% if objet.date_peremption %}
             {% if objet.date_peremption < date_actuelle.date() %}
                 {% set perime, statut = True, 'perime' %}
@@ -43,13 +43,14 @@
             {% endif %}
         {% endif %}
         
-        {# 2. Stock (Seulement si pas de problème de péremption) #}
+        {# 2. SECONDAIRE : Stock (Uniquement si pas d'alerte péremption) #}
         {% if statut == 'ok' %}
             {% if objet.quantite_disponible <= objet.seuil %}
                 {# Cas ROUGE : Sous le seuil #}
                 {% set statut = 'stock_critique' %}
-            {% elif objet.quantite_disponible <= (objet.seuil + 2) %}
-                {# Cas ORANGE : Proche du seuil (Marge de 2 unités) #}
+            
+            {# Cas ORANGE : Marge adaptative (Seulement si seuil > 2) #}
+            {% elif objet.seuil > 2 and objet.quantite_disponible <= (objet.seuil + 2) %}
                 {% set statut = 'stock_bas' %}
             {% endif %}
         {% endif %}

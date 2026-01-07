@@ -4,212 +4,311 @@
 
 {% block content %}
 <div class="main-container">
-    
-    <!-- Fil d'ariane -->
     {% include '_breadcrumb.html' %}
 
-    <!-- En-tête de page -->
-    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
             <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
                  style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
-                    <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
-                </svg>
+                <i class="bi bi-exclamation-triangle-fill fs-4"></i>
             </div>
             <span class="fw-bold">Centre d'Alertes</span>
         </h2>
+        <span class="text-muted small">Dernière mise à jour : {{ now.strftime('%H:%M') }}</span>
     </div>
 
-    <!-- ======================================================= -->
-    <!-- 1. SECTION SUGGESTIONS (PRIORITAIRE) -->
-    <!-- ======================================================= -->
-    <div id="suggestions" class="mb-5">
-        <div class="d-flex align-items-center gap-2 mb-3">
-            <h3 class="h5 fw-bold text-dark mb-0">Suggestions de Commande</h3>
-            {% if suggestions %}
-            <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill">{{ suggestions|length }}</span>
-            {% endif %}
-        </div>
-
-        {% if suggestions %}
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th style="width: 100px;">Date</th>
-                            <th>Objet</th>
-                            <th>Demandé par</th>
-                            <th class="text-center">Qté</th>
-                            <th>Commentaire</th>
-                            <th class="text-end" style="width: 120px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in suggestions %}
-                        <tr>
-                            <td class="text-muted small">{{ s.date_demande.strftime('%d/%m/%Y') }}</td>
-                            <td>
-                                <a href="{{ url_for('inventaire.voir_objet', objet_id=s.objet_id) }}" class="fw-bold text-decoration-none text-dark">
-                                    {{ s.objet.nom }}
-                                </a>
-                                <div class="small text-muted">Stock actuel : {{ s.objet.quantite_physique }}</div>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center text-secondary border" style="width: 24px; height: 24px;">
-                                        <i class="bi bi-person-fill" style="font-size: 0.7rem;"></i>
-                                    </div>
-                                    <span class="small">{{ s.utilisateur.nom_utilisateur }}</span>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge bg-warning text-dark border border-warning-subtle fs-6">+{{ s.quantite }}</span>
-                            </td>
-                            <td class="text-muted fst-italic small">{{ s.commentaire or '-' }}</td>
-                            <td class="text-end">
-                                <div class="d-flex justify-content-end gap-2">
-                                    <!-- Valider -->
-                                    <button type="button" class="btn btn-sm btn-success" 
-                                            title="Valider (Marquer comme traité)"
-                                            onclick="window.traiterSuggestion({{ s.id }}, 'valider')">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                    
-                                    <!-- Refuser -->
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            title="Refuser la suggestion"
-                                            onclick="window.traiterSuggestion({{ s.id }}, 'refuser')">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% else %}
-        <div class="alert alert-light border text-center py-4 text-muted shadow-sm">
-            <i class="bi bi-inbox fs-3 d-block mb-2 opacity-25"></i>
-            Aucune suggestion en attente.
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- ======================================================= -->
-    <!-- 2. SECTION STOCK CRITIQUE -->
-    <!-- ======================================================= -->
-    <div class="mb-5">
-        <div class="d-flex align-items-center gap-2 mb-3">
-            <h3 class="h5 fw-bold text-danger mb-0">Ruptures de Stock & Seuils</h3>
-            {% if objets_stock %}
-            <span class="badge bg-danger rounded-pill">{{ objets_stock|length }}</span>
-            {% endif %}
-        </div>
-
-        {% if objets_stock %}
-        <div class="row g-3">
-            {% for objet in objets_stock %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 border-danger border-opacity-25 shadow-sm">
-                    <div class="card-body d-flex align-items-center gap-3">
-                        <div class="flex-grow-1">
-                            <h6 class="card-title mb-1 fw-bold text-dark">{{ objet.nom }}</h6>
-                            <div class="small text-muted mb-2">
-                                {{ objet.armoire.nom if objet.armoire else 'Sans armoire' }}
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-danger">Stock: {{ objet.quantite_physique }}</span>
-                                <span class="badge bg-light text-dark border">Seuil: {{ objet.seuil }}</span>
+    <!-- NAVIGATION PRINCIPALE (5 CARTES-ONGLETS) -->
+    <div class="row row-cols-1 row-cols-md-5 g-2 mb-0 nav nav-pills" id="alertTabs" role="tablist">
+        
+        <!-- 1. SÉCURITÉ -->
+        <div class="col" role="presentation">
+            <button class="nav-link w-100 p-0 border-0 bg-transparent active" id="tab-securite" data-bs-toggle="pill" data-bs-target="#content-securite" type="button" role="tab">
+                <div class="kpi-card card h-100 {{ 'border-danger' if signalements_securite else 'border-success' }}">
+                    <div class="card-body d-flex align-items-center justify-content-between p-3">
+                        <div class="text-start">
+                            <div class="text-uppercase x-small fw-bold text-muted mb-1">Sécurité</div>
+                            <div class="h3 mb-0 fw-bold {{ 'text-danger' if signalements_securite else 'text-success' }}">
+                                {{ signalements_securite|length }}
                             </div>
                         </div>
-                        <a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-eye"></i>
+                        <div class="rounded-circle p-2 {{ 'bg-danger-subtle text-danger' if signalements_securite else 'bg-success-subtle text-success' }}">
+                            <i class="bi {{ 'bi-shield-exclamation' if signalements_securite else 'bi-shield-check' }} fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="active-indicator"></div>
+                </div>
+            </button>
+        </div>
+
+        <!-- 2. RUPTURES -->
+        <div class="col" role="presentation">
+            <button class="nav-link w-100 p-0 border-0 bg-transparent" id="tab-stock" data-bs-toggle="pill" data-bs-target="#content-stock" type="button" role="tab">
+                <div class="kpi-card card h-100 {{ 'border-danger' if objets_stock else 'border-success' }}">
+                    <div class="card-body d-flex align-items-center justify-content-between p-3">
+                        <div class="text-start">
+                            <div class="text-uppercase x-small fw-bold text-muted mb-1">Ruptures</div>
+                            <div class="h3 mb-0 fw-bold {{ 'text-danger' if objets_stock else 'text-success' }}">
+                                {{ objets_stock|length }}
+                            </div>
+                        </div>
+                        <div class="rounded-circle p-2 {{ 'bg-danger-subtle text-danger' if objets_stock else 'bg-success-subtle text-success' }}">
+                            <i class="bi {{ 'bi-graph-down-arrow' if objets_stock else 'bi-check-lg' }} fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="active-indicator"></div>
+                </div>
+            </button>
+        </div>
+
+        <!-- 3. PÉREMPTIONS -->
+        <div class="col" role="presentation">
+            <button class="nav-link w-100 p-0 border-0 bg-transparent" id="tab-peremption" data-bs-toggle="pill" data-bs-target="#content-peremption" type="button" role="tab">
+                <div class="kpi-card card h-100 {{ 'border-warning' if objets_peremption else 'border-success' }}">
+                    <div class="card-body d-flex align-items-center justify-content-between p-3">
+                        <div class="text-start">
+                            <div class="text-uppercase x-small fw-bold text-muted mb-1">Péremptions</div>
+                            <div class="h3 mb-0 fw-bold {{ 'text-dark' if objets_peremption else 'text-success' }}">
+                                {{ objets_peremption|length }}
+                            </div>
+                        </div>
+                        <div class="rounded-circle p-2 {{ 'bg-warning-subtle text-warning-emphasis' if objets_peremption else 'bg-success-subtle text-success' }}">
+                            <i class="bi {{ 'bi-calendar-x' if objets_peremption else 'bi-check-lg' }} fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="active-indicator"></div>
+                </div>
+            </button>
+        </div>
+
+        <!-- 4. SUGGESTIONS -->
+        <div class="col" role="presentation">
+            <button class="nav-link w-100 p-0 border-0 bg-transparent" id="tab-suggestions" data-bs-toggle="pill" data-bs-target="#content-suggestions" type="button" role="tab">
+                <div class="kpi-card card h-100 {{ 'border-warning' if suggestions else 'border-success' }}">
+                    <div class="card-body d-flex align-items-center justify-content-between p-3">
+                        <div class="text-start">
+                            <div class="text-uppercase x-small fw-bold text-muted mb-1">Suggestions</div>
+                            <div class="h3 mb-0 fw-bold {{ 'text-dark' if suggestions else 'text-success' }}">
+                                {{ suggestions|length }}
+                            </div>
+                        </div>
+                        <div class="rounded-circle p-2 {{ 'bg-warning-subtle text-warning-emphasis' if suggestions else 'bg-success-subtle text-success' }}">
+                            <i class="bi {{ 'bi-cart-plus' if suggestions else 'bi-check-lg' }} fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="active-indicator"></div>
+                </div>
+            </button>
+        </div>
+
+        <!-- 5. OPTIMISATION -->
+        <div class="col" role="presentation">
+            <button class="nav-link w-100 p-0 border-0 bg-transparent" id="tab-dormants" data-bs-toggle="pill" data-bs-target="#content-dormants" type="button" role="tab">
+                <div class="kpi-card card h-100 border-primary">
+                    <div class="card-body d-flex align-items-center justify-content-between p-3">
+                        <div class="text-start">
+                            <div class="text-uppercase x-small fw-bold text-muted mb-1">Optimisation</div>
+                            <div class="h3 mb-0 fw-bold text-primary">
+                                <i class="bi bi-arrow-right-circle"></i>
+                            </div>
+                        </div>
+                        <div class="rounded-circle p-2 bg-primary-subtle text-primary">
+                            <i class="bi bi-hourglass-split fs-4"></i>
+                        </div>
+                    </div>
+                    <div class="active-indicator"></div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- CONTENU DES ONGLETS (CADRE UNIFIÉ) -->
+    <div class="card border-0 shadow-sm mt-0" style="border-top-left-radius: 0; border-top-right-radius: 0; z-index: 1;">
+        <div class="card-body p-4">
+            <div class="tab-content" id="alertTabsContent">
+                
+                <!-- 1. SÉCURITÉ -->
+                <div class="tab-pane fade show active" id="content-securite" role="tabpanel">
+                    {% if signalements_securite %}
+                        <h5 class="fw-bold mb-4 text-danger"><i class="bi bi-shield-exclamation me-2"></i>Signalements de Sécurité</h5>
+                        <div class="list-group">
+                            {% for sig in signalements_securite %}
+                            <div class="list-group-item p-3 border-start border-4 border-danger">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="fw-bold text-danger mb-1">{{ sig.equipement.nom }}</div>
+                                        <p class="mb-1 text-dark">{{ sig.observations }}</p>
+                                        <small class="text-muted">
+                                            Signalé le {{ sig.date_intervention.strftime('%d/%m/%Y') }} par <strong>{{ sig.operateur }}</strong>
+                                        </small>
+                                    </div>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        {% if session.user_role == 'admin' %}
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="window.traiterSignalement({{ sig.id }}, 'refuser')">Ignorer</button>
+                                            <button class="btn btn-sm btn-danger" onclick="window.traiterSignalement({{ sig.id }}, 'valider')"><i class="bi bi-check-lg me-1"></i>Prendre en compte</button>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark border border-warning-subtle"><i class="bi bi-hourglass-split me-1"></i>En attente</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="bi bi-shield-check text-success display-1 opacity-25"></i>
+                            </div>
+                            <h4 class="fw-bold text-success">Aucun problème de sécurité</h4>
+                            <p class="text-muted">Tous les équipements fonctionnent correctement.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 2. RUPTURES -->
+                <div class="tab-pane fade" id="content-stock" role="tabpanel">
+                    {% if objets_stock %}
+                        <h5 class="fw-bold mb-4 text-danger"><i class="bi bi-graph-down-arrow me-2"></i>Ruptures de Stock</h5>
+                        <div class="list-group">
+                            {% for objet in objets_stock %}
+                            <div class="list-group-item p-3 border-start border-4 border-danger">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}" class="fw-bold text-dark text-decoration-none fs-5">{{ objet.nom }}</a>
+                                        <div class="small text-muted">{{ objet.armoire.nom if objet.armoire else 'Sans armoire' }}</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-danger fs-6 mb-1">Stock: {{ objet.quantite_physique }}</span>
+                                        <div class="small text-muted">Seuil: {{ objet.seuil }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="bi bi-check-circle text-success display-1 opacity-25"></i>
+                            </div>
+                            <h4 class="fw-bold text-success">Stock Sain</h4>
+                            <p class="text-muted">Aucun produit sous le seuil d'alerte.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 3. PÉREMPTIONS -->
+                <div class="tab-pane fade" id="content-peremption" role="tabpanel">
+                    {% if objets_peremption %}
+                        <h5 class="fw-bold mb-4 text-warning-emphasis"><i class="bi bi-calendar-x me-2"></i>Péremptions</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr><th class="ps-3">Objet</th><th>Date Péremption</th><th class="text-end pe-3">État</th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for objet in objets_peremption %}
+                                    <tr>
+                                        <td class="ps-3"><a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}" class="fw-bold text-dark text-decoration-none">{{ objet.nom }}</a></td>
+                                        <td>{{ objet.date_peremption.strftime('%d/%m/%Y') }}</td>
+                                        <td class="text-end pe-3">
+                                            {% if objet.date_peremption < date_actuelle.date() %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Périmé</span>
+                                            {% else %}
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Bientôt</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="bi bi-calendar-check text-success display-1 opacity-25"></i>
+                            </div>
+                            <h4 class="fw-bold text-success">Aucun produit périmé</h4>
+                            <p class="text-muted">Votre inventaire est parfaitement à jour.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 4. SUGGESTIONS -->
+                <div class="tab-pane fade" id="content-suggestions" role="tabpanel">
+                    {% if suggestions %}
+                        <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-cart-plus me-2"></i>Suggestions de Commande</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Objet</th>
+                                        <th>Demandé par</th>
+                                        <th class="text-center">Qté</th>
+                                        <th>Note</th>
+                                        {% if session.user_role == 'admin' %}<th class="text-end pe-4">Actions</th>{% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for s in suggestions %}
+                                    <tr>
+                                        <td class="ps-4">
+                                            <a href="{{ url_for('inventaire.voir_objet', objet_id=s.objet_id) }}" class="fw-bold text-dark text-decoration-none">{{ s.objet.nom }}</a>
+                                            <div class="small text-muted">{{ s.date_demande.strftime('%d/%m') }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                                    {{ s.utilisateur.nom_utilisateur[0]|upper }}
+                                                </div>
+                                                <span class="small">{{ s.utilisateur.nom_utilisateur }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-center"><span class="badge bg-warning text-dark border border-warning-subtle">+{{ s.quantite }}</span></td>
+                                        <td class="small text-muted fst-italic">{{ s.commentaire or '-' }}</td>
+                                        {% if session.user_role == 'admin' %}
+                                        <td class="text-end pe-4">
+                                            <button class="btn btn-sm btn-success me-1" onclick="window.traiterSuggestion({{ s.id }}, 'valider')"><i class="bi bi-check-lg"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="window.traiterSuggestion({{ s.id }}, 'refuser')"><i class="bi bi-x-lg"></i></button>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="bi bi-cart-check text-success display-1 opacity-25"></i>
+                            </div>
+                            <h4 class="fw-bold text-success">Aucune suggestion</h4>
+                            <p class="text-muted">Il n'y a aucune demande d'achat en attente.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 5. OPTIMISATION -->
+                <div class="tab-pane fade" id="content-dormants" role="tabpanel">
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle" style="width: 80px; height: 80px;">
+                                <i class="bi bi-hourglass-split text-primary display-4 opacity-50"></i>
+                            </div>
+                        </div>
+                        <h4 class="fw-bold text-primary">Optimisation du Stock</h4>
+                        <p class="text-muted mb-4">Identifiez les produits qui n'ont pas été utilisés depuis plus d'un an pour libérer de l'espace.</p>
+                        <a href="{{ url_for('inventaire.objets_dormants') }}" class="btn btn-primary px-4 fw-bold">
+                            <i class="bi bi-search me-2"></i>Analyser les stocks dormants
                         </a>
                     </div>
-                    <!-- Barre de progression visuelle -->
-                    <div class="progress" style="height: 4px;">
-                        {% set percent = (objet.quantite_physique / objet.seuil * 100) if objet.seuil > 0 else 0 %}
-                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ percent }}%"></div>
-                    </div>
                 </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center">
-            <i class="bi bi-check-circle-fill fs-4 me-3"></i>
-            <div>
-                <strong>Tout va bien !</strong>
-                <div class="small">Aucun objet n'est en dessous de son seuil d'alerte.</div>
+
             </div>
         </div>
-        {% endif %}
     </div>
-
-    <!-- ======================================================= -->
-    <!-- 3. SECTION PÉREMPTION -->
-    <!-- ======================================================= -->
-    <div class="mb-5">
-        <div class="d-flex align-items-center gap-2 mb-3">
-            <h3 class="h5 fw-bold text-warning-emphasis mb-0">Produits Périmés ou Bientôt Périmés</h3>
-            {% if objets_peremption %}
-            <span class="badge bg-warning text-dark rounded-pill">{{ objets_peremption|length }}</span>
-            {% endif %}
-        </div>
-
-        {% if objets_peremption %}
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Objet</th>
-                            <th>Date Péremption</th>
-                            <th>État</th>
-                            <th class="text-end">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for objet in objets_peremption %}
-                        <tr>
-                            <td class="fw-bold">{{ objet.nom }}</td>
-                            <td>{{ objet.date_peremption.strftime('%d/%m/%Y') }}</td>
-                            <td>
-                                {% if objet.date_peremption < date_actuelle.date() %}
-                                    <span class="badge bg-danger">Périmé</span>
-                                {% else %}
-                                    <span class="badge bg-warning text-dark">Bientôt</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}" class="btn btn-sm btn-outline-secondary">
-                                    Gérer
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% else %}
-        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center">
-            <i class="bi bi-check-circle-fill fs-4 me-3"></i>
-            <div>
-                <strong>Aucun produit périmé.</strong>
-                <div class="small">Votre stock est frais et à jour.</div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
 </div>
 
-<!-- Modale de Confirmation Dynamique -->
+<!-- Modale de Confirmation Unique -->
 <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -228,60 +327,67 @@
     </div>
 </div>
 
-<!-- SCRIPT CORRIGÉ -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let currentSuggestionId = null;
+    let currentId = null;
     let currentAction = null;
+    let currentType = null;
     
-    // Initialisation de la modale Bootstrap
     const modalElement = document.getElementById('confirmationModal');
     const confirmationModal = new bootstrap.Modal(modalElement);
-    
     const confirmBtn = document.getElementById('btn-confirm-action');
     const modalHeader = document.getElementById('modal-header-bg');
     const modalTitle = document.getElementById('modal-title');
     const modalMessage = document.getElementById('modal-message');
 
-    // 1. Fonction appelée au clic sur le bouton du tableau
-    // On l'attache à window pour qu'elle soit accessible depuis le HTML onclick
     window.traiterSuggestion = function(id, action) {
-        currentSuggestionId = id;
+        currentId = id;
         currentAction = action;
+        currentType = 'suggestion';
+        setupModal(action, 'suggestion');
+        confirmationModal.show();
+    };
 
-        // Configuration visuelle selon l'action
+    window.traiterSignalement = function(id, action) {
+        currentId = id;
+        currentAction = action;
+        currentType = 'signalement';
+        setupModal(action, 'signalement');
+        confirmationModal.show();
+    };
+
+    function setupModal(action, type) {
         if (action === 'valider') {
             modalHeader.className = 'modal-header text-white bg-success';
-            modalTitle.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Valider la demande';
-            modalMessage.textContent = "Voulez-vous valider cette suggestion de commande ?";
+            modalTitle.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Valider';
+            modalMessage.textContent = type === 'suggestion' ? "Valider cette commande ?" : "Marquer ce signalement comme pris en compte ?";
             confirmBtn.className = 'btn btn-success';
             confirmBtn.textContent = "Oui, Valider";
         } else {
             modalHeader.className = 'modal-header text-white bg-danger';
-            modalTitle.innerHTML = '<i class="bi bi-trash-fill me-2"></i>Refuser la demande';
-            modalMessage.textContent = "Voulez-vous refuser et supprimer cette suggestion ?";
+            modalTitle.innerHTML = '<i class="bi bi-trash-fill me-2"></i>Ignorer / Refuser';
+            modalMessage.textContent = type === 'suggestion' ? "Supprimer cette suggestion ?" : "Supprimer ce signalement ?";
             confirmBtn.className = 'btn btn-danger';
-            confirmBtn.textContent = "Oui, Refuser";
+            confirmBtn.textContent = "Oui, Supprimer";
         }
+    }
 
-        confirmationModal.show();
-    };
-
-    // 2. Fonction appelée au clic sur "Confirmer" dans la modale
     confirmBtn.addEventListener('click', function() {
-        if (!currentSuggestionId || !currentAction) return;
-
-        // État de chargement
+        if (!currentId || !currentAction) return;
         confirmBtn.disabled = true;
         confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Traitement...';
 
-        fetch(`/api/traiter_suggestion/${currentSuggestionId}/${currentAction}`, {
+        let url = currentType === 'suggestion' ? 
+            `/api/traiter_suggestion/${currentId}/${currentAction}` : 
+            `/securite/api/traiter_signalement/${currentId}/${currentAction}`;
+
+        fetch(url, {
             method: 'POST',
-            headers: {'X-CSRFToken': "{{ csrf_token() }}"}
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
+            body: JSON.stringify({})
         }).then(res => {
-            if(res.ok) {
-                window.location.reload();
-            } else {
+            if(res.ok) window.location.reload();
+            else {
                 alert("Erreur lors du traitement.");
                 confirmBtn.disabled = false;
                 confirmBtn.textContent = "Réessayer";
@@ -290,5 +396,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
 {% endblock %}

@@ -75,9 +75,11 @@ def create_app():
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
     db_url = os.environ.get('DATABASE_URL')
-    if db_url and db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    if db_url:
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 
     app.config['CACHE_TYPE'] = 'SimpleCache'

@@ -1,23 +1,49 @@
-{# templates/_pagination.html #}
 {% if pagination.total_pages > 1 %}
-<nav aria-label="Pagination">
-    <ul class="pagination">
-        {# Bouton Précédent #}
-        <li class="page-item {% if pagination.page == 1 %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for(pagination.endpoint, id=pagination.id, page=pagination.page - 1, sort_by=sort_by, direction=direction, q=request.args.get('q'), armoire=request.args.get('armoire'), categorie=request.args.get('categorie'), etat=request.args.get('etat')) if pagination.page > 1 else '#' }}">Précédent</a>
-        </li>
+{# --- CORRECTIF : On nettoie les arguments pour éviter le doublon de 'page' --- #}
+{% set args = request.args.copy() %}
+{% set _ = args.pop('page', None) %}
 
-        {# Liens des pages #}
-        {% for p in range(1, pagination.total_pages + 1) %}
-            <li class="page-item {% if p == pagination.page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for(pagination.endpoint, id=pagination.id, page=p, sort_by=sort_by, direction=direction, q=request.args.get('q'), armoire=request.args.get('armoire'), categorie=request.args.get('categorie'), etat=request.args.get('etat')) }}">{{ p }}</a>
+<!-- Conteneur d'espacement et de séparation -->
+<div class="d-flex justify-content-center mt-4 pt-3 border-top border-light-subtle">
+    <nav aria-label="Navigation des pages">
+        <ul class="pagination mb-0 shadow-sm">
+            
+            <!-- Bouton Précédent -->
+            <li class="page-item {{ 'disabled' if pagination.page == 1 }}">
+                <a class="page-link {{ 'bg-light text-muted' if pagination.page == 1 }}" 
+                   href="{{ url_for(pagination.endpoint, page=pagination.page - 1, **args) if pagination.page > 1 else '#' }}"
+                   aria-label="Précédent">
+                    <span aria-hidden="true">&laquo; Précédent</span>
+                </a>
             </li>
-        {% endfor %}
 
-        {# Bouton Suivant #}
-        <li class="page-item {% if pagination.page == pagination.total_pages %}disabled{% endif %}">
-            <a class="page-link" href="{{ url_for(pagination.endpoint, id=pagination.id, page=pagination.page + 1, sort_by=sort_by, direction=direction, q=request.args.get('q'), armoire=request.args.get('armoire'), categorie=request.args.get('categorie'), etat=request.args.get('etat')) if pagination.page < pagination.total_pages else '#' }}">Suivant</a>
-        </li>
-    </ul>
-</nav>
+            <!-- Numéros de page (Logique intelligente pour ne pas tout afficher) -->
+            {% for p in range(1, pagination.total_pages + 1) %}
+                <!-- On affiche la première, la dernière, la courante, et les voisines -->
+                {% if p == 1 or p == pagination.total_pages or (p >= pagination.page - 2 and p <= pagination.page + 2) %}
+                    <li class="page-item {{ 'active' if p == pagination.page }}">
+                        <a class="page-link {{ 'fw-bold' if p == pagination.page }}" 
+                           href="{{ url_for(pagination.endpoint, page=p, **args) }}">
+                            {{ p }}
+                        </a>
+                    </li>
+                {% elif p == pagination.page - 3 or p == pagination.page + 3 %}
+                    <li class="page-item disabled">
+                        <span class="page-link border-0 bg-transparent">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Bouton Suivant -->
+            <li class="page-item {{ 'disabled' if pagination.page == pagination.total_pages }}">
+                <a class="page-link {{ 'bg-light text-muted' if pagination.page == pagination.total_pages }}" 
+                   href="{{ url_for(pagination.endpoint, page=pagination.page + 1, **args) if pagination.page < pagination.total_pages else '#' }}"
+                   aria-label="Suivant">
+                    <span aria-hidden="true">Suivant &raquo;</span>
+                </a>
+            </li>
+            
+        </ul>
+    </nav>
+</div>
 {% endif %}

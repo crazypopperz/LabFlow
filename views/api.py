@@ -1,10 +1,10 @@
 # ============================================================
-# FICHIER : views/api.py (CORRECTION LOGIQUE STOCK PANIER)
+# FICHIER : views/api.py (VERSION FINALE OPTIMISÉE)
 # ============================================================
 # -*- coding: utf-8 -*-
 import json
 from datetime import datetime
-from typing import NamedTuple
+from typing import NamedTuple, List, Dict, Any
 from flask import Blueprint, request, jsonify, session, current_app, render_template
 from werkzeug.exceptions import BadRequest
 
@@ -23,23 +23,13 @@ from sqlalchemy import func, select
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 # ============================================================
-# STRUCTURES DE DONNÉES
+# STRUCTURES DE DONNÉES & HELPERS
 # ============================================================
 
 class Services(NamedTuple):
     stock: StockService
     panier: PanierService
     inventory: InventoryService
-
-# ============================================================
-# SÉCURITÉ & UTILITAIRES
-# ============================================================
-
-@api_bp.before_request
-def validate_json_content_type():
-    if request.method in ['POST', 'PUT']:
-        if not request.is_json:
-            return jsonify({'success': False, 'error': 'Content-Type must be application/json'}), 415
 
 def get_services() -> Services:
     user_id = session.get('user_id')
@@ -61,60 +51,84 @@ def get_services() -> Services:
 
 def _parse_request_dates(date_str, h_debut, h_fin):
     """Parsing robuste avec logs pour le débogage."""
-    # Log debug (masqué en prod si configuré)
-    current_app.logger.debug(f"[API DEBUG] Parsing dates: date='{date_str}', start='{h_debut}', end='{h_fin}'")
-
     if not date_str: raise ValueError("Paramètre 'date' manquant")
     if not h_debut: raise ValueError("Paramètre 'heure_debut' manquant")
     if not h_fin: raise ValueError("Paramètre 'heure_fin' manquant")
     
     try:
         d = datetime.strptime(date_str, "%Y-%m-%d").date()
-    except ValueError:
-        raise ValueError(f"Format de date invalide (attendu: YYYY-MM-DD, reçu: '{date_str}')")
-    
-    try:
         t_start = datetime.strptime(h_debut, "%H:%M").time()
-    except ValueError:
-        raise ValueError(f"Format heure_debut invalide (attendu: HH:MM, reçu: '{h_debut}')")
-    
-    try:
         t_end = datetime.strptime(h_fin, "%H:%M").time()
-    except ValueError:
-        raise ValueError(f"Format heure_fin invalide (attendu: HH:MM, reçu: '{h_fin}')")
+        
+        start_dt = datetime.combine(d, t_start)
+        end_dt = datetime.combine(d, t_end)
+        
+        if start_dt >= end_dt:
+            raise ValueError("L'heure de début doit être avant l'heure de fin")
+            
+        return start_dt, end_dt
+    except ValueError as e:
+        raise ValueError(f"Format de date/heure invalide: {str(e)}")
+
+def _creneaux_se_chevauchent(start1, end1, start2, end2):
+    """Détermine si deux créneaux temporels se chevauchent."""
+    return start1 < end2 and end1 > start2
+
+def _extraire_items_panier_chevauchant(services: Services, user_id: int, start_dt: datetime, end_dt: datetime) -> List[Dict[str, Any]]:
+    """Retourne les items du panier qui chevauchent le créneau demandé."""
+    items = []
+    try:
+        contenu = services.panier.get_contenu(user_id)
+        # Vérification structure dict
+        if not contenu or not isinstance(contenu, dict) or 'items' not in contenu:
+            return items
+            
+        for item in contenu['items']:
+            try:
+                # Validation des champs requis
+                if not all(k in item for k in ('type', 'id_item', 'quantite', 'date_reservation', 'heure_debut', 'heure_fin')):
+                    continue
+
+                # Conversion dates
+                cart_date_str = item['date_reservation']
+                if isinstance(cart_date_str, str):
+                    cart_date = datetime.strptime(cart_date_str, "%Y-%m-%d").date()
+                else:
+                    cart_date = cart_date_str
+
+                cart_start = datetime.combine(cart_date, datetime.strptime(item['heure_debut'], "%H:%M").time())
+                cart_end = datetime.combine(cart_date, datetime.strptime(item['heure_fin'], "%H:%M").time())
+                
+                if _creneaux_se_chevauchent(cart_start, cart_end, start_dt, end_dt):
+                    items.append({
+                        'type': item['type'],
+                        'id': item['id_item'],
+                        'quantite': item['quantite']
+                    })
+            except (KeyError, ValueError, TypeError) as e:
+                current_app.logger.warning(f"Item panier invalide ignoré: {e}")
+                continue
+    except Exception as e:
+        current_app.logger.warning(f"Erreur lecture panier (non bloquant): {e}")
     
-    start_dt = datetime.combine(d, t_start)
-    end_dt = datetime.combine(d, t_end)
-    
-    if start_dt >= end_dt:
-        raise ValueError(f"L'heure de début ({h_debut}) doit être avant l'heure de fin ({h_fin})")
-    
-    return start_dt, end_dt
+    return items
 
 def _validate_simulated_cart(cart_data):
     if not isinstance(cart_data, list):
         raise ValueError("Le panier doit être une liste")
-    if len(cart_data) > PanierService.MAX_ITEMS_PANIER:
+    
+    # Utilisation de la constante du service (Fallback si non définie)
+    max_items = getattr(PanierService, 'MAX_ITEMS_PANIER', 50)
+    if len(cart_data) > max_items:
         raise ValueError("Panier trop volumineux")
     
     for item in cart_data:
         if not isinstance(item, dict): raise ValueError("Item malformé")
+        if not all(k in item for k in ('type', 'id')): raise ValueError("Champs type/id manquants")
         
-        # Vérification des champs obligatoires
-        if not all(k in item for k in ('type', 'id')): 
-            raise ValueError("Champs type/id manquants")
-            
-        # Vérification de la quantité
         qty = item.get('quantite') or item.get('quantity')
         if qty is None or not isinstance(qty, (int, float)) or qty <= 0:
             raise ValueError("Quantité invalide ou manquante")
-
-def _creneaux_se_chevauchent(start1, end1, start2, end2):
-    """
-    Détermine si deux créneaux temporels se chevauchent.
-    Logique : (StartA < EndB) et (EndA > StartB)
-    """
-    return start1 < end2 and end1 > start2
 
 # ============================================================
 # GESTION D'ERREURS CENTRALISÉE
@@ -124,7 +138,6 @@ def _creneaux_se_chevauchent(start1, end1, start2, end2):
 @api_bp.errorhandler(PanierServiceError)
 @api_bp.errorhandler(InventoryServiceError)
 def handle_business_error(error):
-    # Renvoie 200 pour que le JS puisse lire le message d'erreur proprement
     return jsonify({"success": False, "error": str(error), "code": "BUSINESS_ERROR"}), 200
 
 @api_bp.errorhandler(ValueError)
@@ -135,8 +148,7 @@ def handle_validation_error(error):
     return jsonify({
         "success": False, 
         "error": msg, 
-        "code": "VALIDATION_ERROR",
-        "details": str(error)
+        "code": "VALIDATION_ERROR"
     }), 400
 
 # ============================================================
@@ -155,6 +167,7 @@ def get_panier():
 @login_required
 @limiter.limit("60 per minute")
 def ajouter_item_panier():
+    if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     services = get_services()
     data = request.get_json()
     result = services.panier.ajouter_item(session['user_id'], data)
@@ -191,7 +204,7 @@ def checkout_panier():
         return jsonify({"success": False, "error": "Erreur technique"}), 500
 
 # ============================================================
-# 2. DISPONIBILITÉS (CORRIGÉ & ROBUSTE)
+# 2. DISPONIBILITÉS (OPTIMISÉ)
 # ============================================================
 
 @api_bp.route("/disponibilites", methods=['GET'])
@@ -200,62 +213,18 @@ def api_disponibilites():
     try:
         services = get_services()
         
-        # 1. Parsing des dates demandées
         start_dt, end_dt = _parse_request_dates(
             request.args.get('date'), 
             request.args.get('heure_debut'), 
             request.args.get('heure_fin')
         )
 
-        # 2. Récupération du panier ACTUEL avec filtrage par chevauchement
-        items_a_deduire = []
-        
-        try:
-            contenu_panier = services.panier.get_contenu(session['user_id'])
-            
-            if contenu_panier and isinstance(contenu_panier, dict) and 'items' in contenu_panier:
-                for item in contenu_panier['items']:
-                    # Validation des champs requis
-                    if not all(k in item for k in ('type', 'id_item', 'quantite', 'date_reservation', 'heure_debut', 'heure_fin')):
-                        # On loggue mais on continue (item malformé ignoré)
-                        # current_app.logger.warning(f"Item panier incomplet ignoré: {item}")
-                        continue
-                    
-                    try:
-                        # Conversion robuste des dates du panier
-                        cart_date_str = item['date_reservation']
-                        
-                        # Gérer les deux formats possibles (str ou date object)
-                        if isinstance(cart_date_str, str):
-                            cart_date = datetime.strptime(cart_date_str, "%Y-%m-%d").date()
-                        else:
-                            cart_date = cart_date_str 
-                        
-                        cart_start_time = datetime.strptime(item['heure_debut'], "%H:%M").time()
-                        cart_end_time = datetime.strptime(item['heure_fin'], "%H:%M").time()
-                        
-                        cart_start_dt = datetime.combine(cart_date, cart_start_time)
-                        cart_end_dt = datetime.combine(cart_date, cart_end_time)
-                        
-                        # Test de chevauchement avec le créneau demandé
-                        if _creneaux_se_chevauchent(cart_start_dt, cart_end_dt, start_dt, end_dt):
-                            items_a_deduire.append({
-                                'type': item['type'],
-                                'id': item['id_item'],
-                                'quantite': item['quantite']
-                            })
-                            current_app.logger.debug(f"Item panier CONFLIT: {item['type']}#{item['id_item']}")
-                        else:
-                            current_app.logger.debug(f"Item panier OK (pas de conflit): {item['type']}#{item['id_item']}")
-                    
-                    except (ValueError, KeyError, TypeError) as e:
-                        current_app.logger.warning(f"Erreur parsing item panier (ignoré): {e}")
-                        continue
-        
-        except Exception as e:
-            current_app.logger.error(f"Erreur lecture panier: {e}", exc_info=True)
+        # 1. Récupération intelligente du panier
+        items_a_deduire = _extraire_items_panier_chevauchant(
+            services, session['user_id'], start_dt, end_dt
+        )
 
-        # 3. Panier Simulé (Optionnel)
+        # 2. Panier Simulé (Optionnel)
         panier_param = request.args.get('panier')
         if panier_param:
             try:
@@ -265,7 +234,7 @@ def api_disponibilites():
             except Exception as e:
                 current_app.logger.warning(f"Panier simulé invalide: {e}")
 
-        # 4. Calcul final des disponibilités
+        # 3. Calcul
         resultats = services.stock.get_disponibilites(start_dt, end_dt, panier_items=items_a_deduire)
         return jsonify({"success": True, "data": resultats})
 
@@ -276,7 +245,7 @@ def api_disponibilites():
         return jsonify({"success": False, "error": "Erreur serveur"}), 500
 
 # ============================================================
-# 3. INVENTAIRE & RECHERCHE
+# 3. INVENTAIRE & RECHERCHE (CORRIGÉ)
 # ============================================================
 
 @api_bp.route("/search")
@@ -291,33 +260,78 @@ def search():
 @api_bp.route("/inventaire")
 @login_required
 def api_inventaire():
-    services = get_services()
-    filters = {
-        'q': request.args.get('q'),
-        'armoire_id': request.args.get('armoire', type=int),
-        'categorie_id': request.args.get('categorie', type=int),
-        'etat': request.args.get('etat')
-    }
-    dto = services.inventory.get_paginated_inventory(
-        page=request.args.get('page', 1, type=int),
-        sort_by=request.args.get('sort_by', 'nom'),
-        direction=request.args.get('direction', 'asc'),
-        filters=filters
-    )
-    html = render_template(
-        '_inventaire_content.html', 
-        objets=dto.items, 
-        pagination={'page': dto.current_page, 'total_pages': dto.total_pages, 'endpoint': 'inventaire.inventaire'}, 
-        sort_by=request.args.get('sort_by', 'nom'), 
-        direction=request.args.get('direction', 'asc'), 
-        armoire=dto.context.armoire_nom, 
-        categorie=dto.context.categorie_nom,
-        armoire_id=filters['armoire_id'],
-        categorie_id=filters['categorie_id'],
-        date_actuelle=datetime.now(),
-        etat=filters['etat']
-    )
-    return jsonify({'html': html})
+    try:
+        services = get_services()
+        
+        # 1. Nettoyage des paramètres (Gestion du cas "1:1" ou erreurs JS)
+        def get_clean_int(key):
+            val = request.args.get(key)
+            if not val: return None
+            # On ne garde que les chiffres (ex: "1:1" -> "11" ou juste le premier "1")
+            # Ici on prend une approche simple : on essaie de convertir, sinon None
+            try:
+                return int(val)
+            except ValueError:
+                # Si format bizarre comme "1:1", on essaie de prendre le premier chiffre
+                import re
+                match = re.search(r'\d+', str(val))
+                return int(match.group()) if match else None
+
+        filters = {
+            'q': request.args.get('q'),
+            'armoire_id': get_clean_int('armoire'),
+            'categorie_id': get_clean_int('categorie'),
+            'etat': request.args.get('etat')
+        }
+        
+        sort_by = request.args.get('sort_by', 'nom')
+        direction = request.args.get('direction', 'asc')
+        
+        # 2. Appel Service
+        dto = services.inventory.get_paginated_inventory(
+            page=request.args.get('page', 1, type=int),
+            sort_by=sort_by,
+            direction=direction,
+            filters=filters
+        )
+        
+        # 3. Extraction Context (Défensive)
+        arm_nom = None
+        cat_nom = None
+        
+        if dto.context:
+            if isinstance(dto.context, dict):
+                arm_nom = dto.context.get('armoire_nom')
+                cat_nom = dto.context.get('categorie_nom')
+            else:
+                arm_nom = getattr(dto.context, 'armoire_nom', None)
+                cat_nom = getattr(dto.context, 'categorie_nom', None)
+
+        # 4. Rendu
+        html = render_template(
+            '_inventaire_content.html',
+            objets=dto.items or [], # Protection contre None
+            pagination={
+                'page': dto.current_page,
+                'total_pages': dto.total_pages,
+                'endpoint': 'inventaire.inventaire'
+            },
+            sort_by=sort_by,
+            direction=direction,
+            armoire=arm_nom,
+            categorie=cat_nom,
+            armoire_id=filters['armoire_id'],
+            categorie_id=filters['categorie_id'],
+            date_actuelle=datetime.now(),
+            etat=filters['etat']
+        )
+        return jsonify({'html': html})
+
+    except Exception as e:
+        current_app.logger.error(f"Erreur API Inventaire: {e}", exc_info=True)
+        # En cas d'erreur, on renvoie un bout de HTML d'erreur pour que l'utilisateur voie quelque chose
+        error_html = f'<div class="alert alert-danger m-3">Erreur de chargement : {str(e)}</div>'
+        return jsonify({'html': error_html}), 500
 
 # ============================================================
 # 4. CALENDRIER
@@ -390,6 +404,7 @@ def api_reservation_details(groupe_id):
 @api_bp.route("/supprimer_reservation", methods=['POST'])
 @login_required
 def api_supprimer_reservation():
+    if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     etablissement_id = session.get('etablissement_id')
     gid = request.get_json().get('groupe_id')
     try:
@@ -433,55 +448,57 @@ def api_reservations_jour_detail(date_str):
 @api_bp.route("/reservation/<groupe_id>/ajouter", methods=['POST'])
 @login_required
 def reservation_ajouter_item(groupe_id):
+    if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     services = get_services()
     data = request.get_json()
     try:
-        stmt = select(Reservation).filter_by(
-            groupe_id=groupe_id, 
-            etablissement_id=session['etablissement_id']
-        )
-        if session.get('user_role') != 'admin':
-            stmt = stmt.filter_by(utilisateur_id=session.get('user_id'))
-            
-        existing_resas = db.session.execute(stmt).scalars().all()
-        if not existing_resas:
-            return jsonify({'success': False, 'error': "Réservation introuvable ou non autorisée"}), 404
-            
-        first_resa = existing_resas[0]
-        item_type = data.get('type')
-        item_id = int(data.get('id'))
-        qty_to_add = int(data.get('quantite', 1))
-        
-        dispo = services.stock.get_disponibilites(first_resa.debut_reservation, first_resa.fin_reservation)
-        stock_restant = 0
-        found = False
-        
-        list_to_check = dispo['objets'] if item_type == 'objet' else dispo['kits']
-        for item in list_to_check:
-            if item['id'] == item_id:
-                stock_restant = item['disponible']
-                found = True
-                break
-        
-        if not found: return jsonify({'success': False, 'error': "Item indisponible"}), 400
-        if stock_restant < qty_to_add: return jsonify({'success': False, 'error': f"Stock insuffisant (Max: {stock_restant})"}), 400
-
-        target_resa = None
-        for r in existing_resas:
-            if (item_type == 'kit' and r.kit_id == item_id) or (item_type == 'objet' and r.objet_id == item_id):
-                target_resa = r
-                break
-            
-        if target_resa: target_resa.quantite_reservee += qty_to_add
-        else:
-            new_resa = Reservation(
-                utilisateur_id=first_resa.utilisateur_id, etablissement_id=session['etablissement_id'],
-                quantite_reservee=qty_to_add, debut_reservation=first_resa.debut_reservation,
-                fin_reservation=first_resa.fin_reservation, groupe_id=groupe_id, statut='confirmée'
+        with db.session.begin_nested(): # Transaction atomique
+            stmt = select(Reservation).filter_by(
+                groupe_id=groupe_id, 
+                etablissement_id=session['etablissement_id']
             )
-            if item_type == 'kit': new_resa.kit_id = item_id
-            else: new_resa.objet_id = item_id
-            db.session.add(new_resa)
+            if session.get('user_role') != 'admin':
+                stmt = stmt.filter_by(utilisateur_id=session.get('user_id'))
+                
+            existing_resas = db.session.execute(stmt).scalars().all()
+            if not existing_resas:
+                return jsonify({'success': False, 'error': "Réservation introuvable ou non autorisée"}), 404
+                
+            first_resa = existing_resas[0]
+            item_type = data.get('type')
+            item_id = int(data.get('id'))
+            qty_to_add = int(data.get('quantite', 1))
+            
+            dispo = services.stock.get_disponibilites(first_resa.debut_reservation, first_resa.fin_reservation)
+            stock_restant = 0
+            found = False
+            
+            list_to_check = dispo['objets'] if item_type == 'objet' else dispo['kits']
+            for item in list_to_check:
+                if item['id'] == item_id:
+                    stock_restant = item['disponible']
+                    found = True
+                    break
+            
+            if not found: return jsonify({'success': False, 'error': "Item indisponible"}), 400
+            if stock_restant < qty_to_add: return jsonify({'success': False, 'error': f"Stock insuffisant (Max: {stock_restant})"}), 400
+
+            target_resa = None
+            for r in existing_resas:
+                if (item_type == 'kit' and r.kit_id == item_id) or (item_type == 'objet' and r.objet_id == item_id):
+                    target_resa = r
+                    break
+                
+            if target_resa: target_resa.quantite_reservee += qty_to_add
+            else:
+                new_resa = Reservation(
+                    utilisateur_id=first_resa.utilisateur_id, etablissement_id=session['etablissement_id'],
+                    quantite_reservee=qty_to_add, debut_reservation=first_resa.debut_reservation,
+                    fin_reservation=first_resa.fin_reservation, groupe_id=groupe_id, statut='confirmée'
+                )
+                if item_type == 'kit': new_resa.kit_id = item_id
+                else: new_resa.objet_id = item_id
+                db.session.add(new_resa)
             
         db.session.commit()
         return jsonify({'success': True})
@@ -495,19 +512,20 @@ def reservation_retirer_item(groupe_id, item_id):
     etablissement_id = session.get('etablissement_id')
     item_type = request.args.get('type')
     try:
-        stmt = select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
-        resas = db.session.execute(stmt).scalars().all()
-        target = None
-        for r in resas:
-            if (item_type == 'kit' and r.kit_id == item_id) or (item_type == 'objet' and r.objet_id == item_id):
-                target = r
-                break
-        if not target: return jsonify({'success': False, 'error': "Item non trouvé"}), 404
+        with db.session.begin_nested():
+            stmt = select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
+            resas = db.session.execute(stmt).scalars().all()
+            target = None
+            for r in resas:
+                if (item_type == 'kit' and r.kit_id == item_id) or (item_type == 'objet' and r.objet_id == item_id):
+                    target = r
+                    break
+            if not target: return jsonify({'success': False, 'error': "Item non trouvé"}), 404
+            
+            if target.quantite_reservee > 1: target.quantite_reservee -= 1
+            else: db.session.delete(target)
         
-        if target.quantite_reservee > 1: target.quantite_reservee -= 1
-        else: db.session.delete(target)
         db.session.commit()
-        
         remaining = db.session.execute(select(func.count(Reservation.id)).filter_by(groupe_id=groupe_id)).scalar()
         return jsonify({'success': True, 'remaining_items': remaining})
     except Exception as e:
@@ -517,7 +535,7 @@ def reservation_retirer_item(groupe_id, item_id):
 @api_bp.route("/reservation/<groupe_id>/modifier_heure", methods=['POST'])
 @login_required
 def reservation_modifier_heure(groupe_id):
-    """Modifie l'horaire d'une réservation avec validation du stock."""
+    if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     etablissement_id = session.get('etablissement_id')
     data = request.get_json()
     
@@ -531,6 +549,10 @@ def reservation_modifier_heure(groupe_id):
         
         if new_start >= new_end:
             return jsonify({'success': False, 'error': "Heures invalides"}), 400
+            
+        # Validation date future
+        if new_start <= datetime.now():
+            return jsonify({'success': False, 'error': "Impossible de modifier dans le passé"}), 400
 
         # 2. Récupération des réservations du groupe
         stmt = select(Reservation).filter_by(
@@ -538,7 +560,6 @@ def reservation_modifier_heure(groupe_id):
             etablissement_id=etablissement_id
         )
         
-        # Vérification droits
         if session.get('user_role') != 'admin':
             stmt = stmt.filter_by(utilisateur_id=session.get('user_id'))
             
@@ -550,7 +571,6 @@ def reservation_modifier_heure(groupe_id):
         # 3. VALIDATION CRITIQUE : Vérification du stock sur le nouveau créneau
         for r in resas:
             if r.objet_id:
-                # Calcul du stock déjà pris par LES AUTRES sur le nouveau créneau
                 taken = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
                     Reservation.etablissement_id == etablissement_id,
                     Reservation.groupe_id != groupe_id,  # On s'exclut
@@ -567,20 +587,14 @@ def reservation_modifier_heure(groupe_id):
                 dispo = obj.quantite_physique - taken
                 
                 if dispo < r.quantite_reservee:
-                    return jsonify({
-                        'success': False,
-                        'error': f"Stock insuffisant pour '{obj.nom}' sur ce créneau (Dispo: {dispo}/{r.quantite_reservee})"
-                    }), 400
-                    
+                    return jsonify({'success': False, 'error': f"Stock insuffisant pour '{obj.nom}'"}), 400
+            
             elif r.kit_id:
-                # Pour les kits, on vérifie chaque composant
                 kit = db.session.get(Kit, r.kit_id)
-                if not kit:
-                    return jsonify({'success': False, 'error': "Kit introuvable"}), 404
+                if not kit: return jsonify({'success': False, 'error': "Kit introuvable"}), 404
                 
                 for kit_obj in kit.objets_assoc:
                     qty_needed = kit_obj.quantite * r.quantite_reservee
-                    
                     taken = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
                         Reservation.etablissement_id == etablissement_id,
                         Reservation.groupe_id != groupe_id,
@@ -594,21 +608,20 @@ def reservation_modifier_heure(groupe_id):
                     dispo = obj.quantite_physique - taken
                     
                     if dispo < qty_needed:
-                        return jsonify({
-                            'success': False,
-                            'error': f"Stock insuffisant pour '{obj.nom}' (composant de {kit.nom}) sur ce créneau"
-                        }), 400
+                        return jsonify({'success': False, 'error': f"Stock insuffisant pour '{obj.nom}' (Kit)"}), 400
 
-        # 4. Application de la modification
+        # 4. Application
         for r in resas:
             r.debut_reservation = new_start
             r.fin_reservation = new_end
             
         db.session.commit()
         
+        # Log amélioré
+        user = db.session.get(Utilisateur, session.get('user_id'))
         current_app.logger.info(
             f"Réservation {groupe_id} déplacée vers {new_start.strftime('%Y-%m-%d %H:%M')} "
-            f"par User {session.get('user_id')}"
+            f"par {user.nom_utilisateur if user else 'Inconnu'} (ID: {session.get('user_id')})"
         )
         
         return jsonify({'success': True})
@@ -627,6 +640,7 @@ def reservation_modifier_heure(groupe_id):
 @api_bp.route("/suggerer_commande", methods=['POST'])
 @login_required
 def suggerer_commande():
+    if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     etablissement_id = session.get('etablissement_id')
     data = request.get_json()
     try:
@@ -672,9 +686,11 @@ def valider_dormant(objet_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': "Erreur"}), 500
 
-@api_bp.route('/api/signalement', methods=['POST'])
+# CORRECTION : Suppression du doublon /api/api/
+@api_bp.route('/signalement', methods=['POST'])
 @login_required
 def signaler_dysfonctionnement():
+    if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     try:
         data = request.json
         equipement_id = data.get('equipement_id')
@@ -703,7 +719,7 @@ def signaler_dysfonctionnement():
         current_app.logger.error(f"Erreur signalement: {e}")
         return jsonify({'success': False, 'error': "Erreur technique."}), 500
 
-@api_bp.route('/api/traiter_signalement/<int:log_id>/<action>', methods=['POST'])
+@api_bp.route('/traiter_signalement/<int:log_id>/<action>', methods=['POST'])
 @admin_required
 def traiter_signalement(log_id, action):
     try:

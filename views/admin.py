@@ -8,7 +8,7 @@ import re
 import logging
 import io
 import os
-import imghdr
+import filetype
 from io import BytesIO
 from urllib.parse import urlparse
 from html import escape
@@ -393,72 +393,131 @@ def generer_inventaire_pdf(data, metadata):
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
 
 def generer_inventaire_excel(data, metadata):
+    """Génère un Excel propre (Style Premium sans image)."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Inventaire"
-    font_titre = Font(name='Segoe UI', size=16, bold=True, color="1F3B73")
-    fill_header = PatternFill(start_color="1F3B73", end_color="1F3B73", fill_type="solid")
-    font_header = Font(name='Segoe UI', size=11, bold=True, color="FFFFFF")
-    align_center = Alignment(horizontal="center", vertical="center")
-    border_thin = Border(left=Side(style='thin', color='D9D9D9'), right=Side(style='thin', color='D9D9D9'), bottom=Side(style='thin', color='D9D9D9'))
-    font_alert = Font(color="DC3545", bold=True)
     
-    ws.merge_cells('B1:F1')
-    ws['B1'] = f"📦 ÉTAT DE L'INVENTAIRE - {metadata['etablissement']}"
-    ws['B1'].font = font_titre
-    ws['B1'].alignment = Alignment(horizontal="left", vertical="center")
+    # --- 1. DÉFINITION DES STYLES ---
+    COLOR_PRIMARY = "1F3B73"      # Bleu Nuit
+    COLOR_HEADER_TEXT = "FFFFFF"  # Blanc
+    COLOR_ZEBRA = "F4F6F9"        # Gris très clair
+    COLOR_BORDER = "D0D0D0"       # Gris bordure
+    COLOR_ALERT = "DC3545"        # Rouge Alerte
+
+    # Polices
+    font_titre = Font(name='Segoe UI', size=18, bold=True, color=COLOR_PRIMARY)
+    # Sous-titre en gris et italique
+    font_meta = Font(name='Segoe UI', size=11, italic=True, color="666666")
+    
+    font_header = Font(name='Segoe UI', size=11, bold=True, color=COLOR_HEADER_TEXT)
+    font_data = Font(name='Segoe UI', size=10, color="333333")
+    font_alert = Font(name='Segoe UI', size=10, bold=True, color=COLOR_ALERT)
+    
+    # Remplissages
+    fill_header = PatternFill(start_color=COLOR_PRIMARY, end_color=COLOR_PRIMARY, fill_type="solid")
+    fill_zebra = PatternFill(start_color=COLOR_ZEBRA, end_color=COLOR_ZEBRA, fill_type="solid")
+    
+    # Alignements
+    align_center = Alignment(horizontal="center", vertical="center")
+    align_left = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    
+    # Bordures
+    border_thin = Border(
+        left=Side(style='thin', color=COLOR_BORDER),
+        right=Side(style='thin', color=COLOR_BORDER),
+        top=Side(style='thin', color=COLOR_BORDER),
+        bottom=Side(style='thin', color=COLOR_BORDER)
+    )
+
+    # --- 2. EN-TÊTE (TEXTE SEULEMENT) ---
+    
+    # Ligne 1 : TITRE PRINCIPAL
+    ws.merge_cells('A1:F1')
+    ws['A1'] = f"ÉTAT DE L'INVENTAIRE - {metadata['etablissement']}"
+    ws['A1'].font = font_titre
+    ws['A1'].alignment = align_left
     ws.row_dimensions[1].height = 35
     
-    ajouter_logo_excel(ws)
+    # Ligne 2 : SOUS-TITRE (Date | Total)
+    ws.merge_cells('A2:F2')
+    ws['A2'] = f"Généré le : {metadata['date_generation']} | Total références : {metadata['total']}"
+    ws['A2'].font = font_meta
+    ws['A2'].alignment = align_left
+    ws.row_dimensions[2].height = 25
     
-    ws['A2'] = f"Généré le : {metadata['date_generation']}"
-    ws['A2'].font = Font(italic=True, color="666666")
-    
+    # Ligne 3 : Espace vide pour aérer
+    ws.row_dimensions[3].height = 15
+
+    # --- 3. TABLEAU : HEADERS (Ligne 4) ---
     headers = ["Catégorie", "Désignation", "Quantité", "Seuil", "Emplacement", "Péremption"]
-    ws.append([])
-    ws.append(headers)
     
+    header_row = 4
     for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=4, column=col_num)
-        cell.value = header
+        cell = ws.cell(row=header_row, column=col_num, value=header)
         cell.fill = fill_header
         cell.font = font_header
         cell.alignment = align_center
+        cell.border = border_thin
     
-    ws.row_dimensions[4].height = 30
+    ws.row_dimensions[header_row].height = 30
+
+    # --- 4. TABLEAU : DONNÉES ---
+    start_row = 5
     
-    for row in data:
-        ws.append([
-            row['categorie'], row['nom'], row['quantite'], 
-            row['seuil'], row['armoire'], row['peremption']
-        ])
+    for i, row in enumerate(data):
+        current_row = start_row + i
         
-        current_row = ws.max_row
+        # Insertion des valeurs
+        ws.cell(row=current_row, column=1, value=row['categorie'])
+        ws.cell(row=current_row, column=2, value=row['nom'])
+        ws.cell(row=current_row, column=3, value=row['quantite'])
+        ws.cell(row=current_row, column=4, value=row['seuil'])
+        ws.cell(row=current_row, column=5, value=row['armoire'])
+        ws.cell(row=current_row, column=6, value=row['peremption'])
+        
+        # Application du style
+        ws.row_dimensions[current_row].height = 25
+        
         for col in range(1, 7):
             cell = ws.cell(row=current_row, column=col)
             cell.border = border_thin
-            cell.alignment = Alignment(vertical="center")
-            if col in [3, 4, 6]: cell.alignment = align_center
+            cell.font = font_data
             
+            # Alignement : Centre pour les chiffres/dates, Gauche pour le texte
+            if col in [3, 4, 6]: 
+                cell.alignment = align_center
+            else:
+                cell.alignment = align_left
+            
+            # Zebra Striping
+            if current_row % 2 == 0:
+                cell.fill = fill_zebra
+        
+        # Alerte Stock Bas (Rouge sur la quantité)
         if row['quantite'] <= row['seuil']:
             ws.cell(row=current_row, column=3).font = font_alert
 
+    # --- 5. FINITIONS ---
     ws.column_dimensions['A'].width = 25
-    ws.column_dimensions['B'].width = 40
+    ws.column_dimensions['B'].width = 45
     ws.column_dimensions['C'].width = 12
     ws.column_dimensions['D'].width = 12
     ws.column_dimensions['E'].width = 25
-    ws.column_dimensions['F'].width = 15
+    ws.column_dimensions['F'].width = 18
     
-    ws.auto_filter.ref = f"A4:F{ws.max_row}"
-    ws.freeze_panes = "A5"
+    # Filtres automatiques
+    ws.auto_filter.ref = f"A{header_row}:F{start_row + len(data) - 1}"
+    
+    # Figer les volets sous les titres
+    ws.freeze_panes = f"A{start_row}"
 
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
+    
     filename = f"Inventaire_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
 # ============================================================
 # ROUTE PRINCIPALE
 # ============================================================
@@ -1158,27 +1217,92 @@ def definir_budget():
 @admin_required
 def ajouter_depense():
     etablissement_id = session['etablissement_id']
+    
     try:
-        budget = db.session.get(Budget, int(request.form.get('budget_id')))
-        if not budget or budget.etablissement_id != etablissement_id or budget.cloture:
-            raise ValueError("Budget invalide ou clôturé.")
+        # 1. Validation Budget
+        budget_id = int(request.form.get('budget_id'))
+        budget = db.session.get(Budget, budget_id)
+        
+        if not budget or budget.etablissement_id != etablissement_id:
+            raise ValueError("Budget invalide ou accès interdit.")
+        
+        if budget.cloture:
+            raise ValueError("Impossible d'ajouter une dépense à un budget clôturé.")
 
+        # 2. Récupération données
         est_bon_achat = 'est_bon_achat' in request.form
-        fournisseur_id = int(request.form.get('fournisseur_id')) if not est_bon_achat else None
-        montant = float(request.form.get('montant').replace(',', '.'))
-        date_depense = datetime.strptime(request.form.get('date_depense'), '%Y-%m-%d').date()
+        montant_str = request.form.get('montant', '0').replace(',', '.')
+        contenu = request.form.get('contenu', '').strip()
+        date_str = request.form.get('date_depense')
+        
+        # 3. Validation montant
+        try:
+            montant = round(float(montant_str), 2)
+        except ValueError:
+            raise ValueError("Le format du montant est invalide.")
 
+        MONTANT_MAX = current_app.config.get('DEPENSE_MONTANT_MAX', 1_000_000)
+        if montant <= 0 or montant > MONTANT_MAX:
+            raise ValueError(f"Le montant doit être positif et inférieur à {MONTANT_MAX:,.0f} €.")
+        
+        # 4. Validation contenu
+        if not contenu:
+            raise ValueError("La description ne peut pas être vide.")
+        if len(contenu) > 200:
+            raise ValueError("La description est trop longue (max 200 caractères).")
+        
+        # 5. Validation date
+        try:
+            date_depense = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError("Format de date invalide.")
+
+        date_min = (datetime.now() - timedelta(days=365*10)).date()
+        if date_depense < date_min or date_depense > datetime.now().date():
+            raise ValueError("La date doit être comprise entre il y a 10 ans et aujourd'hui.")
+        
+        # 6. Validation fournisseur
+        fournisseur_id = None
+        if not est_bon_achat:
+            fournisseur_id_raw = request.form.get('fournisseur_id')
+            if fournisseur_id_raw:
+                try:
+                    f_id = int(fournisseur_id_raw)
+                    fournisseur = db.session.query(Fournisseur).filter_by(
+                        id=f_id, 
+                        etablissement_id=etablissement_id
+                    ).first()
+                    if not fournisseur:
+                        raise ValueError("Fournisseur invalide ou introuvable.")
+                    fournisseur_id = f_id
+                except (ValueError, TypeError):
+                    raise ValueError("ID Fournisseur invalide.")
+
+        # 7. Création de la dépense
         db.session.add(Depense(
-            date_depense=date_depense, contenu=request.form.get('contenu', '').strip(),
-            montant=montant, est_bon_achat=est_bon_achat, fournisseur_id=fournisseur_id,
-            budget_id=budget.id, etablissement_id=etablissement_id
+            date_depense=date_depense,
+            contenu=contenu,
+            montant=montant,
+            est_bon_achat=est_bon_achat,
+            fournisseur_id=fournisseur_id,
+            budget_id=budget.id,
+            etablissement_id=etablissement_id
         ))
         db.session.commit()
-        flash("Dépense ajoutée.", "success")
+        
+        current_app.logger.info(f"Dépense créée pour établissement {etablissement_id}")
+        flash("Dépense ajoutée avec succès.", "success")
+        
+    except ValueError as e:
+        flash(str(e), "error")
+    except IntegrityError:
+        db.session.rollback()
+        flash("Erreur de cohérence des données.", "error")
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error("Erreur ajout dépense", exc_info=True)
-        flash("Erreur technique.", "danger")
+        current_app.logger.error(f"Erreur ajout dépense: {e}", exc_info=True)
+        flash("Erreur technique lors de l'ajout.", "error")
+    
     return redirect(url_for('admin.budget'))
 
 @admin_bp.route("/budget/depense/supprimer/<int:id>", methods=['POST'])
@@ -1198,6 +1322,112 @@ def supprimer_depense(id):
     else:
         flash("Dépense introuvable.", "danger")
     return redirect(url_for('admin.budget'))
+    
+
+@admin_bp.route("/budget/depense/modifier/<int:id>", methods=['POST'])
+@admin_required
+def modifier_depense(id):
+    etablissement_id = session['etablissement_id']
+    
+    # 1. Verrouillage + récupération (SELECT ... FOR UPDATE)
+    depense = db.session.query(Depense).with_for_update().filter_by(id=id).first()
+
+    # 2. Vérifications IDOR
+    if not depense or depense.etablissement_id != etablissement_id:
+        flash("Dépense introuvable ou accès interdit.", "error")
+        return redirect(url_for('admin.budget'))
+    
+    if depense.budget.etablissement_id != etablissement_id:
+        flash("Accès interdit (Incohérence Budget).", "error")
+        return redirect(url_for('admin.budget'))
+
+    # 3. Vérification clôture
+    if depense.budget.cloture:
+        flash("Impossible de modifier une dépense d'un budget clôturé.", "warning")
+        return redirect(url_for('admin.budget'))
+
+    try:
+        # 4. Récupération données
+        est_bon_achat = 'est_bon_achat' in request.form
+        montant_str = request.form.get('montant', '0').replace(',', '.')
+        contenu = request.form.get('contenu', '').strip()
+        date_str = request.form.get('date_depense')
+        
+        # 5. Validation montant
+        try:
+            montant = round(float(montant_str), 2)
+        except ValueError:
+            raise ValueError("Le format du montant est invalide.")
+
+        # Utilisation d'une config ou valeur par défaut
+        MONTANT_MAX = current_app.config.get('DEPENSE_MONTANT_MAX', 1_000_000)
+        if montant <= 0 or montant > MONTANT_MAX:
+            raise ValueError(f"Le montant doit être positif et inférieur à {MONTANT_MAX:,.0f} €.")
+        
+        # 6. Validation contenu
+        if not contenu:
+            raise ValueError("La description ne peut pas être vide.")
+        if len(contenu) > 200:
+            raise ValueError("La description est trop longue (max 200 caractères).")
+        
+        # 7. Validation date
+        try:
+            date_depense = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise ValueError("Format de date invalide.")
+
+        # Règle métier : pas de date future, pas de date trop ancienne (> 10 ans)
+        date_min = (datetime.now() - timedelta(days=365*10)).date()
+        if date_depense < date_min or date_depense > datetime.now().date():
+            raise ValueError("La date doit être comprise entre il y a 10 ans et aujourd'hui.")
+        
+        # 8. Validation fournisseur
+        fournisseur_id = None
+        if not est_bon_achat:
+            fournisseur_id_raw = request.form.get('fournisseur_id')
+            if fournisseur_id_raw:
+                try:
+                    f_id = int(fournisseur_id_raw)
+                    # Vérification stricte de l'appartenance du fournisseur
+                    fournisseur = db.session.query(Fournisseur).filter_by(
+                        id=f_id, 
+                        etablissement_id=etablissement_id
+                    ).first()
+                    
+                    if not fournisseur:
+                        raise ValueError("Fournisseur invalide ou introuvable.")
+                    fournisseur_id = f_id
+                except (ValueError, TypeError):
+                    raise ValueError("ID Fournisseur invalide.")
+
+        # 9. Mise à jour
+        depense.date_depense = date_depense
+        depense.contenu = contenu
+        depense.montant = montant
+        depense.est_bon_achat = est_bon_achat
+        depense.fournisseur_id = fournisseur_id
+
+        db.session.commit()
+        
+        # 10. Log audit
+        current_app.logger.info(
+            f"Dépense {id} modifiée par User {session.get('user_id')} (Etab {etablissement_id})"
+        )
+        flash("Dépense modifiée avec succès.", "success")
+
+    except ValueError as e:
+        flash(str(e), "error")
+    except IntegrityError:
+        db.session.rollback()
+        flash("Erreur de cohérence des données.", "error")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur modification dépense {id}: {e}", exc_info=True)
+        flash("Erreur technique lors de la modification.", "error")
+
+    return redirect(url_for('admin.budget'))
+
+
 
 @admin_bp.route("/budget/cloturer", methods=['POST'])
 @admin_required
@@ -1302,7 +1532,7 @@ def ajouter_fournisseur():
     try:
         logo_filename = None
         
-        # 1. Gestion Fichier (Sécurisée)
+        # 1. Gestion Fichier (Sécurisée avec filetype)
         if 'logo_file' in request.files:
             file = request.files['logo_file']
             if file and file.filename != '':
@@ -1312,12 +1542,12 @@ def ajouter_fournisseur():
                     raise ValueError("Image trop volumineuse (Max 10Mo).")
                 file.seek(0)
                 
-                # B. Vérification Type (Magic Bytes)
-                header = file.read(512)
+                # B. Vérification Type (Via module filetype)
+                header = file.read(261) # filetype a besoin de 261 bytes max
                 file.seek(0)
-                format_img = imghdr.what(None, header)
+                kind = filetype.guess(header)
                 
-                if format_img not in ['jpeg', 'png', 'gif']:
+                if kind is None or kind.extension not in ['jpg', 'png', 'gif']:
                     raise ValueError("Format image non supporté (JPG, PNG, GIF uniquement).")
                 
                 # C. Upload
@@ -1374,7 +1604,7 @@ def modifier_fournisseur(id):
         fournisseur.nom = request.form.get("nom")
         fournisseur.site_web = request.form.get("site_web")
 
-        # 1. Gestion Fichier (Sécurisée)
+        # 1. Gestion Fichier (Sécurisée avec filetype)
         if 'logo_file' in request.files:
             file = request.files['logo_file']
             if file and file.filename != '':
@@ -1383,11 +1613,11 @@ def modifier_fournisseur(id):
                     raise ValueError("Image trop volumineuse (Max 10Mo).")
                 file.seek(0)
                 
-                header = file.read(512)
+                header = file.read(261)
                 file.seek(0)
-                format_img = imghdr.what(None, header)
+                kind = filetype.guess(header)
                 
-                if format_img not in ['jpeg', 'png', 'gif']:
+                if kind is None or kind.extension not in ['jpg', 'png', 'gif']:
                     raise ValueError("Format image non supporté.")
                 
                 filename = secure_filename(file.filename)
@@ -2576,3 +2806,4 @@ def generer_inventaire_excel(data, metadata):
     
     filename = f"Inventaire_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+

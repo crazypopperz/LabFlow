@@ -1,8 +1,10 @@
 # ============================================================
-# FICHIER : utils.py (Version Finale Corrigée - Cloche OK)
+# FICHIER : utils.py (Version Finale - Tout inclus)
 # ============================================================
 import hashlib
 import os
+import re
+import unicodedata
 from functools import wraps
 from datetime import datetime, timedelta
 
@@ -13,12 +15,63 @@ from flask import session, flash, redirect, url_for, request, current_app
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func
 
-# Imports Locaux (Ajout de Suggestion ici)
+# Imports Locaux
 from db import db, Utilisateur, Parametre, Objet, Reservation, AuditLog, MaintenanceLog, EquipementSecurite, Suggestion
 from extensions import cache
 
 # -----------------------------------------------------------------------------
-# FONCTIONS DE VÉRIFICATION
+# 1. VALIDATION & SANITIZATION (C'est ce qu'il manquait !)
+# -----------------------------------------------------------------------------
+
+# Regex Email conforme RFC 5321 (simplifiée mais robuste)
+EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9._%+-]{0,63}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+
+def validate_email(email):
+    """Valide le format d'un email."""
+    if not email or len(email) > 254:
+        return False
+    return EMAIL_REGEX.match(email.strip().lower()) is not None
+
+def validate_password_strength(password):
+    """
+    Vérifie la force du mot de passe.
+    Retourne (bool, message_erreur).
+    """
+    if len(password) < 12:
+        return False, "Le mot de passe doit contenir au moins 12 caractères."
+    if not re.search(r'[A-Z]', password):
+        return False, "Le mot de passe doit contenir au moins une majuscule."
+    if not re.search(r'[a-z]', password):
+        return False, "Le mot de passe doit contenir au moins une minuscule."
+    if not re.search(r'[0-9]', password):
+        return False, "Le mot de passe doit contenir au moins un chiffre."
+    if not re.search(r'[^a-zA-Z0-9]', password):
+        return False, "Le mot de passe doit contenir au moins un caractère spécial."
+    return True, ""
+
+def sanitize_input(text, max_length=100):
+    """Nettoie une entrée utilisateur (supprime caractères de contrôle)."""
+    if not text: return ""
+    text = text.strip()[:max_length]
+    # Retire les caractères non imprimables
+    return re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+
+# -----------------------------------------------------------------------------
+# 2. LOGIQUE DE LICENCE
+# -----------------------------------------------------------------------------
+def calculate_license_key(instance_id):
+    """
+    Génère une clé basée uniquement sur l'ID unique de l'installation.
+    """
+    secret = os.environ.get('GMLCL_PRO_KEY')
+    if not secret or not instance_id: return None
+    
+    # Signature simple : ID + Secret
+    raw_string = f"{instance_id}-{secret}"
+    return hashlib.sha256(raw_string.encode()).hexdigest()[:16].upper()
+
+# -----------------------------------------------------------------------------
+# 3. FONCTIONS DE VÉRIFICATION SYSTÈME
 # -----------------------------------------------------------------------------
 def is_setup_needed(app):
     """Vérifie si l'application a besoin d'être configurée (aucun admin)."""
@@ -30,30 +83,33 @@ def is_setup_needed(app):
             return True
 
 # -----------------------------------------------------------------------------
-# FONCTION HELPER (LOGGING)
+# 4. LOGGING (AUDIT)
 # -----------------------------------------------------------------------------
 def log_action(action, details=None):
-    """Enregistre une action dans l'Audit Log avec anonymisation."""
+    """Enregistre une action dans l'Audit Log."""
     try:
         user_id = session.get('user_id')
         etablissement_id = session.get('etablissement_id')
         
         if not user_id or not etablissement_id:
-            return # Pas de log si hors session
+            return 
 
-        # Hachage (Anonymisation GDPR)
-        user_hash = hashlib.sha256(str(user_id).encode()).hexdigest()
-        
         # On récupère l'IP réelle
         ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        ip_hash = hashlib.sha256(str(ip).encode()).hexdigest()
+        
+        # Hashage MD5 pour compatibilité DB (32 chars)
+        if ip:
+            ip_safe = hashlib.md5(ip.encode()).hexdigest()
+        else:
+            ip_safe = 'unknown'
 
         log = AuditLog(
-            user_id_hash=user_hash,
-            ip_address_hash=ip_hash,
+            id_utilisateur=user_id,
+            ip_address=ip_safe,
             action=action,
             details=str(details) if details else None,
-            etablissement_id=etablissement_id
+            etablissement_id=etablissement_id,
+            table_cible="GENERAL"
         )
         
         db.session.add(log)
@@ -64,9 +120,9 @@ def log_action(action, details=None):
         db.session.rollback()
 
 # -----------------------------------------------------------------------------
-# GESTION DU CACHE (Placé avant les décorateurs pour être utilisé dedans)
+# 5. GESTION DU CACHE
 # -----------------------------------------------------------------------------
-@cache.memoize(timeout=300)  # Cache pendant 5 minutes
+@cache.memoize(timeout=300)
 def get_etablissement_params(etablissement_id):
     """Récupère les paramètres critiques (Licence) avec mise en cache."""
     if not etablissement_id:
@@ -84,7 +140,7 @@ def get_etablissement_params(etablissement_id):
         return {}
 
 # -----------------------------------------------------------------------------
-# DÉCORATEURS DE SÉCURITÉ
+# 6. DÉCORATEURS DE SÉCURITÉ
 # -----------------------------------------------------------------------------
 def login_required(f):
     @wraps(f)
@@ -112,12 +168,10 @@ def limit_objets_required(f):
             flash("Session invalide. Veuillez vous reconnecter.", "error")
             return redirect(url_for('auth.login'))
 
-        # OPTIMISATION : Utilisation du cache au lieu d'une requête DB brute
         params = get_etablissement_params(etablissement_id)
         is_pro = params.get('licence_statut') == 'PRO'
         
         if not is_pro:
-            # On compte les objets seulement si pas PRO
             count = db.session.query(Objet).filter_by(etablissement_id=etablissement_id).count()
             if count >= 50:
                 flash("La version gratuite est limitée à 50 objets. Passez à la version Pro.", "warning")
@@ -127,17 +181,28 @@ def limit_objets_required(f):
     return decorated_function
 
 # -----------------------------------------------------------------------------
-# LOGIQUE MÉTIER
+# 7. LOGIQUE MÉTIER (ALERTES)
 # -----------------------------------------------------------------------------
 def get_alerte_info():
-    """Calcule les alertes de stock, péremption, sécurité ET suggestions."""
+    """Calcule les alertes. Chaque bloc est isolé pour éviter un crash global."""
     etablissement_id = session.get('etablissement_id')
-    if not etablissement_id:
-        return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0, 'alertes_securite': 0}
+    
+    # Valeurs par défaut
+    alerts = {
+        "alertes_stock": 0,
+        "alertes_peremption": 0,
+        "alertes_securite": 0,
+        "alertes_suggestions": 0,
+        "alertes_total": 0
+    }
 
+    if not etablissement_id:
+        return alerts
+
+    now = datetime.now()
+
+    # A. Calcul Stock & Péremption
     try:
-        now = datetime.now()
-        
         all_objets = db.session.execute(
             db.select(Objet).filter_by(etablissement_id=etablissement_id)
         ).scalars().all()
@@ -148,82 +213,70 @@ def get_alerte_info():
 
         for objet in all_objets:
             try:
-                # Calcul quantité dispo
+                # Stock
                 total_reserve = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
                     Reservation.objet_id == objet.id,
                     Reservation.fin_reservation > now
                 ).scalar() or 0
                 
                 quantite_disponible = objet.quantite_physique - total_reserve
-                
-                # Conversion sécurisée
                 seuil_numeric = int(objet.seuil) if objet.seuil is not None else 0
-                disponible_numeric = int(quantite_disponible)
-
-                # Alerte de stock
-                if objet.en_commande == 0 and disponible_numeric <= seuil_numeric:
+                
+                if objet.en_commande == 0 and int(quantite_disponible) <= seuil_numeric:
                     count_stock += 1
                 
-                # Alerte de péremption
+                # Péremption
                 if objet.date_peremption and objet.traite == 0:
-                    # Gestion robuste du format de date
-                    if isinstance(objet.date_peremption, str):
-                        d_peremption = datetime.strptime(objet.date_peremption, '%Y-%m-%d').date()
-                    else:
-                        d_peremption = objet.date_peremption # Si déjà date object
-
-                    if d_peremption < date_limite_peremption:
+                    d_perim = objet.date_peremption if isinstance(objet.date_peremption, datetime) else datetime.strptime(str(objet.date_peremption), '%Y-%m-%d').date()
+                    if d_perim < date_limite_peremption:
                         count_peremption += 1
+            except Exception:
+                continue 
 
-            except (ValueError, TypeError) as e:
-                # Log warning sans crasher (current_app est maintenant importé)
-                current_app.logger.warning(f"Skip objet {objet.id} alert check: {e}")
-                pass
+        alerts["alertes_stock"] = count_stock
+        alerts["alertes_peremption"] = count_peremption
 
-        # 2. Alertes Sécurité (Signalements non traités)
+    except Exception as e:
+        current_app.logger.error(f"Erreur calcul stock/péremption: {e}")
+
+    # B. Calcul Sécurité (Signalements)
+    try:
         count_securite = db.session.query(MaintenanceLog).join(EquipementSecurite).filter(
             EquipementSecurite.etablissement_id == etablissement_id,
             MaintenanceLog.resultat == 'signalement'
         ).count()
+        alerts["alertes_securite"] = count_securite
+    except Exception as e:
+        current_app.logger.error(f"Erreur calcul sécurité: {e}")
 
-        # 3. Suggestions (NOUVEAU : Ajouté pour la cloche)
+    # C. Calcul Suggestions
+    try:
         count_suggestions = db.session.query(Suggestion).filter_by(
             etablissement_id=etablissement_id, 
             statut='En attente'
         ).count()
+        alerts["alertes_suggestions"] = count_suggestions
+    except Exception as e:
+        current_app.logger.error(f"Erreur calcul suggestions: {e}")
 
-        return {
-            "alertes_stock": count_stock,
-            "alertes_peremption": count_peremption,
-            "alertes_securite": count_securite,
-            "alertes_suggestions": count_suggestions, # Ajouté
-            "alertes_total": count_stock + count_peremption + count_securite + count_suggestions # Total complet
-        }
+    # Total
+    alerts["alertes_total"] = (
+        alerts["alertes_stock"] + 
+        alerts["alertes_peremption"] + 
+        alerts["alertes_securite"] + 
+        alerts["alertes_suggestions"]
+    )
 
-    except SQLAlchemyError as e:
-        current_app.logger.error(f"ERREUR DB dans get_alerte_info: {e}")
-        return {'alertes_total': 0, 'alertes_stock': 0, 'alertes_peremption': 0, 'alertes_securite': 0}
+    return alerts
 
 def annee_scolaire_format(year):
-    if isinstance(year, int):
-        return f"{year}-{year + 1}"
+    if isinstance(year, int): return f"{year}-{year + 1}"
     return year
-
-# ===============================================
-#  ACTIVATION CLE LICENCE
-# ===============================================
-def calculate_license_key(instance_id):
-    secret = os.environ.get('GMLCL_PRO_KEY')
-    if not secret: return None
-    raw_string = f"{instance_id}-{secret}"
-    return hashlib.sha256(raw_string.encode()).hexdigest()[:16].upper()
 
 # ===============================================
 #  VERIFICATION DES UPLOADS
 # ===============================================
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'json', 'csv'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'json', 'csv', 'xlsx'}
 
 def allowed_file(filename):
-    """Vérifie si l'extension du fichier est autorisée."""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

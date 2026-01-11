@@ -1,10 +1,10 @@
 # --- Framework & Extensions ---
 Flask
-Flask-caching
-Flask-limiter
-Flask-login
+Flask-Caching
+Flask-Limiter
+Flask-Login
 Flask-SQLAlchemy
-Flask-talisman
+Flask-Talisman
 Flask-WTF
 WTForms
 Jinja2
@@ -25,6 +25,7 @@ python-dotenv
 openpyxl
 et_xmlfile
 fpdf2
+reportlab
 pillow
 fonttools
 defusedxml

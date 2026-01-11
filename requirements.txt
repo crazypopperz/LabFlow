@@ -2,6 +2,7 @@
 Flask
 Flask-caching
 Flask-limiter
+Flask-login
 Flask-SQLAlchemy
 Flask-talisman
 Flask-WTF

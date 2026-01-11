@@ -100,6 +100,8 @@ def create_app():
     # 2. INITIALISATION DES EXTENSIONS
     # ============================================================
     init_db_app(app)
+    with app.app_context():
+        db.create_all()
     CSRFProtect(app)
     limiter.init_app(app)
     cache.init_app(app)

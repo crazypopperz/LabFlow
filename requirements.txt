@@ -1,6 +1,6 @@
 # --- Framework & Extensions ---
 Flask
-Flask-catching
+Flask-caching
 Flask-limiter
 Flask-SQLAlchemy
 Flask-talisman

@@ -11,6 +11,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_talisman import Talisman
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Extensions (Cache & Rate Limit) - PAS DE LOGIN_MANAGER
 from extensions import limiter, cache
@@ -46,6 +47,8 @@ def configure_logging(app):
 
 def create_app():
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
 
     # ============================================================
     # 0. VÉRIFICATION ENVIRONNEMENT (FAIL FAST)

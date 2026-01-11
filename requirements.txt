@@ -1,6 +1,9 @@
 # --- Framework & Extensions ---
 Flask
+Flask-catching
+Flask-limiter
 Flask-SQLAlchemy
+Flask-talisman
 Flask-WTF
 WTForms
 Jinja2
@@ -9,6 +12,7 @@ MarkupSafe
 click
 itsdangerous
 blinker
+email-validator
 
 # --- Serveur & Base de données (Prod) ---
 gunicorn

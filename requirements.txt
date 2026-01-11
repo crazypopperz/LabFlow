@@ -14,6 +14,7 @@ click
 itsdangerous
 blinker
 email-validator
+filetype
 
 # --- Serveur & Base de données (Prod) ---
 gunicorn

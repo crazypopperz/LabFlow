@@ -191,11 +191,6 @@ def create_app():
     # ============================================================
     # 7. CONTEXT PROCESSORS (GLOBAL DATA)
     # ============================================================
-    @app.before_request
-    def check_setup():
-        if is_setup_needed(current_app) and request.endpoint not in ['auth.setup', 'static']:
-            return redirect(url_for('auth.setup'))
-
     @app.context_processor
     def inject_global_data():
         context = {

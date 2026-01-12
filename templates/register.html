@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Créer un Compte - LabFlow</title>
+    <title>Rejoindre une équipe - LabFlow</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
@@ -12,27 +12,38 @@
     
     <!-- CSS Modules -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/modules/auth.css') }}">
+
+    <style>
+        /* OVERRIDE LOCAL POUR ÉLARGIR LA CARTE */
+        .register-card {
+            max-width: 750px !important; /* Plus large */
+        }
+        
+        /* Ajustement responsive : sur mobile, on repasse en colonne */
+        @media (max-width: 768px) {
+            .register-card { max-width: 100% !important; margin: 10px; }
+        }
+    </style>
 </head>
 <body class="login-page-body">
 
     <div class="register-card">
-        <!-- En-tête -->
-        <div class="register-header">
-            <div class="register-logo">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+        <!-- En-tête (Plus compact) -->
+        <div class="register-header mb-3">
+            <div class="register-logo mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" style="width: 40px; height: 40px;">
                     <path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z"/>
                 </svg>
             </div>
-            <h1>Créer un compte</h1>
-            <p>Rejoignez votre établissement sur LabFlow</p>
+            <h2 class="fs-4 fw-bold">Rejoindre une équipe</h2>
         </div>
 
         <!-- Messages Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="mb-4">
+                <div class="mb-3">
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm py-2 small">
                         <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
                     </div>
                 {% endfor %}
@@ -40,67 +51,77 @@
             {% endif %}
         {% endwith %}
 
+        <!-- INFO PSEUDO UNIQUE (Compact) -->
+        <div class="alert alert-light border small text-muted mb-4 py-2 d-flex align-items-center justify-content-center">
+            <i class="bi bi-lightbulb-fill me-2 text-warning"></i>
+            <div>
+                <strong>Conseil :</strong> Votre identifiant doit être unique. Préférez <em>Prenom_Nom</em>.
+            </div>
+        </div>
+
         <form method="post" id="registerForm" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <!-- Nom d'utilisateur -->
+            <!-- LIGNE 1 : Code Invitation (Pleine largeur) -->
             <div class="form-floating mb-3">
-                <input type="text" class="form-control" id="username" name="username" placeholder="Identifiant" required minlength="3" maxlength="50" pattern="^[a-zA-Z0-9_-]+$">
-                <label for="username">Nom d'utilisateur</label>
-                <div class="form-text small ps-1">Lettres, chiffres, tirets et underscores uniquement.</div>
+                <input type="text" class="form-control text-uppercase fw-bold" id="code_invitation" name="code_invitation" placeholder="CODE" required maxlength="20" style="letter-spacing: 1px; background-color: #f8f9fa;">
+                <label for="code_invitation">Code d'invitation *</label>
             </div>
 
-            <!-- Email -->
-            <div class="form-floating mb-3">
-                <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
-                <label for="email">Adresse e-mail</label>
-            </div>
-
-            <!-- Code Invitation -->
-            <div class="form-floating mb-3">
-                <input type="text" class="form-control text-uppercase fw-bold" id="code_invitation" name="code_invitation" placeholder="CODE" required maxlength="20" style="letter-spacing: 1px;">
-                <label for="code_invitation">Code d'invitation</label>
-                <div class="form-text small ps-1">Fourni par votre administrateur.</div>
-            </div>
-
-            <!-- Mot de passe -->
-            <div class="mb-2 position-relative">
-                <div class="form-floating">
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Mot de passe" required minlength="12">
-                    <label for="password">Mot de passe</label>
+            <!-- LIGNE 2 : Pseudo & Email (Côte à côte) -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Identifiant" required minlength="3" maxlength="50" pattern="^[a-zA-Z0-9_-]+$">
+                        <label for="username">Nom d'utilisateur</label>
+                    </div>
                 </div>
-                <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y text-muted pe-3" id="togglePassword" style="z-index: 5;">
-                    <i class="bi bi-eye" id="togglePasswordIcon"></i>
-                </button>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+                        <label for="email">Adresse e-mail</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIGNE 3 : Mots de passe (Côte à côte) -->
+            <div class="row g-3 mb-2">
+                <div class="col-md-6">
+                    <div class="position-relative">
+                        <div class="form-floating">
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Mot de passe" required minlength="12">
+                            <label for="password">Mot de passe</label>
+                        </div>
+                        <button type="button" class="btn btn-link position-absolute top-50 end-0 translate-middle-y text-muted pe-3" id="togglePassword" style="z-index: 5;">
+                            <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Confirmation" required>
+                        <label for="password_confirm">Confirmer</label>
+                    </div>
+                </div>
             </div>
 
             <!-- Barre de force -->
-            <div class="strength-bar mb-2">
-                <div class="strength-bar-fill" id="strengthBar"></div>
-            </div>
+            <div class="strength-bar mb-2"><div class="strength-bar-fill" id="strengthBar"></div></div>
 
-            <!-- Exigences -->
-            <div class="password-requirements mb-3">
-                <div class="row g-2">
-                    <div class="col-6 requirement-item" id="req-length"><i class="bi bi-circle"></i> 12 car. min</div>
-                    <div class="col-6 requirement-item" id="req-uppercase"><i class="bi bi-circle"></i> 1 Majuscule</div>
-                    <div class="col-6 requirement-item" id="req-lowercase"><i class="bi bi-circle"></i> 1 Minuscule</div>
-                    <div class="col-6 requirement-item" id="req-number"><i class="bi bi-circle"></i> 1 Chiffre</div>
-                    <div class="col-6 requirement-item" id="req-special"><i class="bi bi-circle"></i> 1 Caractère</div>
-                    <div class="col-6 requirement-item" id="req-match"><i class="bi bi-circle"></i> Identiques</div>
+            <!-- Exigences (Plus compactes : 3 colonnes) -->
+            <div class="password-requirements mb-4">
+                <div class="row g-1 text-center">
+                    <div class="col-4 requirement-item" id="req-length"><i class="bi bi-circle"></i> 12+ car.</div>
+                    <div class="col-4 requirement-item" id="req-uppercase"><i class="bi bi-circle"></i> Majuscule</div>
+                    <div class="col-4 requirement-item" id="req-lowercase"><i class="bi bi-circle"></i> Minuscule</div>
+                    <div class="col-4 requirement-item" id="req-number"><i class="bi bi-circle"></i> Chiffre</div>
+                    <div class="col-4 requirement-item" id="req-special"><i class="bi bi-circle"></i> Spécial</div>
+                    <div class="col-4 requirement-item" id="req-match"><i class="bi bi-circle"></i> Identiques</div>
                 </div>
             </div>
 
-            <!-- Confirmation -->
-            <div class="form-floating mb-4">
-                <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="Confirmation" required>
-                <label for="password_confirm">Confirmer le mot de passe</label>
-            </div>
-
             <!-- Bouton -->
-            <button type="submit" class="btn btn-register w-100 mb-3" id="submitBtn">
-                S'inscrire
-            </button>
+            <button type="submit" class="btn btn-register w-100 mb-3" id="submitBtn">Rejoindre l'équipe</button>
 
             <!-- Footer -->
             <div class="text-center small text-muted">
@@ -112,6 +133,7 @@
     <!-- Bootstrap JS -->
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
 
+    <!-- Script JS (Inchangé) -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('registerForm');
@@ -121,10 +143,8 @@
             const strengthBar = document.getElementById('strengthBar');
             const codeInput = document.getElementById('code_invitation');
 
-            // Majuscules auto pour le code
             codeInput.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
 
-            // Afficher/Masquer mot de passe
             togglePassword.addEventListener('click', function() {
                 const type = password.type === 'password' ? 'text' : 'password';
                 password.type = type;
@@ -133,12 +153,10 @@
                 document.getElementById('togglePasswordIcon').classList.toggle('bi-eye-slash');
             });
 
-            // Vérification Force & Correspondance
             function checkPassword() {
                 const val = password.value;
                 const valConf = passwordConfirm.value;
                 let strength = 0;
-
                 const checks = {
                     'req-length': val.length >= 12,
                     'req-uppercase': /[A-Z]/.test(val),
@@ -147,7 +165,6 @@
                     'req-special': /[^A-Za-z0-9]/.test(val),
                     'req-match': val.length > 0 && val === valConf
                 };
-
                 for (const [id, met] of Object.entries(checks)) {
                     const el = document.getElementById(id);
                     const icon = el.querySelector('i');
@@ -160,7 +177,6 @@
                         icon.className = 'bi bi-circle';
                     }
                 }
-
                 strengthBar.style.width = strength + '%';
                 if (strength <= 40) strengthBar.style.backgroundColor = '#ef4444';
                 else if (strength <= 80) strengthBar.style.backgroundColor = '#f59e0b';
@@ -170,7 +186,6 @@
             password.addEventListener('input', checkPassword);
             passwordConfirm.addEventListener('input', checkPassword);
 
-            // Soumission
             form.addEventListener('submit', function(e) {
                 if (!form.checkValidity() || password.value !== passwordConfirm.value) {
                     e.preventDefault();

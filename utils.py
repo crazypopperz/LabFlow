@@ -74,13 +74,7 @@ def calculate_license_key(instance_id):
 # 3. FONCTIONS DE VÉRIFICATION SYSTÈME
 # -----------------------------------------------------------------------------
 def is_setup_needed(app):
-    """Vérifie si l'application a besoin d'être configurée (aucun admin)."""
-    with app.app_context():
-        try:
-            admin_count = db.session.query(Utilisateur).filter_by(role='admin').count()
-            return admin_count == 0
-        except Exception:
-            return True
+    return False
 
 # -----------------------------------------------------------------------------
 # 4. LOGGING (AUDIT)

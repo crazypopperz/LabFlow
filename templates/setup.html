@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuration Initiale - LabFlow</title>
+    <title>Créer un Établissement - LabFlow</title>
     
     <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
     <style>
-        /* --- STYLE SPÉCIFIQUE SETUP (Pour écraser tout le reste) --- */
+        /* --- STYLE SPÉCIFIQUE SETUP --- */
         body.login-page-body {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
@@ -26,224 +26,152 @@
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 500px;
+            max-width: 750px; /* ÉLARGI POUR LE LAYOUT 2 COLONNES */
             padding: 2rem;
             border: 1px solid rgba(0,0,0,0.05);
         }
-
-        .setup-header {
-            text-align: center;
-            margin-bottom: 2rem;
+        
+        @media (max-width: 768px) {
+            .setup-card { max-width: 100%; padding: 1.5rem; }
         }
+
+        .setup-header { text-align: center; margin-bottom: 1.5rem; }
 
         .setup-icon {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #1F3B73 0%, #2c3e50 100%);
+            width: 50px; height: 50px; /* Un peu plus petit */
+            background: linear-gradient(135deg, #198754 0%, #20c997 100%);
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1rem;
-            color: white;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 10px rgba(31, 59, 115, 0.3);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 0.5rem;
+            color: white; font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3);
         }
 
-        /* --- INPUTS MATÉRIALISÉS (Gris clair + Bordure) --- */
-        .form-label {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: #495057;
-            margin-bottom: 0.4rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+        .form-label { font-weight: 600; font-size: 0.8rem; color: #495057; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-group-text { background-color: #f1f3f5; border: 1px solid #ced4da; border-right: none; color: #6c757d; }
+        .form-control { background-color: #f1f3f5; border: 1px solid #ced4da; border-left: none; padding: 0.5rem 1rem; font-size: 0.95rem; color: #212529; font-weight: 500; }
+        .form-control:focus { background-color: #ffffff; border-color: #198754; box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.15); }
+        .input-group:focus-within .input-group-text { background-color: #ffffff; border-color: #198754; }
 
-        .input-group-text {
-            background-color: #f1f3f5;
-            border: 1px solid #ced4da;
-            border-right: none;
-            color: #6c757d;
-        }
-
-        .form-control {
-            background-color: #f1f3f5;
-            border: 1px solid #ced4da;
-            border-left: none;
-            padding: 0.6rem 1rem;
-            font-size: 0.95rem;
-            color: #212529;
-            font-weight: 500;
-        }
-
-        .form-control:focus {
-            background-color: #ffffff;
-            border-color: #0d6efd;
-            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
-        }
-
-        .input-group:focus-within .input-group-text {
-            background-color: #ffffff;
-            border-color: #0d6efd;
-        }
-
-        /* --- BARRE DE FORCE --- */
-        .strength-bar {
-            height: 4px;
-            background: #e9ecef;
-            border-radius: 2px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-        .strength-bar-fill {
-            height: 100%;
-            width: 0;
-            transition: width 0.3s ease, background-color 0.3s ease;
-        }
+        .strength-bar { height: 4px; background: #e9ecef; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+        .strength-bar-fill { height: 100%; width: 0; transition: width 0.3s ease, background-color 0.3s ease; }
         
-        .password-requirements {
-            font-size: 0.75rem;
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 10px;
-            border: 1px solid #e9ecef;
-        }
-        
-        .requirement-item {
-            margin-bottom: 2px;
-            color: #adb5bd;
-            transition: color 0.2s;
-        }
-        .requirement-item.met {
-            color: #198754;
-            font-weight: 700;
-        }
-        .requirement-item i {
-            font-size: 0.8rem;
-            margin-right: 4px;
-        }
+        .password-requirements { font-size: 0.7rem; background: #f8f9fa; padding: 8px; border-radius: 8px; margin-top: 8px; border: 1px solid #e9ecef; }
+        .requirement-item { margin-bottom: 1px; color: #adb5bd; transition: color 0.2s; }
+        .requirement-item.met { color: #198754; font-weight: 700; }
+        .requirement-item i { font-size: 0.8rem; margin-right: 4px; }
 
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            font-weight: 700;
-            font-size: 1rem;
-            border-radius: 8px;
-            background: #1F3B73;
-            border: none;
-            color: white;
-            margin-top: 1rem;
-            transition: all 0.2s;
-        }
-        .btn-submit:hover {
-            background: #0d6efd;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
-        }
+        .btn-submit { width: 100%; padding: 10px; font-weight: 700; font-size: 1rem; border-radius: 8px; background: #198754; border: none; color: white; margin-top: 0.5rem; transition: all 0.2s; }
+        .btn-submit:hover { background: #157347; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(21, 115, 71, 0.3); }
     </style>
 </head>
 
 <body class="login-page-body">
 
     <div class="setup-card">
-        <!-- En-tête -->
         <div class="setup-header">
-            <div class="setup-icon">
-                <i class="bi bi-rocket-takeoff-fill"></i>
-            </div>
-            <h2 class="fw-bold text-dark mb-1">Bienvenue sur LabFlow</h2>
-            <p class="text-muted small">Configuration initiale de votre établissement</p>
+            <div class="setup-icon"><i class="bi bi-building-add"></i></div>
+            <h2 class="fs-4 fw-bold text-dark mb-0">Nouvel Établissement</h2>
+            <p class="text-muted small mb-0">Créez votre espace LabFlow</p>
         </div>
 
-        <!-- Messages Flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
+                <div class="mb-3">
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm border-0 mb-4 py-2 small">
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm border-0 py-2 small mb-2">
                         <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
                     </div>
                 {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
+
+        <!-- INFO PSEUDO UNIQUE (Compact) -->
+        <div class="alert alert-light border small text-muted mb-3 py-2 d-flex align-items-center justify-content-center">
+            <i class="bi bi-lightbulb-fill me-2 text-success"></i>
+            <div>
+                <strong>Conseil :</strong> Identifiant unique requis. Préférez <em>Admin_Lycee</em>.
+            </div>
+        </div>
 
         <form action="{{ url_for('auth.setup') }}" method="post" id="setupForm" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <!-- Nom Établissement -->
+            <!-- LIGNE 1 : Nom Établissement (Pleine largeur) -->
             <div class="mb-3">
-                <label for="nom_etablissement" class="form-label">Nom de l'établissement</label>
+                <label for="nom_etablissement" class="form-label text-success">Nom de l'établissement</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-building"></i></span>
-                    <input type="text" class="form-control" id="nom_etablissement" name="nom_etablissement" placeholder="Ex: Lycée Victor Hugo" required autocomplete="organization">
+                    <input type="text" class="form-control" id="nom_etablissement" name="nom_etablissement" placeholder="Ex: Lycée Victor Hugo" required autocomplete="organization" autofocus>
                 </div>
             </div>
 
-            <!-- Admin User -->
-            <div class="mb-3">
-                <label for="username" class="form-label">Nom d'utilisateur Admin</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
-                    <input type="text" class="form-control" id="username" name="username" placeholder="Ex: Admin" required autocomplete="username">
+            <!-- LIGNE 2 : Admin & Email (Côte à côte) -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label for="username" class="form-label">Nom d'utilisateur Admin</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Ex: Admin_VH" required autocomplete="username">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="email" class="form-label">Email Administrateur</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="admin@ecole.fr" required autocomplete="email">
+                    </div>
                 </div>
             </div>
 
-            <!-- Email -->
-            <div class="mb-3">
-                <label for="email" class="form-label">Email Administrateur</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                    <input type="email" class="form-control" id="email" name="email" placeholder="admin@ecole.fr" required autocomplete="email">
+            <!-- LIGNE 3 : Mots de passe (Côte à côte) -->
+            <div class="row g-3 mb-2">
+                <div class="col-md-6">
+                    <label for="password" class="form-label">Mot de passe</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="••••••••••••" required autocomplete="new-password">
+                        <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePassword" style="border-color: #ced4da;">
+                            <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                    <!-- Barre de force sous le champ -->
+                    <div class="strength-bar"><div class="strength-bar-fill" id="strengthBar"></div></div>
+                </div>
+                <div class="col-md-6">
+                    <label for="password_confirm" class="form-label">Confirmer</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-check2-circle"></i></span>
+                        <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="••••••••••••" required autocomplete="new-password">
+                    </div>
+                    <div class="invalid-feedback d-block small mt-1" id="matchError" style="display: none !important;">Ne correspond pas</div>
                 </div>
             </div>
 
-            <!-- Mot de passe -->
-            <div class="mb-2">
-                <label for="password" class="form-label">Mot de passe</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="••••••••••••" required autocomplete="new-password">
-                    <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePassword" style="border-color: #ced4da;">
-                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
-                    </button>
-                </div>
-                
-                <!-- Barre de force -->
-                <div class="strength-bar">
-                    <div class="strength-bar-fill" id="strengthBar"></div>
-                </div>
-            </div>
-
-            <!-- Exigences -->
+            <!-- Exigences (3 colonnes pour gagner de la place) -->
             <div class="password-requirements mb-3">
-                <div class="row g-1">
-                    <div class="col-6 requirement-item" id="req-length"><i class="bi bi-circle"></i> 12 car. min</div>
-                    <div class="col-6 requirement-item" id="req-uppercase"><i class="bi bi-circle"></i> 1 Majuscule</div>
-                    <div class="col-6 requirement-item" id="req-lowercase"><i class="bi bi-circle"></i> 1 Minuscule</div>
-                    <div class="col-6 requirement-item" id="req-number"><i class="bi bi-circle"></i> 1 Chiffre</div>
-                    <div class="col-6 requirement-item" id="req-special"><i class="bi bi-circle"></i> 1 Caractère</div>
-                    <div class="col-6 requirement-item" id="req-match"><i class="bi bi-circle"></i> Identiques</div>
+                <div class="row g-1 text-center">
+                    <div class="col-4 requirement-item" id="req-length"><i class="bi bi-circle"></i> 12+ car.</div>
+                    <div class="col-4 requirement-item" id="req-uppercase"><i class="bi bi-circle"></i> Majuscule</div>
+                    <div class="col-4 requirement-item" id="req-lowercase"><i class="bi bi-circle"></i> Minuscule</div>
+                    <div class="col-4 requirement-item" id="req-number"><i class="bi bi-circle"></i> Chiffre</div>
+                    <div class="col-4 requirement-item" id="req-special"><i class="bi bi-circle"></i> Spécial</div>
+                    <div class="col-4 requirement-item" id="req-match"><i class="bi bi-circle"></i> Identiques</div>
                 </div>
             </div>
 
-            <!-- Confirmation -->
-            <div class="mb-4">
-                <label for="password_confirm" class="form-label">Confirmer le mot de passe</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-check2-circle"></i></span>
-                    <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="••••••••••••" required autocomplete="new-password">
-                </div>
-                <div class="invalid-feedback d-block" id="matchError" style="display: none !important;">Les mots de passe ne correspondent pas</div>
-            </div>
+            <button type="submit" class="btn-submit">Créer et Démarrer</button>
 
-            <button type="submit" class="btn-submit">
-                Créer et Démarrer
-            </button>
+            <div class="text-center mt-3">
+                <a href="{{ url_for('auth.login') }}" class="text-decoration-none small text-muted">
+                    <i class="bi bi-arrow-left me-1"></i>Annuler
+                </a>
+            </div>
         </form>
     </div>
 
-    <!-- Script de Validation -->
+    <!-- Script JS (Inchangé) -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('setupForm');
@@ -254,7 +182,6 @@
             const strengthBar = document.getElementById('strengthBar');
             const matchError = document.getElementById('matchError');
 
-            // Toggle Password Visibility
             togglePassword.addEventListener('click', function() {
                 const type = password.type === 'password' ? 'text' : 'password';
                 password.type = type;
@@ -263,14 +190,11 @@
                 togglePasswordIcon.classList.toggle('bi-eye-slash');
             });
 
-            // Fonction de vérification de correspondance
             function checkMatch() {
                 const valPass = password.value;
                 const valConf = passwordConfirm.value;
                 const isMatch = valPass.length > 0 && valConf.length > 0 && valPass === valConf;
-                
                 updateRequirement('req-match', isMatch);
-
                 if (valConf.length > 0 && valPass !== valConf) {
                     passwordConfirm.classList.add('is-invalid');
                     matchError.style.display = 'block';
@@ -281,11 +205,9 @@
                 return isMatch;
             }
 
-            // Password Strength Logic
             password.addEventListener('input', function() {
                 const value = this.value;
                 let strength = 0;
-                
                 const hasLength = value.length >= 12;
                 const hasUpperCase = /[A-Z]/.test(value);
                 const hasLowerCase = /[a-z]/.test(value);
@@ -305,14 +227,9 @@
                 if (hasSpecial) strength += 20;
 
                 strengthBar.style.width = strength + '%';
-                
-                if (strength <= 40) {
-                    strengthBar.style.backgroundColor = '#dc3545'; 
-                } else if (strength <= 80) {
-                    strengthBar.style.backgroundColor = '#ffc107'; 
-                } else {
-                    strengthBar.style.backgroundColor = '#198754'; 
-                }
+                if (strength <= 40) strengthBar.style.backgroundColor = '#dc3545'; 
+                else if (strength <= 80) strengthBar.style.backgroundColor = '#ffc107'; 
+                else strengthBar.style.backgroundColor = '#198754'; 
 
                 checkMatch();
             });
@@ -331,7 +248,6 @@
                 }
             }
 
-            // Validation à la soumission
             form.addEventListener('submit', function(event) {
                 if (!form.checkValidity() || password.value !== passwordConfirm.value) {
                     event.preventDefault();

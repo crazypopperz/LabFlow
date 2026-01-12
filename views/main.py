@@ -13,6 +13,15 @@ main_bp = Blueprint(
     template_folder='../templates'
 )
 
+#============================================================
+# ROUTE RACINE (ACCUEIL)
+#============================================================
+@main_bp.route('/')
+def index():
+    if 'user_id' in session:
+        return redirect(url_for('inventaire.index'))
+    return redirect(url_for('auth.login'))
+
     
 #============================================================
 # GESTION ARMOIRES (LOGIQUE RESTAURÉE)

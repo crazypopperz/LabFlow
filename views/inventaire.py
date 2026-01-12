@@ -75,7 +75,6 @@ def cleanup_old_file(relative_path):
 # ROUTES
 # ============================================================
 @inventaire_bp.route("/")
-@login_required
 def index():
     # --- LOGIQUE DASHBOARD (Conservée) ---
     etablissement_id = session.get('etablissement_id')

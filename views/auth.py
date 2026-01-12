@@ -1,5 +1,5 @@
 # ============================================================
-# FICHIER : views/auth.py (SÉCURISÉ & VALIDÉ)
+# FICHIER : views/auth.py (Solution Pseudo Unique)
 # ============================================================
 import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
@@ -17,6 +17,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
+        # Recherche de l'utilisateur unique
         user = db.session.execute(db.select(Utilisateur).filter_by(nom_utilisateur=username)).scalar_one_or_none()
         
         if user and check_password_hash(user.mot_de_passe, password):
@@ -25,7 +26,6 @@ def login():
                 return redirect(url_for('auth.login'))
 
             session.clear()
-            
             session['user_id'] = user.id
             session['user_name'] = user.nom_utilisateur
             session['user_role'] = user.role
@@ -49,33 +49,31 @@ def register():
         password = request.form.get('password')
         code_invitation = request.form.get('code_invitation', '').strip().upper()
         
-        # 1. Validation Email
         if not validate_email(email):
             flash("Format d'email invalide.", "error")
-            return redirect(url_for('auth.register'))
+            return render_template('register.html')
 
-        # 2. Validation Mot de passe (AJOUTÉ)
         is_valid_pass, msg_pass = validate_password_strength(password)
         if not is_valid_pass:
             flash(msg_pass, "error")
-            return redirect(url_for('auth.register'))
+            return render_template('register.html')
 
-        # 3. Vérification du code d'invitation
         etablissement = db.session.execute(db.select(Etablissement).filter_by(code_invitation=code_invitation)).scalar_one_or_none()
-        
         if not etablissement:
             flash("Code d'invitation invalide.", "error")
-            return redirect(url_for('auth.register'))
+            return render_template('register.html')
             
-        # 4. Vérification existence utilisateur
+        # VÉRIFICATION STRICTE DU PSEUDO
         existing_user = db.session.execute(db.select(Utilisateur).filter_by(nom_utilisateur=username)).scalar_one_or_none()
+        if existing_user:
+            flash(f"Le nom d'utilisateur '{username}' est déjà pris. Veuillez en choisir un autre.", "error")
+            return render_template('register.html')
+            
         existing_email = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
-        
-        if existing_user or existing_email:
-            flash("Impossible de créer le compte avec ces informations.", "error")
-            return redirect(url_for('auth.register'))
+        if existing_email:
+            flash("Cet email est déjà utilisé.", "error")
+            return render_template('register.html')
 
-        # 5. Création
         try:
             nouvel_utilisateur = Utilisateur(
                 nom_utilisateur=username,
@@ -84,17 +82,14 @@ def register():
                 role='utilisateur',
                 etablissement_id=etablissement.id
             )
-            
             db.session.add(nouvel_utilisateur)
             db.session.commit()
-            
-            flash("Compte créé avec succès ! Connectez-vous.", "success")
+            flash("Compte créé ! Connectez-vous.", "success")
             return redirect(url_for('auth.login'))
-            
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Erreur register: {e}")
-            flash("Erreur technique lors de l'inscription.", "error")
+            flash("Erreur technique.", "error")
             
     return render_template('register.html')
 
@@ -107,32 +102,35 @@ def logout():
 @auth_bp.route('/setup', methods=['GET', 'POST'])
 @limiter.limit("3 per minute")
 def setup():
-    """Installation initiale (Premier Admin)."""
-    user_exist = db.session.execute(db.select(Utilisateur)).first()
-    if user_exist:
-        flash("L'application est déjà installée.", "warning")
-        return redirect(url_for('auth.login'))
-
+    """Création d'un NOUVEL Établissement."""
     if request.method == 'POST':
         nom_etablissement = request.form.get('nom_etablissement')
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
         
-        # Validation Email
         if not validate_email(email):
             flash("Format d'email invalide.", "error")
             return render_template('setup.html')
 
-        # Validation Mot de passe (AJOUTÉ)
         is_valid_pass, msg_pass = validate_password_strength(password)
         if not is_valid_pass:
             flash(msg_pass, "error")
             return render_template('setup.html')
 
+        # VÉRIFICATION STRICTE DU PSEUDO
+        user_exist = db.session.execute(db.select(Utilisateur).filter_by(nom_utilisateur=username)).scalar_one_or_none()
+        if user_exist:
+            flash(f"Le nom d'utilisateur '{username}' est déjà pris. Essayez '{username}_lycee' ou '{username}_admin'.", "error")
+            return render_template('setup.html')
+
+        email_exist = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
+        if email_exist:
+            flash("Cet email est déjà utilisé.", "error")
+            return render_template('setup.html')
+
         try:
             code_temp = f"LAB-{secrets.token_hex(6).upper()}"
-            
             etab = Etablissement(nom=nom_etablissement, code_invitation=code_temp)
             db.session.add(etab)
             db.session.flush()
@@ -152,16 +150,17 @@ def setup():
             
             db.session.commit()
             
-            flash("Installation terminée ! Connectez-vous.", "success")
+            flash(f"Établissement créé ! Connectez-vous.", "success")
             return redirect(url_for('auth.login'))
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.error(f"Erreur setup: {e}")
-            flash(f"Erreur d'installation.", "error")
+            flash(f"Erreur technique.", "error")
 
     return render_template('setup.html')
 
+# ... (Route profil inchangée)
 @auth_bp.route('/profil', methods=['GET', 'POST'])
 @login_required
 def profil():

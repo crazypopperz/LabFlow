@@ -164,6 +164,7 @@ class PanierService:
                 'nom': nom,
                 'image': image,
                 'quantite': item.quantite,
+                'date': item.date_reservation.isoformat(),
                 'date_reservation': item.date_reservation.isoformat(),
                 'heure_debut': item.heure_debut,
                 'heure_fin': item.heure_fin

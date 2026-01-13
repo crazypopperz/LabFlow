@@ -195,8 +195,27 @@ def checkout_panier():
     user_id = session['user_id']
     try:
         result = services.panier.valider_panier(user_id)
+        
+        # --- CORRECTION POUR LE TOAST JS ---
+        # Le JS attend data.reservations_count
+        response_data = result
+
+        # Si le service renvoie une liste (les réservations créées), on la structure
+        if isinstance(result, list):
+            response_data = {
+                'reservations_count': len(result),
+                'reservations': result
+            }
+        # Si c'est un dictionnaire mais qu'il manque la clé explicite
+        elif isinstance(result, dict) and 'reservations_count' not in result:
+            # On essaie de deviner le nombre, sinon 1 par défaut (car succès)
+            count = len(result.get('reservations', [])) or len(result.get('items', [])) or 1
+            response_data = result.copy()
+            response_data['reservations_count'] = count
+
         current_app.logger.info(f"API CHECKOUT SUCCESS | User {user_id}")
-        return jsonify({"success": True, "data": result}), 201
+        return jsonify({"success": True, "data": response_data}), 201
+
     except Exception as e:
         current_app.logger.error(f"API CHECKOUT ERROR: {e}", exc_info=True)
         if isinstance(e, (PanierServiceError, StockServiceError)):

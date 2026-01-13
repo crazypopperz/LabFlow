@@ -224,7 +224,10 @@ function setupGlobalActions() {
                 const json = await res.json();
 
                 if (res.ok && json.success) {
-                    showToast(`Succès ! ${json.data.reservations_count} réservations créées.`, "success");
+                    const count = json.data.reservations_count;
+                    const accord = count > 1 ? "s" : "";
+                    
+                    showToast(`Succès ! ${count} réservation${accord} créée${accord}.`, "success");
                     setTimeout(() => {
                         window.location.href = '/calendrier';
                     }, 1500);

@@ -268,7 +268,7 @@
 .objet-table th:first-child a { text-align: left !important; }
 
 /* Images dans tableau */
-.image-cell { width: 60px; text-align: center; padding: 0.5rem !important; }
+.image-cell { width: 60px; text-align: center; padding: 0.5rem !important; overflow: visible !important;}
 .image-preview-wrapper {
     position: relative; display: inline-block; width: 40px; height: 40px; vertical-align: middle;
 }
@@ -281,13 +281,17 @@
 }
 .table-image-placeholder svg { fill: #999; }
 .image-objet-preview {
-  visibility: hidden; opacity: 0; position: fixed !important;
+  visibility: hidden; opacity: 0; position: absolute !important;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  margin-right: 10px;
   width: 250px; height: 250px; object-fit: contain;
-  background-color: var(--fond-element);
-  border: 2px solid #ccc; border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background-color: white;
+  border: 1px solid #ccc; border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   z-index: 10010; transition: opacity 0.2s ease;
-  pointer-events: none; padding: 4px;
+  pointer-events: none; padding: 5px;
 }
 .image-preview-wrapper:hover .image-objet-preview { visibility: visible; opacity: 1; }
 

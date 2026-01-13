@@ -368,7 +368,11 @@ class PanierService:
             db.session.add(audit)
 
             db.session.commit()
-            return {"success": True, "groupes": resultats}
+            return {
+                "success": True, 
+                "groupes": resultats,
+                "count": len(resultats) 
+            }
 
         except (PanierServiceError, StockServiceError) as e:
             db.session.rollback()

@@ -501,32 +501,25 @@
 
         numberInputs.forEach(input => {
             input.addEventListener('keydown', function(e) {
-                // Si l'utilisateur tape un point, on le convertit en virgule
+                // Si l'utilisateur tape un point (clavier ou pavé numérique)
                 if (e.key === '.' || e.key === 'Decimal') {
                     e.preventDefault();
                     
-                    // Hack pour Chrome : sur type="number", la selection ne marche pas toujours
-                    // On tente le coup, sinon on ajoute à la fin
-                    let start, end;
-                    try {
-                        start = this.selectionStart;
-                        end = this.selectionEnd;
-                    } catch (err) {
-                        start = this.value.length;
-                        end = this.value.length;
-                    }
-                    
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
                     const value = this.value;
                     
                     // Vérifier qu'il n'y a pas déjà une virgule
                     if (!value.includes(',')) {
-                        // Si curseur détecté, on insère au bon endroit, sinon à la fin
-                        if (start !== null) {
-                            this.value = value.substring(0, start) + ',' + value.substring(end);
-                            try { this.setSelectionRange(start + 1, start + 1); } catch(e){}
-                        } else {
-                            this.value = value + ',';
-                        }
+                        // Construire la nouvelle valeur
+                        const newValue = value.substring(0, start) + ',' + value.substring(end);
+                        this.value = newValue;
+                        
+                        // Repositionner le curseur APRÈS la mise à jour
+                        const newPosition = start + 1;
+                        setTimeout(() => {
+                            this.selectionStart = this.selectionEnd = newPosition;
+                        }, 0);
                     }
                 }
             });

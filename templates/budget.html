@@ -501,25 +501,13 @@
 
         numberInputs.forEach(input => {
             input.addEventListener('keydown', function(e) {
-                // Si l'utilisateur tape un point (clavier ou pavé numérique)
+                // Si l'utilisateur tape un point (pavé ou clavier)
                 if (e.key === '.' || e.key === 'Decimal') {
-                    e.preventDefault();
+                    e.preventDefault(); // On bloque le point
                     
-                    const start = this.selectionStart;
-                    const end = this.selectionEnd;
-                    const value = this.value;
-                    
-                    // Vérifier qu'il n'y a pas déjà une virgule
-                    if (!value.includes(',')) {
-                        // Construire la nouvelle valeur
-                        const newValue = value.substring(0, start) + ',' + value.substring(end);
-                        this.value = newValue;
-                        
-                        // Repositionner le curseur APRÈS la mise à jour
-                        const newPosition = start + 1;
-                        setTimeout(() => {
-                            this.selectionStart = this.selectionEnd = newPosition;
-                        }, 0);
+                    // On ajoute une virgule à la fin, SEULEMENT s'il n'y en a pas déjà une
+                    if (!this.value.includes(',')) {
+                        this.value = this.value + ',';
                     }
                 }
             });

@@ -534,3 +534,36 @@ tr.row-done td strong { font-weight: normal; }
 .form-control:focus, .form-select:focus { border-color: var(--couleur-principale); box-shadow: 0 0 0 3px rgba(31, 59, 115, 0.15); }
 .form-switch-link { text-align: center; margin-top: 1.5rem; font-size: 0.9rem; }
 .form-switch-link a { color: var(--couleur-principale); font-weight: 500; }
+
+
+/* =================================================================
+   BOUTONS DE SÉLECTION D'EXPORT (ADMIN)
+   ================================================================= */
+
+/* État par défaut (Repos) */
+.btn-export-select {
+    background-color: #ffffff;
+    color: var(--texte-discret); /* Gris doux */
+    font-weight: 500;
+    border-color: var(--couleur-bordure);
+    transition: all 0.2s ease-in-out;
+}
+
+/* État Survol (Hover) */
+.btn-export-select:hover {
+    background-color: #f8f9fa;
+    color: var(--couleur-principale); /* Bleu LabFlow */
+    border-color: #adb5bd;
+    z-index: 2; /* Passe au-dessus des bordures voisines */
+}
+
+/* État Sélectionné (Checked) - Style Premium */
+.btn-check:checked + .btn-export-select {
+    /* Dégradé Bleu/Cyan comme l'icône de la carte */
+    background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3); /* Ombre portée */
+    z-index: 3;
+}

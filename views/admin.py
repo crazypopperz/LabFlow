@@ -1997,22 +1997,62 @@ def importer_fichier():
 @limiter.limit("5 per minute")
 def exporter_inventaire():
     etablissement_id = session['etablissement_id']
-    format_type = request.args.get('format')
     
+    # 1. Récupération et nettoyage des entrées
+    format_type = request.args.get('format')
+    armoire_id = request.args.get('armoire_id', type=int)
+    categorie_id = request.args.get('categorie_id', type=int)
+    
+    # 2. Sécurité : Validation du format
     if format_type not in ['excel', 'pdf']:
-        flash("Format non supporté.", "error")
+        flash("Format d'export non supporté.", "error")
+        return redirect(url_for('admin.admin'))
+    
+    # 3. Sécurité : Exclusion mutuelle
+    if armoire_id and categorie_id:
+        flash("Veuillez choisir soit une armoire, soit une catégorie, mais pas les deux.", "warning")
         return redirect(url_for('admin.admin'))
 
     try:
-        # 1. Récupération des données (Optimisée avec Jointures)
-        objets = db.session.execute(
-            db.select(Objet)
-            .options(joinedload(Objet.categorie), joinedload(Objet.armoire))
-            .filter_by(etablissement_id=etablissement_id)
-            .order_by(Objet.categorie_id, Objet.nom) # Tri par Catégorie puis Nom
-        ).scalars().all()
+        # 4. Construction de la requête de base (Optimisée)
+        query = db.select(Objet).options(
+            joinedload(Objet.categorie), 
+            joinedload(Objet.armoire)
+        ).filter_by(etablissement_id=etablissement_id)
+
+        # 5. Application des filtres avec SÉCURITÉ IDOR
+        titre_doc = f"Inventaire - {session.get('nom_etablissement', 'Global')}"
         
-        # 2. Préparation des données pour les générateurs
+        if armoire_id:
+            # Vérification stricte : l'armoire appartient-elle à l'établissement ?
+            armoire = db.session.get(Armoire, armoire_id)
+            if not armoire or armoire.etablissement_id != etablissement_id:
+                current_app.logger.warning(f"IDOR SUSPECT: User {session.get('user_id')} tried accessing Armoire {armoire_id}")
+                flash("Armoire introuvable ou accès refusé.", "error")
+                return redirect(url_for('admin.admin'))
+            
+            query = query.filter(Objet.armoire_id == armoire_id)
+            titre_doc = f"Inventaire - {armoire.nom}"
+        
+        elif categorie_id:
+            # Vérification stricte : la catégorie appartient-elle à l'établissement ?
+            categorie = db.session.get(Categorie, categorie_id)
+            if not categorie or categorie.etablissement_id != etablissement_id:
+                current_app.logger.warning(f"IDOR SUSPECT: User {session.get('user_id')} tried accessing Categorie {categorie_id}")
+                flash("Catégorie introuvable ou accès refusé.", "error")
+                return redirect(url_for('admin.admin'))
+            
+            query = query.filter(Objet.categorie_id == categorie_id)
+            titre_doc = f"Inventaire - {categorie.nom}"
+
+        # 6. Exécution
+        objets = db.session.execute(query.order_by(Objet.categorie_id, Objet.nom)).scalars().all()
+        
+        if not objets:
+            flash("Aucun objet trouvé pour cette sélection.", "warning")
+            return redirect(url_for('admin.admin'))
+        
+        # 7. Formatage des données (La boucle complète)
         data_export = []
         for obj in objets:
             data_export.append({
@@ -2024,23 +2064,25 @@ def exporter_inventaire():
                 'peremption': obj.date_peremption.strftime('%d/%m/%Y') if obj.date_peremption else "-"
             })
             
-        # 3. Métadonnées
+        # 8. Métadonnées
         metadata = {
-            'etablissement': session.get('nom_etablissement', 'Mon Établissement'),
+            'etablissement': titre_doc, 
             'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
             'total': len(data_export)
         }
 
-        log_action('export_inventaire', f"Format: {format_type}, Items: {len(data_export)}")
+        # 9. Audit Log (Obligatoire)
+        log_action('export_inventaire', 
+                  f"Format: {format_type}, Armoire: {armoire_id}, Cat: {categorie_id}, Items: {len(data_export)}")
 
-        # 4. Appel des générateurs
+        # 10. Génération du fichier
         if format_type == 'excel':
             return generer_inventaire_excel(data_export, metadata)
         else:
             return generer_inventaire_pdf(data_export, metadata)
 
     except Exception as e:
-        current_app.logger.error(f"Erreur export inventaire: {e}", exc_info=True)
+        current_app.logger.error(f"Erreur critique export inventaire: {e}", exc_info=True)
         flash("Une erreur technique est survenue lors de l'export.", "error")
         return redirect(url_for('admin.admin'))
 

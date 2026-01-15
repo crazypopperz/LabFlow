@@ -286,29 +286,64 @@
             </div>
 
             <!-- Carte Export Inventaire -->
-            <div class="admin-card card-wide">
-                <div class="card-icon-wrapper card-icon-cyan">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px">
-                        <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160v-40h240v40h160q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Z"/>
-                    </svg>
-                </div>
-                <h3 class="card-title">Exporter l'Inventaire Complet</h3>
-                <p class="card-description">Obtenez une liste complète de tous les objets avec leur stock disponible actuel</p>
-                <div class="card-footer card-footer-multiple">
-                    <a href="{{ url_for('admin.exporter_inventaire', format='pdf') }}" class="btn-card btn-secondary">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
-                            <path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Z"/>
-                        </svg>
-                        Export PDF
-                    </a>
-                    <a href="{{ url_for('admin.exporter_inventaire', format='excel') }}" class="btn-card btn-secondary">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
-                            <path d="M240-160q-33 0-56.5-23.5T160-240v-480q0-33 23.5-56.5T240-800h360l160 160v400q0 33-23.5 56.5T720-160H240Z"/>
-                        </svg>
-                        Export Excel
-                    </a>
-                </div>
-            </div>
+			<div class="admin-card card-wide">
+				<div class="card-icon-wrapper card-icon-cyan">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px">
+						<path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160v-40h240v40h160q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Z"/>
+					</svg>
+				</div>
+				<h3 class="card-title">Exporter l'Inventaire</h3>
+				<p class="card-description">Téléchargez la liste de votre matériel.</p>
+				
+				<div class="mb-3">
+					<!-- Sélecteur de Type (Radios) -->
+					<div class="btn-group w-100 mb-3" role="group" aria-label="Type d'export">
+    
+						<!-- Option TOUT -->
+						<input type="radio" class="btn-check" name="export_type" id="exp_all" value="all" checked onchange="toggleExportFilters()">
+						<!-- J'ai ajouté la classe 'btn-export-select' ici -->
+						<label class="btn btn-outline-light text-dark border btn-export-select" for="exp_all">Tout</label>
+
+						<!-- Option ARMOIRE -->
+						<input type="radio" class="btn-check" name="export_type" id="exp_armoire" value="armoire" onchange="toggleExportFilters()">
+						<!-- Et ici -->
+						<label class="btn btn-outline-light text-dark border btn-export-select" for="exp_armoire">Par Armoire</label>
+
+						<!-- Option CATÉGORIE -->
+						<input type="radio" class="btn-check" name="export_type" id="exp_cat" value="categorie" onchange="toggleExportFilters()">
+						<!-- Et là -->
+						<label class="btn btn-outline-light text-dark border btn-export-select" for="exp_cat">Par Catégorie</label>
+
+					</div>
+					<!-- Selects -->
+					<div id="div_select_armoire" style="display:none;">
+						<select id="select_armoire" class="form-select form-select-sm">
+							<option value="" selected disabled>-- Choisir une armoire --</option>
+							{% for a in all_armoires %}
+								<option value="{{ a.id }}">{{ a.nom }}</option>
+							{% endfor %}
+						</select>
+					</div>
+
+					<div id="div_select_categorie" style="display:none;">
+						<select id="select_categorie" class="form-select form-select-sm">
+							<option value="" selected disabled>-- Choisir une catégorie --</option>
+							{% for c in all_categories %}
+								<option value="{{ c.id }}">{{ c.nom }}</option>
+							{% endfor %}
+						</select>
+					</div>
+				</div>
+
+				<div class="card-footer card-footer-multiple">
+					<button onclick="lancerExport('pdf', this)" class="btn-card btn-secondary w-100 mb-2">
+						<i class="bi bi-file-pdf me-2"></i>Export PDF
+					</button>
+					<button onclick="lancerExport('excel', this)" class="btn-card btn-secondary w-100">
+						<i class="bi bi-file-excel me-2"></i>Export Excel
+					</button>
+				</div>
+			</div>
         </div>
     </div>
 
@@ -349,4 +384,102 @@
 
 {% include '_modale_warning.html' %}
 {% include '_modals.html' %}
+<script>
+    // Variable globale pour éviter le double-clic (Race Condition)
+    let isExporting = false;
+
+    // Fonction utilitaire pour les notifications
+    function notifyUser(message, type) {
+        if (typeof showToast === 'function') {
+            showToast(message, type);
+        } else {
+            alert(message);
+        }
+    }
+
+    function toggleExportFilters() {
+        const type = document.querySelector('input[name="export_type"]:checked').value;
+        document.getElementById('div_select_armoire').style.display = (type === 'armoire') ? 'block' : 'none';
+        document.getElementById('div_select_categorie').style.display = (type === 'categorie') ? 'block' : 'none';
+    }
+
+    async function lancerExport(format, btn) {
+        // 1. Anti-Spam
+        if (isExporting) return;
+        
+        const type = document.querySelector('input[name="export_type"]:checked').value;
+        
+        // 2. Construction d'URL sécurisée (URLSearchParams)
+        // Cela empêche toute injection de code dans l'URL
+        const baseUrl = "{{ url_for('admin.exporter_inventaire') }}";
+        const urlParams = new URLSearchParams();
+        urlParams.append('format', format);
+
+        // 3. Validation des entrées
+        if (type === 'armoire') {
+            const id = document.getElementById('select_armoire').value;
+            if (!id) {
+                notifyUser("Veuillez sélectionner une armoire.", "warning");
+                return;
+            }
+            urlParams.append('armoire_id', id);
+        } 
+        else if (type === 'categorie') {
+            const id = document.getElementById('select_categorie').value;
+            if (!id) {
+                notifyUser("Veuillez sélectionner une catégorie.", "warning");
+                return;
+            }
+            urlParams.append('categorie_id', id);
+        }
+
+        // 4. Feedback Visuel
+        isExporting = true;
+        const originalText = btn.innerHTML;
+        const originalWidth = btn.offsetWidth; // Garde la taille du bouton
+        btn.style.width = `${originalWidth}px`;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Génération...';
+
+        try {
+            // 5. Appel Fetch (permet de gérer les erreurs 500/404 proprement)
+            const finalUrl = `${baseUrl}?${urlParams.toString()}`;
+            const response = await fetch(finalUrl);
+
+            if (!response.ok) {
+                // Si le serveur renvoie une erreur (ex: redirection vers login ou erreur 500)
+                throw new Error("Erreur serveur ou session expirée");
+            }
+
+            // Vérification que c'est bien un fichier (et pas une page HTML d'erreur)
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("text/html")) {
+                throw new Error("Le serveur a renvoyé une page HTML au lieu du fichier.");
+            }
+
+            // 6. Téléchargement du Blob
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `inventaire_${type}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+            
+            notifyUser("Export téléchargé avec succès !", "success");
+
+        } catch (error) {
+            console.error("Erreur export:", error);
+            notifyUser("Une erreur est survenue. Vérifiez qu'il y a des données à exporter.", "error");
+        } finally {
+            // 7. Reset de l'état
+            isExporting = false;
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.style.width = '';
+        }
+    }
+</script>
 {% endblock %}

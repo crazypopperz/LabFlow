@@ -1,2 +1,2 @@
 #!/bin/bash
-   flask db upgrade && gunicorn app:app
+flask db upgrade && gunicorn "app:create_app()"

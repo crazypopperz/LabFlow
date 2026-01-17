@@ -267,6 +267,7 @@
 
 .objet-table th:first-child a { text-align: left !important; }
 
+
 /* Images dans tableau */
 .image-cell { width: 60px; text-align: center; padding: 0.5rem !important; overflow: visible !important;}
 .image-preview-wrapper {
@@ -294,6 +295,8 @@
   pointer-events: none; padding: 5px;
 }
 .image-preview-wrapper:hover .image-objet-preview { visibility: visible; opacity: 1; }
+
+
 
 /* --- ACTIONS & CHECKBOX (MODERNE) --- */
 

@@ -36,8 +36,18 @@
     {% if armoires %}
         <div class="card-container management-page" role="list">
             {% for armoire in armoires %}
-            <article class="item-card" data-armoire-id="{{ armoire.id }}" role="listitem">
-                <!-- Vue normale -->
+            <!-- 
+                IMPORTANT : C'est ici que les données sont stockées pour le JS.
+                Vérifiez bien que data-description et data-photo sont présents.
+            -->
+            <article class="item-card" 
+                     data-armoire-id="{{ armoire.id }}" 
+                     data-nom="{{ armoire.nom }}"
+                     data-description="{{ armoire.description or '' }}"
+                     data-photo="{{ armoire.photo_url or '' }}"
+                     role="listitem">
+                
+                <!-- Info Armoire -->
                 <div class="card-info">
                     <a href="{{ url_for('inventaire.voir_armoire', armoire_id=armoire.id) }}" 
                        class="card-title-link"
@@ -55,68 +65,41 @@
                     </span>
                 </div>
 
-                <!-- Mode édition (masqué par défaut) -->
-                <div class="edit-mode" style="display: none;">
-                    <input type="text" 
-                           value="{{ armoire.nom }}" 
-                           class="edit-input"
-                           aria-label="Modifier le nom de l'armoire"
-                           maxlength="100">
-                    <button type="button" 
-                            class="save-btn" 
-                            data-id="{{ armoire.id }}" 
-                            title="Enregistrer les modifications"
-                            aria-label="Enregistrer">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-                        </svg>
-                    </button>
-                    <button type="button" 
-                            class="cancel-btn" 
-                            title="Annuler les modifications"
-                            aria-label="Annuler">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Actions -->
+                <!-- Actions Premium -->
                 <div class="card-actions">
+                    <!-- 1. Voir (Œil) -->
                     <a href="{{ url_for('inventaire.voir_armoire', armoire_id=armoire.id) }}" 
-                       class="action-btn" 
-                       title="Voir le contenu de {{ armoire.nom }}"
-                       aria-label="Voir le contenu">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M260-320q47 0 91.5 10.5T440-278v-394q-41-24-87-36t-93-12q-36 0-71.5 7T120-692v396q35-12 69.5-18t70.5-6Zm260 42q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59ZM280-494Z"/>
-                        </svg>
+                       class="action-btn btn-view" 
+                       title="Voir le contenu">
+                        <i class="bi bi-eye"></i>
                     </a>
                     
                     {% if session.user_role == 'admin' %}
+                    <!-- 2. Modifier (Crayon) - Déclenche la modale d'édition -->
                     <button type="button" 
-                            class="action-btn edit-btn" 
-                            title="Modifier le nom de {{ armoire.nom }}"
-                            aria-label="Modifier le nom">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M167-120q-21 5-36.5-10.5T120-167l40-191 198 198-191 40Zm191-40L160-358l458-458q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L358-160Zm317-600L261-346l85 85 414-414-85-85Z"/>
-                        </svg>
-                    </button>
+							class="action-btn btn-edit" 
+							data-bs-toggle="modal" 
+							data-bs-target="#editArmoireModal"
+							
+							data-id="{{ armoire.id }}"
+							data-nom="{{ armoire.nom | e }}"
+							data-desc="{{ armoire.description | default('', true) | e }}"
+							data-photo="{{ armoire.photo_url | default('', true) | e }}"
+							
+							title="Modifier">
+						<i class="bi bi-pencil-fill"></i>
+					</button>
                     
-                    <form action="{{ url_for('admin.supprimer', type_objet='armoire', id=armoire.id) }}" 
-                          method="post" 
-                          class="delete-form-interactive" 
-                          data-item-type="armoire" 
-                          data-item-name="{{ armoire.nom }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="button" 
-                                class="action-btn delete-btn" 
-                                title="Supprimer {{ armoire.nom }}"
-                                aria-label="Supprimer l'armoire">
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
-                            </svg>
-                        </button>
-                    </form>
+                    <!-- 3. Supprimer (Poubelle) -->
+					<button type="button" class="action-btn btn-delete" 
+							data-url="{{ url_for('admin.supprimer', type_objet='armoire', id=armoire.id) }}"
+							data-item-name="{{ armoire.nom }}"
+							title="Supprimer {{ armoire.nom }}" 
+							aria-label="Supprimer l'armoire">
+						<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+							<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"></path>
+						</svg>
+					</button>
                     {% endif %}
                 </div>
             </article>
@@ -137,8 +120,7 @@
             <button type="button" 
                     class="btn btn-primary mt-3" 
                     data-bs-toggle="modal" 
-                    data-bs-target="#addArmoireModal"
-                    aria-label="Ajouter la première armoire">
+                    data-bs-target="#addArmoireModal">
                 Ajouter la première armoire
             </button>
             {% endif %}
@@ -146,69 +128,102 @@
     {% endif %}
 </div>
 
-<!-- Modale d'ajout d'armoire (Bootstrap 5) -->
-<div class="modal fade" 
-     id="addArmoireModal" 
-     tabindex="-1" 
-     aria-labelledby="addArmoireModalLabel" 
-     aria-hidden="true">
+<!-- ========================================== -->
+<!-- MODALE 1 : AJOUT D'ARMOIRE -->
+<!-- ========================================== -->
+<div class="modal fade" id="addArmoireModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addArmoireModalLabel">
-                    <i class="bi bi-folder-plus me-2"></i>
-                    Ajouter une nouvelle armoire
-                </h5>
-                <button type="button" 
-                        class="btn-close" 
-                        data-bs-dismiss="modal" 
-                        aria-label="Fermer"></button>
+                <h5 class="modal-title"><i class="bi bi-folder-plus me-2"></i> Ajouter une armoire</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
-            <form action="{{ url_for('admin.ajouter') }}" 
-                  method="post" 
-                  id="addArmoireForm"
-                  novalidate>
+            <form action="{{ url_for('admin.ajouter_armoire_specifique') }}" method="post" enctype="multipart/form-data" id="addArmoireForm" novalidate>
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="type" value="armoire">
                     
                     <div class="mb-3">
-                        <label for="nomArmoire" class="form-label">
-                            Nom de l'armoire <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" 
-                               class="form-control" 
-                               id="nomArmoire" 
-                               name="nom" 
-                               placeholder="Ex: Armoire Chimie A"
-                               required 
-                               maxlength="100"
-                               autocomplete="off"
-                               aria-describedby="nomArmoireHelp">
-                        <div id="nomArmoireHelp" class="form-text">
-                            Choisissez un nom descriptif pour identifier facilement cette armoire.
-                        </div>
-                        <div class="invalid-feedback">
-                            Veuillez entrer un nom pour l'armoire.
-                        </div>
+                        <label for="nomArmoire" class="form-label fw-bold">Nom de l'armoire <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nomArmoire" name="nom" placeholder="Ex: Armoire Chimie A" required maxlength="100" autocomplete="off">
+                        <div class="invalid-feedback">Veuillez entrer un nom.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descArmoire" class="form-label fw-bold">Description (Optionnel)</label>
+                        <textarea class="form-control" id="descArmoire" name="description" rows="2" maxlength="500" placeholder="Ex: Située au fond..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="photoArmoire" class="form-label fw-bold">Photo (Optionnel)</label>
+                        <input type="file" class="form-control" id="photoArmoire" name="photo" accept="image/jpeg, image/png, image/webp, image/heic, image/heif">
+                        <div class="form-text">JPG, PNG ou HEIC (iPhone). Max 5 Mo.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" 
-                            class="btn btn-secondary" 
-                            data-bs-dismiss="modal">
-                        Annuler
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle me-1"></i>
-                        Ajouter l'armoire
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i> Créer</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- MODALE 2 : MODIFICATION D'ARMOIRE -->
+<!-- ========================================== -->
+<div class="modal fade" id="editArmoireModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i> Modifier l'armoire</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            
+            <form action="{{ url_for('admin.modifier_armoire_specifique') }}" method="post" enctype="multipart/form-data" id="editArmoireForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <!-- ID Caché indispensable -->
+                    <input type="hidden" name="id" id="editArmoireId">
+                    
+                    <div class="mb-3">
+                        <label for="editArmoireNom" class="form-label fw-bold">Nom</label>
+                        <input type="text" class="form-control" id="editArmoireNom" name="nom" required maxlength="100">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editArmoireDesc" class="form-label fw-bold">Description</label>
+                        <textarea class="form-control" id="editArmoireDesc" name="description" rows="2" maxlength="500"></textarea>
+                    </div>
+
+                    <!-- Zone Photo Actuelle -->
+                    <div class="mb-3" id="currentPhotoContainer" style="display: none;">
+                        <label class="form-label fw-bold text-muted small">Photo actuelle</label>
+                        <div class="d-flex align-items-center gap-3 p-2 border rounded bg-light">
+                            <img src="" id="currentPhotoPreview" class="rounded shadow-sm bg-white" style="width: 60px; height: 60px; object-fit: cover;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="supprimer_photo" value="1" id="deletePhotoCheck">
+                                <label class="form-check-label text-danger small fw-bold" for="deletePhotoCheck">Supprimer cette photo</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editArmoirePhoto" class="form-label fw-bold">Changer la photo</label>
+                        <input type="file" class="form-control" id="editArmoirePhoto" name="photo" accept="image/jpeg, image/png, image/webp, image/heic, image/heif">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<form id="globalDeleteForm" method="post" action="" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
 <!-- Modale de danger pour suppression -->
 {% include '_modale_danger.html' %}
 
@@ -216,7 +231,7 @@
 
 {% block scripts %}
 <script>
-// Validation du formulaire d'ajout
+// 1. Validation du formulaire d'ajout (Standard Bootstrap)
 (function() {
     'use strict';
     const form = document.getElementById('addArmoireForm');
@@ -229,7 +244,7 @@
             form.classList.add('was-validated');
         });
         
-        // Réinitialiser la validation quand on ferme la modale
+        // Reset du formulaire à la fermeture
         const modal = document.getElementById('addArmoireModal');
         if (modal) {
             modal.addEventListener('hidden.bs.modal', function() {
@@ -239,5 +254,114 @@
         }
     }
 })();
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ============================================================
+    // 2. GESTION DE LA MODALE D'ÉDITION (Crayon)
+    // ============================================================
+    const editModal = document.getElementById('editArmoireModal');
+    
+    if (editModal) {
+        editModal.addEventListener('show.bs.modal', function(event) {
+            // Le bouton qui a déclenché la modale
+            const button = event.relatedTarget;
+            
+            // Récupération des données directement depuis le bouton
+            const id = button.getAttribute('data-id');
+            const nom = button.getAttribute('data-nom');
+            const desc = button.getAttribute('data-desc');
+            const photo = button.getAttribute('data-photo');
+
+            // Remplissage des champs
+            document.getElementById('editArmoireId').value = id;
+            document.getElementById('editArmoireNom').value = nom;
+            document.getElementById('editArmoireDesc').value = desc;
+
+            // Gestion de l'affichage photo
+            const photoContainer = document.getElementById('currentPhotoContainer');
+            const photoPreview = document.getElementById('currentPhotoPreview');
+            const deleteCheck = document.getElementById('deletePhotoCheck');
+            const fileInput = document.getElementById('editArmoirePhoto');
+
+            // Reset UX (décocher suppression, réactiver upload)
+            if(deleteCheck) {
+                deleteCheck.checked = false;
+                if(fileInput) {
+                    fileInput.disabled = false;
+                    fileInput.value = ''; 
+                }
+                
+                // UX : Si on coche "Supprimer", on grise l'upload
+                deleteCheck.onchange = function() {
+                    if(fileInput) {
+                        fileInput.disabled = this.checked;
+                        if(this.checked) fileInput.value = '';
+                    }
+                };
+            }
+
+            // Affichage de la miniature si photo existe
+            if (photo && photo !== 'None' && photo !== '') {
+                const baseUrl = "{{ url_for('static', filename='') }}";
+                if(photoPreview) photoPreview.src = baseUrl + photo;
+                if(photoContainer) photoContainer.style.display = 'block';
+            } else {
+                if(photoContainer) photoContainer.style.display = 'none';
+            }
+        });
+    }
+
+    // ============================================================
+    // 3. GESTION DE LA SUPPRESSION (CORRIGÉE)
+    // ============================================================
+    const deleteButtons = document.querySelectorAll('.btn-delete');
+    const globalDeleteForm = document.getElementById('globalDeleteForm');
+    const dangerModalEl = document.getElementById('dangerModal');
+    
+    if (dangerModalEl && globalDeleteForm) {
+        const dangerModal = new bootstrap.Modal(dangerModalEl);
+        
+        // CORRECTION DES IDs ICI (Selon votre analyse)
+        const confirmBtn = document.getElementById('confirmDeleteBtn'); // Était dangerConfirmBtn
+        const modalBody = document.getElementById('dangerModalText');   // Était dangerModalBody
+
+        deleteButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // 1. Récupération des données
+                const url = this.getAttribute('data-url');
+                const itemName = this.getAttribute('data-item-name');
+				
+                
+                // 2. Injection dans le formulaire global
+                globalDeleteForm.action = url;
+                // 3. Mise à jour du texte de la modale
+                if (modalBody) {
+                    modalBody.innerHTML = `Êtes-vous sûr de vouloir supprimer <strong>"${itemName}"</strong> ?<br>Cette action est irréversible.`;
+                }
+                
+                // 4. Affichage
+                dangerModal.show();
+            });
+        });
+
+        // Gestion du clic sur "Confirmer"
+        if (confirmBtn) {
+            // On clone le bouton pour éviter d'empiler les événements
+            const newBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+            
+            newBtn.addEventListener('click', function() {
+                if (globalDeleteForm.action) {
+                    globalDeleteForm.submit(); // Envoie le POST correctement
+                } else {
+                    alert("Erreur critique : URL de suppression manquante.");
+                }
+            });
+        }
+    }
+});
 </script>
 {% endblock %}

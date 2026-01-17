@@ -672,67 +672,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 	
 	
-    // =====================================================================
-	// SECTION 5 : GESTION DEPLACEMENT EN MASSE
-	// =====================================================================
-    const selectAllCheckbox = document.getElementById('select-all-checkbox');
-	if (selectAllCheckbox) {
-		const objetCheckboxes = document.querySelectorAll('.objet-checkbox');
-		const bulkActionSection = document.getElementById('bulk-action-section');
-		const bulkMoveBtn = document.getElementById('bulk-move-btn');
-		const moveDestination = document.getElementById('move-destination');
-		function toggleBulkActionSection() {
-			const anyChecked = document.querySelector('.objet-checkbox:checked');
-			if(bulkActionSection) bulkActionSection.style.display = anyChecked ? 'flex' : 'none';
-		}
-		selectAllCheckbox.addEventListener('change', function () {
-			objetCheckboxes.forEach(checkbox => { checkbox.checked = this.checked; });
-			toggleBulkActionSection();
-		});
-		objetCheckboxes.forEach(checkbox => {
-			checkbox.addEventListener('change', function () {
-				if (!this.checked) selectAllCheckbox.checked = false;
-				toggleBulkActionSection();
-			});
-		});
-		if(bulkMoveBtn) {
-            bulkMoveBtn.addEventListener('click', function () {
-                const selectedObjectIds = Array.from(objetCheckboxes).filter(cb => cb.checked).map(cb => cb.dataset.id);
-                if (selectedObjectIds.length === 0) {
-                    showInfoModal("Aucune Sélection", "Veuillez sélectionner au moins un objet à déplacer.");
-                    return;
-                }
-                const destinationId = moveDestination.value;
-                const pathname = window.location.pathname;
-                const typeDestination = pathname.includes('/armoire/') ? 'armoire' : (pathname.includes('/categorie/') ? 'categorie' : '');
-                if (!typeDestination) {
-                    showInfoModal("Action Impossible", "Action de déplacement non disponible sur cette page.");
-                    return;
-                }
-                fetch('/api/deplacer_objets', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                    body: JSON.stringify({
-                        objet_ids: selectedObjectIds,
-                        destination_id: destinationId,
-                        type_destination: typeDestination
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.reload();
-                    } else {
-                        showInfoModal("Erreur", "Erreur lors du déplacement des objets : " + (data.error || 'Erreur inconnue'));
-                    }
-                })
-                .catch(error => {
-                    console.error("Erreur lors du déplacement en masse :", error);
-                    showInfoModal("Erreur de Communication", "Une erreur est survenue lors de la communication avec le serveur.");
-                });
-            });
-        }
-	}
+    
 	
 	// =================================================================
 	// SECTION 6 : ANIMATION DE LA CLOCHE D'ALERTE

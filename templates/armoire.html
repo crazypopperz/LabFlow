@@ -4,60 +4,191 @@
 
 {% block content %}
 
-    <div class="main-container">
-        <!-- Fil d'ariane Modernisé -->
-        {% include '_breadcrumb.html' %}
-        
-        <!-- En-tête Armoire (Style Admin - Vert) -->
-        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-            <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-                <!-- Icône Armoire (Vert Nature) -->
-                <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                     style="width: 48px; height: 48px; background: linear-gradient(135deg, #198754 0%, #20c997 100%);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-box2-fill" viewBox="0 0 16 16">
-                        <path d="M3.75 0a1 1 0 0 0-.8.4L.1 4.2a.5.5 0 0 0-.1.3V15a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4.5a.5.5 0 0 0-.1-.3L13.05.4a1 1 0 0 0-.8-.4zM15 4.667V5H1v-.333L1.5 4h6V1h1v3h6z"/>
-                    </svg>
-                </div>
-                <span>Contenu de l'armoire : <strong class="text-success">{{ armoire.nom }}</strong></span>
-            </h2>
-        </div>
-
-        <!-- Contenu de l'inventaire -->
-        <div id="inventory-content" 
-             data-sort-by="{{ sort_by }}" 
-             data-direction="{{ direction }}" 
-             data-armoire-id="{{ armoire.id }}">
-            
-            {% include '_inventaire_content.html' %}
-        </div>
-
-        <!-- Barre d'action de masse (Modernisée) -->
-        {% if session.user_role == 'admin' %}
-        <div id="bulk-action-section" class="card border-0 shadow-sm mt-4 bg-light" style="display: none;">
-            <div class="card-body d-flex align-items-center flex-wrap gap-3">
-                <div class="d-flex align-items-center text-primary">
-                    <i class="bi bi-check-square-fill fs-4 me-2"></i>
-                    <span class="fw-bold">Action groupée</span>
-                </div>
+<div class="main-container">
+    <!-- Fil d'ariane -->
+    {% include '_breadcrumb.html' %}
+    
+    <!-- HEADER PREMIUM : Carte de présentation de l'armoire -->
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden bg-white">
+        <div class="card-body p-4">
+            <div class="row align-items-center g-4">
                 
-                <div class="d-flex align-items-center gap-2 flex-grow-1">
-                    <label for="move-destination" class="text-nowrap">Déplacer la sélection vers :</label>
-                    <select id="move-destination" class="form-select w-auto" style="min-width: 200px;">
-                        <option value="" disabled selected>Choisir une autre armoire...</option>
-                        {% for autre_armoire in autres_armoires %}
-                            <option value="{{ autre_armoire.id }}">{{ autre_armoire.nom }}</option>
-                        {% endfor %}
-                    </select>
-                    <button id="bulk-move-btn" class="btn btn-primary">
-                        <i class="bi bi-arrow-right-circle me-2"></i>Déplacer
-                    </button>
+                <!-- COLONNE 1 : VISUEL -->
+                <div class="col-12 col-md-auto text-center text-md-start">
+                    {% if armoire.photo_url %}
+                        <div class="position-relative d-inline-block">
+                            <img src="{{ url_for('static', filename=armoire.photo_url) }}" 
+                                 alt="{{ armoire.nom }}" 
+                                 class="rounded-3 shadow-sm object-fit-cover" 
+                                 style="width: 120px; height: 120px; border: 4px solid #fff;">
+                            <a href="{{ url_for('static', filename=armoire.photo_url) }}" target="_blank" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark border border-white shadow-sm"><i class="bi bi-zoom-in"></i></a>
+                        </div>
+                    {% else %}
+                        <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm mx-auto mx-md-0" 
+                             style="width: 100px; height: 100px; background: linear-gradient(135deg, #198754 0%, #20c997 100%);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-box2-fill" viewBox="0 0 16 16">
+                                <path d="M3.75 0a1 1 0 0 0-.8.4L.1 4.2a.5.5 0 0 0-.1.3V15a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4.5a.5.5 0 0 0-.1-.3L13.05.4a1 1 0 0 0-.8-.4zM15 4.667V5H1v-.333L1.5 4h6V1h1v3h6z"/>
+                            </svg>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- COLONNE 2 : INFORMATIONS -->
+                <div class="col-12 col-md">
+                    <div class="text-center text-md-start">
+                        <!-- Titre Bleu Nuit -->
+                        <h1 class="h2 fw-bold mb-2" style="color: #1F3B73;">{{ armoire.nom }}</h1>
+
+                        {% if armoire.description %}
+                            <div class="d-flex align-items-center justify-content-center justify-content-md-start mt-3">
+                                <div class="bg-success rounded-pill me-3" style="width: 4px; height: 30px; opacity: 0.6;"></div>
+                                <p class="text-muted mb-0 fst-italic" style="max-width: 600px;">"{{ armoire.description }}"</p>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0 small mt-2"><i class="bi bi-info-circle me-1"></i> Aucune description disponible.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- COLONNE 3 : STATS -->
+                <div class="col-12 col-md-auto border-start border-light ps-md-4 d-none d-lg-block">
+                    <div class="text-center">
+                        <h6 class="text-uppercase text-muted fw-bold mb-2" style="font-size: 0.65rem; letter-spacing: 1px;">Contenu de l'armoire</h6>
+                        <span class="d-block h2 fw-bold text-success mb-0">{{ objets|length }}</span>
+                        <span class="text-muted small text-uppercase">Références</span>
+                    </div>
                 </div>
             </div>
         </div>
-        {% endif %}
     </div>
+
+    <!-- Contenu de l'inventaire (Tableau) -->
+    <div id="inventory-content" 
+         data-sort-by="{{ sort_by }}" 
+         data-direction="{{ direction }}" 
+         data-armoire-id="{{ armoire.id }}">
+        
+        {% include '_inventaire_content.html' %}
+    </div>
+
+    <!-- Barre d'action de masse (Admin) -->
+    {% if session.user_role == 'admin' %}
+    <div id="bulk-action-section" class="card border-0 shadow-sm mt-4 bg-light" style="display: none;">
+        <div class="card-body d-flex align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center text-primary">
+                <i class="bi bi-check-square-fill fs-4 me-2"></i>
+                <span class="fw-bold">Action groupée</span>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2 flex-grow-1">
+                <label for="move-destination" class="text-nowrap">Déplacer la sélection vers :</label>
+                <select id="move-destination" class="form-select w-auto" style="min-width: 200px;">
+                    <option value="" disabled selected>Choisir une autre armoire...</option>
+                    {% for autre_armoire in autres_armoires %}
+                        <option value="{{ autre_armoire.id }}">{{ autre_armoire.nom }}</option>
+                    {% endfor %}
+                </select>
+                <button id="bulk-move-btn" class="btn btn-primary">
+                    <i class="bi bi-arrow-right-circle me-2"></i>Déplacer
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    const bulkSection = document.getElementById('bulk-action-section');
+    const selectAll = document.getElementById('select-all-checkbox'); 
+    const moveBtn = document.getElementById('bulk-move-btn');
+    const destinationSelect = document.getElementById('move-destination');
 
+    function getCheckboxes() {
+        return document.querySelectorAll('.objet-checkbox');
+    }
+
+    function updateBulkUI() {
+        const checkboxes = getCheckboxes();
+        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+        
+        if (bulkSection) {
+            bulkSection.style.display = anyChecked ? 'block' : 'none';
+        }
+
+        if (selectAll) {
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+            selectAll.checked = allChecked;
+        }
+    }
+
+    function attachCheckboxListeners() {
+        getCheckboxes().forEach(cb => {
+            cb.removeEventListener('change', updateBulkUI);
+            cb.addEventListener('change', updateBulkUI);
+        });
+    }
+
+    attachCheckboxListeners();
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            getCheckboxes().forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateBulkUI();
+        });
+    }
+
+    if (moveBtn && destinationSelect) {
+        moveBtn.addEventListener('click', function() {
+            
+            const selectedIds = Array.from(getCheckboxes())
+                                     .filter(cb => cb.checked)
+                                     .map(cb => parseInt(cb.value))
+                                     .filter(id => !isNaN(id));
+            
+            const targetId = destinationSelect.value;
+
+            if (selectedIds.length === 0) return alert("Aucun objet valide sélectionné.");
+            if (!targetId) return alert("Veuillez choisir une armoire de destination.");
+
+            const originalText = moveBtn.innerHTML;
+            moveBtn.disabled = true;
+            moveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Déplacement...';
+
+            fetch("{{ url_for('api.deplacer_objets') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    objet_ids: selectedIds,
+                    target_armoire_id: parseInt(targetId)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert("Erreur serveur : " + (data.error || "Inconnue"));
+                    moveBtn.disabled = false;
+                    moveBtn.innerHTML = originalText;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Erreur technique de communication.");
+                moveBtn.disabled = false;
+                moveBtn.innerHTML = originalText;
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

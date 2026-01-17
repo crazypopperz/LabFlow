@@ -19,8 +19,12 @@ from services.panier_service import PanierService, PanierServiceError
 from services.inventory_service import InventoryService, InventoryServiceError
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+MAX_BULK_MOVE = 50
 
 # ============================================================
 # STRUCTURES DE DONNÉES & HELPERS
@@ -351,6 +355,129 @@ def api_inventaire():
         # En cas d'erreur, on renvoie un bout de HTML d'erreur pour que l'utilisateur voie quelque chose
         error_html = f'<div class="alert alert-danger m-3">Erreur de chargement : {str(e)}</div>'
         return jsonify({'html': error_html}), 500
+
+
+@api_bp.route('/objets/deplacer', methods=['POST'])
+@login_required
+@admin_required
+@limiter.limit("20 per minute")  # Protection Anti-spam
+def deplacer_objets():
+    """
+    Déplace une liste d'objets vers une nouvelle armoire.
+    Optimisé pour la performance (Bulk Insert, Eager Loading).
+    """
+    etablissement_id = session.get('etablissement_id')
+    user_id = session.get('user_id')
+    
+    # --- 1. VALIDATION DES ENTRÉES ---
+    try:
+        data = request.get_json()
+        if not data: raise ValueError
+            
+        objet_ids = data.get('objet_ids', [])
+        # Conversion immédiate pour éviter les erreurs de type plus loin
+        target_armoire_id = int(data.get('target_armoire_id'))
+
+        # Validation de type stricte (Anti-SQL Injection)
+        if not isinstance(objet_ids, list) or not all(isinstance(x, int) for x in objet_ids):
+            return jsonify(success=False, error="Format des IDs invalide."), 400
+            
+        # Validation de taille (Anti-DoS)
+        if len(objet_ids) > MAX_BULK_MOVE:
+            return jsonify(success=False, error=f"Limite de {MAX_BULK_MOVE} objets dépassée."), 400
+            
+        if not objet_ids:
+            return jsonify(success=False, error="Aucun objet sélectionné."), 400
+
+    except (ValueError, TypeError):
+        return jsonify(success=False, error="Données malformées ou incomplètes."), 400
+
+    try:
+        # --- 2. VÉRIFICATION ARMOIRE CIBLE & LOCK ---
+        # Lock pessimiste pour éviter qu'elle ne soit supprimée pendant le transfert
+        target_armoire = db.session.query(Armoire).filter_by(
+            id=target_armoire_id, 
+            etablissement_id=etablissement_id
+        ).with_for_update().first()
+
+        if not target_armoire:
+            return jsonify(success=False, error="Armoire de destination introuvable."), 404
+
+        # --- 3. VÉRIFICATION DES RÉSERVATIONS ---
+        # On ne touche pas aux objets qui sont physiquement absents (réservés)
+        objets_reserves = db.session.query(Reservation).filter(
+            Reservation.objet_id.in_(objet_ids),
+            Reservation.etablissement_id == etablissement_id,
+            Reservation.statut == 'confirmée',
+            Reservation.fin_reservation >= datetime.now()
+        ).count()
+
+        if objets_reserves > 0:
+            return jsonify(success=False, error=f"Impossible : {objets_reserves} objet(s) sont en cours de réservation."), 409
+
+        # --- 4. RÉCUPÉRATION OPTIMISÉE (Eager Loading) ---
+        # joinedload(Objet.armoire) charge l'armoire d'origine en une seule requête
+        # Cela évite le problème N+1 lors de la génération des logs
+        objets_a_deplacer = db.session.query(Objet).options(
+            joinedload(Objet.armoire)
+        ).filter(
+            Objet.id.in_(objet_ids),
+            Objet.etablissement_id == etablissement_id
+        ).all()
+
+        if not objets_a_deplacer:
+            return jsonify(success=False, error="Aucun objet trouvé."), 404
+
+        # --- 5. FILTRAGE INTELLIGENT ---
+        # On retire les objets qui sont DÉJÀ dans la bonne armoire
+        objets_reels_a_deplacer = [
+            obj for obj in objets_a_deplacer 
+            if obj.armoire_id != target_armoire.id
+        ]
+
+        if not objets_reels_a_deplacer:
+            return jsonify(success=False, error="Ces objets sont déjà dans cette armoire."), 400
+
+        # --- 6. TRAITEMENT EN BATCH (Performance) ---
+        timestamp_bulk = datetime.now()
+        logs = []
+        
+        for obj in objets_reels_a_deplacer:
+            # Pour l'historique
+            ancienne_armoire_nom = obj.armoire.nom if obj.armoire else "Aucune"
+            
+            # Modification de l'objet (SQLAlchemy suit le changement)
+            obj.armoire_id = target_armoire.id
+            
+            # Préparation du log
+            logs.append(Historique(
+                objet_id=obj.id,
+                utilisateur_id=user_id,
+                action="Modification",
+                details=f"Déplacement de masse : {ancienne_armoire_nom} ➝ {target_armoire.nom}",
+                etablissement_id=etablissement_id,
+                timestamp=timestamp_bulk
+            ))
+
+        # Insertion massive des logs (beaucoup plus rapide que add() dans la boucle)
+        db.session.bulk_save_objects(logs)
+        
+        # Commit unique pour tout (Objets + Logs)
+        db.session.commit()
+        
+        count = len(objets_reels_a_deplacer)
+        current_app.logger.info(f"Bulk move: {count} objets vers Armoire {target_armoire_id} par User {user_id}")
+        
+        return jsonify(success=True, count=count)
+
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(success=False, error="Erreur d'intégrité des données."), 409
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur critique déplacement masse: {str(e)}", exc_info=True)
+        return jsonify(success=False, error="Une erreur technique est survenue."), 500
 
 # ============================================================
 # 4. CALENDRIER

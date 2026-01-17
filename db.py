@@ -46,6 +46,8 @@ class Armoire(db.Model):
     __tablename__ = 'armoires'
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    photo_url = db.Column(db.String(255), nullable=True)
     etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
     objets = db.relationship('Objet', back_populates='armoire')
 

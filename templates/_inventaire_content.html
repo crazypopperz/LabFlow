@@ -56,7 +56,7 @@
         {% endif %}
 
         <tr class="{{ 'row-perime' if perime else 'row-perime-bientot' if perime_bientot }}" data-objet-id="{{ objet.id }}">
-            {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}<td class="checkbox-column"><input type="checkbox" class="objet-checkbox" data-id="{{ objet.id }}"></td>{% endif %}
+            {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}<td class="checkbox-column"><input type="checkbox" class="form-check-input objet-checkbox" value="{{ objet.id }}"></td>{% endif %}
             
             <td data-field="nom"><a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a></td>
             <td data-field="quantite">{{ objet.quantite_disponible }}</td>
@@ -117,7 +117,6 @@
 						data-quantite="{{ objet.quantite_physique }}"
 						data-seuil="{{ objet.seuil }}"
 						
-						{# CES DEUX LIGNES DOIVENT ÊTRE PRÉSENTES #}
 						data-armoire-id="{{ objet.armoire_id }}"
 						data-categorie-id="{{ objet.categorie_id }}"
 						

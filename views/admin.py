@@ -9,6 +9,7 @@ import logging
 import io
 import os
 import filetype
+import uuid
 from io import BytesIO
 from urllib.parse import urlparse
 from html import escape
@@ -48,6 +49,11 @@ from utils import calculate_license_key, admin_required, login_required, log_act
 
 from services.security_service import SecurityService
 
+from PIL import Image, UnidentifiedImageError
+import pillow_heif
+
+pillow_heif.register_heif_opener()
+
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -59,6 +65,12 @@ PASSWORD_MIN_LENGTH = 12
 EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 MAX_IMPORT_ROWS = 5000
 MAX_JSON_SIZE = 5 * 1024 * 1024
+
+MAX_ARMOIRES_PER_ETAB = 50
+MAX_DESC_LENGTH = 500
+MAX_IMAGE_PIXELS = 1920
+JPEG_QUALITY = 80
+UPLOAD_SUBDIR = 'armoires'
 
 # ============================================================
 # UTILITAIRES DE SÉCURITÉ
@@ -122,6 +134,56 @@ def sanitize_for_excel_report(text):
     if text.startswith(('=', '+', '-', '@')): text = "'" + text
     return text
 
+def _handle_armoire_image(file_obj):
+    """
+    Helper dédié admin : Traite, sécurise et convertit (HEIC->JPG) l'image.
+    """
+    try:
+        img = Image.open(file_obj)
+        img.load() # Force le chargement pour valider l'intégrité
+    except (UnidentifiedImageError, Exception):
+        raise ValueError("Fichier image invalide ou corrompu.")
+
+    # Validation Format (Liste blanche incluant HEIC/HEIF)
+    valid_formats = ['JPEG', 'JPG', 'PNG', 'WEBP', 'HEIF', 'HEIC']
+    if img.format is None or img.format.upper() not in valid_formats:
+        raise ValueError("Format non supporté. Utilisez JPG, PNG ou HEIC (iPhone).")
+
+    # Nettoyage (Sécurité) & Conversion RGB
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    
+    img_clean = img.copy()
+
+    # Redimensionnement (Optimisation stockage)
+    if img_clean.width > MAX_IMAGE_PIXELS or img_clean.height > MAX_IMAGE_PIXELS:
+        img_clean.thumbnail((MAX_IMAGE_PIXELS, MAX_IMAGE_PIXELS), Image.Resampling.LANCZOS)
+
+    # Génération nom sécurisé (UUID) + Extension forcée .jpg
+    filename = f"ARM_{uuid.uuid4().hex}.jpg"
+    
+    # Chemins
+    base_upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', UPLOAD_SUBDIR)
+    full_path = os.path.abspath(os.path.join(base_upload_dir, filename))
+    
+    # Sécurité Path Traversal
+    if not full_path.startswith(os.path.abspath(base_upload_dir)):
+        raise ValueError("Erreur de sécurité (Path Traversal).")
+
+    os.makedirs(base_upload_dir, exist_ok=True)
+    
+    # Sauvegarde en JPEG (Universel pour le web)
+    img_clean.save(full_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
+
+    return f"uploads/{UPLOAD_SUBDIR}/{filename}", full_path
+
+def _rollback_file(path):
+    """Supprime le fichier si l'enregistrement DB échoue"""
+    if path and os.path.exists(path):
+        try: os.remove(path)
+        except OSError: pass
+            
+ 
 # ============================================================
 # GÉNÉRATEURS PDF / EXCEL
 # ============================================================
@@ -518,6 +580,42 @@ def generer_inventaire_excel(data, metadata):
     
     filename = f"Inventaire_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+# ============================================================
+# HELPER DE SUPPRESSION ARMOIRE SÉCURISÉE (Version Gold)
+# ============================================================
+def _safe_delete_old_image(relative_path: str | None, context_info: str = "") -> None:
+    """
+    Supprime une ancienne image du disque APRÈS validation DB.
+    Args:
+        relative_path: Chemin relatif stocké en DB (ex: 'uploads/armoires/xyz.jpg')
+        context_info: Chaîne pour tracer l'action dans les logs (User ID, Etab ID)
+    """
+    # Point 11 : Gestion robuste (None ou vide)
+    if not relative_path or not relative_path.strip(): 
+        return
+
+    try:
+        base_dir = os.path.join(current_app.root_path, 'static', 'uploads', UPLOAD_SUBDIR)
+        full_path = os.path.abspath(os.path.join(current_app.root_path, 'static', relative_path))
+        
+        # Sécurité Path Traversal
+        if not full_path.startswith(os.path.abspath(base_dir)):
+            # Point 2 : Log enrichi
+            current_app.logger.warning(f"SECURITY: Tentative suppression hors dossier ({context_info}) : {full_path}")
+            return
+
+        if os.path.exists(full_path):
+            os.remove(full_path)
+            current_app.logger.info(f"Nettoyage image : {relative_path} ({context_info})")
+
+    # Point 3 : Exception spécifique
+    except (OSError, IOError) as e:
+        current_app.logger.error(f"Erreur suppression fichier {relative_path}: {e}")
+
+
+
 # ============================================================
 # ROUTE PRINCIPALE
 # ============================================================
@@ -596,6 +694,81 @@ def ajouter():
     
     redirect_to = "main.gestion_armoires" if type_objet == "armoire" else "main.gestion_categories"
     return redirect(url_for(redirect_to))
+    
+# ===================================================================
+# Ajout spécifique pour les armoires avec photo et description
+# ===================================================================
+@admin_bp.route("/armoires/ajouter_specifique", methods=["POST"])
+@admin_required
+@limiter.limit("10 per minute")
+def ajouter_armoire_specifique():
+    etablissement_id = session['etablissement_id']
+    user_id = session.get('user_id', 'Unknown')
+    
+    # 1. Validation Quotas
+    count = db.session.query(func.count(Armoire.id)).filter_by(etablissement_id=etablissement_id).scalar()
+    if count >= MAX_ARMOIRES_PER_ETAB:
+        flash(f"Limite atteinte ({MAX_ARMOIRES_PER_ETAB} armoires max).", "warning")
+        return redirect(url_for('main.gestion_armoires'))
+
+    # 2. Validation Formulaire
+    nom = request.form.get("nom", "").strip()
+    description = request.form.get("description", "").strip() or None
+
+    if not nom:
+        flash("Le nom est obligatoire.", "error")
+        return redirect(url_for('main.gestion_armoires'))
+    
+    if len(nom) > 100:
+        flash("Nom trop long.", "warning")
+        return redirect(url_for('main.gestion_armoires'))
+
+    if description and len(description) > MAX_DESC_LENGTH:
+        flash("Description trop longue.", "warning")
+        return redirect(url_for('main.gestion_armoires'))
+
+    # 3. Gestion Image (HEIC -> JPG)
+    photo_db_path = None
+    uploaded_file_path = None
+
+    if 'photo' in request.files:
+        file = request.files['photo']
+        if file and file.filename != '':
+            try:
+                photo_db_path, uploaded_file_path = _handle_armoire_image(file)
+            except ValueError as ve:
+                flash(str(ve), "warning")
+                return redirect(url_for('main.gestion_armoires'))
+            except Exception as e:
+                current_app.logger.error(f"Upload error: {str(e)}", exc_info=True)
+                flash("Erreur technique image.", "error")
+                return redirect(url_for('main.gestion_armoires'))
+
+    # 4. Enregistrement DB
+    try:
+        nouvelle_armoire = Armoire(
+            nom=nom,
+            description=description,
+            photo_url=photo_db_path,
+            etablissement_id=etablissement_id
+        )
+        db.session.add(nouvelle_armoire)
+        db.session.commit()
+        
+        current_app.logger.info(f"Armoire créée : {nom} (ID: {nouvelle_armoire.id}) par {user_id}")
+        flash(f"L'armoire '{nom}' a été créée.", "success")
+
+    except IntegrityError:
+        db.session.rollback()
+        _rollback_file(uploaded_file_path)
+        flash(f"Une armoire nommée '{nom}' existe déjà.", "warning")
+    except Exception as e:
+        db.session.rollback()
+        _rollback_file(uploaded_file_path)
+        current_app.logger.error(f"DB Error: {str(e)}", exc_info=True)
+        flash("Erreur technique base de données.", "error")
+
+    return redirect(url_for('main.gestion_armoires'))
 
 @admin_bp.route("/supprimer/<type_objet>/<int:id>", methods=["POST"])
 @admin_required
@@ -666,10 +839,140 @@ def _modifier_element_generique(model_class, request_data):
         current_app.logger.error(f"Erreur modif {model_class.__name__}", exc_info=True)
         return jsonify(success=False, error="Erreur serveur"), 500
 
-@admin_bp.route("/modifier_armoire", methods=["POST"])
+
+# ============================================================
+# ROUTE DE MODIFICATION ARMOIRES
+# ============================================================
+@admin_bp.route("/armoires/modifier_specifique", methods=["POST"])
 @admin_required
-def modifier_armoire():
-    return _modifier_element_generique(Armoire, request.get_json())
+def modifier_armoire_specifique():
+    etablissement_id = session['etablissement_id']
+    user_id = session.get('user_id', 'Unknown')
+    context_log = f"User {user_id} | Etab {etablissement_id}"
+    
+    armoire_id = request.form.get("id")
+    
+    # Point 12 : Gestion Concurrence (Lock Pessimiste)
+    # On verrouille la ligne jusqu'à la fin de la transaction
+    try:
+        armoire = db.session.query(Armoire).filter_by(id=armoire_id).with_for_update().first()
+    except Exception as e:
+        # Si la DB ne supporte pas le lock ou timeout
+        current_app.logger.error(f"DB Lock Error: {e}")
+        flash("Erreur technique (verrouillage). Réessayez.", "error")
+        return redirect(url_for('main.gestion_armoires'))
+
+    # Point 8 : IDOR Message standardisé
+    if not armoire or armoire.etablissement_id != etablissement_id:
+        flash("Armoire introuvable.", "error")
+        return redirect(url_for('main.gestion_armoires'))
+
+    # --- Validation ---
+    nom = request.form.get("nom", "").strip()
+    description = request.form.get("description", "").strip() or None
+    # Point 1 : La logique checkbox est gérée, le JS gérera l'UX
+    supprimer_photo = request.form.get("supprimer_photo") == "1"
+
+    if not nom:
+        flash("Le nom est obligatoire.", "error")
+        return redirect(url_for('main.gestion_armoires'))
+    
+    if len(nom) > 100:
+        flash("Nom trop long.", "warning")
+        return redirect(url_for('main.gestion_armoires'))
+
+    if description and len(description) > MAX_DESC_LENGTH:
+        flash("Description trop longue.", "warning")
+        return redirect(url_for('main.gestion_armoires'))
+
+    # --- Point 5 : Détection "Pas de changement" ---
+    # On vérifie si l'utilisateur a cliqué sur "Enregistrer" sans rien toucher
+    no_text_change = (nom == armoire.nom and description == armoire.description)
+    no_photo_action = (not supprimer_photo and 'photo' not in request.files)
+    # Cas subtil : upload vide
+    if 'photo' in request.files and request.files['photo'].filename == '':
+        no_photo_action = True
+
+    if no_text_change and no_photo_action:
+        flash("Aucune modification détectée.", "info")
+        return redirect(url_for('main.gestion_armoires'))
+
+    # --- Vérification Unicité ---
+    existing = db.session.query(Armoire.id).filter(
+        func.lower(Armoire.nom) == nom.lower(),
+        Armoire.etablissement_id == etablissement_id,
+        Armoire.id != armoire.id 
+    ).first()
+
+    if existing:
+        # Point 4 : Log du conflit
+        current_app.logger.info(f"Conflit nom armoire '{nom}' avec ID {existing.id} ({context_log})")
+        flash(f"Le nom '{nom}' est déjà utilisé.", "warning")
+        return redirect(url_for('main.gestion_armoires'))
+
+    # --- Logique Image ---
+    old_photo_path = armoire.photo_url
+    new_photo_path = old_photo_path
+    uploaded_file_physical_path = None
+    file_to_delete_later = None
+
+    # Cas A : Nouvel Upload
+    if 'photo' in request.files and request.files['photo'].filename != '':
+        try:
+            # Point 7 : Nom uniformisé (_handle_armoire_image)
+            rel_path, abs_path = _handle_armoire_image(request.files['photo'])
+            
+            new_photo_path = rel_path
+            uploaded_file_physical_path = abs_path
+            
+            if old_photo_path:
+                file_to_delete_later = old_photo_path
+
+        except ValueError as ve:
+            flash(str(ve), "warning")
+            return redirect(url_for('main.gestion_armoires'))
+        except Exception as e:
+            current_app.logger.error(f"Upload error: {e}", exc_info=True)
+            flash("Erreur technique image.", "error")
+            return redirect(url_for('main.gestion_armoires'))
+
+    # Cas B : Suppression explicite
+    elif supprimer_photo:
+        new_photo_path = None
+        if old_photo_path:
+            file_to_delete_later = old_photo_path
+
+    # --- Mise à jour ---
+    armoire.nom = nom
+    armoire.description = description
+    armoire.photo_url = new_photo_path
+
+    # --- Commit & Nettoyage ---
+    try:
+        db.session.commit()
+        
+        # SUCCÈS : Suppression différée
+        if file_to_delete_later:
+            _safe_delete_old_image(file_to_delete_later, context_log)
+            
+        current_app.logger.info(f"Armoire modifiée : ID {armoire.id} ({context_log})")
+        # Point 8 : Message concis
+        flash(f"L'armoire '{nom}' a été modifiée.", "success")
+
+    # Point 9 : Distinction des erreurs
+    except IntegrityError:
+        db.session.rollback()
+        if uploaded_file_physical_path: _rollback_file(uploaded_file_physical_path)
+        flash("Erreur d'intégrité (doublon probable).", "error")
+
+    except Exception as e:
+        db.session.rollback()
+        if uploaded_file_physical_path: _rollback_file(uploaded_file_physical_path)
+        current_app.logger.error(f"DB Error update armoire: {e}", exc_info=True)
+        flash("Erreur technique lors de l'enregistrement.", "error")
+
+    return redirect(url_for('main.gestion_armoires'))
+
 
 @admin_bp.route("/modifier_categorie", methods=["POST"])
 @admin_required

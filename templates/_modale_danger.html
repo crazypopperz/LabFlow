@@ -8,16 +8,13 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="dangerModalForm" action="" method="post">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <p id="dangerModalText">Le message de confirmation va ici.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn">Confirmer</button>
-                </div>
-            </form>
+            <div class="modal-body">
+                <p id="dangerModalText">Le message de confirmation va ici.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Confirmer</button>
+            </div>
         </div>
     </div>
 </div>

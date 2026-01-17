@@ -15,6 +15,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Extensions (Cache & Rate Limit) - PAS DE LOGIN_MANAGER
 from extensions import limiter, cache
+from flask_migrate import Migrate
 
 # Imports locaux
 from db import db, Parametre, Armoire, Categorie, init_app as init_db_app
@@ -104,6 +105,7 @@ def create_app():
     # 2. INITIALISATION DES EXTENSIONS
     # ============================================================
     init_db_app(app)
+    migrate = Migrate(app, db)
     with app.app_context():
         db.create_all()
     CSRFProtect(app)

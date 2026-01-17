@@ -14,8 +14,31 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    op.add_column('armoires', sa.Column('description', sa.Text(), nullable=True))
-    op.add_column('armoires', sa.Column('photo_url', sa.String(255), nullable=True))
+    # Ajouter description seulement si elle n'existe pas
+    op.execute("""
+        DO $$ 
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name='armoires' AND column_name='description'
+            ) THEN
+                ALTER TABLE armoires ADD COLUMN description TEXT;
+            END IF;
+        END $$;
+    """)
+    
+    # Ajouter photo_url seulement si elle n'existe pas
+    op.execute("""
+        DO $$ 
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name='armoires' AND column_name='photo_url'
+            ) THEN
+                ALTER TABLE armoires ADD COLUMN photo_url VARCHAR(255);
+            END IF;
+        END $$;
+    """)
 
 def downgrade():
     op.drop_column('armoires', 'photo_url')

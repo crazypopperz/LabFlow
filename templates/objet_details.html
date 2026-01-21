@@ -121,6 +121,7 @@
                                 data-categorie-id="{{ objet.categorie_id }}"
                                 data-image-url="{{ objet.image_url }}"
                                 data-date-peremption="{{ objet.date_peremption }}"
+								data-is-cmr="{{ 'on' if objet.is_cmr else 'off' }}"
                                 data-fds-url="{{ objet.fds_url }}">
                             <i class="bi bi-pencil-square me-2"></i>Modifier
                         </button>

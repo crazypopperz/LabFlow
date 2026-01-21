@@ -914,16 +914,17 @@ document.addEventListener("DOMContentLoaded", function () {
 				modalTitle.textContent = "Modifier l'objet";
 				form.action = `/modifier_objet/${objetId}`;
 				
-				// Données brutes
+				// 1. Récupération des Données brutes depuis le bouton
 				const rawImg = (button.dataset.imageUrl || '').trim();
 				const rawFds = (button.dataset.fdsUrl || '').trim();
                 
-                // --- AJOUT CMR : Récupération de la donnée ---
+                // CORRECTION CMR : Lecture explicite de la donnée
+                // On vérifie si l'attribut est strictement égal à 'on'
                 const isCmr = button.dataset.isCmr === 'on';
                 
-                console.log(`Objet ID: ${objetId}, FDS: ${rawFds}, CMR: ${isCmr}`); // Debug
+                console.log(`[DEBUG] Edit Objet ID: ${objetId} | CMR: ${isCmr} (Raw: ${button.dataset.isCmr})`);
 
-				// Remplissage Champs Standards
+				// 2. Remplissage Champs Standards (Boucle)
 				const fields = {
 					'nom': button.dataset.nom,
 					'quantite': button.dataset.quantite,
@@ -942,13 +943,17 @@ document.addEventListener("DOMContentLoaded", function () {
 					}
 				}
 
-                // --- AJOUT CMR : Cocher la case ---
-                const cmrCheckbox = document.getElementById('is_cmr');
+                // 3. APPLICATION CMR (CORRIGÉ)
+                // On cible l'input dans le formulaire spécifique
+                const cmrCheckbox = form.querySelector('#is_cmr');
                 if (cmrCheckbox) {
+                    // On force l'état coché ou décoché
                     cmrCheckbox.checked = isCmr;
+                } else {
+                    console.warn("[DEBUG] Checkbox CMR introuvable dans le formulaire !");
                 }
 
-				// Gestion Image
+				// 4. Gestion Image (Onglets)
                 const tabImgUrl = new bootstrap.Tab(document.querySelector('#pills-url-tab'));
                 if (rawImg.startsWith('http')) {
                     tabImgUrl.show();
@@ -960,20 +965,15 @@ document.addEventListener("DOMContentLoaded", function () {
 					imagePreviewContainer.style.display = 'block';
 				}
 				
-                // --- GESTION FDS (LOGIQUE CORRIGÉE) ---
-                // On n'affiche la barre verte QUE si une FDS existe vraiment
+                // 5. Gestion FDS (Barre verte)
                 if (rawFds && rawFds !== 'None' && fdsStatusDiv) {
-                    console.log("✅ FDS détectée, affichage de la barre verte.");
-                    fdsStatusDiv.style.display = 'flex'; // On réaffiche
+                    fdsStatusDiv.style.display = 'flex';
+                    if (fdsHelpText) fdsHelpText.innerHTML = '<i class="bi bi-info-circle me-1"></i>FDS active. Utilisez ces champs pour la <strong>remplacer</strong>.';
                     
-                    if (fdsHelpText) {
-                        fdsHelpText.innerHTML = '<i class="bi bi-info-circle me-1"></i>Une FDS est active. Utilisez ces champs uniquement pour la <strong>remplacer</strong>.';
-                    }
-
                     if (rawFds.startsWith('http')) {
                         fdsTypeLabel.textContent = 'Lien Web Externe';
                         fdsLinkBtn.href = rawFds;
-                        
+                        // Pré-remplir l'onglet URL si c'est un lien
                         const btnTabFdsUrl = document.querySelector('button[data-bs-target="#nav-url-fds"]');
                         if (btnTabFdsUrl) new bootstrap.Tab(btnTabFdsUrl).show();
                         if (inputFdsUrl) inputFdsUrl.value = rawFds;
@@ -993,6 +993,10 @@ document.addEventListener("DOMContentLoaded", function () {
 				modalTitle.textContent = "Ajouter un nouvel objet";
 				form.action = document.body.dataset.addUrl || '/ajouter_objet';
 				
+                // Reset spécifique pour le mode ajout
+                const cmrCheckbox = form.querySelector('#is_cmr');
+                if (cmrCheckbox) cmrCheckbox.checked = false;
+
 				if (submitBtn) {
 					submitBtn.textContent = 'Enregistrer l\'objet';
 					submitBtn.className = 'btn btn-success';

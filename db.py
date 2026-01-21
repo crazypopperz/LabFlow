@@ -67,6 +67,7 @@ class Objet(db.Model):
     date_peremption = db.Column(db.Date, nullable=True)
     image_url = db.Column(db.String(255), nullable=True)
     fds_url = db.Column(db.String(255), nullable=True)
+    is_cmr = db.Column(db.Boolean, default=False)
     
     # FK
     armoire_id = db.Column(db.Integer, db.ForeignKey('armoires.id'))
@@ -366,3 +367,33 @@ class MaintenanceLog(db.Model):
     
     # Gestion documentaire (GED)
     fichier_rapport = db.Column(db.String(255)) # Chemin vers le PDF stocké
+
+
+
+# ============================================================
+# 7. CONFORMITÉ & DOCUMENTS
+# ============================================================
+
+class DocumentReglementaire(db.Model):
+    """GED : Stockage des DUERP, FDS globales, Attestations..."""
+    __tablename__ = 'documents_reglementaires'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    
+    nom = db.Column(db.String(150), nullable=False)
+    type_doc = db.Column(db.String(50))
+    fichier_url = db.Column(db.String(255), nullable=False)
+    date_upload = db.Column(db.DateTime, default=datetime.now)
+
+class InventaireArchive(db.Model):
+    """Snapshot : Inventaire figé à une date T"""
+    __tablename__ = 'inventaires_archives'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    
+    titre = db.Column(db.String(150))
+    date_archive = db.Column(db.DateTime, default=datetime.now)
+    fichier_url = db.Column(db.String(255), nullable=False)
+    nb_objets = db.Column(db.Integer)

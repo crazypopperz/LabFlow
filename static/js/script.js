@@ -918,7 +918,10 @@ document.addEventListener("DOMContentLoaded", function () {
 				const rawImg = (button.dataset.imageUrl || '').trim();
 				const rawFds = (button.dataset.fdsUrl || '').trim();
                 
-                console.log(`Objet ID: ${objetId}, FDS: ${rawFds}`); // Debug
+                // --- AJOUT CMR : Récupération de la donnée ---
+                const isCmr = button.dataset.isCmr === 'on';
+                
+                console.log(`Objet ID: ${objetId}, FDS: ${rawFds}, CMR: ${isCmr}`); // Debug
 
 				// Remplissage Champs Standards
 				const fields = {
@@ -938,6 +941,12 @@ document.addEventListener("DOMContentLoaded", function () {
 						input.value = value;
 					}
 				}
+
+                // --- AJOUT CMR : Cocher la case ---
+                const cmrCheckbox = document.getElementById('is_cmr');
+                if (cmrCheckbox) {
+                    cmrCheckbox.checked = isCmr;
+                }
 
 				// Gestion Image
                 const tabImgUrl = new bootstrap.Tab(document.querySelector('#pills-url-tab'));

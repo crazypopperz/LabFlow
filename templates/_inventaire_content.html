@@ -1,40 +1,39 @@
 <table class="objet-table">
     <thead>
-		<tr>
-			{% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}<th class="checkbox-column"><input type="checkbox" id="select-all-checkbox" title="Tout sélectionner"></th>{% endif %}
-			
-			{# --- CORRECTION ICI : On utilise directement les variables IDs passées par la vue --- #}
-			<th class="sortable {% if sort_by == 'nom' %}th-sort-{{ direction }}{% endif %}">
-				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='nom', direction='desc' if sort_by == 'nom' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Nom</a>
-			</th>
-			<th class="sortable {% if sort_by == 'quantite' %}th-sort-{{ direction }}{% endif %}">
-				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='quantite', direction='desc' if sort_by == 'quantite' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Quantité</a>
-			</th>
-			<th class="sortable {% if sort_by == 'seuil' %}th-sort-{{ direction }}{% endif %}">
-				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='seuil', direction='desc' if sort_by == 'seuil' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Seuil</a>
-			</th>
-			<th class="sortable {% if sort_by == 'date_peremption' %}th-sort-{{ direction }}{% endif %}">
-				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='date_peremption', direction='desc' if sort_by == 'date_peremption' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Péremption</a>
-			</th>
-			<th class="sortable {% if sort_by == 'categorie' %}th-sort-{{ direction }}{% endif %}">
-				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='categorie', direction='desc' if sort_by == 'categorie' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Catégorie</a>
-			</th>
-			<th class="sortable {% if sort_by == 'armoire' %}th-sort-{{ direction }}{% endif %}">
-				<a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='armoire', direction='desc' if sort_by == 'armoire' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Armoire</a>
-			</th>
+        <tr>
+            {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}
+                <th class="checkbox-column"><input type="checkbox" id="select-all-checkbox" title="Tout sélectionner"></th>
+            {% endif %}
+            
+            <th class="sortable {% if sort_by == 'nom' %}th-sort-{{ direction }}{% endif %}">
+                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='nom', direction='desc' if sort_by == 'nom' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Nom</a>
+            </th>
+            <th class="sortable {% if sort_by == 'quantite' %}th-sort-{{ direction }}{% endif %}">
+                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='quantite', direction='desc' if sort_by == 'quantite' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Quantité</a>
+            </th>
+            <th class="sortable {% if sort_by == 'seuil' %}th-sort-{{ direction }}{% endif %}">
+                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='seuil', direction='desc' if sort_by == 'seuil' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Seuil</a>
+            </th>
+            <th class="sortable {% if sort_by == 'date_peremption' %}th-sort-{{ direction }}{% endif %}">
+                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='date_peremption', direction='desc' if sort_by == 'date_peremption' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Péremption</a>
+            </th>
+            <th class="sortable {% if sort_by == 'categorie' %}th-sort-{{ direction }}{% endif %}">
+                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='categorie', direction='desc' if sort_by == 'categorie' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Catégorie</a>
+            </th>
+            <th class="sortable {% if sort_by == 'armoire' %}th-sort-{{ direction }}{% endif %}">
+                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='armoire', direction='desc' if sort_by == 'armoire' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Armoire</a>
+            </th>
 
-			<th>Image</th>
-			<th>État</th>
-			{% if session.user_id %}<th>Actions</th>{% endif %}
-		</tr>
-	</thead>
+            <th>Image</th>
+            <th>État</th>
+            {% if session.user_id %}<th>Actions</th>{% endif %}
+        </tr>
+    </thead>
     <tbody>
         {% for objet in objets %}
         
-        {# --- LOGIQUE ÉTAT (HIERARCHIE STRICTE) --- #}
         {% set perime, perime_bientot, statut = False, False, 'ok' %}
         
-        {# 1. PRIORITÉ ABSOLUE : Péremption #}
         {% if objet.date_peremption %}
             {% if objet.date_peremption < date_actuelle.date() %}
                 {% set perime, statut = True, 'perime' %}
@@ -43,22 +42,26 @@
             {% endif %}
         {% endif %}
         
-        {# 2. SECONDAIRE : Stock (Uniquement si pas d'alerte péremption) #}
         {% if statut == 'ok' %}
             {% if objet.quantite_disponible <= objet.seuil %}
-                {# Cas ROUGE : Sous le seuil #}
                 {% set statut = 'stock_critique' %}
-            
-            {# Cas ORANGE : Marge adaptative (Seulement si seuil > 2) #}
             {% elif objet.seuil > 2 and objet.quantite_disponible <= (objet.seuil + 2) %}
                 {% set statut = 'stock_bas' %}
             {% endif %}
         {% endif %}
 
         <tr class="{{ 'row-perime' if perime else 'row-perime-bientot' if perime_bientot }}" data-objet-id="{{ objet.id }}">
-            {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}<td class="checkbox-column"><input type="checkbox" class="form-check-input objet-checkbox" value="{{ objet.id }}"></td>{% endif %}
+            {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}
+                <td class="checkbox-column"><input type="checkbox" class="form-check-input objet-checkbox" value="{{ objet.id }}"></td>
+            {% endif %}
             
-            <td data-field="nom"><a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a></td>
+            <td data-field="nom">
+                <a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a>
+                {% if objet.is_cmr %}
+                    <span class="badge bg-danger ms-1" title="Produit CMR"><i class="bi bi-radioactive"></i> CMR</span>
+                {% endif %}
+            </td>
+            
             <td data-field="quantite">{{ objet.quantite_disponible }}</td>
             <td data-field="seuil">{{ objet.seuil }}</td>
             
@@ -66,77 +69,85 @@
                 {{ objet.date_peremption.strftime('%d/%m/%Y') if objet.date_peremption else '-' }}
             </td>
             
-            {# --- MODIFICATION ICI : Accès aux champs plats du DTO --- #}
             <td data-field="categorie">{{ objet.categorie_nom if objet.categorie_nom else '-' }}</td>
             <td data-field="armoire">{{ objet.armoire_nom if objet.armoire_nom else '-' }}</td>
             
             <td class="image-cell">
-				<div class="image-preview-wrapper">
-					{% if objet.image_url %}
+                <div class="image-preview-wrapper">
+                    {% if objet.image_url %}
                         {% if objet.image_url.startswith('http') %}
-						    <img src="{{ objet.image_url }}" class="image-objet-thumbnail" alt="{{ objet.nom }}" loading="lazy">
-						    <img src="{{ objet.image_url }}" class="image-objet-preview" alt="{{ objet.nom }}" loading="lazy">
+                            <img src="{{ objet.image_url }}" class="image-objet-thumbnail" alt="{{ objet.nom }}" loading="lazy">
+                            <img src="{{ objet.image_url }}" class="image-objet-preview" alt="{{ objet.nom }}" loading="lazy">
                         {% else %}
                             <img src="{{ url_for('static', filename=objet.image_url) }}" class="image-objet-thumbnail" alt="{{ objet.nom }}" loading="lazy">
-						    <img src="{{ url_for('static', filename=objet.image_url) }}" class="image-objet-preview" alt="{{ objet.nom }}" loading="lazy">
+                            <img src="{{ url_for('static', filename=objet.image_url) }}" class="image-objet-preview" alt="{{ objet.nom }}" loading="lazy">
                         {% endif %}
-					{% else %}
-						<div class="table-image-placeholder">
-							<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"/></svg>
-						</div>
-					{% endif %}
-				</div>
-			</td>
+                    {% else %}
+                        <div class="table-image-placeholder">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"/></svg>
+                        </div>
+                    {% endif %}
+                </div>
+            </td>
 
             <td data-type="alerte" data-alerte-status="{{ statut }}">
                 {% if statut == 'perime' %}
                     <span class="texte-perime" title="Produit périmé"><i class="bi bi-x-circle-fill"></i></span>
                 {% elif statut == 'bientot' %}
                     <span class="texte-perime-bientot" title="Expire bientôt"><i class="bi bi-exclamation-circle-fill"></i></span>
-                
-                {# NOUVEAU : Stock Critique (Rouge) #}
                 {% elif statut == 'stock_critique' %}
-                    <span class="text-danger" title="Stock critique (Sous le seuil)"><i class="bi bi-exclamation-octagon-fill"></i></span>
-                
-                {# NOUVEAU : Stock Bas (Orange) #}
+                    <span class="text-danger" title="Stock critique"><i class="bi bi-exclamation-octagon-fill"></i></span>
                 {% elif statut == 'stock_bas' %}
-                    <span class="text-warning" title="Stock bas (Proche du seuil)"><i class="bi bi-exclamation-triangle-fill"></i></span>
-                
+                    <span class="text-warning" title="Stock bas"><i class="bi bi-exclamation-triangle-fill"></i></span>
                 {% else %}
                     <span class="texte-ok" title="OK"><i class="bi bi-check-circle-fill"></i></span>
                 {% endif %}
             </td>
 
             {% if session.user_id %}
-			<td class="actions-cell">
-                {# Bouton d'édition : Note que les IDs armoire/catégorie ne sont pas dans le DTO liste pour perf #}
-                {# Si l'édition nécessite ces IDs, il faudra soit les ajouter au DTO, soit faire un fetch AJAX au clic #}
-				<button class="btn btn-sm btn-outline-primary edit-objet-btn"
-						data-objet-id="{{ objet.id }}"
-						data-nom="{{ objet.nom }}"
-						data-quantite="{{ objet.quantite_physique }}"
-						data-seuil="{{ objet.seuil }}"
-						
-						data-armoire-id="{{ objet.armoire_id }}"
-						data-categorie-id="{{ objet.categorie_id }}"
-						
-						data-date-peremption="{{ objet.date_peremption or '' }}"
-						data-image-url="{{ objet.image_url or '' }}"
-						data-fds-url="{{ objet.fds_url or '' }}"
-						data-bs-toggle="modal" data-bs-target="#addObjectModal">
-					<i class="bi bi-pencil-square"></i>
-				</button>
-				
-				{% if session.user_role == 'admin' %}
-				<form class="form-in-cell" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post">
-					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<button type="button" class="btn btn-sm btn-outline-danger btn-delete-objet" data-objet-nom="{{ objet.nom }}">
-						<i class="bi bi-trash"></i>
-					</button>
-				</form>
-				{% endif %}
-			</td>
-			{% endif %}
+            <td class="actions-cell">
+                <div class="d-flex align-items-center justify-content-end gap-2">
+                    
+                    <!-- 1. BOUTON SUGGÉRER -->
+                    <button type="button" 
+                            class="btn btn-sm btn-outline-warning btn-suggest"
+                            title="Suggérer une commande"
+                            data-objet-id="{{ objet.id }}"
+                            data-objet-nom="{{ objet.nom }}"
+                            data-stock="{{ objet.quantite_physique }}"
+                            data-seuil="{{ objet.seuil }}">
+                        <i class="bi bi-cart-plus-fill"></i>
+                    </button>
+
+                    <!-- 2. BOUTON MODIFIER -->
+                    <button class="btn btn-sm btn-outline-primary edit-objet-btn"
+                            data-objet-id="{{ objet.id }}"
+                            data-nom="{{ objet.nom }}"
+                            data-quantite="{{ objet.quantite_physique }}"
+                            data-seuil="{{ objet.seuil }}"
+                            data-armoire-id="{{ objet.armoire_id }}"
+                            data-categorie-id="{{ objet.categorie_id }}"
+                            data-date-peremption="{{ objet.date_peremption or '' }}"
+                            data-image-url="{{ objet.image_url or '' }}"
+                            data-fds-url="{{ objet.fds_url or '' }}"
+                            data-is-cmr="{{ 'on' if objet.is_cmr else 'off' }}"
+                            data-bs-toggle="modal" data-bs-target="#addObjectModal"
+                            title="Modifier">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    
+                    <!-- 3. BOUTON SUPPRIMER -->
+                    {% if session.user_role == 'admin' %}
+                    <form class="d-inline m-0 p-0" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement l\'objet \'{{ objet.nom }}\' ? Cette action est irréversible.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger btn-delete-objet" data-objet-nom="{{ objet.nom }}" title="Supprimer">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </td>
+            {% endif %}
         </tr>
         {% endfor %}
     </tbody>

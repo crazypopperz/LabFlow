@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-file-earmark-lock me-2"></i>Documents & Conformité</h2>
+        
+        <!-- LE BOUTON QUI DÉCLENCHE TON NOUVEAU SERVICE -->
+        <a href="{{ url_for('admin.generer_inventaire_annuel') }}" class="btn btn-primary">
+            <i class="bi bi-camera-fill me-2"></i>Figer l'Inventaire (Snapshot)
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- COLONNE GAUCHE : GED (Uploads) -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light fw-bold">Documents Réglementaires</div>
+                <div class="card-body">
+                    <form action="{{ url_for('admin.upload_document') }}" method="post" enctype="multipart/form-data" class="mb-4">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="input-group mb-2">
+                            <input type="text" name="nom" class="form-control" placeholder="Nom (ex: DUERP 2025)" required>
+                            <select name="type_doc" class="form-select" style="max-width: 120px;">
+                                <option value="duerp">DUERP</option>
+                                <option value="dechets">Déchets</option>
+                                <option value="autre">Autre</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <input type="file" name="fichier" class="form-control" required accept=".pdf">
+                            <button type="submit" class="btn btn-success">Uploader</button>
+                        </div>
+                    </form>
+
+                    <ul class="list-group">
+                        {% for doc in docs %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-file-pdf text-danger me-2"></i>
+                                <strong>{{ doc.nom }}</strong>
+                                <div class="small text-muted">{{ doc.date_upload.strftime('%d/%m/%Y') }}</div>
+                            </div>
+                            <a href="{{ url_for('static', filename=doc.fichier_url) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-muted text-center">Aucun document.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DROITE : ARCHIVES (Résultat de ton service) -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light fw-bold">Archives d'Inventaire</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for arch in archives %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-archive-fill text-warning me-2"></i>
+                                <strong>{{ arch.titre }}</strong>
+                                <div class="small text-muted">{{ arch.date_archive.strftime('%d/%m/%Y %H:%M') }} - {{ arch.nb_objets }} objets</div>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('static', filename=arch.fichier_url) }}" target="_blank" class="btn btn-sm btn-outline-dark">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                </a>
+                                <!-- Bouton suppression (si tu as ajouté la route suppression) -->
+                                <!-- Formulaire modifié -->
+								<form action="{{ url_for('admin.supprimer_archive', archive_id=arch.id) }}" method="post" class="form-delete-archive">
+									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+									<!-- Type button pour ne pas soumettre tout de suite -->
+									<button type="button" class="btn btn-sm btn-outline-danger btn-trigger-delete" title="Supprimer">
+										<i class="bi bi-trash"></i>
+									</button>
+								</form>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-muted text-center">Aucune archive générée.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE DE SUPPRESSION (Design Pro) -->
+<div class="modal fade" id="deleteArchiveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer l'archive</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer ce document ?</p>
+                <p class="text-muted small mt-2 mb-0">Cette action est irréversible. Le fichier PDF sera effacé du serveur.</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteBtn">
+                    Confirmer la suppression
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let formToSubmit = null;
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+        // 1. Quand on clique sur une poubelle
+        document.querySelectorAll('.btn-trigger-delete').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // On repère le formulaire associé au bouton cliqué
+                formToSubmit = this.closest('form');
+                // On ouvre la belle modale
+                deleteModal.show();
+            });
+        });
+
+        // 2. Quand on confirme dans la modale
+        confirmBtn.addEventListener('click', function() {
+            if (formToSubmit) {
+                // On change le texte du bouton pour montrer que ça charge
+                this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
+                this.disabled = true;
+                // On soumet le formulaire
+                formToSubmit.submit();
+            }
+        });
+    });
+</script>
+{% endblock %}

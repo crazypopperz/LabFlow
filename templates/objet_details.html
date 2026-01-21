@@ -37,17 +37,31 @@
 				</div>
 
                 <div class="card-body">
-                    <h1 class="h4 fw-bold mb-2">{{ objet.nom }}</h1>
-                    
-                    <div class="mb-4">
-                        {% if objet.categorie %}
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                                <i class="bi bi-tag-fill me-1"></i> {{ objet.categorie.nom }}
-                            </span>
-                        {% else %}
-                            <span class="badge bg-secondary">Sans catégorie</span>
-                        {% endif %}
-                    </div>
+                    <!-- LIGNE TITRE + BADGE CMR -->
+					<div class="d-flex justify-content-between align-items-start flex-wrap mb-2">
+    
+						<!-- 1. Le Titre -->
+						<h1 class="h3 fw-bold mb-0 text-dark me-3">{{ objet.nom }}</h1>
+						
+						<!-- 2. Le Badge (Poussé à droite par justify-content-between) -->
+						{% if objet.is_cmr %}
+							<span class="badge rounded-pill bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2 text-nowrap" 
+								  title="Cancérogène, Mutagène, Reprotoxique">
+								<i class="bi bi-radioactive me-1"></i> PRODUIT CMR
+							</span>
+						{% endif %}
+					</div>
+
+					<!-- LIGNE CATÉGORIE (Juste en dessous) -->
+					<div class="mb-4">
+						{% if objet.categorie %}
+							<span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+								<i class="bi bi-tag-fill me-1"></i> {{ objet.categorie.nom }}
+							</span>
+						{% else %}
+							<span class="badge bg-secondary">Sans catégorie</span>
+						{% endif %}
+					</div>
 
                     <!-- Infos Rapides -->
                     <ul class="list-group list-group-flush mb-4 small">

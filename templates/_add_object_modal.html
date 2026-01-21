@@ -3,7 +3,7 @@
         <div class="modal-header">
             <h3 class="modal-title-with-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" class="modal-icon" viewBox="0 -960 960 960"><path d="M440-280h80v-120h120v-80H520v-120h-80v120H320v80h120v120ZM200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/></svg>
-                Ajouter un Nouvel Objet
+                Ajouter un Nouvel Objet ou Produit
             </h3>
             <button class="close-btn">×</button>
         </div>
@@ -11,7 +11,7 @@
 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
                 <div class="form-column">
-                    <label for="nom">Nom de l'objet</label>
+                    <label for="nom">Nom de l'objet/produit</label>
                     <input type="text" id="nom" name="nom" required>
 
                     <label for="armoire_id">Armoire de rangement</label>
@@ -50,6 +50,16 @@
                     <input type="file" id="image" name="image" class="custom-file-input">
                 </div>
             </div>
+
+            <!-- AJOUT CMR ICI -->
+            <div class="form-check form-switch mt-3 p-3 border rounded bg-light">
+                <input class="form-check-input" type="checkbox" id="is_cmr" name="is_cmr">
+                <label class="form-check-label text-danger fw-bold" for="is_cmr">
+                    <i class="bi bi-radioactive me-2"></i>Produit CMR (Cancérogène, Mutagène, Reprotoxique)
+                </label>
+            </div>
+            <!-- FIN AJOUT -->
+
             <div class="modal-actions">
                 <button type="button" class="btn-action">Annuler</button>
                 <button type="submit" class="btn-action">Ajouter l'objet</button>

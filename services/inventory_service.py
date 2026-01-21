@@ -120,6 +120,7 @@ class InventoryService:
                 'date_peremption': obj.date_peremption,
                 'image_url': obj.image_url,
                 'fds_url': obj.fds_url,
+                'is_cmr': obj.is_cmr,
                 'armoire_nom': obj.armoire.nom if obj.armoire else None,
                 'categorie_nom': obj.categorie.nom if obj.categorie else None,
                 'armoire_id': obj.armoire_id,
@@ -135,6 +136,9 @@ class InventoryService:
             if filters.get('categorie_id'):
                 c = db.session.get(Categorie, filters['categorie_id'])
                 if c: categorie_nom = c.nom
+
+            if serialized_items:
+                print(f"DEBUG ITEM 1 CMR: {serialized_items[0].get('is_cmr')}")
 
             return InventoryDTO(
                 items=serialized_items,

@@ -407,6 +407,8 @@ def ajouter_objet():
             url_input = request.form.get("fds_url", "").strip()
             if url_input and is_valid_url(url_input):
                 fds_path_db = url_input
+        
+        is_cmr = request.form.get('is_cmr') == 'on'
 
         # --- CRÉATION ---
         new_objet = Objet(
@@ -418,6 +420,7 @@ def ajouter_objet():
             date_peremption=request.form.get("date_peremption") or None,
             image_url=image_path_db,
             fds_url=fds_path_db,
+            is_cmr=is_cmr,
             etablissement_id=etablissement_id
         )
         db.session.add(new_objet)
@@ -588,6 +591,7 @@ def modifier_objet(id_objet):
         objet.armoire_id = armoire_id
         objet.categorie_id = categorie_id
         objet.date_peremption = request.form.get("date_peremption") or None
+        objet.is_cmr = (request.form.get('is_cmr') == 'on')
         
         # --- HISTORIQUE ---
         details_modif = []

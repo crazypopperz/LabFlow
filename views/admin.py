@@ -19,6 +19,7 @@ from functools import wraps
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, jsonify, send_file, current_app, abort, make_response)
+from markupsafe import Markup
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -44,10 +45,11 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 # Imports Locaux
 from extensions import limiter, cache
-from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Reservation, Suggestion
+from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Reservation, Suggestion, DocumentReglementaire, InventaireArchive
 from utils import calculate_license_key, admin_required, login_required, log_action, get_etablissement_params, allowed_file
-
+from fpdf import FPDF
 from services.security_service import SecurityService
+from services.document_service import DocumentService, DocumentServiceError
 
 from PIL import Image, UnidentifiedImageError
 import pillow_heif
@@ -2301,61 +2303,53 @@ def importer_fichier():
 def exporter_inventaire():
     etablissement_id = session['etablissement_id']
     
-    # 1. Récupération et nettoyage des entrées
+    # 1. Récupération des paramètres
     format_type = request.args.get('format')
     armoire_id = request.args.get('armoire_id', type=int)
     categorie_id = request.args.get('categorie_id', type=int)
+    filter_type = request.args.get('filter') # Nouveau paramètre pour CMR
     
-    # 2. Sécurité : Validation du format
     if format_type not in ['excel', 'pdf']:
-        flash("Format d'export non supporté.", "error")
-        return redirect(url_for('admin.admin'))
-    
-    # 3. Sécurité : Exclusion mutuelle
-    if armoire_id and categorie_id:
-        flash("Veuillez choisir soit une armoire, soit une catégorie, mais pas les deux.", "warning")
+        flash("Format non supporté.", "error")
         return redirect(url_for('admin.admin'))
 
     try:
-        # 4. Construction de la requête de base (Optimisée)
+        # 2. Requête de base
         query = db.select(Objet).options(
             joinedload(Objet.categorie), 
             joinedload(Objet.armoire)
         ).filter_by(etablissement_id=etablissement_id)
 
-        # 5. Application des filtres avec SÉCURITÉ IDOR
         titre_doc = f"Inventaire - {session.get('nom_etablissement', 'Global')}"
         
-        if armoire_id:
-            # Vérification stricte : l'armoire appartient-elle à l'établissement ?
+        # 3. Application des filtres
+        if filter_type == 'cmr':
+            # --- FILTRE CMR ---
+            query = query.filter(Objet.is_cmr == True)
+            titre_doc = f"Inventaire - Produits CMR"
+            
+        elif armoire_id:
             armoire = db.session.get(Armoire, armoire_id)
             if not armoire or armoire.etablissement_id != etablissement_id:
-                current_app.logger.warning(f"IDOR SUSPECT: User {session.get('user_id')} tried accessing Armoire {armoire_id}")
-                flash("Armoire introuvable ou accès refusé.", "error")
                 return redirect(url_for('admin.admin'))
-            
             query = query.filter(Objet.armoire_id == armoire_id)
             titre_doc = f"Inventaire - {armoire.nom}"
         
         elif categorie_id:
-            # Vérification stricte : la catégorie appartient-elle à l'établissement ?
             categorie = db.session.get(Categorie, categorie_id)
             if not categorie or categorie.etablissement_id != etablissement_id:
-                current_app.logger.warning(f"IDOR SUSPECT: User {session.get('user_id')} tried accessing Categorie {categorie_id}")
-                flash("Catégorie introuvable ou accès refusé.", "error")
                 return redirect(url_for('admin.admin'))
-            
             query = query.filter(Objet.categorie_id == categorie_id)
             titre_doc = f"Inventaire - {categorie.nom}"
 
-        # 6. Exécution
-        objets = db.session.execute(query.order_by(Objet.categorie_id, Objet.nom)).scalars().all()
+        # 4. Exécution
+        objets = db.session.execute(query.order_by(Objet.nom)).scalars().all()
         
         if not objets:
             flash("Aucun objet trouvé pour cette sélection.", "warning")
             return redirect(url_for('admin.admin'))
         
-        # 7. Formatage des données (La boucle complète)
+        # 5. Formatage des données (La boucle complète)
         data_export = []
         for obj in objets:
             data_export.append({
@@ -2367,18 +2361,18 @@ def exporter_inventaire():
                 'peremption': obj.date_peremption.strftime('%d/%m/%Y') if obj.date_peremption else "-"
             })
             
-        # 8. Métadonnées
+        # 6. Métadonnées
         metadata = {
             'etablissement': titre_doc, 
             'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
             'total': len(data_export)
         }
 
-        # 9. Audit Log (Obligatoire)
+        # 7. Audit Log (Obligatoire)
         log_action('export_inventaire', 
                   f"Format: {format_type}, Armoire: {armoire_id}, Cat: {categorie_id}, Items: {len(data_export)}")
 
-        # 10. Génération du fichier
+        # 8. Génération du fichier
         if format_type == 'excel':
             return generer_inventaire_excel(data_export, metadata)
         else:
@@ -2598,6 +2592,128 @@ def exporter_rapports():
         current_app.logger.error(f"Erreur export: {e}", exc_info=True)
         flash("Erreur technique lors de la génération.", "error")
         return redirect(url_for('admin.rapports'))
+
+
+
+# ============================================================
+# GESTION DOCUMENTAIRE & CONFORMITÉ (NOUVEAU)
+# ============================================================
+
+@admin_bp.route("/documents")
+@admin_required
+def gestion_documents():
+    etablissement_id = session['etablissement_id']
+    # Récupération des documents triés par date
+    docs = db.session.execute(db.select(DocumentReglementaire).filter_by(etablissement_id=etablissement_id).order_by(DocumentReglementaire.date_upload.desc())).scalars().all()
+    # Récupération des archives d'inventaire
+    archives = db.session.execute(db.select(InventaireArchive).filter_by(etablissement_id=etablissement_id).order_by(InventaireArchive.date_archive.desc())).scalars().all()
+    
+    breadcrumbs = [{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Documents & Conformité'}]
+    return render_template("admin_documents.html", docs=docs, archives=archives, breadcrumbs=breadcrumbs)
+
+@admin_bp.route("/documents/upload", methods=['POST'])
+@admin_required
+def upload_document():
+    etablissement_id = session['etablissement_id']
+    if 'fichier' not in request.files: return redirect(url_for('admin.gestion_documents'))
+    
+    f = request.files['fichier']
+    nom = request.form.get('nom')
+    type_doc = request.form.get('type_doc')
+    
+    if f and nom:
+        # Sécurisation du nom de fichier
+        filename = secure_filename(f"{etablissement_id}_{int(datetime.now().timestamp())}_{f.filename}")
+        upload_path = os.path.join(current_app.root_path, 'static', 'uploads', 'docs')
+        os.makedirs(upload_path, exist_ok=True)
+        
+        f.save(os.path.join(upload_path, filename))
+        
+        doc = DocumentReglementaire(
+            etablissement_id=etablissement_id, 
+            nom=nom, 
+            type_doc=type_doc, 
+            fichier_url=f"uploads/docs/{filename}"
+        )
+        db.session.add(doc)
+        db.session.commit()
+        flash("Document ajouté avec succès.", "success")
+        
+    return redirect(url_for('admin.gestion_documents'))
+
+
+@admin_bp.route("/documents/generer_inventaire")
+@admin_required
+def generer_inventaire_annuel():
+    etablissement_id = session['etablissement_id']
+    nom_etablissement = session.get('nom_etablissement', 'Mon Etablissement')
+    
+    try:
+        # 1. Récupération optimisée (Eager Loading)
+        stmt = (
+            db.select(Objet)
+            .options(
+                joinedload(Objet.categorie), 
+                joinedload(Objet.armoire)
+            )
+            .filter_by(etablissement_id=etablissement_id)
+            .order_by(Objet.nom)
+        )
+        objets = db.session.execute(stmt).scalars().all()
+        
+        # 2. Appel du Service
+        # On injecte le chemin racine des uploads (static/uploads)
+        upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
+        doc_service = DocumentService(upload_root)
+        
+        result = doc_service.generate_inventory_pdf(
+            etablissement_name=nom_etablissement,
+            etablissement_id=etablissement_id,
+            objets=objets
+        )
+        
+        # 3. Enregistrement en Base (Transaction)
+        archive = InventaireArchive(
+            etablissement_id=etablissement_id,
+            titre=result['titre'],
+            fichier_url=result['relative_path'],
+            nb_objets=result['nb_objets']
+        )
+        db.session.add(archive)
+        db.session.commit()
+        
+        # Optionnel : Rafraîchir l'objet pour être sûr d'avoir l'ID (si besoin plus tard)
+        # db.session.refresh(archive) 
+        
+        # 4. Feedback avec Lien
+        lien = url_for('static', filename=result['relative_path'])
+        msg = Markup(f"Inventaire généré avec succès. <a href='{lien}' target='_blank' class='alert-link'>Voir le PDF</a>")
+        flash(msg, "success")
+
+    except DocumentServiceError as e:
+        # Erreur métier (Liste vide, trop d'objets...)
+        flash(str(e), "warning")
+        
+    except FileSystemError as e:
+        # Erreur disque
+        current_app.logger.critical(f"Erreur Disque: {e}")
+        flash("Erreur système : Impossible d'écrire le fichier.", "error")
+
+    except SQLAlchemyError as e:
+        # Erreur base de données
+        db.session.rollback()
+        current_app.logger.error(f"Erreur DB lors de l'archivage: {e}")
+        flash("Erreur lors de l'enregistrement en base de données.", "error")
+        
+    except Exception as e:
+        # Filet de sécurité global
+        db.session.rollback() # Sécurité supplémentaire
+        current_app.logger.error(f"Erreur critique génération inventaire: {e}", exc_info=True)
+        flash("Une erreur technique inattendue est survenue.", "error")
+        
+    return redirect(url_for('admin.gestion_documents'))
+
+
 
 # ============================================================
 # LICENCE (Rate Limit Custom)
@@ -3152,3 +3268,35 @@ def generer_inventaire_excel(data, metadata):
     filename = f"Inventaire_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
+
+@admin_bp.route("/documents/supprimer_archive/<int:archive_id>", methods=['POST'])
+@admin_required
+def supprimer_archive(archive_id):
+    etablissement_id = session['etablissement_id']
+    archive = db.session.get(InventaireArchive, archive_id)
+    
+    # Vérification de sécurité (IDOR)
+    if not archive or archive.etablissement_id != etablissement_id:
+        flash("Archive introuvable ou accès interdit.", "error")
+        return redirect(url_for('admin.gestion_documents'))
+        
+    try:
+        # 1. Suppression du fichier physique sur le disque
+        # On reconstruit le chemin absolu : root/static/uploads/...
+        full_path = os.path.join(current_app.root_path, 'static', archive.fichier_url)
+        
+        if os.path.exists(full_path):
+            os.remove(full_path)
+            
+        # 2. Suppression de l'entrée en base de données
+        db.session.delete(archive)
+        db.session.commit()
+        
+        flash("Archive supprimée avec succès.", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur suppression archive: {e}", exc_info=True)
+        flash("Erreur technique lors de la suppression.", "error")
+        
+    return redirect(url_for('admin.gestion_documents'))

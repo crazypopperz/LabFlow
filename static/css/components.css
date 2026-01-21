@@ -181,7 +181,7 @@
   background-color: var(--fond-element);
   border: 1px solid var(--couleur-bordure);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--ombre-legere);
   font-size: 0.9rem;
 }
@@ -281,20 +281,51 @@
   background-color: #f0f0f0; border-radius: 4px; border: 1px solid var(--couleur-bordure);
 }
 .table-image-placeholder svg { fill: #999; }
+
 .image-objet-preview {
-  visibility: hidden; opacity: 0; position: absolute !important;
+  visibility: hidden;
+  opacity: 0;
+  position: absolute !important;
   top: 50%;
   right: 100%;
   transform: translateY(-50%);
-  margin-right: 10px;
-  width: 250px; height: 250px; object-fit: contain;
-  background-color: white;
-  border: 1px solid #ccc; border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  z-index: 10010; transition: opacity 0.2s ease;
-  pointer-events: none; padding: 5px;
+  margin-right: 20px;
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
+  
+  /* STYLE APPLE PREMIUM */
+  background: #ffffff;
+  border: 0.5px solid rgba(0, 0, 0, 0.04); /* Bordure ultra-fine */
+  border-radius: 18px;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.08),
+    0 24px 48px rgba(0, 0, 0, 0.12),
+    0 0 0 0.5px rgba(0, 0, 0, 0.02) inset; /* Multi-couches subtiles */
+  
+  z-index: 99999;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  padding: 15px;
 }
-.image-preview-wrapper:hover .image-objet-preview { visibility: visible; opacity: 1; }
+
+.image-preview-wrapper:hover .image-objet-preview {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(-50%) scale(1.025);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.05),
+    0 12px 32px rgba(0, 0, 0, 0.1),
+    0 32px 64px rgba(0, 0, 0, 0.15),
+    0 0 0 0.5px rgba(31, 59, 115, 0.08) inset; /* Légère teinte bleue au survol */
+}
+
+
+.objet-table tbody tr:hover {
+  position: relative;
+  z-index: 100;
+}
 
 
 
@@ -371,6 +402,21 @@
     border-color: transparent;
     transform: translateY(-2px);
     box-shadow: 0 2px 5px rgba(220, 53, 69, 0.15);
+}
+
+/* --- VARIANTE : BOUTON SUGGÉRER DE PAGE(Jaune) --- */
+.actions-cell .btn-outline-warning {
+    color: #64748b; /* Gris par défaut (comme les autres) */
+    background-color: #f1f5f9; /* Fond gris très léger */
+    border-color: transparent;
+}
+
+.actions-cell .btn-outline-warning:hover {
+    color: #d97706; /* Jaune/Orange foncé pour la lisibilité */
+    background-color: #fffbeb; /* Fond jaune très pâle */
+    border-color: transparent;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(217, 119, 6, 0.15);
 }
 
 /* --- CHECKBOX --- */
@@ -531,6 +577,26 @@ tr.row-done td strong { font-weight: normal; }
     background: linear-gradient(135deg, #ffca2c 0%, #ffc107 100%); color: #000 !important;
 }
 .btn-suggest:active { transform: translateY(-1px); box-shadow: 0 4px 6px rgba(255, 193, 7, 0.25); }
+
+.actions-cell .btn-suggest {
+    background-color: #f1f5f9;
+    background-image: none; /* Annule le gradient */
+    color: #64748b !important; /* Surcharge le !important existant */
+    font-weight: 500 !important; /* Pareil */
+    text-transform: none;
+    letter-spacing: normal;
+    padding: 0; /* Pour respecter le style carré 34x34 */
+    box-shadow: none;
+}
+
+.actions-cell .btn-suggest:hover {
+    color: #d97706 !important; /* Jaune/orange au survol */
+    background-color: #fffbeb;
+    background-image: none;
+    border-color: transparent;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(217, 119, 6, 0.15);
+}
 
 /* --- FORMS BOOTSTRAP --- */
 .form-control, .form-select { font-size: 0.95rem; padding: 0.6rem 1rem; border-radius: 6px; }

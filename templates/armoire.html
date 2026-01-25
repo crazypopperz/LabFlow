@@ -38,7 +38,9 @@
                     <div class="text-center text-md-start">
                         <!-- Titre Bleu Nuit -->
                         <h1 class="h2 fw-bold mb-2" style="color: #1F3B73;">{{ armoire.nom }}</h1>
-
+							<a href="{{ url_for('inventaire.exporter_inventaire', format='pdf', armoire_id=armoire.id) }}" class="btn btn-outline-dark btn-sm">
+								<i class="bi bi-file-earmark-pdf me-2"></i>Imprimer cette armoire
+							</a>
                         {% if armoire.description %}
                             <div class="d-flex align-items-center justify-content-center justify-content-md-start mt-3">
                                 <div class="bg-success rounded-pill me-3" style="width: 4px; height: 30px; opacity: 0.6;"></div>

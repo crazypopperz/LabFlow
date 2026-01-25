@@ -429,7 +429,7 @@
         if (isExporting) return;
         
         const type = document.querySelector('input[name="export_type"]:checked').value;
-        const baseUrl = "{{ url_for('admin.exporter_inventaire') }}";
+        const baseUrl = "{{ url_for('inventaire.exporter_inventaire') }}";
         const urlParams = new URLSearchParams();
         urlParams.append('format', format);
 

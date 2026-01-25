@@ -18,7 +18,7 @@ from extensions import limiter, cache
 from flask_migrate import Migrate
 
 # Imports locaux
-from db import db, Parametre, Armoire, Categorie, init_app as init_db_app
+from db import db, Parametre, Armoire, Notification, Categorie, init_app as init_db_app
 from utils import get_alerte_info, is_setup_needed, annee_scolaire_format, get_etablissement_params
 
 # Imports des Blueprints
@@ -198,10 +198,14 @@ def create_app():
         context = {
             'all_armoires': [], 'all_categories': [], 'alertes_total': 0,
             'licence': {'statut': 'FREE', 'is_pro': False, 'instance_id': 'N/A'},
-            'nom_etablissement': None
+            'nom_etablissement': None,
+            'notifs_count': 0,      # <--- AJOUT
+            'notifications_list': [] # <--- AJOUT
         }
         
         etablissement_id = session.get('etablissement_id')
+        user_id = session.get('user_id') # <--- AJOUT
+        
         if not etablissement_id: return context
             
         try:
@@ -212,6 +216,16 @@ def create_app():
             context['all_categories'] = db.session.execute(
                 db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)
             ).scalars().all()
+            
+            if user_id:
+                notifs = db.session.execute(
+                    db.select(Notification)
+                    .filter_by(utilisateur_id=user_id, lu=False)
+                    .order_by(Notification.date_creation.desc())
+                ).scalars().all()
+                
+                context['notifs_count'] = len(notifs)
+                context['notifications_list'] = notifs
             
             alert_info = get_alerte_info()
             context['alertes_total'] = alert_info.get('alertes_total', 0)

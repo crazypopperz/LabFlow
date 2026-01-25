@@ -4,19 +4,15 @@
 
 {% block content %}
 
-
 <div class="main-container">
     {% include '_breadcrumb.html' %}
 
     <!-- En-tête -->
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-            <!-- Icône Import (Indigo) -->
             <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 -960 960 960">
-                    <path d="M240-160q-33 0-56.5-23.5T160-240v-480q0-33 23.5-56.5T240-800h360l160 160v400q0 33-23.5 56.5T720-160H240Zm0-80h480v-360H560v-120H240v480Z"/>
-                </svg>
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #0dcaf0 0%, #0d6efd 100%);">
+                <i class="bi bi-file-earmark-spreadsheet-fill fs-3"></i>
             </div>
             <span class="fw-bold">Importation en Masse</span>
         </h2>
@@ -27,46 +23,47 @@
         <!-- COLONNE GAUCHE : Instructions -->
         <div class="col-lg-6">
             <div class="import-card">
-                <h4 class="mb-4 d-flex align-items-center">
+                <!-- Titre Etape 1 -->
+                <div class="import-card-header">
                     <span class="step-number">1</span>
-                    Préparer le fichier
-                </h4>
+                    <h4>Préparer le fichier</h4>
+                </div>
                 
-                <p class="text-muted mb-4">
-                    Pour importer de nouveaux objets, téléchargez le modèle Excel officiel. 
-                    Remplissez-le en respectant scrupuleusement les colonnes.
-                </p>
+                <!-- Contenu Etape 1 -->
+                <div class="d-flex flex-column gap-3 h-100">
+                    <p class="text-muted mb-0">
+                        Pour importer de nouveaux objets, téléchargez le modèle Excel officiel. 
+                        Remplissez-le en respectant scrupuleusement les colonnes.
+                    </p>
 
-                <!-- NOUVEAU BLOC D'AVERTISSEMENT -->
-                <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start mb-4" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill fs-5 me-3 text-warning-emphasis mt-1"></i>
-                    <div>
-                        <strong class="text-warning-emphasis">Préalable important :</strong>
-                        <p class="mb-0 small text-muted mt-1">
-                            Le modèle Excel génère des <strong>listes déroulantes</strong> basées sur vos données actuelles.
-                            <br>
-                            Assurez-vous d'avoir créé toutes vos 
-                            <a href="{{ url_for('main.gestion_armoires') }}" class="fw-bold text-dark text-decoration-underline">Armoires</a> 
-                            et 
-                            <a href="{{ url_for('main.gestion_categories') }}" class="fw-bold text-dark text-decoration-underline">Catégories</a> 
-                            dans l'application <strong>avant</strong> de télécharger ce fichier.
-                        </p>
+                    <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start gap-3 mb-0">
+                        <i class="bi bi-exclamation-triangle-fill fs-4 text-warning-emphasis mt-1"></i>
+                        <div>
+                            <strong class="text-warning-emphasis">Préalable important :</strong>
+                            <p class="mb-0 small text-muted mt-1">
+                                Assurez-vous d'avoir créé toutes vos 
+                                <a href="{{ url_for('main.gestion_armoires') }}" class="fw-bold text-dark text-decoration-underline">Armoires</a> 
+                                et 
+                                <a href="{{ url_for('main.gestion_categories') }}" class="fw-bold text-dark text-decoration-underline">Catégories</a> 
+                                dans l'application <strong>avant</strong> de télécharger ce fichier.
+                            </p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="alert alert-info border-0 bg-light text-dark mb-4">
-                    <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-2"></i>Règles de remplissage :</h6>
-                    <ul class="help-list mb-0">
-                        <li>Les colonnes <strong>Nom</strong>, <strong>Quantité</strong> et <strong>Seuil</strong> sont obligatoires.</li>
-                        <li>Utilisez les menus déroulants pour l'Armoire et la Catégorie.</li>
-                        <li>La date doit être au format <strong>AAAA-MM-JJ</strong> (ex: 2025-12-31).</li>
-                    </ul>
-                </div>
+                    <div class="alert alert-info border-0 bg-light text-dark mb-0">
+                        <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-2"></i>Règles de remplissage :</h6>
+                        <ul class="help-list mb-0">
+                            <li>Les colonnes <strong>Nom</strong>, <strong>Quantité</strong> et <strong>Seuil</strong> sont obligatoires.</li>
+                            <li>Utilisez les menus déroulants pour l'Armoire et la Catégorie.</li>
+                            <li>La date doit être au format <strong>AAAA-MM-JJ</strong> (ex: 2025-12-31).</li>
+                        </ul>
+                    </div>
 
-                <div class="text-center">
-                    <a href="{{ url_for('admin.telecharger_modele_excel') }}" class="btn btn-outline-primary w-100 py-3 fw-bold">
-                        <i class="bi bi-file-earmark-arrow-down me-2"></i>Télécharger le Modèle (.xlsx)
-                    </a>
+                    <div class="mt-auto pt-3">
+                        <a href="{{ url_for('admin.telecharger_modele_excel') }}" class="btn btn-outline-primary w-100 py-3 fw-bold shadow-sm">
+                            <i class="bi bi-file-earmark-arrow-down me-2"></i>Télécharger le Modèle (.xlsx)
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -74,17 +71,19 @@
         <!-- COLONNE DROITE : Upload -->
         <div class="col-lg-6">
             <div class="import-card">
-                <h4 class="mb-4 d-flex align-items-center">
+                <!-- Titre Etape 2 -->
+                <div class="import-card-header">
                     <span class="step-number">2</span>
-                    Importer les données
-                </h4>
+                    <h4>Importer les données</h4>
+                </div>
 
-                <form action="{{ url_for('admin.importer_fichier') }}" method="post" enctype="multipart/form-data">
+                <!-- Contenu Etape 2 -->
+                <form action="{{ url_for('admin.importer_fichier') }}" method="post" enctype="multipart/form-data" class="d-flex flex-column h-100">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                    <div class="form-group mb-4">
+                    <div class="form-group mb-4 flex-grow-1 d-flex flex-column">
                         <div class="file-drop-zone" id="drop-zone">
-                            <i class="bi bi-cloud-upload drop-icon"></i>
+                            <i class="bi bi-cloud-upload-fill drop-icon"></i>
                             <h5 class="fw-bold text-dark mb-2">Déposez votre fichier ici</h5>
                             <p class="text-muted small mb-0 file-msg">ou cliquez pour parcourir vos dossiers</p>
                             
@@ -92,8 +91,8 @@
                         </div>
                     </div>
 
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary py-2 fw-bold">
+                    <div class="mt-auto">
+                        <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm">
                             <i class="bi bi-play-circle-fill me-2"></i>Lancer l'Importation
                         </button>
                     </div>
@@ -117,12 +116,12 @@
                 const fileName = this.files[0].name;
                 fileMsg.innerHTML = `Fichier prêt : <strong class="text-success">${fileName}</strong>`;
                 dropZone.classList.add('file-selected');
-                dropIcon.classList.remove('bi-cloud-upload');
+                dropIcon.classList.remove('bi-cloud-upload-fill');
                 dropIcon.classList.add('bi-file-earmark-excel-fill');
             } else {
                 fileMsg.innerHTML = originalMsg;
                 dropZone.classList.remove('file-selected');
-                dropIcon.classList.add('bi-cloud-upload');
+                dropIcon.classList.add('bi-cloud-upload-fill');
                 dropIcon.classList.remove('bi-file-earmark-excel-fill');
             }
         });

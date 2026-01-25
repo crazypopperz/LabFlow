@@ -108,9 +108,13 @@
                     </ul>
 
                     <!-- Actions -->
-                    <div class="d-grid gap-2">
+                    <div class="d-grid gap-3"> <!-- gap-3 pour aérer un peu plus -->
+                        
                         {% if session.user_role == 'admin' %}
-                        <button class="btn btn-outline-primary" 
+                        <!-- BOUTON MODIFIER -->
+                        <!-- J'ai remplacé 'btn-outline-primary' par 'btn-premium-blue' -->
+                        <!-- ET j'ai ajouté 'edit-objet-btn' pour que le JS fonctionne -->
+                        <button class="btn btn-premium-blue edit-objet-btn" 
                                 data-bs-toggle="modal" 
                                 data-bs-target="#addObjectModal"
                                 data-objet-id="{{ objet.id }}"
@@ -121,20 +125,21 @@
                                 data-categorie-id="{{ objet.categorie_id }}"
                                 data-image-url="{{ objet.image_url }}"
                                 data-date-peremption="{{ objet.date_peremption }}"
-								data-is-cmr="{{ 'on' if objet.is_cmr else 'off' }}"
+                                data-is-cmr="{{ 'on' if objet.is_cmr else 'off' }}"
                                 data-fds-url="{{ objet.fds_url }}">
                             <i class="bi bi-pencil-square me-2"></i>Modifier
                         </button>
                         {% endif %}
                         
-                        <!-- Bouton Suggestion pour tous -->
-                        <button class="btn btn-outline-warning text-dark btn-suggest"
-								data-objet-id="{{ objet.id }}"
-								data-objet-nom="{{ objet.nom }}"
-								data-stock="{{ objet.quantite_physique }}"
-								data-seuil="{{ objet.seuil }}">
-							<i class="bi bi-cart-plus me-2"></i>Suggérer une commande
-						</button>
+                        <!-- BOUTON SUGGÉRER -->
+                        <!-- J'ai remplacé 'btn-outline-warning text-dark' par 'btn-premium-yellow' -->
+                        <button class="btn btn-premium-yellow btn-suggest"
+                                data-objet-id="{{ objet.id }}"
+                                data-objet-nom="{{ objet.nom }}"
+                                data-stock="{{ objet.quantite_physique }}"
+                                data-seuil="{{ objet.seuil }}">
+                            <i class="bi bi-cart-plus-fill me-2"></i>Suggérer une commande
+                        </button>
                     </div>
                 </div>
             </div>

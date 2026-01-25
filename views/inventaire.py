@@ -6,7 +6,7 @@ import os
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, session, jsonify, current_app)
+                   flash, send_file, session, jsonify, current_app)
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, desc, or_
 from sqlalchemy.orm import joinedload
@@ -17,10 +17,14 @@ from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historiq
 
 # IMPORTS UTILS
 from utils import login_required, admin_required, limit_objets_required, allowed_file
+from extensions import limiter
 
 # --- CORRECTION ICI : On importe le Service au lieu de la fonction API ---
 from services.inventory_service import InventoryService, InventoryServiceError
 from services.security_service import SecurityService
+from services.document_service import DocumentService, DocumentServiceError
+
+from markupsafe import Markup
 
 inventaire_bp = Blueprint(
     'inventaire', 
@@ -920,3 +924,90 @@ def objets_dormants():
                            objets=dormants, 
                            breadcrumbs=breadcrumbs,
                            now=datetime.now())
+
+
+# ============================================================
+# EXPORT CONTEXTUEL (PDF/EXCEL)
+# ============================================================
+@inventaire_bp.route("/exporter", methods=['GET'])
+@login_required  # <--- Accessible aux profs maintenant
+@limiter.limit("10 per minute")
+def exporter_inventaire():
+    etablissement_id = session['etablissement_id']
+    
+    # 1. Récupération des paramètres
+    format_type = request.args.get('format')
+    armoire_id = request.args.get('armoire_id', type=int)
+    categorie_id = request.args.get('categorie_id', type=int)
+    filter_type = request.args.get('filter')
+    
+    if format_type not in ['excel', 'pdf']:
+        flash("Format non supporté.", "error")
+        return redirect(request.referrer or url_for('inventaire.index'))
+
+    try:
+        # 2. Requête de base
+        query = db.select(Objet).options(
+            joinedload(Objet.categorie), 
+            joinedload(Objet.armoire)
+        ).filter_by(etablissement_id=etablissement_id)
+
+        titre_doc = f"Inventaire - {session.get('nom_etablissement', 'Global')}"
+        filename_prefix = "Inventaire"
+        
+        # 3. Application des filtres
+        if filter_type == 'cmr':
+            query = query.filter(Objet.is_cmr == True)
+            titre_doc = "Inventaire - Produits CMR"
+            filename_prefix = "CMR"
+            
+        elif armoire_id:
+            armoire = db.session.get(Armoire, armoire_id)
+            if not armoire or armoire.etablissement_id != etablissement_id:
+                return redirect(url_for('inventaire.index'))
+            query = query.filter(Objet.armoire_id == armoire_id)
+            titre_doc = f"Inventaire - {armoire.nom}"
+            filename_prefix = f"Armoire_{armoire.nom}"
+        
+        elif categorie_id:
+            categorie = db.session.get(Categorie, categorie_id)
+            if not categorie or categorie.etablissement_id != etablissement_id:
+                return redirect(url_for('inventaire.index'))
+            query = query.filter(Objet.categorie_id == categorie_id)
+            titre_doc = f"Inventaire - {categorie.nom}"
+            filename_prefix = f"Categorie_{categorie.nom}"
+
+        # 4. Exécution
+        objets = db.session.execute(query.order_by(Objet.nom)).scalars().all()
+        
+        if not objets:
+            flash("Aucun objet à exporter dans cette sélection.", "warning")
+            return redirect(request.referrer)
+
+        # 5. Appel du Service Documentaire
+        upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
+        doc_service = DocumentService(upload_root)
+        
+        # On utilise la méthode générique du service
+        result = doc_service.generate_inventory_pdf(
+            etablissement_name=session.get('nom_etablissement'),
+            etablissement_id=etablissement_id,
+            objets=objets,
+            doc_title=titre_doc.upper(),
+            filename_prefix=filename_prefix
+        )
+        
+        # Pour l'instant, on ne stocke pas ces exports contextuels en base (Archives)
+        # pour ne pas polluer la liste des documents officiels.
+        # On renvoie directement le fichier.
+        
+        return send_file(
+            os.path.join(current_app.root_path, 'static', result['relative_path']),
+            as_attachment=True,
+            download_name=result['filename']
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Erreur export contextuel: {e}", exc_info=True)
+        flash("Erreur technique lors de l'export.", "error")
+        return redirect(request.referrer)

@@ -64,23 +64,23 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
-                                    <!-- Modifier -->
-                                    <button class="btn btn-sm btn-outline-primary btn-icon-only me-1" 
-                                            title="Modifier"
-                                            onclick='openEditModal({{ item.Fournisseur.id }}, "{{ item.Fournisseur.nom|replace('"', '&quot;') }}", "{{ item.Fournisseur.site_web or "" }}", "{{ item.Fournisseur.logo or "" }}")'>
-                                        <i class="bi bi-pencil-fill"></i>
-                                    </button>
-                                    
-                                    <!-- Supprimer -->
-                                    <button class="btn btn-sm btn-outline-danger btn-icon-only" 
-                                            title="Supprimer"
-                                            {% if item.depenses_count > 0 %}disabled{% endif %}
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deleteModal"
-                                            data-url="{{ url_for('admin.supprimer_fournisseur', id=item.Fournisseur.id) }}">
-                                        <i class="bi bi-trash-fill"></i>
-                                    </button>
-                                </td>
+									<button class="btn btn-sm btn-outline-primary btn-icon-only me-1" 
+											title="Modifier"
+											onclick="openEditModal({{ item.Fournisseur.id }}, '{{ item.Fournisseur.nom|replace("'", "\\'") }}', '{{ item.Fournisseur.site_web or '' }}', '{{ item.Fournisseur.logo or '' }}')">
+										<i class="bi bi-pencil-fill"></i>
+									</button>
+									
+									<!-- Supprimer -->
+									<button type="button" 
+											class="btn btn-sm btn-outline-danger btn-icon-only" 
+											title="Supprimer"
+											{% if item.depenses_count > 0 %}disabled{% endif %}
+											data-bs-toggle="modal" 
+											data-bs-target="#deleteFournisseurModal"
+											onclick="preparerSuppression('{{ url_for('admin.supprimer_fournisseur', id=item.Fournisseur.id) }}')">
+										<i class="bi bi-trash-fill"></i>
+									</button>
+								</td>
                             </tr>
                         {% endfor %}
                     {% else %}
@@ -140,25 +140,28 @@
     </div>
 </div>
 
-<!-- Modale Suppression -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+<!-- Modale Suppression Spécifique -->
+<div class="modal fade" id="deleteFournisseurModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Supprimer le fournisseur</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer le fournisseur</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Voulez-vous vraiment supprimer ce fournisseur ?</p>
-                <div class="alert alert-warning small">
-                    <i class="bi bi-exclamation-triangle me-1"></i> Impossible si des dépenses y sont liées.
+            <div class="modal-body p-4">
+                <p class="mb-2 fs-5 text-dark">Voulez-vous vraiment supprimer ce fournisseur ?</p>
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0">
+                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                    <div class="small">Impossible si des dépenses y sont liées.</div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <form id="deleteForm" method="post" action="">
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
+                
+                <!-- Formulaire avec ID spécifique -->
+                <form id="formSuppressionFournisseur" method="post" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4">Confirmer</button>
                 </form>
             </div>
         </div>
@@ -180,11 +183,9 @@
 
     // Remplir la modale pour l'édition
     function openEditModal(id, nom, site, logo) {
-        // Ouvrir la modale via Bootstrap
         const modal = new bootstrap.Modal(document.getElementById('fournisseurModal'));
         modal.show();
 
-        // Remplir les champs
         document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier le fournisseur';
         document.getElementById('fournisseurForm').action = "/admin/fournisseurs/modifier/" + id;
         document.getElementById('inputNom').value = nom;
@@ -192,14 +193,17 @@
         document.getElementById('inputLogo').value = logo;
     }
 
-    // Gestion suppression
-    const deleteModal = document.getElementById('deleteModal');
-    if (deleteModal) {
-        deleteModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const url = button.dataset.url;
-            document.getElementById('deleteForm').action = url;
-        });
+    // --- FONCTION DE SUPPRESSION DIRECTE ---
+    // Appelée directement par le onclick du bouton
+    function preparerSuppression(url) {
+        // On cible le formulaire par son ID unique
+        const form = document.getElementById('formSuppressionFournisseur');
+        if (form) {
+            form.action = url;
+            console.log("URL de suppression définie sur : " + url); // Pour débugger si besoin
+        } else {
+            console.error("Erreur : Formulaire de suppression introuvable !");
+        }
     }
 </script>
 {% endblock %}

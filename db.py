@@ -397,3 +397,17 @@ class InventaireArchive(db.Model):
     date_archive = db.Column(db.DateTime, default=datetime.now)
     fichier_url = db.Column(db.String(255), nullable=False)
     nb_objets = db.Column(db.Integer)
+
+# ============================================================
+# 8. SYSTÈME DE NOTIFICATIONS
+# ============================================================
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(20), default='warning') # info, warning, danger, success
+    lu = db.Column(db.Boolean, default=False)
+    date_creation = db.Column(db.DateTime, default=datetime.now)

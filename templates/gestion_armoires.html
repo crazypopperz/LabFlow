@@ -73,24 +73,30 @@
                        title="Voir le contenu">
                         <i class="bi bi-eye"></i>
                     </a>
+
+                    <!-- 2. IMPRIMER (Nouveau) -->
+                    <a href="{{ url_for('inventaire.exporter_inventaire', format='pdf', armoire_id=armoire.id) }}" 
+					   class="action-btn btn-print" 
+					   title="Télécharger l'inventaire PDF"
+					   target="_blank">
+						<i class="bi bi-printer"></i>
+					</a>
                     
                     {% if session.user_role == 'admin' %}
-                    <!-- 2. Modifier (Crayon) - Déclenche la modale d'édition -->
+                    <!-- 3. Modifier (Crayon) -->
                     <button type="button" 
 							class="action-btn btn-edit" 
 							data-bs-toggle="modal" 
 							data-bs-target="#editArmoireModal"
-							
 							data-id="{{ armoire.id }}"
-							data-nom="{{ armoire.nom | e }}"
-							data-desc="{{ armoire.description | default('', true) | e }}"
-							data-photo="{{ armoire.photo_url | default('', true) | e }}"
-							
+							data-nom="{{ armoire.nom }}"
+							data-desc="{{ armoire.description if armoire.description else '' }}" 
+							data-photo="{{ armoire.photo_url if armoire.photo_url else '' }}"
 							title="Modifier">
 						<i class="bi bi-pencil-fill"></i>
 					</button>
                     
-                    <!-- 3. Supprimer (Poubelle) -->
+                    <!-- 4. Supprimer (Poubelle) -->
 					<button type="button" class="action-btn btn-delete" 
 							data-url="{{ url_for('admin.supprimer', type_objet='armoire', id=armoire.id) }}"
 							data-item-name="{{ armoire.nom }}"
@@ -264,16 +270,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (editModal) {
         editModal.addEventListener('show.bs.modal', function(event) {
-            // Le bouton qui a déclenché la modale
             const button = event.relatedTarget;
             
-            // Récupération des données directement depuis le bouton
+            // Récupération
             const id = button.getAttribute('data-id');
             const nom = button.getAttribute('data-nom');
             const desc = button.getAttribute('data-desc');
             const photo = button.getAttribute('data-photo');
 
-            // Remplissage des champs
+            // Remplissage
             document.getElementById('editArmoireId').value = id;
             document.getElementById('editArmoireNom').value = nom;
             document.getElementById('editArmoireDesc').value = desc;

@@ -485,6 +485,33 @@ document.addEventListener("DOMContentLoaded", function () {
 	// SECTION 3 : GESTIONNAIRES D'ÉVÉNEMENTS NON-CLIC (input, change, submit)
 	// =================================================================
 	document.body.addEventListener('change', function(e) {
+        
+        // --- A. GESTION DU "TOUT SÉLECTIONNER" (NOUVEAU) ---
+        if (e.target.id === 'select-all-checkbox') {
+            const isChecked = e.target.checked;
+            const table = e.target.closest('table');
+            if (table) {
+                table.querySelectorAll('.objet-checkbox').forEach(cb => {
+                    cb.checked = isChecked;
+                });
+            }
+        }
+
+        // --- B. GESTION DES CASES ENFANTS (NOUVEAU) ---
+        if (e.target.classList.contains('objet-checkbox')) {
+            const table = e.target.closest('table');
+            const masterCheckbox = table ? table.querySelector('#select-all-checkbox') : null;
+            
+            if (masterCheckbox) {
+                // Si on décoche un enfant, on décoche le maître
+                // Si tous sont cochés, on coche le maître
+                const all = table.querySelectorAll('.objet-checkbox');
+                const allChecked = Array.from(all).every(cb => cb.checked);
+                masterCheckbox.checked = allChecked;
+            }
+        }
+
+        // --- C. LOGIQUE EXISTANTE (Commandes / Traité) ---
 		if (e.target.matches('.commande-checkbox, .traite-checkbox')) {
 			const checkbox = e.target;
 			const isCommande = checkbox.matches('.commande-checkbox');

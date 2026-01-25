@@ -7,170 +7,153 @@
 <div class="main-container">
     {% include '_breadcrumb.html' %}
 
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-            <!-- Icône Euro (Harmonisée avec Dashboard) -->
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%);">
-                <!-- SVG Euro -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
-                    <path d="M600-120q-118 0-210-67T260-360H120v-80h122q-2-11-2-20v-40q0-9 2-20H120v-80h140q38-106 130-173t210-67q69 0 130.5 24T840-748l-70 70q-35-29-78.5-45.5T600-740q-75 0-136.5 38.5T370-600h230v80H344q-2 11-3 20t-1 20q0 11 1 20t3 20h256v80H370q32 63 93.5 101.5T600-220q48 0 92.5-16.5T770-282l70 70q-48 44-109.5 68T600-120Z"/>
-                </svg>
-            </div>
-            <span class="fw-bold">Suivi Budgétaire</span>
-        </h2>
+    <!-- EN-TÊTE DE PAGE -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <!-- Icône Euro Simple et Pro -->
+        <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+             style="width: 48px; height: 48px; background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+            <i class="bi bi-currency-euro fs-3"></i>
+        </div>
+        <div>
+            <h2 class="h3 mb-0 fw-bold text-dark">Suivi Budgétaire</h2>
+            <p class="text-muted mb-0 small">Gérez vos crédits et dépenses pour l'année scolaire</p>
+        </div>
     </div>
 
     <div class="row g-4">
-        <!-- COLONNE GAUCHE : Synthèse & Actions -->
+        
+        <!-- COLONNE GAUCHE : SYNTHÈSE & EXPORT -->
         <div class="col-lg-4">
-            <!-- Carte Synthèse -->
-            <div class="budget-summary-card mb-4">
-                <h5 class="d-flex align-items-center gap-2 mb-3 text-dark fw-bold">
-                    <i class="bi bi-pie-chart-fill text-primary"></i>
-                    Synthèse {{ annee_selectionnee | annee_scolaire }}
-                </h5>
+            <div class="d-flex flex-column gap-4">
                 
-                {% if budget_affiche %}
-                    <ul class="budget-stat-list">
-                        <li class="budget-stat-item">
-                            <span class="stat-label">Budget Initial</span>
-                            <span class="stat-value val-neutral">{{ "%.2f"|format(budget_affiche.montant_initial) }} €</span>
-                        </li>
-                        <li class="budget-stat-item">
-                            <span class="stat-label">Dépenses Totales</span>
-                            <span class="stat-value val-negative">- {{ "%.2f"|format(total_depenses) }} €</span>
-                        </li>
-                        <li class="budget-stat-item pt-3 border-top border-2">
-                            <span class="stat-label fw-bold text-dark">Solde Restant</span>
-                            <span class="stat-value {% if solde >= 0 %}val-positive{% else %}val-negative{% endif %}">
-                                {{ "%.2f"|format(solde) }} €
-                            </span>
-                        </li>
-                    </ul>
-                {% else %}
-                    <div class="alert alert-warning text-center small">
-                        Aucun budget défini pour cette année.
+                <!-- 1. CARTE DE SYNTHÈSE -->
+                <div class="budget-summary-card">
+                    <div class="budget-header-premium">
+                        <h4><i class="bi bi-pie-chart-fill me-2"></i> Synthèse {{ budget_affiche.annee if budget_affiche else '...' }}</h4>
                     </div>
-                {% endif %}
-
-                <!-- ACTIONS (Visible uniquement pour ADMIN) -->
-                {% if session.user_role == 'admin' %}
-                <div class="budget-actions mt-4 pt-3 border-top">
-                    <button class="btn btn-primary w-100 mb-2" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#budgetModal"
-                            onclick="setupBudgetModal('{{ budget_actuel_pour_modales.annee if budget_actuel_pour_modales else annee_proposee_pour_creation }}', '{{ '%.2f'|format(budget_actuel_pour_modales.montant_initial) if budget_actuel_pour_modales else '0.00' }}')">
-                        <i class="bi bi-pencil-square me-2"></i>
-                        {% if budget_actuel_pour_modales %}Modifier le Budget{% else %}Définir le Budget{% endif %}
-                    </button>
                     
-                    <button class="btn btn-success w-100" 
-							data-bs-toggle="modal" 
-							data-bs-target="#depenseModal"
-							onclick="resetDepenseModal()"
-							{% if not budget_affiche or budget_affiche.cloture %}disabled{% endif %}>
-						<i class="bi bi-plus-circle me-2"></i>Ajouter une Dépense
-					</button>
+                    <div class="budget-body">
+                        {% if budget_affiche %}
+                            <ul class="budget-stat-list">
+                                <li class="budget-stat-item">
+                                    <span class="stat-label">Budget Initial</span>
+                                    <span class="stat-value val-neutral">{{ "%.2f"|format(budget_affiche.montant_initial) }} €</span>
+                                </li>
+                                <li class="budget-stat-item">
+                                    <span class="stat-label">Dépenses Totales</span>
+                                    <span class="stat-value text-danger">- {{ "%.2f"|format(total_depenses) }} €</span>
+                                </li>
+                                <li class="budget-stat-item">
+                                    <span class="stat-label fw-bold text-dark">Solde Restant</span>
+                                    <span class="stat-value solde-highlight {{ 'negative' if solde < 0 else '' }}">
+                                        {{ "%.2f"|format(solde) }} €
+                                    </span>
+                                </li>
+                            </ul>
 
-                    {% if budget_affiche and not budget_affiche.cloture %}
-                        {% if cloture_autorisee %}
-                            <!-- Formulaire identifié par id="formCloture" -->
-                            <form action="{{ url_for('admin.cloturer_budget') }}" method="post" id="formCloture">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="budget_id" value="{{ budget_affiche.id }}">
-                                
-                                <!-- Le bouton est de type "button" pour ouvrir la modale -->
-                                <button type="button" class="btn btn-danger w-100 mt-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCloture">
-                                    <i class="bi bi-lock-fill me-2"></i>Clôturer l'année
+                            {% if session.user_role == 'admin' %}
+                            <div class="budget-actions">
+                                <button class="btn-budget-action btn-budget-edit" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#budgetModal"
+                                        onclick="setupBudgetModal('{{ budget_affiche.annee }}', '{{ '%.2f'|format(budget_affiche.montant_initial) }}')">
+                                    <i class="bi bi-pencil-square"></i> Modifier le Budget
                                 </button>
-                            </form>
-                        {% else %}
-                            <!-- Cas où la date n'est pas encore atteinte -->
-                            <button class="btn btn-outline-secondary w-100 mt-2" disabled title="Possible à partir du 01/06">
-                                <i class="bi bi-lock me-2"></i>Clôture (dès juin)
-                            </button>
-                        {% endif %}
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
 
-            <!-- Carte Export (Visible pour TOUS) -->
-            <div class="budget-summary-card export-card-premium">
-				<div class="export-card-header">
-					<div class="export-icon-wrapper">
-						<i class="bi bi-file-earmark-arrow-down-fill"></i>
-					</div>
-					<h5 class="export-card-title">Exporter les Dépenses</h5>
-				</div>
-				
-				<div class="export-zone-premium">
-					<div class="period-selector">
-						<label class="export-label">
-							<i class="bi bi-calendar-range me-1"></i>
-							Période d'export
-						</label>
-						
-						<div class="date-input-wrapper">
-							<div class="date-input-group">
-								<span class="date-prefix">Du</span>
-								<input type="date" id="date_debut_export" class="date-input" 
-									   value="2024-09-01" 
-									   aria-label="Date de début">
-							</div>
-							
-							<div class="date-separator">
-								<i class="bi bi-arrow-right"></i>
-							</div>
-							
-							<div class="date-input-group">
-								<span class="date-prefix">Au</span>
-								<input type="date" id="date_fin_export" class="date-input" 
-									   value="2026-01-07" 
-									   aria-label="Date de fin">
-							</div>
-						</div>
-					</div>
-					
-					<div class="export-actions">
-						<button class="export-btn export-btn-pdf" onclick="exportData('pdf')">
-							<span class="export-btn-icon">
-								<i class="bi bi-file-pdf-fill"></i>
-							</span>
-							<span class="export-btn-content">
-								<span class="export-btn-title">PDF</span>
-								<span class="export-btn-subtitle">Document imprimable</span>
-							</span>
-						</button>
-						
-						<button class="export-btn export-btn-excel" onclick="exportData('excel')">
-							<span class="export-btn-icon">
-								<i class="bi bi-file-excel-fill"></i>
-							</span>
-							<span class="export-btn-content">
-								<span class="export-btn-title">Excel</span>
-								<span class="export-btn-subtitle">Tableau de données</span>
-							</span>
-						</button>
-					</div>
-				</div>
-			</div>
+                                {% if not budget_affiche.cloture %}
+                                    <button class="btn-budget-action btn-budget-add" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#depenseModal"
+                                            onclick="resetDepenseModal()">
+                                        <i class="bi bi-plus-circle"></i> Ajouter une Dépense
+                                    </button>
+                                    
+                                    {% if cloture_autorisee %}
+                                    <button class="btn-budget-action btn-outline-secondary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalCloture">
+                                        <i class="bi bi-lock-fill"></i> Clôturer l'année
+                                    </button>
+                                    {% else %}
+                                    <button class="btn-budget-action btn-budget-close" disabled title="Disponible dès juin">
+                                        <i class="bi bi-lock"></i> Clôture (dès juin)
+                                    </button>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="alert alert-warning text-center small mb-0 mt-2">
+                                        <i class="bi bi-lock-fill"></i> Budget Clôturé
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                        {% else %}
+                            <div class="text-center py-4">
+                                <p class="text-muted mb-3">Aucun budget défini pour cette année.</p>
+                                {% if session.user_role == 'admin' %}
+                                <button class="btn-budget-action btn-budget-add" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#budgetModal">
+                                    <i class="bi bi-plus-lg"></i> Définir le Budget
+                                </button>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 2. CARTE D'EXPORT (CORRIGÉE) -->
+                <div class="export-card-premium">
+                    <div class="export-card-header">
+                        <h5 class="export-card-title"><i class="bi bi-download me-2"></i> Exporter les Dépenses</h5>
+                    </div>
+                    
+                    <div class="export-zone-premium">
+                        <div class="period-selector">
+                            <label class="export-label">Période d'export</label>
+                            <div class="date-input-wrapper">
+                                <div class="date-input-group">
+                                    <span class="date-prefix">Du</span>
+                                    <input type="date" id="date_debut_export" class="date-input" 
+                                           value="{{ (now.replace(month=9, day=1) if now.month >= 9 else now.replace(year=now.year-1, month=9, day=1)).strftime('%Y-%m-%d') }}">
+                                </div>
+                                <div class="date-separator"><i class="bi bi-arrow-right"></i></div>
+                                <div class="date-input-group">
+                                    <span class="date-prefix">Au</span>
+                                    <input type="date" id="date_fin_export" class="date-input" 
+                                           value="{{ now.strftime('%Y-%m-%d') }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="export-actions">
+                            <button type="button" onclick="exportData('pdf')" class="btn-export-file pdf">
+                                <i class="bi bi-file-earmark-pdf-fill export-btn-icon"></i>
+                                <span class="export-btn-title">PDF Imprimable</span>
+                            </button>
+                            
+                            <button type="button" onclick="exportData('excel')" class="btn-export-file excel">
+                                <i class="bi bi-file-earmark-excel-fill export-btn-icon"></i>
+                                <span class="export-btn-title">Excel Tableau</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
 
-        <!-- COLONNE DROITE : Tableau Dépenses -->
+        <!-- COLONNE DROITE : TABLEAU DES DÉPENSES -->
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-3 overflow-hidden h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-dark fw-bold">Détail des Dépenses</h5>
+            <div class="budget-table-card">
+                <div class="budget-table-header">
+                    <h5 class="mb-0 fw-bold text-dark">Détail des Dépenses</h5>
                     
-                    <!-- Sélecteur d'année -->
+                    <!-- Sélecteur d'année ALIGNÉ -->
                     {% if budgets_archives %}
-                    <form action="{{ url_for('admin.budget') }}" method="get" class="d-flex align-items-center gap-2">
-                        <label for="annee_select" class="small text-muted mb-0 fw-bold text-uppercase">Année :</label>
-                        <!-- Changement ici : classe spécifique 'budget-year-select' -->
-                        <select name="annee" id="annee_select" class="form-select form-select-sm budget-year-select" onchange="this.form.submit()">
+                    <form action="{{ url_for('admin.budget') }}" method="get" class="year-selector-group">
+                        <label for="annee_select" class="year-label">ANNÉE :</label>
+                        <select name="annee" id="annee_select" class="budget-year-select" onchange="this.form.submit()">
                             {% for ba in budgets_archives %}
                                 <option value="{{ ba.annee }}" {% if ba.annee == annee_selectionnee %}selected{% endif %}>
                                     {{ ba.annee | annee_scolaire }}
@@ -183,14 +166,13 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table class="budget-table mb-0">
+                    <table class="budget-table">
                         <thead>
                             <tr>
-                                <th style="width: 100px;">Date</th>
-                                <th>Fournisseur</th>
-                                <th>Libellé</th>
-                                <th class="text-end" style="width: 100px;">Montant</th>
-                                {% if session.user_role == 'admin' %}
+                                <th style="width: 110px;">Date</th>
+                                <th>Fournisseur / Libellé</th>
+                                <th class="text-end" style="width: 120px;">Montant</th>
+                                {% if session.user_role == 'admin' and budget_affiche and not budget_affiche.cloture %}
                                 <th class="text-end" style="width: 100px;">Actions</th>
                                 {% endif %}
                             </tr>
@@ -199,46 +181,50 @@
                             {% if depenses %}
                                 {% for depense in depenses %}
                                 <tr>
-                                    <td>{{ depense.date_depense.strftime('%d/%m/%Y') }}</td>
+                                    <td class="text-nowrap">{{ depense.date_depense.strftime('%d/%m/%Y') }}</td>
                                     <td>
-                                        {% if depense.est_bon_achat %}
-                                            <span class="badge bg-light text-dark border"><i class="bi bi-ticket-perforated me-1"></i>Bon d'achat</span>
-                                        {% else %}
-                                            <span class="fw-medium text-dark">{{ depense.fournisseur.nom if depense.fournisseur else 'N/A' }}</span>
-                                        {% endif %}
+                                        <div class="fw-bold text-dark">
+                                            {% if depense.est_bon_achat %}
+                                                <span class="badge bg-light text-dark border"><i class="bi bi-ticket-perforated me-1"></i>Bon d'achat</span>
+                                            {% else %}
+                                                <span class="text-primary">{{ depense.fournisseur.nom if depense.fournisseur else 'Inconnu' }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small text-muted">{{ depense.contenu }}</div>
                                     </td>
-                                    <td class="text-muted small">{{ depense.contenu }}</td>
-                                    <td class="text-end fw-bold text-danger">- {{ "%.2f"|format(depense.montant) }} €</td>
+                                    <td class="text-end amount-cell text-danger">
+                                        - {{ "%.2f"|format(depense.montant) }} €
+                                    </td>
                                     
-                                    <!-- ACTIONS (Admin seulement) -->
-                                    {% if session.user_role == 'admin' %}
+                                    {% if session.user_role == 'admin' and not budget_affiche.cloture %}
                                     <td class="text-end">
-                                        {% if not budget_affiche.cloture %}
                                         <div class="d-flex justify-content-end gap-1">
-                                            <button class="btn btn-sm btn-outline-primary btn-icon-only" 
-                                                    title="Modifier"
-                                                    onclick='openEditDepenseModal({{ depense.id }}, "{{ depense.date_depense }}", "{{ depense.fournisseur_id or "" }}", {{ "true" if depense.est_bon_achat else "false" }}, "{{ depense.contenu|replace('"', '&quot;') }}", "{{ depense.montant }}")'>
+                                            <button class="btn btn-sm btn-outline-primary btn-icon-only edit-depense-btn"
+                                                    onclick='openEditDepenseModal({{ depense.id }}, "{{ depense.date_depense }}", "{{ depense.fournisseur_id or "" }}", {{ "true" if depense.est_bon_achat else "false" }}, "{{ depense.contenu|replace('"', '&quot;')|replace("'", "&apos;") }}", "{{ depense.montant }}")'
+                                                    title="Modifier">
                                                 <i class="bi bi-pencil-fill"></i>
                                             </button>
                                             
                                             <button class="btn btn-sm btn-outline-danger btn-icon-only" 
-                                                    title="Supprimer"
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#deleteModal"
-                                                    data-url="{{ url_for('admin.supprimer_depense', id=depense.id) }}">
+                                                    data-url="{{ url_for('admin.supprimer_depense', id=depense.id) }}"
+                                                    title="Supprimer">
                                                 <i class="bi bi-trash-fill"></i>
                                             </button>
                                         </div>
-                                        {% endif %}
                                     </td>
                                     {% endif %}
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="{{ 5 if session.user_role == 'admin' else 4 }}" class="text-center py-5 text-muted">
-                                        <i class="bi bi-receipt display-4 d-block mb-3 opacity-25"></i>
-                                        Aucune dépense enregistrée pour cette année.
+                                    <td colspan="4" class="text-center py-5 text-muted">
+                                        <div class="mb-3">
+                                            <i class="bi bi-receipt display-4 opacity-25"></i>
+                                        </div>
+                                        <h6 class="fw-bold">Aucune dépense</h6>
+                                        <p class="small mb-0">Les dépenses enregistrées apparaîtront ici.</p>
                                     </td>
                                 </tr>
                             {% endif %}
@@ -252,7 +238,6 @@
 
 <!-- MODALES (Uniquement pour ADMIN) -->
 {% if session.user_role == 'admin' %}
-
     <!-- Modale Budget -->
     <div class="modal fade" id="budgetModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -265,11 +250,12 @@
                     <div class="modal-body">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
-                            <label class="form-label">Année de début (ex: 2025 pour 2025-2026)</label>
-                            <input type="number" class="form-control" name="annee" id="budgetAnnee" required>
+                            <label class="form-label fw-bold">Année de début</label>
+                            <input type="number" class="form-control" name="annee" id="budgetAnnee" required placeholder="ex: 2025">
+                            <div class="form-text">Pour l'année scolaire 2025-2026, entrez 2025.</div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Montant Initial (€)</label>
+                            <label class="form-label fw-bold">Montant Initial (€)</label>
                             <input type="number" step="0.01" class="form-control" name="montant_initial" id="budgetMontant" required>
                         </div>
                     </div>
@@ -293,21 +279,21 @@
                 <form id="depenseForm" action="{{ url_for('admin.ajouter_depense') }}" method="post">
                     <div class="modal-body">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="budget_id" value="{{ budget_actuel_pour_modales.id if budget_actuel_pour_modales }}">
+                        <input type="hidden" name="budget_id" value="{{ budget_affiche.id if budget_affiche else '' }}">
                         
                         <div class="mb-3">
-                            <label class="form-label">Date</label>
-                            <input type="date" class="form-control" name="date_depense" id="depenseDate" required value="{{ now.strftime('%Y-%m-%d') }}">
+                            <label class="form-label fw-bold">Date</label>
+                            <input type="date" class="form-control" name="date_depense" id="depenseDate" required value="{{ now.strftime('%Y-%m-%d') }}" max="{{ now.strftime('%Y-%m-%d') }}">
                         </div>
 
                         <div class="mb-3">
-                            <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" name="est_bon_achat" id="checkBonAchat" onchange="toggleFournisseur()">
-                                <label class="form-check-label" for="checkBonAchat">C'est un Bon d'achat (Petit matériel)</label>
+                            <div class="form-check form-switch mb-2 p-2 border rounded bg-light">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" name="est_bon_achat" id="checkBonAchat" onchange="toggleFournisseur()">
+                                <label class="form-check-label fw-bold" for="checkBonAchat">C'est un Bon d'achat (Petit matériel)</label>
                             </div>
                             
                             <div id="divFournisseur">
-                                <label class="form-label">Fournisseur</label>
+                                <label class="form-label fw-bold">Fournisseur</label>
                                 <select class="form-select" name="fournisseur_id" id="selectFournisseur">
                                     <option value="">-- Choisir --</option>
                                     {% for f in fournisseurs %}
@@ -318,12 +304,12 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Libellé / Contenu</label>
-                            <textarea class="form-control" name="contenu" id="depenseContenu" rows="2" required></textarea>
+                            <label class="form-label fw-bold">Libellé / Contenu</label>
+                            <textarea class="form-control" name="contenu" id="depenseContenu" rows="2" required placeholder="Ex: Achat verrerie TP Chimie"></textarea>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Montant (€)</label>
+                            <label class="form-label fw-bold">Montant (€)</label>
                             <input type="number" step="0.01" class="form-control" name="montant" id="depenseMontant" required>
                         </div>
                     </div>
@@ -339,24 +325,57 @@
     <!-- Modale Suppression -->
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+            <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Supprimer la dépense</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer la dépense</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p>Voulez-vous vraiment supprimer cette dépense ? Le montant sera recrédité au budget.</p>
+                <div class="modal-body p-4">
+                    <p class="mb-0 fs-5">Voulez-vous vraiment supprimer cette dépense ?</p>
+                    <p class="text-muted small mt-2 mb-0">Le montant sera recrédité au budget.</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
                     <form id="deleteForm" method="post" action="">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-danger">Supprimer</button>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold">Confirmer la suppression</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Modale Clôture -->
+    {% if budget_affiche %}
+    <div class="modal fade" id="modalCloture" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-lock-fill me-2"></i>Clôture du Budget</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="fw-bold text-dark mb-2">Êtes-vous sûr de vouloir clôturer l'année {{ budget_affiche.annee }}-{{ budget_affiche.annee + 1 }} ?</p>
+                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-0">
+                        <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+                        <div class="small">
+                            Cette action est <strong>irréversible</strong>.<br>
+                            Vous ne pourrez plus modifier ce budget.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Annuler</button>
+                    <form action="{{ url_for('admin.cloturer_budget') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="budget_id" value="{{ budget_affiche.id }}">
+                        <button type="submit" class="btn btn-danger fw-bold">Confirmer la clôture</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
 {% endif %}
 
@@ -364,54 +383,53 @@
 
 {% block scripts %}
 <script>
+    // --- 1. GESTION DU POINT/VIRGULE (UX) ---
     document.addEventListener('DOMContentLoaded', function() {
-        // On cible les inputs number
         const numberInputs = document.querySelectorAll('input[type="number"]');
-
         numberInputs.forEach(input => {
-            // 1. ASTUCE : On passe en mode "texte" pour avoir le contrôle total
-            // tout en gardant le clavier numérique sur mobile
             input.type = "text";
             input.inputMode = "decimal";
-            
-            // 2. Gestion de la touche Point
             input.addEventListener('keydown', function(e) {
                 if (e.key === '.' || e.key === 'Decimal') {
                     e.preventDefault();
-                    
                     const start = this.selectionStart;
                     const end = this.selectionEnd;
                     const val = this.value;
-                    
-                    // On n'ajoute la virgule que s'il n'y en a pas déjà une
                     if (!val.includes(',')) {
                         this.value = val.substring(0, start) + ',' + val.substring(end);
-                        // On replace le curseur après la virgule (ça marche car on est en type="text")
                         this.setSelectionRange(start + 1, start + 1);
                     }
                 }
             });
-
-            // 3. Sécurité : On empêche d'écrire des lettres (puisqu'on est passé en text)
             input.addEventListener('input', function(e) {
-                // On ne garde que les chiffres et la virgule
                 let val = this.value.replace(/[^0-9,]/g, '');
-                
-                // On s'assure qu'il n'y a qu'une seule virgule
                 const parts = val.split(',');
-                if (parts.length > 2) {
-                    val = parts[0] + ',' + parts.slice(1).join('');
-                }
-                
-                if (this.value !== val) {
-                    this.value = val;
-                }
+                if (parts.length > 2) val = parts[0] + ',' + parts.slice(1).join('');
+                if (this.value !== val) this.value = val;
             });
         });
+
+        // --- RESET MODALE BUDGET A LA FERMETURE ---
+        const budgetModal = document.getElementById('budgetModal');
+        if (budgetModal) {
+            budgetModal.addEventListener('hidden.bs.modal', function () {
+                const inputAnnee = document.getElementById('budgetAnnee');
+                const form = budgetModal.querySelector('form');
+                
+                // On remet à zéro
+                form.reset();
+                
+                // On déverrouille visuellement et techniquement
+                inputAnnee.readOnly = false;
+                inputAnnee.classList.remove('bg-secondary', 'bg-opacity-10'); // Enlève le gris
+                inputAnnee.style.cursor = 'text'; // Remet le curseur texte
+            });
+        }
     });
-</script>
-<script>	
-	// Gestion dynamique du champ Fournisseur
+
+    // --- 2. LOGIQUE MÉTIER ---
+    
+    // Bascule Fournisseur / Bon d'achat
     function toggleFournisseur() {
         const isBonAchat = document.getElementById('checkBonAchat').checked;
         const divFournisseur = document.getElementById('divFournisseur');
@@ -427,10 +445,17 @@
         }
     }
 
-    // Prépa Modale Budget
+    // Prépa Modale Budget (CORRIGÉ UX)
     function setupBudgetModal(annee, montant) {
-        document.getElementById('budgetAnnee').value = annee;
+        const inputAnnee = document.getElementById('budgetAnnee');
+        
+        inputAnnee.value = annee;
         document.getElementById('budgetMontant').value = montant;
+
+        // FIX UX : Verrouillage visuel complet
+        inputAnnee.readOnly = true;
+        inputAnnee.classList.add('bg-secondary', 'bg-opacity-10'); // Fond gris moderne
+        inputAnnee.style.cursor = 'not-allowed'; // Curseur sens interdit
     }
 
     // Reset Modale Dépense (Ajout)
@@ -442,8 +467,6 @@
         document.getElementById('depenseContenu').value = '';
         document.getElementById('depenseMontant').value = '';
         toggleFournisseur();
-        
-        // Reset select
         document.getElementById('selectFournisseur').value = "";
     }
 
@@ -455,12 +478,16 @@
         document.getElementById('depenseModalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier la Dépense';
         document.getElementById('depenseForm').action = "/admin/budget/depense/modifier/" + id;
         
-        document.getElementById('depenseDate').value = date.split(' ')[0]; // Garde YYYY-MM-DD
+        // Formatage date YYYY-MM-DD
+        let dateStr = date;
+        if(date.includes(' ')) dateStr = date.split(' ')[0];
+        document.getElementById('depenseDate').value = dateStr;
+        
         document.getElementById('checkBonAchat').checked = isBonAchat;
         document.getElementById('depenseContenu').value = contenu;
         document.getElementById('depenseMontant').value = montant;
         
-        toggleFournisseur(); // Met à jour l'affichage
+        toggleFournisseur();
         
         if (!isBonAchat) {
             document.getElementById('selectFournisseur').value = fournisseurId;
@@ -477,68 +504,22 @@
         });
     }
 
-    // Export (Redirection simple)
+    // Export
     function exportData(format) {
-        // 1. Récupération des valeurs des champs date
         const dateDebut = document.getElementById('date_debut_export').value;
         const dateFin = document.getElementById('date_fin_export').value;
         
-        // 2. Validations basiques côté client
         if (!dateDebut || !dateFin) {
             alert("Veuillez sélectionner une date de début et une date de fin.");
             return;
         }
-
         if (dateDebut > dateFin) {
             alert("La date de début ne peut pas être postérieure à la date de fin.");
             return;
         }
 
-        // 3. Construction de l'URL vers la route Flask
-        // On passe les paramètres en GET query string
         const url = `/admin/budget/exporter?format=${format}&date_debut=${dateDebut}&date_fin=${dateFin}`;
-        
-        // 4. Déclenchement du téléchargement
-        // Le navigateur va suivre le lien, le serveur va renvoyer le fichier (attachment),
-        // et l'utilisateur restera sur la page actuelle.
         window.location.href = url;
     }
 </script>
-
-<!-- MODALE DE CONFIRMATION CLÔTURE -->
-<div class="modal fade" id="modalCloture" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <!-- Header Rouge -->
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title fw-bold">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Clôture du Budget
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            
-            <div class="modal-body p-4">
-                <p class="fw-bold text-dark mb-2">Êtes-vous sûr de vouloir clôturer l'année {{ budget_affiche.annee }}-{{ budget_affiche.annee + 1 }} ?</p>
-                
-                <div class="alert alert-warning d-flex align-items-start gap-2 mb-0">
-                    <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
-                    <div class="small">
-                        Cette action est <strong>irréversible</strong>.<br>
-                        Vous ne pourrez plus ajouter, modifier ou supprimer de dépenses pour cette année budgétaire une fois clôturée.
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Annuler</button>
-                <!-- Ce bouton déclenche la soumission du formulaire défini plus haut -->
-                <button type="button" class="btn btn-danger fw-bold" onclick="document.getElementById('formCloture').submit()">
-                    <i class="bi bi-lock-fill me-2"></i>Confirmer la clôture
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ... fin du contenu HTML ... -->
 {% endblock %}

@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify, session, current_app, render_temp
 from werkzeug.exceptions import BadRequest
 
 # Imports locaux
-from db import db, Objet, Armoire, Categorie, Utilisateur, Reservation, Kit, KitObjet, Suggestion, Historique, MaintenanceLog, EquipementSecurite
+from db import db, Objet, Armoire, Categorie, Utilisateur, Reservation, Notification, Kit, KitObjet, Suggestion, Historique, MaintenanceLog, EquipementSecurite
 from extensions import limiter
 from utils import login_required, admin_required
 
@@ -553,11 +553,27 @@ def api_supprimer_reservation():
     if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     etablissement_id = session.get('etablissement_id')
     gid = request.get_json().get('groupe_id')
+    current_user_id = session.get('user_id')
+
     try:
         existing = db.session.execute(db.select(Reservation).filter_by(groupe_id=gid, etablissement_id=etablissement_id).limit(1)).scalar()
         if not existing: return jsonify({'success': False, 'error': "Introuvable"}), 404
-        if session.get('user_role') != 'admin' and existing.utilisateur_id != session.get('user_id'):
+        
+        if session.get('user_role') != 'admin' and existing.utilisateur_id != current_user_id:
             return jsonify({'success': False, 'error': "Interdit"}), 403
+
+        # --- NOTIFICATION ---
+        if existing.utilisateur_id != current_user_id:
+            date_str = existing.debut_reservation.strftime('%d/%m')
+            notif = Notification(
+                utilisateur_id=existing.utilisateur_id,
+                etablissement_id=etablissement_id,
+                type='danger',
+                message=f"Votre réservation complète du {date_str} a été annulée par l'administrateur."
+            )
+            db.session.add(notif)
+        # --------------------
+
         db.session.execute(db.delete(Reservation).where(Reservation.groupe_id == gid))
         db.session.commit()
         return jsonify({'success': True})
@@ -656,26 +672,67 @@ def reservation_ajouter_item(groupe_id):
 @login_required
 def reservation_retirer_item(groupe_id, item_id):
     etablissement_id = session.get('etablissement_id')
+    current_user_id = session.get('user_id')
+    user_role = session.get('user_role')
     item_type = request.args.get('type')
+    
+    print(f"--- DEBUG SUPPRESSION ITEM ---")
+    print(f"User: {current_user_id} | Role: {user_role}")
+    
     try:
-        with db.session.begin_nested():
-            stmt = select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
-            resas = db.session.execute(stmt).scalars().all()
-            target = None
-            for r in resas:
-                if (item_type == 'kit' and r.kit_id == item_id) or (item_type == 'objet' and r.objet_id == item_id):
-                    target = r
-                    break
-            if not target: return jsonify({'success': False, 'error': "Item non trouvé"}), 404
-            
-            if target.quantite_reservee > 1: target.quantite_reservee -= 1
-            else: db.session.delete(target)
+        # On cherche la réservation
+        stmt = select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
+        resas = db.session.execute(stmt).scalars().all()
+        target = None
         
+        for r in resas:
+            if (item_type == 'kit' and r.kit_id == item_id) or (item_type == 'objet' and r.objet_id == item_id):
+                target = r
+                break
+        
+        if not target: 
+            print("❌ Item non trouvé")
+            return jsonify({'success': False, 'error': "Item non trouvé"}), 404
+        
+        print(f"Cible trouvée. Propriétaire: {target.utilisateur_id}")
+
+        # --- NOTIFICATION ---
+        # Condition stricte : Admin ET le propriétaire n'est pas celui qui clique
+        if user_role == 'admin' and target.utilisateur_id != current_user_id:
+            print("✅ CONDITION NOTIF REMPLIE : Création de la notif...")
+            
+            nom_item = target.kit.nom if target.kit else (target.objet.nom if target.objet else "Inconnu")
+            date_str = target.debut_reservation.strftime('%d/%m')
+            
+            notif = Notification(
+                utilisateur_id=target.utilisateur_id,
+                etablissement_id=etablissement_id,
+                type='warning',
+                message=f"L'élément '{nom_item}' a été retiré de votre réservation du {date_str} par l'administrateur."
+            )
+            db.session.add(notif)
+            print("✅ Notif ajoutée à la session DB")
+        else:
+            print("ℹ️ Pas de notif (Soit pas admin, soit suppression de sa propre résa)")
+        # --------------------
+
+        # Suppression ou Décrémentation
+        if target.quantite_reservee > 1: 
+            target.quantite_reservee -= 1
+        else: 
+            db.session.delete(target)
+        
+        # COMMIT UNIQUE POUR TOUT
         db.session.commit()
+        print("✅ COMMIT EFFECTUÉ")
+        
         remaining = db.session.execute(select(func.count(Reservation.id)).filter_by(groupe_id=groupe_id)).scalar()
         return jsonify({'success': True, 'remaining_items': remaining})
+        
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Erreur retrait item: {e}")
+        print(f"❌ ERREUR CRITIQUE : {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @api_bp.route("/reservation/<groupe_id>/modifier_heure", methods=['POST'])
@@ -882,3 +939,21 @@ def traiter_signalement(log_id, action):
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ---======================================---
+#    AVERTISSEMENT ADMIN SUPPRESSION RESA
+# ---======================================---
+@api_bp.route("/notifications/lu/<int:notif_id>", methods=['POST'])
+@login_required
+def marquer_notification_lue(notif_id):
+    try:
+        notif = db.session.get(Notification, notif_id)
+        if not notif or notif.utilisateur_id != session.get('user_id'):
+            return jsonify({'success': False}), 404
+            
+        notif.lu = True
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception:
+        return jsonify({'success': False}), 500

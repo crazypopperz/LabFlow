@@ -93,14 +93,17 @@ class DocumentService:
         self.style_cell_danger = ParagraphStyle('CellDanger', parent=self.style_cell_center, textColor=self.config['color_alert'], fontName='Helvetica-Bold')
         self.style_stats = ParagraphStyle('Stats', parent=styles['Normal'], fontSize=10, alignment=TA_RIGHT, textColor=c_prim)
 
-    def _generate_filename(self, etablissement_id: int, name: str) -> str:
+    def _generate_filename(self, etablissement_id: int, name: str, prefix: str = "Inventaire") -> str:
         safe_name = re.sub(r'[^\w\s-]', '', str(name)).strip().replace(' ', '_')
         safe_name = secure_filename(safe_name)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M')
         unique_id = uuid.uuid4().hex[:8]
-        return f"Inventaire_{etablissement_id}_{safe_name}_{timestamp}_{unique_id}.pdf"
+        return f"{prefix}_{etablissement_id}_{safe_name}_{timestamp}_{unique_id}.pdf"
 
-    def generate_inventory_pdf(self, etablissement_name: str, etablissement_id: int, objets: List['Objet']) -> Dict[str, Any]:
+    def generate_inventory_pdf(self, etablissement_name: str, etablissement_id: int, objets: List['Objet'], 
+                             doc_title: str = "INVENTAIRE RÉGLEMENTAIRE", 
+                             filename_prefix: str = "Inventaire") -> Dict[str, Any]:
+        
         # Point 6 : Validation ID
         if not isinstance(etablissement_id, int) or etablissement_id <= 0:
             raise ValueError(f"etablissement_id invalide : {etablissement_id}")
@@ -112,10 +115,11 @@ class DocumentService:
             raise DocumentServiceError(f"Trop d'objets ({len(objets)}). Limite : {self.config['max_items']}.")
 
         try:
-            # Point 7 : TOCTOU mitigation (makedirs juste avant usage)
+            # Point 7 : TOCTOU mitigation
             os.makedirs(self.archive_folder, exist_ok=True)
             
-            filename = self._generate_filename(etablissement_id, etablissement_name)
+            # Utilisation du préfixe personnalisé
+            filename = self._generate_filename(etablissement_id, etablissement_name, prefix=filename_prefix)
             full_path = os.path.join(self.archive_folder, filename)
 
             # Configuration Doc
@@ -125,7 +129,7 @@ class DocumentService:
                 pagesize=landscape(A4),
                 rightMargin=margin, leftMargin=margin,
                 topMargin=margin, bottomMargin=margin,
-                title=f"Inventaire - {etablissement_name}",
+                title=f"{filename_prefix} - {etablissement_name}",
                 author="LabFlow",
                 creator="LabFlow System"
             )
@@ -135,7 +139,7 @@ class DocumentService:
             # En-tête
             logo = LogoGraphique(width=40, height=40, primary_color=self.config['color_primary'])
             titre_bloc = [
-                Paragraph(f"INVENTAIRE RÉGLEMENTAIRE", self.style_titre),
+                Paragraph(doc_title, self.style_titre), # Titre personnalisé
                 Paragraph(f"Arrêté au {date.today().strftime('%d/%m/%Y')} - {escape(etablissement_name)}", self.style_sous_titre)
             ]
             header_table = Table([[logo, titre_bloc]], colWidths=[1.5*cm, 20*cm])
@@ -194,32 +198,25 @@ class DocumentService:
             stats_text = f"<b>Total références :</b> {len(objets)}  |  <b>Dont produits CMR :</b> {total_cmr}"
             elements.append(Paragraph(stats_text, self.style_stats))
 
-            # Écriture Disque (Point 7 : Try/Except spécifique)
+            # Écriture Disque
             try:
                 doc.build(elements)
             except Exception as e:
                 raise DocumentServiceError(f"Erreur ReportLab lors de la génération: {e}") from e
             
-            # Point 1 : Calcul dynamique du chemin relatif
-            # On veut le chemin relatif par rapport au dossier 'static' (parent de upload_root)
-            # upload_root = .../static/uploads
-            # full_path = .../static/uploads/archives/file.pdf
-            # target = uploads/archives/file.pdf
-            static_folder = os.path.dirname(self.upload_root) # Remonte d'un cran vers 'static'
+            static_folder = os.path.dirname(self.upload_root)
             relative_path = os.path.relpath(full_path, static_folder)
-            # Force les slashs pour compatibilité URL (Windows)
             relative_path = relative_path.replace(os.sep, '/')
 
             return {
                 "filename": filename,
                 "relative_path": relative_path,
                 "nb_objets": len(objets),
-                "titre": f"Inventaire {date.today().year} (v.{datetime.now().strftime('%H%M')})"
+                "titre": f"{filename_prefix} {date.today().year} (v.{datetime.now().strftime('%H%M')})"
             }
 
         except (OSError, IOError) as e:
             logger.error(f"Erreur I/O PDF: {e}", exc_info=True)
-            # Point 5 : Contexte préservé
             raise FileSystemError(f"Erreur d'écriture disque: {e.strerror}") from e
         except Exception as e:
             logger.error(f"Erreur inattendue PDF: {e}", exc_info=True)

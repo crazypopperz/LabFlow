@@ -58,25 +58,29 @@
 				<span id="cart-count-badge" class="icon-badge" style="display: none;">0</span>
 			</a>
             
-            <!-- ALERTES OPTIMISÉ -->
-            <a href="{{ url_for('main.alertes') }}" 
+            <!-- ALERTES (Stock + Notifications) -->
+            {# Calcul du total : Alertes techniques + Messages personnels #}
+            {% set total_badge = (alertes_total or 0) + (notifs_count or 0) %}
+
+            <a href="{{ url_for('main.index') if (notifs_count and notifs_count > 0) else url_for('main.alertes') }}" 
                class="header-icon-link text-white" 
-               title="Alertes produits"
+               title="Alertes & Notifications"
                id="alert-icon-link" 
-               data-alert-count="{{ alertes_total }}" 
-               aria-label="Alertes produits{% if alertes_total > 0 %} - {{ alertes_total }} alerte(s){% endif %}">
+               data-alert-count="{{ total_badge }}" 
+               aria-label="Alertes : {{ total_badge }}">
     
                 <!-- SVG Bootstrap Icons (bi-bell-fill) -->
+                <!-- La couleur change selon l'urgence du TOTAL -->
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" 
-                     class="header-icon {% if alertes_total >= 3 %}bell-critical{% elif alertes_total > 0 %}bell-warning{% endif %}" 
+                     class="header-icon {% if total_badge >= 3 %}bell-critical{% elif total_badge > 0 %}bell-warning{% endif %}" 
                      viewBox="0 0 16 16">
                     <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/>
                 </svg>
                 
-                <!-- Pastille (Réutilisation du style cart-count-badge pour cohérence) -->
-                {% if alertes_total and alertes_total > 0 %}
+                <!-- Pastille avec le total cumulé -->
+                {% if total_badge > 0 %}
                 <span class="cart-count-badge pulse">
-                    {{ alertes_total }}
+                    {{ total_badge }}
                 </span>
                 {% endif %}
             </a>

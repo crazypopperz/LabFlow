@@ -18,18 +18,6 @@
             </div>
             <span class="fw-bold text-dark">Gestion des Utilisateurs</span>
         </h2>
-        
-        {% if session.user_role == 'admin' %}
-        <div class="page-actions-container">
-            <button type="button" 
-                    class="btn btn-primary" 
-                    data-bs-toggle="modal" 
-                    data-bs-target="#addUserModal">
-                <i class="bi bi-person-plus-fill me-2"></i> 
-                Ajouter un utilisateur
-            </button>
-        </div>
-        {% endif %}
     </div>
 
     <!-- Liste des utilisateurs -->

@@ -1461,14 +1461,9 @@ def budget():
 
     budgets_archives = db.session.execute(db.select(Budget).filter_by(etablissement_id=etablissement_id).order_by(Budget.annee.desc())).scalars().all()
     budget_affiche = db.session.execute(db.select(Budget).filter_by(etablissement_id=etablissement_id, annee=annee_selectionnee)).scalar_one_or_none()
-
-    if not budget_affiche and not budgets_archives:
-        try:
-            budget_affiche = Budget(annee=annee_selectionnee, montant_initial=0.0, etablissement_id=etablissement_id)
-            db.session.add(budget_affiche)
-            db.session.commit()
-            budgets_archives.insert(0, budget_affiche)
-        except IntegrityError: db.session.rollback()
+    if not budget_affiche and session.get('user_role') != 'admin':
+        flash("Le budget n'a pas encore été défini par l'administrateur.", "info")
+        return redirect(url_for('main.index'))
 
     depenses = []
     total_depenses = 0

@@ -505,7 +505,28 @@ async function loadAvailabilities() {
     const date = dateInput.value;
     const start = startTimeSelect.value;
     const end = endTimeSelect.value;
+    
     if (!date || !start || !end) return;
+
+    // --- CORRECTION : VALIDATION HORAIRE ROBUSTE (Minutes) ---
+    // On convertit en minutes pour éviter les bugs de comparaison de texte
+    // ex: "9:00" > "10:00" en texte, mais 540 < 600 en minutes.
+    const [startH, startM] = start.split(':').map(Number);
+    const [endH, endM] = end.split(':').map(Number);
+    
+    const startTotalMinutes = startH * 60 + startM;
+    const endTotalMinutes = endH * 60 + endM;
+
+    if (startTotalMinutes >= endTotalMinutes) {
+        availableItemsContainer.innerHTML = `
+            <div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+                <i class="bi bi-exclamation-triangle display-4 text-warning mb-3"></i>
+                <h6 class="fw-bold text-dark">Créneau horaire invalide</h6>
+                <p class="small text-center mb-0">L'heure de fin doit être postérieure à l'heure de début.</p>
+            </div>`;
+        return; // On arrête ici, pas d'appel serveur
+    }
+    // ---------------------------------------
 
     if (availabilityController) {
         availabilityController.abort();

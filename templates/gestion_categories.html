@@ -12,8 +12,9 @@
             <!-- Icône Catégories (Violet/Rose) -->
             <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
                  style="width: 48px; height: 48px; background: linear-gradient(135deg, #654ea3 0%, #eaafc8 100%);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-inboxes-fill" viewBox="0 0 16 16">
-                    <path d="M4.98 1a.5.5 0 0 0-.39.188L1.54 5H6a.5.5 0 0 1 .5.5 1.5 1.5 0 0 0 3 0A.5.5 0 0 1 10 5h4.46l-3.05-3.812A.5.5 0 0 0 11.02 1zM3.81.563A1.5 1.5 0 0 1 4.98 0h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .106.374l-.39 3.124A1.5 1.5 0 0 1 14.117 10H1.883A1.5 1.5 0 0 1 .394 8.686l-.39-3.124a.5.5 0 0 1 .106-.374zM.125 11.17A.5.5 0 0 1 .5 11H6a.5.5 0 0 1 .5.5 1.5 1.5 0 0 0 3 0 .5.5 0 0 1 .5-.5h5.5a.5.5 0 0 1 .496.562l-.39 3.124A1.5 1.5 0 0 1 14.117 16H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .121-.393z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-tags-fill" viewBox="0 0 16 16">
+                    <path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586V2zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+                    <path d="M1.293 7.793A1 1 0 0 1 1 7.086V2a1 1 0 0 0-1 1v4.586a1 1 0 0 0 .293.707l7 7a1 1 0 0 0 1.414 0l.043-.043-7.457-7.457z"/>
                 </svg>
             </div>
             <span class="fw-bold">Gestion des Catégories</span>
@@ -36,8 +37,11 @@
     {% if categories %}
         <div class="card-container management-page" role="list">
             {% for categorie in categories %}
-            <div class="item-card" data-categorie-id="{{ categorie.id }}" role="listitem">
-                <!-- Vue normale -->
+            <article class="item-card" 
+                     data-categorie-id="{{ categorie.id }}" 
+                     role="listitem">
+                
+                <!-- Info Catégorie -->
                 <div class="card-info">
                     <a href="{{ url_for('inventaire.voir_categorie', categorie_id=categorie.id) }}" 
                        class="card-title-link"
@@ -55,69 +59,48 @@
                     </span>
                 </div>
 
-                <!-- Mode édition (masqué par défaut) -->
-                <div class="edit-mode" style="display: none;">
-                    <input type="text" 
-                           value="{{ categorie.nom }}" 
-                           class="edit-input"
-                           aria-label="Modifier le nom de la catégorie"
-                           maxlength="100">
-                    <button type="button" 
-                            class="save-btn" 
-                            data-id="{{ categorie.id }}" 
-                            title="Enregistrer les modifications"
-                            aria-label="Enregistrer">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-                        </svg>
-                    </button>
-                    <button type="button" 
-                            class="cancel-btn" 
-                            title="Annuler les modifications"
-                            aria-label="Annuler">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Actions -->
+                <!-- Actions Premium (Standardisées) -->
                 <div class="card-actions">
+                    <!-- 1. Voir (Œil) -->
                     <a href="{{ url_for('inventaire.voir_categorie', categorie_id=categorie.id) }}" 
-                       title="Voir le contenu de {{ categorie.nom }}"
-                       aria-label="Voir le contenu">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M260-320q47 0 91.5 10.5T440-278v-394q-41-24-87-36t-93-12q-36 0-71.5 7T120-692v396q35-12 69.5-18t70.5-6Zm260 42q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59ZM280-494Z"/>
-                        </svg>
+                       class="action-btn btn-view" 
+                       title="Voir le contenu">
+                        <i class="bi bi-eye"></i>
+                    </a>
+
+                    <!-- 2. IMPRIMER (Nouveau) -->
+                    <a href="{{ url_for('inventaire.exporter_inventaire', format='pdf', categorie_id=categorie.id) }}" 
+                       class="action-btn btn-print" 
+                       title="Télécharger l'inventaire PDF"
+                       target="_blank">
+                        <i class="bi bi-printer"></i>
                     </a>
                     
                     {% if session.user_role == 'admin' %}
-                    <span class="edit-btn" 
-                          title="Modifier le nom de {{ categorie.nom }}"
-                          aria-label="Modifier le nom">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                            <path d="M167-120q-21 5-36.5-10.5T120-167l40-191 198 198-191 40Zm191-40L160-358l458-458q23-23 57-23t57 23l84 84q23 23 23 57t-23 57L358-160Zm317-600L261-346l85 85 414-414-85-85Z"/>
-                        </svg>
-                    </span>
+                    <!-- 3. Modifier (Crayon) -->
+                    <button type="button" 
+                            class="action-btn btn-edit" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#editCategorieModal"
+                            data-id="{{ categorie.id }}"
+                            data-nom="{{ categorie.nom | e }}"
+                            title="Modifier">
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
                     
-                    <form action="{{ url_for('admin.supprimer', type_objet='categorie', id=categorie.id) }}" 
-                          method="post" 
-                          class="delete-form-interactive" 
-                          data-item-type="categorie" 
-                          data-item-name="{{ categorie.nom }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="button" 
-                                class="delete-btn" 
-                                title="Supprimer {{ categorie.nom }}"
-                                aria-label="Supprimer la catégorie">
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
-                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
-                            </svg>
-                        </button>
-                    </form>
+                    <!-- 4. Supprimer (Poubelle) -->
+                    <button type="button" class="action-btn btn-delete" 
+                            data-url="{{ url_for('admin.supprimer', type_objet='categorie', id=categorie.id) }}"
+                            data-item-name="{{ categorie.nom }}"
+                            title="Supprimer {{ categorie.nom }}" 
+                            aria-label="Supprimer la catégorie">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"></path>
+                        </svg>
+                    </button>
                     {% endif %}
                 </div>
-            </div>
+            </article>
             {% endfor %}
         </div>
 
@@ -135,8 +118,7 @@
             <button type="button" 
                     class="btn btn-primary mt-3" 
                     data-bs-toggle="modal" 
-                    data-bs-target="#addCategorieModal"
-                    aria-label="Ajouter la première catégorie">
+                    data-bs-target="#addCategorieModal">
                 Ajouter la première catégorie
             </button>
             {% endif %}
@@ -144,69 +126,70 @@
     {% endif %}
 </div>
 
-<!-- Modale d'ajout de catégorie (Bootstrap 5) -->
-<div class="modal fade" 
-     id="addCategorieModal" 
-     tabindex="-1" 
-     aria-labelledby="addCategorieModalLabel" 
-     aria-hidden="true">
+<!-- ========================================== -->
+<!-- MODALE 1 : AJOUT DE CATÉGORIE -->
+<!-- ========================================== -->
+<div class="modal fade" id="addCategorieModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addCategorieModalLabel">
-                    <i class="bi bi-tag-fill me-2"></i>
-                    Ajouter une nouvelle catégorie
-                </h5>
-                <button type="button" 
-                        class="btn-close" 
-                        data-bs-dismiss="modal" 
-                        aria-label="Fermer"></button>
+                <h5 class="modal-title"><i class="bi bi-tag-fill me-2"></i> Ajouter une catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
-            <form action="{{ url_for('admin.ajouter') }}" 
-                  method="post" 
-                  id="addCategorieForm"
-                  novalidate>
+            <form action="{{ url_for('admin.ajouter') }}" method="post" id="addCategorieForm" novalidate>
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="type" value="categorie">
                     
                     <div class="mb-3">
-                        <label for="nomCategorie" class="form-label">
-                            Nom de la catégorie <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" 
-                               class="form-control" 
-                               id="nomCategorie" 
-                               name="nom" 
-                               placeholder="Ex: Verrerie, Chimie organique, Électronique..."
-                               required 
-                               maxlength="100"
-                               autocomplete="off"
-                               aria-describedby="nomCategorieHelp">
-                        <div id="nomCategorieHelp" class="form-text">
-                            Choisissez un nom descriptif pour identifier facilement cette catégorie.
-                        </div>
-                        <div class="invalid-feedback">
-                            Veuillez entrer un nom pour la catégorie.
-                        </div>
+                        <label for="nomCategorie" class="form-label fw-bold">Nom de la catégorie <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nomCategorie" name="nom" placeholder="Ex: Verrerie" required maxlength="100" autocomplete="off">
+                        <div class="invalid-feedback">Veuillez entrer un nom.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" 
-                            class="btn btn-secondary" 
-                            data-bs-dismiss="modal">
-                        Annuler
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle me-1"></i>
-                        Ajouter la catégorie
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i> Créer</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- MODALE 2 : MODIFICATION DE CATÉGORIE -->
+<!-- ========================================== -->
+<div class="modal fade" id="editCategorieModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i> Modifier la catégorie</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            
+            <form action="{{ url_for('admin.modifier_categorie') }}" method="post" id="editCategorieForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <!-- ID Caché indispensable -->
+                    <input type="hidden" name="id" id="editCategorieId">
+                    
+                    <div class="mb-3">
+                        <label for="editCategorieNom" class="form-label fw-bold">Nom</label>
+                        <input type="text" class="form-control" id="editCategorieNom" name="nom" required maxlength="100">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<form id="globalDeleteForm" method="post" action="" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
 <!-- Modale de danger pour suppression -->
 {% include '_modale_danger.html' %}
 
@@ -214,7 +197,7 @@
 
 {% block scripts %}
 <script>
-// Validation du formulaire d'ajout
+// 1. Validation du formulaire d'ajout
 (function() {
     'use strict';
     const form = document.getElementById('addCategorieForm');
@@ -227,7 +210,6 @@
             form.classList.add('was-validated');
         });
         
-        // Réinitialiser la validation quand on ferme la modale
         const modal = document.getElementById('addCategorieModal');
         if (modal) {
             modal.addEventListener('hidden.bs.modal', function() {
@@ -237,5 +219,59 @@
         }
     }
 })();
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ============================================================
+    // 2. GESTION DE LA MODALE D'ÉDITION (Crayon)
+    // ============================================================
+    const editModal = document.getElementById('editCategorieModal');
+    
+    if (editModal) {
+        editModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const id = button.getAttribute('data-id');
+            const nom = button.getAttribute('data-nom');
+
+            document.getElementById('editCategorieId').value = id;
+            document.getElementById('editCategorieNom').value = nom;
+        });
+    }
+
+    // ============================================================
+    // 3. GESTION DE LA SUPPRESSION (Standardisée)
+    // ============================================================
+    const deleteButtons = document.querySelectorAll('.btn-delete');
+    const globalDeleteForm = document.getElementById('globalDeleteForm');
+    const dangerModalEl = document.getElementById('dangerModal');
+    
+    if (dangerModalEl && globalDeleteForm) {
+        const dangerModal = new bootstrap.Modal(dangerModalEl);
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const modalBody = document.getElementById('dangerModalText');
+
+        deleteButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = this.getAttribute('data-url');
+                const itemName = this.getAttribute('data-item-name');
+                
+                globalDeleteForm.action = url;
+                if (modalBody) {
+                    modalBody.innerHTML = `Êtes-vous sûr de vouloir supprimer la catégorie <strong>"${itemName}"</strong> ?<br>Cette action est irréversible.`;
+                }
+                dangerModal.show();
+            });
+        });
+
+        if (confirmBtn) {
+            const newBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+            newBtn.addEventListener('click', function() {
+                if (globalDeleteForm.action) globalDeleteForm.submit();
+            });
+        }
+    }
+});
 </script>
 {% endblock %}

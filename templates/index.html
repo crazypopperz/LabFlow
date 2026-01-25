@@ -4,6 +4,45 @@
 
 {% block content %}
 <div class="dashboard-container">
+	<!-- ZONE DE NOTIFICATIONS -->
+    {% if notifications_list %}
+    <div class="alert alert-warning shadow-sm mb-4">
+        <h5 class="alert-heading"><i class="bi bi-bell-fill me-2"></i>Notifications</h5>
+        <ul class="mb-0 ps-3">
+            {% for notif in notifications_list %}
+            <li class="mb-2 d-flex justify-content-between align-items-start border-bottom pb-2">
+                <span class="me-2">{{ notif.message }}</span>
+                
+                <!-- BOUTON ACTION -->
+                <button class="btn btn-sm p-0 d-flex align-items-center gap-2 text-decoration-none mark-read-btn" 
+                        onclick="markAsRead({{ notif.id }}, this)" 
+                        style="color: #856404; white-space: nowrap; cursor: pointer;">
+                    <i class="bi bi-square"></i>
+                    <span class="small fw-bold">Marquer comme lu</span>
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <script>
+        function markAsRead(id, btn) {
+            fetch(`/api/notifications/lu/${id}`, { 
+                method: 'POST',
+                headers: {'X-CSRFToken': "{{ csrf_token() }}"}
+            }).then(r => {
+                if(r.ok) {
+                    // Masquer la ligne visuellement
+                    const li = btn.closest('li');
+                    li.style.opacity = '0.5';
+                    li.style.textDecoration = 'line-through';
+                    setTimeout(() => li.remove(), 500);
+                }
+            });
+        }
+    </script>
+    {% endif %}
+
     <!-- En-tête Principal -->
     <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
         <h1 class="h2 mb-0 text-dark d-flex align-items-center gap-3">

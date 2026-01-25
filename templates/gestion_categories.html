@@ -136,10 +136,9 @@
                 <h5 class="modal-title"><i class="bi bi-tag-fill me-2"></i> Ajouter une catégorie</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
-            <form action="{{ url_for('admin.ajouter') }}" method="post" id="addCategorieForm" novalidate>
+            <form action="{{ url_for('admin.ajouter_categorie') }}" method="post" id="addCategorieForm" novalidate>
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="type" value="categorie">
                     
                     <div class="mb-3">
                         <label for="nomCategorie" class="form-label fw-bold">Nom de la catégorie <span class="text-danger">*</span></label>

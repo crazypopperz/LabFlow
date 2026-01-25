@@ -83,15 +83,15 @@
 					</a>
                     
                     {% if session.user_role == 'admin' %}
-                    <!-- 3. Modifier (Crayon) -->
+					<!-- 3. Modifier (Crayon) -->
                     <button type="button" 
 							class="action-btn btn-edit" 
 							data-bs-toggle="modal" 
 							data-bs-target="#editArmoireModal"
 							data-id="{{ armoire.id }}"
-							data-nom="{{ armoire.nom }}"
-							data-desc="{{ armoire.description if armoire.description else '' }}" 
-							data-photo="{{ armoire.photo_url if armoire.photo_url else '' }}"
+							data-nom="{{ armoire.nom|e }}"
+							data-description="{{ armoire.description|default('', true)|e }}" 
+							data-photo="{{ armoire.photo_url|default('', true) }}"
 							title="Modifier">
 						<i class="bi bi-pencil-fill"></i>
 					</button>
@@ -264,58 +264,60 @@
 document.addEventListener('DOMContentLoaded', function() {
     
     // ============================================================
-    // 2. GESTION DE LA MODALE D'ÉDITION (Crayon)
-    // ============================================================
-    const editModal = document.getElementById('editArmoireModal');
-    
-    if (editModal) {
-        editModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            
-            // Récupération
-            const id = button.getAttribute('data-id');
-            const nom = button.getAttribute('data-nom');
-            const desc = button.getAttribute('data-desc');
-            const photo = button.getAttribute('data-photo');
+	// 2. GESTION DE LA MODALE D'ÉDITION (Crayon)
+	// ============================================================
+	const editModal = document.getElementById('editArmoireModal');
 
-            // Remplissage
-            document.getElementById('editArmoireId').value = id;
-            document.getElementById('editArmoireNom').value = nom;
-            document.getElementById('editArmoireDesc').value = desc;
+	if (editModal) {
+		editModal.addEventListener('show.bs.modal', function(event) {
+			const button = event.relatedTarget;
+			
+			// Récupération des données
+			const id = button.getAttribute('data-id');
+			const nom = button.getAttribute('data-nom');
+			const description = button.getAttribute('data-description') || '';
+			const photo = button.getAttribute('data-photo');
 
-            // Gestion de l'affichage photo
-            const photoContainer = document.getElementById('currentPhotoContainer');
-            const photoPreview = document.getElementById('currentPhotoPreview');
-            const deleteCheck = document.getElementById('deletePhotoCheck');
-            const fileInput = document.getElementById('editArmoirePhoto');
+			// Remplissage des champs
+			document.getElementById('editArmoireId').value = id;
+			document.getElementById('editArmoireNom').value = nom;
+			
+			const descInput = document.getElementById('editArmoireDesc');
+			if (descInput) {
+				descInput.value = description;
+			}
 
-            // Reset UX (décocher suppression, réactiver upload)
-            if(deleteCheck) {
-                deleteCheck.checked = false;
-                if(fileInput) {
-                    fileInput.disabled = false;
-                    fileInput.value = ''; 
-                }
-                
-                // UX : Si on coche "Supprimer", on grise l'upload
-                deleteCheck.onchange = function() {
-                    if(fileInput) {
-                        fileInput.disabled = this.checked;
-                        if(this.checked) fileInput.value = '';
-                    }
-                };
-            }
+			// Gestion de l'affichage photo
+			const photoContainer = document.getElementById('currentPhotoContainer');
+			const photoPreview = document.getElementById('currentPhotoPreview');
+			const deleteCheck = document.getElementById('deletePhotoCheck');
+			const fileInput = document.getElementById('editArmoirePhoto');
 
-            // Affichage de la miniature si photo existe
-            if (photo && photo !== 'None' && photo !== '') {
-                const baseUrl = "{{ url_for('static', filename='') }}";
-                if(photoPreview) photoPreview.src = baseUrl + photo;
-                if(photoContainer) photoContainer.style.display = 'block';
-            } else {
-                if(photoContainer) photoContainer.style.display = 'none';
-            }
-        });
-    }
+			// Reset UX
+			if(deleteCheck) {
+				deleteCheck.checked = false;
+				if(fileInput) {
+					fileInput.disabled = false;
+					fileInput.value = ''; 
+				}
+				deleteCheck.onchange = function() {
+					if(fileInput) {
+						fileInput.disabled = this.checked;
+						if(this.checked) fileInput.value = '';
+					}
+				};
+			}
+
+			if (photo && photo !== 'None' && photo !== '') {
+				const baseUrl = "{{ url_for('static', filename='') }}";
+				if(photoPreview) photoPreview.src = baseUrl + photo;
+				if(photoContainer) photoContainer.style.display = 'block';
+			} else {
+				if(photoContainer) photoContainer.style.display = 'none';
+			}
+		});
+	}
+
 
     // ============================================================
     // 3. GESTION DE LA SUPPRESSION (CORRIGÉE)

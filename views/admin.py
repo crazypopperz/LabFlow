@@ -665,37 +665,33 @@ def admin():
                            securite_stats=securite_stats)
 
 # ============================================================
-# GESTION ARMOIRES / CATÉGORIES
+# GESTION CREATION CATÉGORIES
 # ============================================================
-@admin_bp.route("/ajouter", methods=["POST"])
+@admin_bp.route("/categories/ajouter", methods=["POST"])
 @admin_required
-@limiter.limit("30 per minute") # Rate limit ajouté
-def ajouter():
+@limiter.limit("30 per minute")
+def ajouter_categorie():
     etablissement_id = session['etablissement_id']
-    type_objet = request.form.get("type")
     nom = request.form.get("nom", "").strip()
     
     if not nom:
         flash("Le nom ne peut pas être vide.", "error")
-        return redirect(request.referrer)
-
-    Model = Armoire if type_objet == "armoire" else Categorie
+        return redirect(url_for('main.gestion_categories'))
     
     try:
-        nouvel_element = Model(nom=nom, etablissement_id=etablissement_id)
-        db.session.add(nouvel_element)
+        nouvelle_categorie = Categorie(nom=nom, etablissement_id=etablissement_id)
+        db.session.add(nouvelle_categorie)
         db.session.commit()
-        flash(f"L'élément '{nom}' a été créé.", "success")
+        flash(f"La catégorie '{nom}' a été créée.", "success")
     except IntegrityError:
         db.session.rollback()
-        flash(f"L'élément '{nom}' existe déjà.", "error")
+        flash(f"La catégorie '{nom}' existe déjà.", "error")
     except Exception:
         db.session.rollback()
-        current_app.logger.error(f"Erreur ajout {type_objet}", exc_info=True) # Log sécurisé
+        current_app.logger.error(f"Erreur ajout catégorie", exc_info=True)
         flash("Erreur technique.", "error")
     
-    redirect_to = "main.gestion_armoires" if type_objet == "armoire" else "main.gestion_categories"
-    return redirect(url_for(redirect_to))
+    return redirect(url_for('main.gestion_categories'))
     
 # ===================================================================
 # Ajout spécifique pour les armoires avec photo et description

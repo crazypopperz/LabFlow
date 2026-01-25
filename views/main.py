@@ -32,18 +32,24 @@ def gestion_armoires():
     etablissement_id = session['etablissement_id']
     
     armoires = db.session.execute(
-        db.select(Armoire.id, Armoire.nom, func.count(Objet.id).label('count'))
+        db.select(
+            Armoire.id, 
+            Armoire.nom, 
+            Armoire.description,
+            Armoire.photo_url,
+            func.count(Objet.id).label('count')
+        )
         .outerjoin(Objet, Armoire.id == Objet.armoire_id)
         .filter(Armoire.etablissement_id == etablissement_id)
-        .group_by(Armoire.id, Armoire.nom)
+        .group_by(Armoire.id, Armoire.nom, Armoire.description, Armoire.photo_url)  # ← MODIFIÉ
         .order_by(Armoire.nom)
     ).mappings().all()
-
+    
     breadcrumbs = [
         {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
         {'text': 'Gérer les Armoires', 'url': None}
     ]
-
+    
     return render_template("gestion_armoires.html",
                            armoires=armoires,
                            breadcrumbs=breadcrumbs,

@@ -83,7 +83,26 @@ def create_app():
     if db_url:
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql://", 1)
+        
+        # Configuration SSL pour Render/Production
+        if is_production and 'postgresql://' in db_url:
+            # Ajouter les paramètres SSL si pas déjà présents
+            if '?' not in db_url:
+                db_url += '?sslmode=require'
+            elif 'sslmode' not in db_url:
+                db_url += '&sslmode=require'
+        
         app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+        
+        if is_production:
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'connect_args': {
+                'sslmode': 'require',
+                'connect_timeout': 10
+            },
+            'pool_pre_ping': True,
+            'pool_recycle': 300,
+        }
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 

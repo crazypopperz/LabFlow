@@ -69,53 +69,192 @@
     margin: 0;
 }
 
-/* =================================================================
-   STYLE 1 : INPUT GROUPS (Pour la page LOGIN)
-   C'est ici que ça cassait. On fusionne l'icône et l'input.
-   ================================================================= */
-
-/* Le conteneur global de l'input devient la "fausse" bordure */
-.login-form .input-group {
-    background-color: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 4px; /* Petit padding interne */
-    transition: all 0.2s ease;
-    margin-bottom: 1rem; /* Espacement entre les champs */
-    display: flex;
-    align-items: center;
+/* ============================================================
+   LOGIN PREMIUM - CARTE & STRUCTURE
+   ============================================================ */
+.auth-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(31, 59, 115, 0.15);
+    overflow: hidden; /* Important pour le footer coloré */
+    background: white;
+    transition: transform 0.3s ease;
 }
 
-/* Quand on clique dedans, tout le bloc s'illumine */
-.login-form .input-group:focus-within {
-    background-color: #ffffff;
-    border-color: var(--couleur-principale, #1F3B73);
+.auth-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 50px rgba(31, 59, 115, 0.2);
+}
+
+/* --- ZONE HAUTE : CONNEXION --- */
+.auth-header {
+    padding: 2.5rem 2.5rem 1rem 2.5rem;
+    text-align: center;
+}
+
+.auth-icon-circle {
+    width: 85px;
+    height: 85px;
+    background: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem auto;
+    box-shadow: 0 8px 25px rgba(31, 59, 115, 0.1);
+    border: 1px solid rgba(31, 59, 115, 0.05);
+    transition: transform 0.3s ease;
+}
+
+.auth-card:hover .auth-icon-circle {
+    transform: scale(1.05);
+}
+
+.auth-title {
+    font-weight: 800;
+    color: #1F3B73;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.5px;
+}
+
+.auth-subtitle {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.auth-body {
+    padding: 1rem 2.5rem 2rem 2.5rem;
+}
+
+/* Inputs stylisés */
+.input-group-text {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    color: #adb5bd;
+}
+.form-control:focus {
+    border-color: #1F3B73;
     box-shadow: 0 0 0 4px rgba(31, 59, 115, 0.1);
 }
 
-/* L'icône à gauche */
-.login-form .input-group-text {
-    background-color: transparent;
+/* Bouton Connexion */
+.btn-login {
+    background: #1F3B73;
+    color: white;
+    font-weight: 700;
+    padding: 0.8rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(31, 59, 115, 0.2);
+}
+.btn-login:hover {
+    background: #162d5c;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(31, 59, 115, 0.3);
+}
+
+/* --- SÉPARATEUR --- */
+.auth-separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 0 2.5rem;
+    color: #adb5bd;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.auth-separator::before, .auth-separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e9ecef;
+}
+.auth-separator span {
+    padding: 0 15px;
+}
+
+/* --- ZONE BASSE : NOUVEAUX UTILISATEURS --- */
+.auth-footer {
+    background: #f8faff; /* Fond très légèrement bleuté */
+    padding: 2rem 2.5rem;
+    border-top: 1px solid #edf2f7;
+}
+
+/* Boutons Premium */
+.btn-premium-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 1. Bouton Rejoindre (Style "Ghost" coloré) */
+.btn-join {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); 
     border: none;
-    color: #64748b;
-    padding-left: 12px;
-    padding-right: 8px;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+}
+.btn-join:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+    color: white !important;
 }
 
-/* L'input lui-même : transparent et sans bordure */
-.login-form .form-control {
-    border: none !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    color: #0f172a;
-    font-weight: 500;
-    padding: 10px 0;
-    height: auto;
+/* 2. Bouton Créer (Style "Gradient" clinquant) */
+.btn-create {
+    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); /* Cyan to Blue */
+    border: none;
+    color: white;
+    box-shadow: 0 4px 15px rgba(58, 123, 213, 0.3);
+}
+.btn-create:hover {
+    background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(58, 123, 213, 0.4);
+    color: white;
 }
 
-.login-form .form-control:focus {
-    outline: none;
+.btn-premium-action i {
+    font-size: 1.1rem;
 }
+
+/* La pastille Cadenas */
+.security-badge {
+    position: absolute;
+    bottom: -6px; /* Déborde légèrement vers le bas */
+    right: -8px;  /* Déborde légèrement vers la droite */
+    
+    width: 26px;
+    height: 26px;
+    
+    background: #ffffff; /* Fond blanc pour couper le logo */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Ombre pour l'effet 3D */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    border: 2px solid #ffffff; /* Bordure blanche pour bien séparer */
+    
+    color: #1F3B73; /* Couleur du cadenas (Bleu LabFlow) */
+    font-size: 0.8rem;
+}
+
+
 
 /* =================================================================
    STYLE 2 : FLOATING LABELS (Pour la page REGISTER)

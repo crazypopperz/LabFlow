@@ -231,21 +231,6 @@
 
 .header-icon-link:active { transform: translateY(0); }
 
-/* Style SPÉCIFIQUE pour le bouton Admin (Pilule) */
-.header-icon-link.admin-badge {
-    width: auto; /* IMPORTANT : Surcharge la largeur fixe de 40px */
-    padding: 0 16px; /* Espace pour le texte */
-    border-radius: 50px; /* Forme arrondie */
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    gap: 8px; /* Espace entre icône et texte */
-}
-
-.header-icon-link.admin-badge:hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
 
 /* SVG des icônes */
 .header-icon {
@@ -293,6 +278,119 @@
     pointer-events: none;
 }
 
+/* 1. BOUTON ADMIN (Pilule Glass) */
+.header-btn-admin {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(4px);
+}
+
+.header-btn-admin:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: white;
+}
+
+.header-btn-admin svg {
+    width: 16px; height: 16px; fill: #ffd700; /* Icône dorée pour l'admin */
+}
+
+/* 2. CAPSULE UTILISATEUR (Avatar + Nom) */
+.header-user-capsule {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 16px 4px 4px; /* Padding asymétrique pour l'avatar */
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 30px;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.header-user-capsule:hover {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+/* Avatar généré avec l'initiale */
+.user-avatar-circle {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #00d4ff 0%, #005bea 100%); /* Dégradé Bleu Cyan */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.user-name-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* 3. BOUTON DÉCONNEXION (Rond) */
+.header-btn-logout {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.header-btn-logout:hover {
+    background: rgba(220, 53, 69, 0.15); /* Fond rouge très léger */
+    color: #ff6b6b; /* Icône rouge clair */
+    border-color: rgba(220, 53, 69, 0.3);
+    transform: rotate(90deg); /* Petite animation sympa */
+}
+
+.header-btn-logout svg {
+    width: 18px; height: 18px; fill: currentColor;
+}
+
+/* Bouton Connexion (Si pas connecté) */
+.btn-login-premium {
+    background: white;
+    color: var(--couleur-principale);
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: 30px;
+    text-decoration: none;
+    transition: transform 0.2s;
+}
+.btn-login-premium:hover {
+    transform: scale(1.05);
+    color: var(--couleur-principale);
+    box-shadow: 0 4px 15px rgba(255,255,255,0.3);
+}
+
 @keyframes badge-pulse-glow {
     0%, 100% { transform: scale(1); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 0 0 rgba(239, 68, 68, 0.7); }
     50% { transform: scale(1.15); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 8px rgba(239, 68, 68, 0); }
@@ -304,40 +402,22 @@
 }
 
 /* Responsive Header */
-@media (max-width: 992px) {
-    /* Sur tablette/mobile, le bouton admin redevient un carré */
-    .header-icon-link.admin-badge {
-        width: 40px;
-        padding: 0;
-        border-radius: 8px;
-        justify-content: center;
-    }
-    /* On cache le texte "ADMIN" */
-    .header-icon-link.admin-badge span {
-        display: none !important;
-    }
-}
-
 @media (max-width: 768px) {
-    .header-icon-link, .header-icon-link.admin-badge {
+    .header-icon-link {
         width: 36px;
         height: 36px;
     }
     .header-icon { width: 20px; height: 20px; }
 }
 
+
 /* --- AUTH SECTION --- */
 .auth-section {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    color: var(--texte-inverse);
+    gap: 0.75rem;
 }
-.auth-section .btn-outline-light {
-    border-radius: 20px;
-    font-weight: 500;
-    font-size: 0.85rem;
-}
+
 
 /* --- SUB NAV --- */
 .sub-nav {
@@ -453,5 +533,6 @@
 @media (max-width: 768px) {
     .btn-back-to-top { bottom: 20px; right: 20px; width: 45px; height: 45px; }
 }
+
 
 

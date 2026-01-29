@@ -807,7 +807,7 @@ def voir_armoire(armoire_id):
 def voir_categorie(categorie_id):
     """
     Affiche le contenu d'une catégorie.
-    CORRIGÉ : Utilise InventoryService.
+    CORRIGÉ : Envoie la liste des armoires pour le déplacement de masse.
     """
     etablissement_id = session['etablissement_id']
     service = InventoryService(etablissement_id)
@@ -832,6 +832,7 @@ def voir_categorie(categorie_id):
         'categorie_id': categorie_id
     }
 
+    # 1. Liste des autres catégories (pour info ou nav)
     categories_list = db.session.execute(
         db.select(Categorie)
         .filter(
@@ -839,6 +840,13 @@ def voir_categorie(categorie_id):
             Categorie.id != categorie_id
         )
         .order_by(Categorie.nom)
+    ).scalars().all()
+
+    # 2. AJOUT CRITIQUE : Liste des armoires pour le menu "Déplacer vers..."
+    armoires = db.session.execute(
+        db.select(Armoire)
+        .filter_by(etablissement_id=etablissement_id)
+        .order_by(Armoire.nom)
     ).scalars().all()
 
     breadcrumbs = [
@@ -854,6 +862,7 @@ def voir_categorie(categorie_id):
                            sort_by=sort_by,
                            direction=direction,
                            categories_list=categories_list,
+                           armoires=armoires,  # <--- C'est ici que ça manquait !
                            breadcrumbs=breadcrumbs,
                            date_actuelle=datetime.now(),
                            armoire_id=None,

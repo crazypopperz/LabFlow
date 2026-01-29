@@ -17,7 +17,6 @@
                         <path d="M4.98 1a.5.5 0 0 0-.39.188L1.54 5H6a.5.5 0 0 1 .5.5 1.5 1.5 0 0 0 3 0A.5.5 0 0 1 10 5h4.46l-3.05-3.812A.5.5 0 0 0 11.02 1zM3.81.563A1.5 1.5 0 0 1 4.98 0h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .106.374l-.39 3.124A1.5 1.5 0 0 1 14.117 10H1.883A1.5 1.5 0 0 1 .394 8.686l-.39-3.124a.5.5 0 0 1 .106-.374zM.125 11.17A.5.5 0 0 1 .5 11H6a.5.5 0 0 1 .5.5 1.5 1.5 0 0 0 3 0 .5.5 0 0 1 .5-.5h5.5a.5.5 0 0 1 .496.562l-.39 3.124A1.5 1.5 0 0 1 14.117 16H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .121-.393z"/>
                     </svg>
                 </div>
-                <!-- CORRECTION ICI : categorie.nom -->
                 <span>Objets dans la catégorie : <strong style="color: #fe5196;">{{ categorie.nom }}</strong></span>
             </h2>
         </div>
@@ -31,7 +30,7 @@
             {% include '_inventaire_content.html' %}
         </div>
 
-        <!-- Barre d'action de masse (Modernisée) -->
+        <!-- Barre d'action de masse (Admin) -->
         {% if session.user_role == 'admin' %}
         <div id="bulk-action-section" class="card border-0 shadow-sm mt-4 bg-light" style="display: none;">
             <div class="card-body d-flex align-items-center flex-wrap gap-3">
@@ -42,15 +41,16 @@
                 
                 <div class="d-flex align-items-center gap-2 flex-grow-1">
                     <label for="move-destination" class="text-nowrap">Déplacer la sélection vers :</label>
+                    
+                    <!-- CORRECTION : On liste les ARMOIRES, pas les catégories -->
                     <select id="move-destination" class="form-select w-auto" style="min-width: 200px;">
-                        <option value="" disabled selected>Choisir une autre catégorie...</option>
-                        {% for c in categories_list %}
-                            <!-- CORRECTION ICI : c.id != categorie.id -->
-                            {% if c.id != categorie.id %}
-                                <option value="{{ c.id }}">{{ c.nom }}</option>
-                            {% endif %}
+                        <option value="" disabled selected>Choisir une armoire...</option>
+                        <!-- On suppose que la variable 'armoires' est passée au template -->
+                        {% for armoire in armoires %}
+                            <option value="{{ armoire.id }}">{{ armoire.nom }}</option>
                         {% endfor %}
                     </select>
+
                     <button id="bulk-move-btn" class="btn btn-primary">
                         <i class="bi bi-arrow-right-circle me-2"></i>Déplacer
                     </button>
@@ -62,5 +62,110 @@
 {% endblock %}
 
 {% block scripts %}
-    <!-- Cette page n'a pas besoin de script de type "module" spécifique -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Récupération des éléments du DOM
+    const bulkSection = document.getElementById('bulk-action-section');
+    const selectAll = document.getElementById('select-all-checkbox'); 
+    const moveBtn = document.getElementById('bulk-move-btn');
+    const destinationSelect = document.getElementById('move-destination');
+
+    // Fonction pour récupérer toutes les checkboxes des objets
+    function getCheckboxes() {
+        return document.querySelectorAll('.objet-checkbox');
+    }
+
+    // Mise à jour de l'interface (Afficher/Masquer la barre d'action)
+    function updateBulkUI() {
+        const checkboxes = getCheckboxes();
+        const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+        
+        if (bulkSection) {
+            bulkSection.style.display = anyChecked ? 'block' : 'none';
+        }
+
+        // Gestion de l'état de la case "Tout sélectionner"
+        if (selectAll) {
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+            selectAll.checked = allChecked;
+        }
+    }
+
+    // Attacher les écouteurs d'événements aux checkboxes individuelles
+    function attachCheckboxListeners() {
+        getCheckboxes().forEach(cb => {
+            // On retire d'abord pour éviter les doublons si le script s'exécute plusieurs fois
+            cb.removeEventListener('change', updateBulkUI);
+            cb.addEventListener('change', updateBulkUI);
+        });
+    }
+
+    // Initialisation
+    attachCheckboxListeners();
+
+    // Gestion du "Tout sélectionner"
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            getCheckboxes().forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateBulkUI();
+        });
+    }
+
+    // Gestion du clic sur le bouton "Déplacer"
+    if (moveBtn && destinationSelect) {
+        moveBtn.addEventListener('click', function() {
+            
+            // Récupérer les IDs sélectionnés
+            const selectedIds = Array.from(getCheckboxes())
+                                     .filter(cb => cb.checked)
+                                     .map(cb => parseInt(cb.value))
+                                     .filter(id => !isNaN(id));
+            
+            const targetId = destinationSelect.value;
+
+            // Validations
+            if (selectedIds.length === 0) return alert("Aucun objet valide sélectionné.");
+            if (!targetId) return alert("Veuillez choisir une armoire de destination.");
+
+            // Feedback visuel (Loading)
+            const originalText = moveBtn.innerHTML;
+            moveBtn.disabled = true;
+            moveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Déplacement...';
+
+            // Appel API
+            fetch("{{ url_for('api.deplacer_objets') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    objet_ids: selectedIds,
+                    target_armoire_id: parseInt(targetId)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Rechargement pour voir les changements
+                    window.location.reload();
+                } else {
+                    alert("Erreur serveur : " + (data.error || "Inconnue"));
+                    moveBtn.disabled = false;
+                    moveBtn.innerHTML = originalText;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Erreur technique de communication.");
+                moveBtn.disabled = false;
+                moveBtn.innerHTML = originalText;
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

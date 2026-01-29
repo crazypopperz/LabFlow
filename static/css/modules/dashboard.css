@@ -84,3 +84,39 @@
         text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
     }
 .btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31, 59, 115, 0.3); color: white; }
+
+
+
+/* 	=====================================================================================================================
+	SPECIAL RESPONSIVE MOBILE SMARTPHONE
+	=====================================================================================================================
+/* ============================================================
+   RESPONSIVE DASHBOARD
+   ============================================================ */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem; /* Moins de marge sur les côtés */
+    }
+
+    /* En-tête Dashboard */
+    .dashboard-container .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+
+    /* Le Titre */
+    .dashboard-container h1.h2 {
+        font-size: 1.5rem;
+    }
+    
+    /* L'icône du titre */
+    .dashboard-container h1 .rounded-3 {
+        width: 40px !important;
+        height: 40px !important;
+    }
+    .dashboard-container h1 svg {
+        width: 20px;
+        height: 20px;
+    }
+}

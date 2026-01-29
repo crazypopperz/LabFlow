@@ -1,5 +1,5 @@
 # ============================================================
-# FICHIER : views/auth.py (Solution Pseudo Unique)
+# FICHIER : views/auth.py (Avec Récupération MDP)
 # ============================================================
 import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
@@ -8,7 +8,51 @@ from db import db, Utilisateur, Etablissement, Parametre
 from utils import get_etablissement_params, login_required, validate_password_strength, validate_email
 from extensions import limiter
 
+# NOUVEAUX IMPORTS POUR L'EMAIL
+from flask_mail import Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+
 auth_bp = Blueprint('auth', __name__)
+
+# --- UTILITAIRES EMAIL ---
+def get_serializer():
+    return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+
+def send_reset_email(user_email, token):
+    """Envoie l'email avec le lien de réinitialisation."""
+    try:
+        # On récupère l'instance mail initialisée dans app.py
+        mail = current_app.extensions.get('mail')
+        if not mail:
+            current_app.logger.error("Flask-Mail n'est pas initialisé.")
+            return False
+
+        msg = Message("Réinitialisation de votre mot de passe LabFlow",
+                      recipients=[user_email])
+        
+        reset_url = url_for('auth.reset_password', token=token, _external=True)
+        
+        msg.body = f"""Bonjour,
+
+Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LabFlow.
+
+Pour définir un nouveau mot de passe, cliquez sur le lien suivant (valable 1 heure) :
+{reset_url}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
+
+Cordialement,
+L'équipe LabFlow
+"""
+        mail.send(msg)
+        print("✅ SUCCÈS : Email envoyé à", user_email) # <--- AJOUTE CECI
+        return True
+    except Exception as e:
+        print(f"❌ ERREUR MAIL CRITIQUE : {e}") # <--- AJOUTE CECI
+        current_app.logger.error(f"Erreur envoi mail reset: {e}")
+        return False
+
+# --- ROUTES EXISTANTES ---
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("10 per minute")
@@ -17,7 +61,6 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Recherche de l'utilisateur unique
         user = db.session.execute(db.select(Utilisateur).filter_by(nom_utilisateur=username)).scalar_one_or_none()
         
         if user and check_password_hash(user.mot_de_passe, password):
@@ -63,10 +106,9 @@ def register():
             flash("Code d'invitation invalide.", "error")
             return render_template('register.html')
             
-        # VÉRIFICATION STRICTE DU PSEUDO
         existing_user = db.session.execute(db.select(Utilisateur).filter_by(nom_utilisateur=username)).scalar_one_or_none()
         if existing_user:
-            flash(f"Le nom d'utilisateur '{username}' est déjà pris. Veuillez en choisir un autre.", "error")
+            flash(f"Le nom d'utilisateur '{username}' est déjà pris.", "error")
             return render_template('register.html')
             
         existing_email = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
@@ -102,7 +144,6 @@ def logout():
 @auth_bp.route('/setup', methods=['GET', 'POST'])
 @limiter.limit("3 per minute")
 def setup():
-    """Création d'un NOUVEL Établissement."""
     if request.method == 'POST':
         nom_etablissement = request.form.get('nom_etablissement')
         username = request.form.get('username')
@@ -118,10 +159,9 @@ def setup():
             flash(msg_pass, "error")
             return render_template('setup.html')
 
-        # VÉRIFICATION STRICTE DU PSEUDO
         user_exist = db.session.execute(db.select(Utilisateur).filter_by(nom_utilisateur=username)).scalar_one_or_none()
         if user_exist:
-            flash(f"Le nom d'utilisateur '{username}' est déjà pris. Essayez '{username}_lycee' ou '{username}_admin'.", "error")
+            flash(f"Le nom d'utilisateur '{username}' est déjà pris.", "error")
             return render_template('setup.html')
 
         email_exist = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
@@ -160,7 +200,6 @@ def setup():
 
     return render_template('setup.html')
 
-# ... (Route profil inchangée)
 @auth_bp.route('/profil', methods=['GET', 'POST'])
 @login_required
 def profil():
@@ -201,3 +240,74 @@ def profil():
                     flash("Erreur lors de la mise à jour.", "error")
                 
     return render_template('profil.html', user=user)
+
+# --- NOUVELLES ROUTES : MOT DE PASSE OUBLIÉ ---
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit("3 per minute")
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        print(f"🔍 DEBUG: Tentative de reset pour l'email : '{email}'") # <--- MOUCHARD 1
+        
+        # 1. Vérifier si l'email existe
+        user = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
+        
+        if user:
+            print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}") # <--- MOUCHARD 2
+            # 2. Générer le token
+            s = get_serializer()
+            token = s.dumps(user.email, salt='password-reset-salt')
+            
+            # 3. Envoyer l'email
+            if send_reset_email(user.email, token):
+                flash("Un email de réinitialisation a été envoyé.", "info")
+            else:
+                flash("Erreur technique lors de l'envoi.", "error")
+        else:
+            print(f"⚠️ DEBUG: AUCUN utilisateur trouvé avec cet email dans la BDD.") # <--- MOUCHARD 3
+            # Sécurité : On ne dit pas si l'email existe ou non
+            flash("Si cet email existe, un lien a été envoyé.", "info")
+            
+        return redirect(url_for('auth.login'))
+        
+    return render_template('forgot_password.html')
+
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        s = get_serializer()
+        # Le token est valide 1 heure (3600 secondes)
+        email = s.loads(token, salt='password-reset-salt', max_age=3600)
+    except SignatureExpired:
+        flash("Le lien de réinitialisation a expiré.", "error")
+        return redirect(url_for('auth.forgot_password'))
+    except BadSignature:
+        flash("Le lien de réinitialisation est invalide.", "error")
+        return redirect(url_for('auth.forgot_password'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm = request.form.get('confirm_password')
+        
+        if password != confirm:
+            flash("Les mots de passe ne correspondent pas.", "error")
+            return render_template('reset_password.html', token=token)
+            
+        is_valid, msg = validate_password_strength(password)
+        if not is_valid:
+            flash(msg, "error")
+            return render_template('reset_password.html', token=token)
+            
+        # Mise à jour du mot de passe
+        user = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
+        if user:
+            user.mot_de_passe = generate_password_hash(password, method='pbkdf2:sha256')
+            db.session.commit()
+            flash("Votre mot de passe a été modifié avec succès. Connectez-vous.", "success")
+            return redirect(url_for('auth.login'))
+        else:
+            flash("Utilisateur introuvable.", "error")
+            return redirect(url_for('auth.login'))
+            
+    return render_template('reset_password.html', token=token)

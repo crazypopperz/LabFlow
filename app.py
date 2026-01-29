@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Extensions (Cache & Rate Limit) - PAS DE LOGIN_MANAGER
-from extensions import limiter, cache
+from extensions import limiter, cache, mail
 from flask_migrate import Migrate
 
 # Imports locaux
@@ -109,6 +109,7 @@ def create_app():
     with app.app_context():
         db.create_all()
     CSRFProtect(app)
+    mail.init_app(app)
     limiter.init_app(app)
     cache.init_app(app)
     configure_logging(app)

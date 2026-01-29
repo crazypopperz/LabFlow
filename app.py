@@ -94,15 +94,16 @@ def create_app():
         
         app.config['SQLALCHEMY_DATABASE_URI'] = db_url
         
+        # Options SQLAlchemy pour gérer SSL correctement
         if is_production:
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'connect_args': {
-                'sslmode': 'require',
-                'connect_timeout': 10
-            },
-            'pool_pre_ping': True,
-            'pool_recycle': 300,
-        }
+            app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+                'connect_args': {
+                    'sslmode': 'require',
+                    'connect_timeout': 10
+                },
+                'pool_pre_ping': True,
+                'pool_recycle': 300,
+            }
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 

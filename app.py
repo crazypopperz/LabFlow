@@ -48,6 +48,14 @@ def configure_logging(app):
 
 def create_app():
     app = Flask(__name__)
+    # IMPORTANT : Charger la clé SendGrid depuis les variables d'environnement
+    app.config['SENDGRID_API_KEY'] = os.environ.get('SENDGRID_API_KEY')
+
+    # Vérification au démarrage (optionnel mais utile)
+    if not app.config.get('SENDGRID_API_KEY'):
+        print("⚠️ ATTENTION : SENDGRID_API_KEY n'est pas définie !")
+    else:
+        print("✅ SENDGRID_API_KEY chargée avec succès")
     app.wsgi_app = ProxyFix(
         app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
     )

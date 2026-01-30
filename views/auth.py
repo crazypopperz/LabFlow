@@ -29,6 +29,7 @@ def send_async_email(app, msg):
         except Exception as e:
             print(f"❌ Erreur mail async: {e}")
             app.logger.error(f"Erreur envoi mail: {e}")
+    print("🧵 THREAD TERMINÉ")
 
 def send_reset_email(user_email, token):
     """Envoie l'email avec le lien de réinitialisation (asynchrone)."""

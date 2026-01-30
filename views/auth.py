@@ -36,21 +36,18 @@ def send_async_email(app, msg):
     print("🧵 THREAD TERMINÉ")
 
 def send_reset_email(user_email, token):
-    """Envoie l'email avec le lien de réinitialisation (asynchrone)."""
+    """Envoie l'email via l'API SendGrid (pas SMTP)."""
     try:
-        print(f"🔍 MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
-        
-        mail = current_app.extensions.get('mail')
-        if not mail:
-            current_app.logger.error("Flask-Mail n'est pas initialisé.")
-            return False
-
-        msg = Message("Réinitialisation de votre mot de passe LabFlow",
-                      recipients=[user_email])
+        from sendgrid import SendGridAPIClient
+        from sendgrid.helpers.mail import Mail
         
         reset_url = url_for('auth.reset_password', token=token, _external=True)
         
-        msg.body = f"""Bonjour,
+        message = Mail(
+            from_email='help.labflow@gmail.com',
+            to_emails=user_email,
+            subject='Réinitialisation de votre mot de passe LabFlow',
+            plain_text_content=f"""Bonjour,
 
 Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LabFlow.
 
@@ -61,27 +58,23 @@ Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
 
 Cordialement,
 L'équipe LabFlow
-"""
+""")
         
-        # TEST SYNCHRONE POUR DEBUG
-        print("📧 TENTATIVE ENVOI SYNCHRONE...")
-        try:
-            mail.send(msg)
-            print("✅ EMAIL ENVOYÉ AVEC SUCCÈS !")
-        except Exception as e:
-            print(f"❌ ERREUR SMTP COMPLÈTE: {e}")
-            import traceback
-            traceback.print_exc()
-            raise
+        api_key = current_app.config.get('SENDGRID_API_KEY')
+        if not api_key:
+            print("❌ SENDGRID_API_KEY manquante !")
+            return False
+            
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
         
-        print(f"📧 Email mis en file d'attente pour {user_email}")
+        print(f"✅ Email envoyé via API SendGrid ! Status: {response.status_code}")
         return True
         
     except Exception as e:
-        print(f"❌ ERREUR : {e}")
+        print(f"❌ ERREUR SendGrid API: {e}")
         import traceback
         traceback.print_exc()
-        current_app.logger.error(f"Erreur: {e}")
         return False
 
 # --- ROUTES EXISTANTES ---

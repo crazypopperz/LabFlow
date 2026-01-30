@@ -17,36 +17,46 @@ export function escapeHtml(text) {
  */
 export async function updateCartBadge() {
     const badge = document.getElementById('cart-count-badge');
-	badge.classList.add('pulse-ring');
     if (!badge) return;
+
+    badge.classList.add('pulse-ring');
 
     try {
         const response = await fetch('/api/panier');
-        if (response.ok) {
-            const json = await response.json();
-            const count = json.data.total || 0;
+        
+        // Gestion des cas d'erreur (non connecté = HTML au lieu de JSON)
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            // Redirigé vers login ou erreur → on cache le badge
+            badge.textContent = '0';
+            badge.style.display = 'none';
+            return;
+        }
 
-            // 1. Mise à jour du texte
-            badge.textContent = count > 99 ? '99+' : count;
+        const json = await response.json();
+        const count = json.data?.total || 0;
+
+        // 1. Mise à jour du texte
+        badge.textContent = count > 99 ? '99+' : count;
+        
+        // 2. Gestion de la visibilité
+        if (count > 0) {
+            badge.style.display = 'flex';
             
-            // 2. Gestion de la visibilité (C'est ici que ça se joue)
-            if (count > 0) {
-                // S'il y a des articles, on affiche la pastille
-                badge.style.display = 'flex';
-                
-                // Petite animation "Pulse" pour attirer l'attention lors d'un ajout
-                badge.classList.remove('pulse'); // Reset pour rejouer l'anim
-                void badge.offsetWidth; // Force le reflow (hack CSS)
-                badge.classList.add('pulse');
-            } else {
-                // Si 0, on cache complètement la pastille
-                badge.style.display = 'none';
-            }
+            // Petite animation "Pulse"
+            badge.classList.remove('pulse');
+            void badge.offsetWidth; // Force le reflow
+            badge.classList.add('pulse');
+        } else {
+            badge.style.display = 'none';
         }
     } catch (error) {
         console.error("Erreur synchro badge panier:", error);
+        // En cas d'erreur, on cache le badge silencieusement
+        badge.textContent = '0';
+        badge.style.display = 'none';
     }
 }
 
-// Auto-update au chargement de la page si le script est importé
+// Auto-update au chargement de la page
 document.addEventListener('DOMContentLoaded', updateCartBadge);

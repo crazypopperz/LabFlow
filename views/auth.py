@@ -21,13 +21,17 @@ def get_serializer():
 
 def send_async_email(app, msg):
     """Envoie l'email dans un thread séparé."""
+    print("🧵 THREAD DÉMARRÉ !!!")  # ← DÉPLACE ICI, AVANT le with
     with app.app_context():
         try:
             mail = app.extensions.get('mail')
+            print(f"📧 Envoi vers: {msg.recipients}")
             mail.send(msg)
             print("✅ Email envoyé en arrière-plan")
         except Exception as e:
             print(f"❌ Erreur mail async: {e}")
+            import traceback
+            traceback.print_exc()
             app.logger.error(f"Erreur envoi mail: {e}")
     print("🧵 THREAD TERMINÉ")
 
@@ -60,16 +64,21 @@ Cordialement,
 L'équipe LabFlow
 """
         
-        # Envoi asynchrone pour éviter timeout
+        # Envoi asynchrone
         app = current_app._get_current_object()
+        print("🚀 AVANT création du thread")  # ← NOUVEAU
         thread = Thread(target=send_async_email, args=(app, msg))
+        print("🚀 Thread créé, lancement...")  # ← NOUVEAU
         thread.start()
+        print("🚀 Thread.start() appelé")  # ← NOUVEAU
         
         print(f"📧 Email mis en file d'attente pour {user_email}")
         return True
         
     except Exception as e:
         print(f"❌ ERREUR : {e}")
+        import traceback
+        traceback.print_exc()  # ← NOUVEAU pour voir la vraie erreur
         current_app.logger.error(f"Erreur: {e}")
         return False
 

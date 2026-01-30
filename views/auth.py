@@ -19,51 +19,25 @@ auth_bp = Blueprint('auth', __name__)
 def get_serializer():
     return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
 
-def send_reset_email(user_email, token):
-    """Envoie l'email avec le lien de réinitialisation."""
-    try:
-        print(f"🔍 MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
-        
-        mail = current_app.extensions.get('mail')
-        if not mail:
-            current_app.logger.error("Flask-Mail n'est pas initialisé.")
-            return False
-
-        msg = Message("Réinitialisation de votre mot de passe LabFlow",
-                      recipients=[user_email])
-        
-        reset_url = url_for('auth.reset_password', token=token, _external=True)
-        
-        msg.body = f"""Bonjour,
-
-Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LabFlow.
-
-Pour définir un nouveau mot de passe, cliquez sur le lien suivant (valable 1 heure) :
-{reset_url}
-
-Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
-
-Cordialement,
-L'équipe LabFlow
-"""
-        
-        # ENVOI SYNCHRONE POUR DÉBUGGER
-        print("📧 Envoi synchrone en cours...")
-        mail.send(msg)
-        print("✅ Email envoyé avec succès !")
-        return True
-        
-    except Exception as e:
-        print(f"❌ ERREUR COMPLÈTE : {e}")
-        import traceback
-        traceback.print_exc()
-        current_app.logger.error(f"Erreur: {e}")
-        return False
+def send_async_email(app, msg):
+    """Envoie l'email dans un thread séparé."""
+    print("🧵 THREAD DÉMARRÉ !!!")
+    with app.app_context():
+        try:
+            mail = app.extensions.get('mail')
+            print(f"📧 Envoi vers: {msg.recipients}")
+            mail.send(msg)
+            print("✅ Email envoyé en arrière-plan")
+        except Exception as e:
+            print(f"❌ Erreur mail async: {e}")
+            import traceback
+            traceback.print_exc()
+            app.logger.error(f"Erreur envoi mail: {e}")
+    print("🧵 THREAD TERMINÉ")
 
 def send_reset_email(user_email, token):
     """Envoie l'email avec le lien de réinitialisation (asynchrone)."""
     try:
-        # DEBUG
         print(f"🔍 MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
         
         mail = current_app.extensions.get('mail')
@@ -91,11 +65,11 @@ L'équipe LabFlow
         
         # Envoi asynchrone
         app = current_app._get_current_object()
-        print("🚀 AVANT création du thread")  # ← NOUVEAU
+        print("🚀 AVANT création du thread")
         thread = Thread(target=send_async_email, args=(app, msg))
-        print("🚀 Thread créé, lancement...")  # ← NOUVEAU
+        print("🚀 Thread créé, lancement...")
         thread.start()
-        print("🚀 Thread.start() appelé")  # ← NOUVEAU
+        print("🚀 Thread.start() appelé")
         
         print(f"📧 Email mis en file d'attente pour {user_email}")
         return True
@@ -103,7 +77,7 @@ L'équipe LabFlow
     except Exception as e:
         print(f"❌ ERREUR : {e}")
         import traceback
-        traceback.print_exc()  # ← NOUVEAU pour voir la vraie erreur
+        traceback.print_exc()
         current_app.logger.error(f"Erreur: {e}")
         return False
 
@@ -303,25 +277,21 @@ def profil():
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
-        print(f"🔍 DEBUG: Tentative de reset pour l'email : '{email}'") # <--- MOUCHARD 1
+        print(f"🔍 DEBUG: Tentative de reset pour l'email : '{email}'")
         
-        # 1. Vérifier si l'email existe
         user = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
         
         if user:
-            print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}") # <--- MOUCHARD 2
-            # 2. Générer le token
+            print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}")
             s = get_serializer()
             token = s.dumps(user.email, salt='password-reset-salt')
             
-            # 3. Envoyer l'email
             if send_reset_email(user.email, token):
                 flash("Un email de réinitialisation a été envoyé.", "info")
             else:
                 flash("Erreur technique lors de l'envoi.", "error")
         else:
-            print(f"⚠️ DEBUG: AUCUN utilisateur trouvé avec cet email dans la BDD.") # <--- MOUCHARD 3
-            # Sécurité : On ne dit pas si l'email existe ou non
+            print(f"⚠️ DEBUG: AUCUN utilisateur trouvé avec cet email dans la BDD.")
             flash("Si cet email existe, un lien a été envoyé.", "info")
             
         return redirect(url_for('auth.login'))
@@ -332,7 +302,6 @@ def forgot_password():
 def reset_password(token):
     try:
         s = get_serializer()
-        # Le token est valide 1 heure (3600 secondes)
         email = s.loads(token, salt='password-reset-salt', max_age=3600)
     except SignatureExpired:
         flash("Le lien de réinitialisation a expiré.", "error")
@@ -354,7 +323,6 @@ def reset_password(token):
             flash(msg, "error")
             return render_template('reset_password.html', token=token)
             
-        # Mise à jour du mot de passe
         user = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
         if user:
             user.mot_de_passe = generate_password_hash(password, method='pbkdf2:sha256')

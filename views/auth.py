@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from db import db, Utilisateur, Etablissement, Parametre
 from utils import get_etablissement_params, login_required, validate_password_strength, validate_email
 from extensions import limiter
+from threading import Thread
 
 # NOUVEAUX IMPORTS POUR L'EMAIL
 from flask_mail import Message

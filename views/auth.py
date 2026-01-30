@@ -201,3 +201,153 @@ def profil():
                     flash("Erreur lors de la mise à jour.", "error")
                 
     return render_template('profil.html', user=user)
+
+# ============================================================
+# RÃ‰INITIALISATION MOT DE PASSE
+# ============================================================
+from flask_mail import Message
+from threading import Thread
+from itsdangerous import URLSafeTimedSerializer
+
+def get_serializer():
+    """Retourne le serializer pour les tokens."""
+    return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+
+def send_async_email(app, msg):
+    """Envoie l'email dans un thread séparé."""
+    print("🧵 THREAD DÉMARRÉ !!!")
+    with app.app_context():
+        try:
+            mail = app.extensions.get('mail')
+            print(f"📧 Envoi vers: {msg.recipients}")
+            mail.send(msg)
+            print("✅ Email envoyé en arrière-plan")
+        except Exception as e:
+            print(f"❌ Erreur mail async: {e}")
+            import traceback
+            traceback.print_exc()
+            app.logger.error(f"Erreur envoi mail: {e}")
+    print("🧵 THREAD TERMINÉ")
+
+def send_reset_email(user_email, token):
+    """Envoie l'email avec le lien de réinitialisation (asynchrone)."""
+    try:
+        print(f"🔍 MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
+        
+        mail = current_app.extensions.get('mail')
+        if not mail:
+            current_app.logger.error("Flask-Mail n'est pas initialisé.")
+            return False
+
+        msg = Message("Réinitialisation de votre mot de passe LabFlow",
+                      recipients=[user_email])
+        
+        reset_url = url_for('auth.reset_password', token=token, _external=True)
+        
+        msg.body = f"""Bonjour,
+
+Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LabFlow.
+
+Pour définir un nouveau mot de passe, cliquez sur le lien suivant (valable 1 heure) :
+{reset_url}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
+
+Cordialement,
+L'équipe LabFlow
+"""
+        
+        # Envoi asynchrone
+        app = current_app._get_current_object()
+        print("🚀 AVANT création du thread")
+        thread = Thread(target=send_async_email, args=(app, msg))
+        print("🚀 Thread créé, lancement...")
+        thread.start()
+        print("🚀 Thread.start() appelé")
+        
+        print(f"📧 Email mis en file d'attente pour {user_email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ ERREUR : {e}")
+        import traceback
+        traceback.print_exc()
+        current_app.logger.error(f"Erreur: {e}")
+        return False
+
+@auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
+def forgot_password():
+    """Page de demande de réinitialisation."""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        print(f"🔍 DEBUG: Tentative de reset pour l'email : '{email}'")
+        
+        if not email:
+            flash("Veuillez saisir votre adresse email.", "error")
+            return render_template('forgot_password.html')
+        
+        user = db.session.execute(
+            db.select(Utilisateur).filter_by(email=email)
+        ).scalar_one_or_none()
+        
+        if user:
+            print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}")
+            serializer = get_serializer()
+            token = serializer.dumps(email, salt='password-reset-salt')
+            
+            if send_reset_email(email, token):
+                flash("Un email de réinitialisation a été envoyé.", "success")
+            else:
+                flash("Erreur technique lors de l'envoi.", "error")
+        else:
+            print(f"⚠️ DEBUG: Aucun utilisateur trouvé pour '{email}'")
+            flash("Un email de réinitialisation a été envoyé si ce compte existe.", "info")
+        
+        return redirect(url_for('auth.login'))
+    
+    return render_template('forgot_password.html')
+
+@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
+def reset_password(token):
+    """Page de réinitialisation avec token."""
+    try:
+        serializer = get_serializer()
+        email = serializer.loads(token, salt='password-reset-salt', max_age=3600)
+    except Exception as e:
+        current_app.logger.error(f"Token invalide: {e}")
+        flash("Le lien est invalide ou a expiré.", "error")
+        return redirect(url_for('auth.forgot_password'))
+    
+    if request.method == 'POST':
+        new_password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if new_password != confirm_password:
+            flash("Les mots de passe ne correspondent pas.", "error")
+            return render_template('reset_password.html', token=token)
+        
+        is_valid, msg = validate_password_strength(new_password)
+        if not is_valid:
+            flash(msg, "error")
+            return render_template('reset_password.html', token=token)
+        
+        user = db.session.execute(
+            db.select(Utilisateur).filter_by(email=email)
+        ).scalar_one_or_none()
+        
+        if user:
+            try:
+                user.mot_de_passe = generate_password_hash(new_password, method='pbkdf2:sha256')
+                db.session.commit()
+                flash("Mot de passe réinitialisé avec succès ! Connectez-vous.", "success")
+                return redirect(url_for('auth.login'))
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Erreur reset password: {e}")
+                flash("Erreur technique.", "error")
+        else:
+            flash("Utilisateur introuvable.", "error")
+    
+    return render_template('reset_password.html', token=token)

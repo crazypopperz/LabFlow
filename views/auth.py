@@ -18,10 +18,23 @@ auth_bp = Blueprint('auth', __name__)
 def get_serializer():
     return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
 
+def send_async_email(app, msg):
+    """Envoie l'email dans un thread séparé."""
+    with app.app_context():
+        try:
+            mail = app.extensions.get('mail')
+            mail.send(msg)
+            print("✅ Email envoyé en arrière-plan")
+        except Exception as e:
+            print(f"❌ Erreur mail async: {e}")
+            app.logger.error(f"Erreur envoi mail: {e}")
+
 def send_reset_email(user_email, token):
-    """Envoie l'email avec le lien de réinitialisation."""
+    """Envoie l'email avec le lien de réinitialisation (asynchrone)."""
     try:
-        # On récupère l'instance mail initialisée dans app.py
+        # DEBUG
+        print(f"🔍 MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
+        
         mail = current_app.extensions.get('mail')
         if not mail:
             current_app.logger.error("Flask-Mail n'est pas initialisé.")
@@ -44,12 +57,18 @@ Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
 Cordialement,
 L'équipe LabFlow
 """
-        mail.send(msg)
-        print("✅ SUCCÈS : Email envoyé à", user_email) # <--- AJOUTE CECI
+        
+        # Envoi asynchrone pour éviter timeout
+        app = current_app._get_current_object()
+        thread = Thread(target=send_async_email, args=(app, msg))
+        thread.start()
+        
+        print(f"📧 Email mis en file d'attente pour {user_email}")
         return True
+        
     except Exception as e:
-        print(f"❌ ERREUR MAIL CRITIQUE : {e}") # <--- AJOUTE CECI
-        current_app.logger.error(f"Erreur envoi mail reset: {e}")
+        print(f"❌ ERREUR : {e}")
+        current_app.logger.error(f"Erreur: {e}")
         return False
 
 # --- ROUTES EXISTANTES ---

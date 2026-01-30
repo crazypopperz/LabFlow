@@ -19,21 +19,46 @@ auth_bp = Blueprint('auth', __name__)
 def get_serializer():
     return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
 
-def send_async_email(app, msg):
-    """Envoie l'email dans un thread séparé."""
-    print("🧵 THREAD DÉMARRÉ !!!")  # ← DÉPLACE ICI, AVANT le with
-    with app.app_context():
-        try:
-            mail = app.extensions.get('mail')
-            print(f"📧 Envoi vers: {msg.recipients}")
-            mail.send(msg)
-            print("✅ Email envoyé en arrière-plan")
-        except Exception as e:
-            print(f"❌ Erreur mail async: {e}")
-            import traceback
-            traceback.print_exc()
-            app.logger.error(f"Erreur envoi mail: {e}")
-    print("🧵 THREAD TERMINÉ")
+def send_reset_email(user_email, token):
+    """Envoie l'email avec le lien de réinitialisation."""
+    try:
+        print(f"🔍 MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
+        
+        mail = current_app.extensions.get('mail')
+        if not mail:
+            current_app.logger.error("Flask-Mail n'est pas initialisé.")
+            return False
+
+        msg = Message("Réinitialisation de votre mot de passe LabFlow",
+                      recipients=[user_email])
+        
+        reset_url = url_for('auth.reset_password', token=token, _external=True)
+        
+        msg.body = f"""Bonjour,
+
+Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LabFlow.
+
+Pour définir un nouveau mot de passe, cliquez sur le lien suivant (valable 1 heure) :
+{reset_url}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
+
+Cordialement,
+L'équipe LabFlow
+"""
+        
+        # ENVOI SYNCHRONE POUR DÉBUGGER
+        print("📧 Envoi synchrone en cours...")
+        mail.send(msg)
+        print("✅ Email envoyé avec succès !")
+        return True
+        
+    except Exception as e:
+        print(f"❌ ERREUR COMPLÈTE : {e}")
+        import traceback
+        traceback.print_exc()
+        current_app.logger.error(f"Erreur: {e}")
+        return False
 
 def send_reset_email(user_email, token):
     """Envoie l'email avec le lien de réinitialisation (asynchrone)."""

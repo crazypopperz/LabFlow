@@ -63,13 +63,16 @@ Cordialement,
 L'équipe LabFlow
 """
         
-        # Envoi asynchrone
-        app = current_app._get_current_object()
-        print("🚀 AVANT création du thread")
-        thread = Thread(target=send_async_email, args=(app, msg))
-        print("🚀 Thread créé, lancement...")
-        thread.start()
-        print("🚀 Thread.start() appelé")
+        # TEST SYNCHRONE POUR DEBUG
+        print("📧 TENTATIVE ENVOI SYNCHRONE...")
+        try:
+            mail.send(msg)
+            print("✅ EMAIL ENVOYÉ AVEC SUCCÈS !")
+        except Exception as e:
+            print(f"❌ ERREUR SMTP COMPLÈTE: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
         
         print(f"📧 Email mis en file d'attente pour {user_email}")
         return True

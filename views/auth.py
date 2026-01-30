@@ -2,6 +2,7 @@
 # FICHIER : views/auth.py (Avec Récupération MDP)
 # ============================================================
 import secrets
+import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import db, Utilisateur, Etablissement, Parametre

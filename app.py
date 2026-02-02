@@ -137,6 +137,8 @@ def create_app():
                 print("✓ Migration effectuée avec succès")
             except Exception as e:
                 print(f"❌ Erreur migration: {e}")
+                import traceback
+                traceback.print_exc()
     CSRFProtect(app)
     mail.init_app(app)
     limiter.init_app(app)

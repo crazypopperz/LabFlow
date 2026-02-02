@@ -163,7 +163,7 @@ def create_app():
                 add_column('objets', 'capacite_initiale', 'FLOAT')
                 add_column('objets', 'niveau_actuel', 'FLOAT')
                 add_column('objets', 'seuil_pourcentage', 'FLOAT')
-                add_column('objets', 'niveau_requis', 'VARCHAR(50) DEFAULT \'tous\'')
+                add_column('objets', 'niveau_requis', 'VARCHAR(50)')
                 add_column('objets', 'quantite_physique', 'INTEGER')
                 add_column('objets', 'seuil', 'INTEGER')
                 add_column('objets', 'date_peremption', 'DATE')

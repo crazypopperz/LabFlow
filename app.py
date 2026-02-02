@@ -127,16 +127,59 @@ def create_app():
     init_db_app(app)
     migrate = Migrate(app, db)
     with app.app_context():
-        db.create_all()
+        from sqlalchemy import text, inspect
         
-        # Migration automatique sur Render
+        # Créer les tables si elles n'existent pas
+        db.create_all()
+        print("✅ Tables créées")
+        
+        # Migration directe des colonnes manquantes
         if os.environ.get('RENDER') or os.environ.get('DATABASE_URL'):
+            print("🔧 Démarrage migration BDD...")
+            
             try:
-                from migrate_db import migrate
-                migrate()
-                print("✓ Migration effectuée avec succès")
+                inspector = inspect(db.engine)
+                
+                # Fonction helper pour ajouter une colonne
+                def add_column(table, column, definition):
+                    try:
+                        cols = [c['name'] for c in inspector.get_columns(table)]
+                        if column not in cols:
+                            with db.engine.connect() as conn:
+                                conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {column} {definition}'))
+                                conn.commit()
+                            print(f"✅ {table}.{column} ajoutée")
+                        else:
+                            print(f"✓ {table}.{column} existe")
+                    except Exception as e:
+                        print(f"❌ Erreur {table}.{column}: {e}")
+                
+                # Migrations table utilisateurs
+                add_column('utilisateurs', 'niveau_enseignement', 'VARCHAR(50)')
+                
+                # Migrations table objets - TOUTES les colonnes
+                add_column('objets', 'type_objet', 'VARCHAR(50)')
+                add_column('objets', 'unite', 'VARCHAR(20)')
+                add_column('objets', 'capacite_initiale', 'FLOAT')
+                add_column('objets', 'niveau_actuel', 'FLOAT')
+                add_column('objets', 'seuil_pourcentage', 'FLOAT')
+                add_column('objets', 'niveau_requis', 'FLOAT')
+                add_column('objets', 'quantite_physique', 'INTEGER')
+                add_column('objets', 'seuil', 'INTEGER')
+                add_column('objets', 'date_peremption', 'DATE')
+                add_column('objets', 'image_url', 'TEXT')
+                add_column('objets', 'fds_url', 'TEXT')
+                add_column('objets', 'is_cmr', 'BOOLEAN')
+                add_column('objets', 'armoire_id', 'INTEGER')
+                add_column('objets', 'categorie_id', 'INTEGER')
+                add_column('objets', 'etablissement_id', 'INTEGER')
+                add_column('objets', 'en_commande', 'BOOLEAN')
+                add_column('objets', 'traite', 'BOOLEAN')
+                
+                print("🎉 Migration BDD terminée !")
+                
             except Exception as e:
-                print(f"❌ Erreur migration: {e}")
+                print(f"❌ ERREUR MIGRATION: {e}")
                 import traceback
                 traceback.print_exc()
     CSRFProtect(app)

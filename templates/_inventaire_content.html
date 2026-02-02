@@ -5,25 +5,12 @@
                 <th class="checkbox-column"><input type="checkbox" id="select-all-checkbox" title="Tout sélectionner"></th>
             {% endif %}
             
-            <th class="sortable {% if sort_by == 'nom' %}th-sort-{{ direction }}{% endif %}">
-                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='nom', direction='desc' if sort_by == 'nom' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Nom</a>
-            </th>
-            <th class="sortable {% if sort_by == 'quantite' %}th-sort-{{ direction }}{% endif %}">
-                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='quantite', direction='desc' if sort_by == 'quantite' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Quantité</a>
-            </th>
-            <th class="sortable {% if sort_by == 'seuil' %}th-sort-{{ direction }}{% endif %}">
-                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='seuil', direction='desc' if sort_by == 'seuil' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Seuil</a>
-            </th>
-            <th class="sortable {% if sort_by == 'date_peremption' %}th-sort-{{ direction }}{% endif %}">
-                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='date_peremption', direction='desc' if sort_by == 'date_peremption' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Péremption</a>
-            </th>
-            <th class="sortable {% if sort_by == 'categorie' %}th-sort-{{ direction }}{% endif %}">
-                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='categorie', direction='desc' if sort_by == 'categorie' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Catégorie</a>
-            </th>
-            <th class="sortable {% if sort_by == 'armoire' %}th-sort-{{ direction }}{% endif %}">
-                <a href="{{ url_for(pagination.endpoint, page=pagination.page, sort_by='armoire', direction='desc' if sort_by == 'armoire' and direction == 'asc' else 'asc', armoire_id=armoire_id, categorie_id=categorie_id, q=request.args.get('q'), etat=request.args.get('etat')) }}">Armoire</a>
-            </th>
-
+            <th class="sortable"><a href="#">Nom</a></th>
+            <th class="sortable"><a href="#">Quantité / Niveau</a></th>
+            <th class="sortable"><a href="#">Seuil</a></th>
+            <th class="sortable"><a href="#">Péremption</a></th>
+            <th class="sortable"><a href="#">Catégorie</a></th>
+            <th class="sortable"><a href="#">Armoire</a></th>
             <th>Image</th>
             <th>État</th>
             {% if session.user_id %}<th>Actions</th>{% endif %}
@@ -43,27 +30,72 @@
         {% endif %}
         
         {% if statut == 'ok' %}
-            {% if objet.quantite_disponible <= objet.seuil %}
-                {% set statut = 'stock_critique' %}
-            {% elif objet.seuil > 2 and objet.quantite_disponible <= (objet.seuil + 2) %}
-                {% set statut = 'stock_bas' %}
+            {% if objet.type_objet == 'produit' %}
+                <!-- Alerte Produit (Basée sur le %) -->
+                {% if objet.pourcentage_restant <= objet.seuil_pourcentage %}
+                    {% set statut = 'stock_critique' %}
+                {% endif %}
+            {% else %}
+                <!-- Alerte Matériel (Basée sur la quantité) -->
+                {% if objet.quantite_disponible <= objet.seuil %}
+                    {% set statut = 'stock_critique' %}
+                {% elif objet.seuil > 2 and objet.quantite_disponible <= (objet.seuil + 2) %}
+                    {% set statut = 'stock_bas' %}
+                {% endif %}
             {% endif %}
         {% endif %}
 
         <tr class="{{ 'row-perime' if perime else 'row-perime-bientot' if perime_bientot }}" data-objet-id="{{ objet.id }}">
             {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}
-                <td class="checkbox-column"><input type="checkbox" class="form-check-input objet-checkbox" value="{{ objet.id }}"></td>
+                <td class="checkbox-column"><input type="checkbox" class="form-check-input objet-checkbox" value="{{ objet.id }}" data-armoire-id="{{ objet.armoire_id }}"></td>
             {% endif %}
             
             <td data-field="nom">
-                <a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}">{{ objet.nom }}</a>
-                {% if objet.is_cmr %}
-                    <span class="badge bg-danger ms-1" title="Produit CMR"><i class="bi bi-radioactive"></i> CMR</span>
+                <div class="d-flex align-items-center">
+                    {% if objet.type_objet == 'produit' %}
+                        <span class="badge bg-info text-dark me-2" title="Produit Chimique"><i class="bi bi-droplet-fill"></i></span>
+                    {% else %}
+                        <span class="badge bg-light text-secondary border me-2" title="Matériel"><i class="bi bi-box-seam"></i></span>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('inventaire.voir_objet', objet_id=objet.id) }}" class="fw-bold text-dark text-decoration-none">
+                        {{ objet.nom }}
+                    </a>
+                    
+                    {% if objet.is_cmr %}
+                        <span class="badge bg-danger ms-2" style="font-size: 0.65rem;"><i class="bi bi-radioactive"></i> CMR</span>
+                    {% endif %}
+                </div>
+            </td>
+            
+            <td data-field="quantite">
+                {% if objet.type_objet == 'produit' %}
+                    <div class="virtual-flask-container">
+                        <div class="flask-body" title="{{ objet.pourcentage_restant }}% restant">
+                            <div class="flask-liquid 
+                                {% if objet.pourcentage_restant > 50 %}level-high
+                                {% elif objet.pourcentage_restant > 20 %}level-medium
+                                {% else %}level-low{% endif %}" 
+                                style="height: {{ objet.pourcentage_restant }}%;">
+                            </div>
+                        </div>
+                        <div class="flask-stats">
+                            <span class="flask-current fw-bold">{{ objet.niveau_actuel }} <small>{{ objet.unite }}</small></span>
+                            <span class="flask-total text-muted" style="font-size: 0.7rem;">sur {{ objet.capacite_initiale }}</span>
+                        </div>
+                    </div>
+                {% else %}
+                    <span class="fw-bold fs-5">{{ objet.quantite_physique }}</span>
                 {% endif %}
             </td>
             
-            <td data-field="quantite">{{ objet.quantite_disponible }}</td>
-            <td data-field="seuil">{{ objet.seuil }}</td>
+            <td data-field="seuil">
+                {% if objet.type_objet == 'produit' %}
+                    {{ objet.seuil_pourcentage }}%
+                {% else %}
+                    {{ objet.seuil }}
+                {% endif %}
+            </td>
             
             <td data-field="date_peremption" class="{{ 'texte-perime' if perime else 'texte-perime-bientot' if perime_bientot }}">
                 {{ objet.date_peremption.strftime('%d/%m/%Y') if objet.date_peremption else '-' }}
@@ -75,32 +107,22 @@
             <td class="image-cell">
                 <div class="image-preview-wrapper">
                     {% if objet.image_url %}
-                        {% if objet.image_url.startswith('http') %}
-                            <img src="{{ objet.image_url }}" class="image-objet-thumbnail" alt="{{ objet.nom }}" loading="lazy">
-                            <img src="{{ objet.image_url }}" class="image-objet-preview" alt="{{ objet.nom }}" loading="lazy">
-                        {% else %}
-                            <img src="{{ url_for('static', filename=objet.image_url) }}" class="image-objet-thumbnail" alt="{{ objet.nom }}" loading="lazy">
-                            <img src="{{ url_for('static', filename=objet.image_url) }}" class="image-objet-preview" alt="{{ objet.nom }}" loading="lazy">
-                        {% endif %}
+                        <img src="{{ url_for('static', filename=objet.image_url) if not objet.image_url.startswith('http') else objet.image_url }}" 
+                             class="image-objet-thumbnail" alt="Img">
+                        <img src="{{ url_for('static', filename=objet.image_url) if not objet.image_url.startswith('http') else objet.image_url }}" 
+                             class="image-objet-preview" alt="Zoom">
                     {% else %}
-                        <div class="table-image-placeholder">
-                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="m840-234-80-80v-446H314l-80-80h526q33 0 56.5 23.5T840-760v526ZM792-56l-64-64H200q-33 0-56.5-23.5T120-200v-528l-64-64 56-56 736 736-56 56ZM240-280l120-160 90 120 33-44-283-283v447h447l-80-80H240Zm297-257ZM424-424Z"/></svg>
-                        </div>
+                        <div class="table-image-placeholder"><i class="bi bi-image text-muted"></i></div>
                     {% endif %}
                 </div>
             </td>
 
-            <td data-type="alerte" data-alerte-status="{{ statut }}">
-                {% if statut == 'perime' %}
-                    <span class="texte-perime" title="Produit périmé"><i class="bi bi-x-circle-fill"></i></span>
-                {% elif statut == 'bientot' %}
-                    <span class="texte-perime-bientot" title="Expire bientôt"><i class="bi bi-exclamation-circle-fill"></i></span>
-                {% elif statut == 'stock_critique' %}
-                    <span class="text-danger" title="Stock critique"><i class="bi bi-exclamation-octagon-fill"></i></span>
-                {% elif statut == 'stock_bas' %}
-                    <span class="text-warning" title="Stock bas"><i class="bi bi-exclamation-triangle-fill"></i></span>
-                {% else %}
-                    <span class="texte-ok" title="OK"><i class="bi bi-check-circle-fill"></i></span>
+            <td data-type="alerte">
+                {% if statut == 'perime' %}<i class="bi bi-x-circle-fill text-danger" title="Périmé"></i>
+                {% elif statut == 'bientot' %}<i class="bi bi-exclamation-circle-fill text-warning" title="Bientôt périmé"></i>
+                {% elif statut == 'stock_critique' %}<i class="bi bi-exclamation-octagon-fill text-danger" title="Stock critique"></i>
+                {% elif statut == 'stock_bas' %}<i class="bi bi-exclamation-triangle-fill text-warning" title="Stock bas"></i>
+                {% else %}<i class="bi bi-check-circle-fill text-success" title="OK"></i>
                 {% endif %}
             </td>
 
@@ -108,18 +130,11 @@
             <td class="actions-cell">
                 <div class="d-flex align-items-center justify-content-end gap-2">
                     
-                    <!-- 1. BOUTON SUGGÉRER -->
-                    <button type="button" 
-                            class="btn btn-sm btn-outline-warning btn-suggest"
-                            title="Suggérer une commande"
-                            data-objet-id="{{ objet.id }}"
-                            data-objet-nom="{{ objet.nom }}"
-                            data-stock="{{ objet.quantite_physique }}"
-                            data-seuil="{{ objet.seuil }}">
+                    <button type="button" class="btn btn-sm btn-outline-warning btn-suggest"
+                            data-objet-id="{{ objet.id }}" data-objet-nom="{{ objet.nom }}">
                         <i class="bi bi-cart-plus-fill"></i>
                     </button>
 
-                    <!-- 2. BOUTON MODIFIER -->
                     <button class="btn btn-sm btn-outline-primary edit-objet-btn"
                             data-objet-id="{{ objet.id }}"
                             data-nom="{{ objet.nom }}"
@@ -129,18 +144,24 @@
                             data-categorie-id="{{ objet.categorie_id }}"
                             data-date-peremption="{{ objet.date_peremption or '' }}"
                             data-image-url="{{ objet.image_url or '' }}"
+                            data-full-image-url="{% if objet.image_url %}{% if objet.image_url.startswith('http') %}{{ objet.image_url }}{% else %}{{ url_for('static', filename=objet.image_url) }}{% endif %}{% endif %}"
                             data-fds-url="{{ objet.fds_url or '' }}"
                             data-is-cmr="{{ 'on' if objet.is_cmr else 'off' }}"
+                            data-type-objet="{{ objet.type_objet }}"
+                            data-unite="{{ objet.unite }}"
+                            data-capacite="{{ objet.capacite_initiale }}"
+                            data-niveau="{{ objet.niveau_actuel }}"
+                            data-seuil-pct="{{ objet.seuil_pourcentage }}"
+                            data-niveau-requis="{{ objet.niveau_requis }}"
                             data-bs-toggle="modal" data-bs-target="#addObjectModal"
                             title="Modifier">
                         <i class="bi bi-pencil-square"></i>
                     </button>
                     
-                    <!-- 3. BOUTON SUPPRIMER -->
                     {% if session.user_role == 'admin' %}
-                    <form class="d-inline m-0 p-0" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer définitivement l\'objet \'{{ objet.nom }}\' ? Cette action est irréversible.');">
+                    <form class="d-inline m-0 p-0" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post" onsubmit="return confirm('Supprimer définitivement ?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-sm btn-outline-danger btn-delete-objet" data-objet-nom="{{ objet.nom }}" title="Supprimer">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
                             <i class="bi bi-trash"></i>
                         </button>
                     </form>
@@ -153,3 +174,122 @@
     </tbody>
 </table>
 {% include '_pagination.html' %}
+
+<!-- SCRIPT POUR REMPLIR LA MODALE DE MODIFICATION -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editButtons = document.querySelectorAll('.edit-objet-btn');
+    const modalTitle = document.getElementById('modal-objet-title');
+    const form = document.querySelector('#addObjectModal form');
+    
+    // Éléments pour l'image
+    const imgPreviewContainer = document.getElementById('image-preview-container');
+    const imgPreview = document.getElementById('image-preview');
+    
+    function setValueIfExists(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element && value && value !== 'null' && value !== 'undefined') {
+            element.value = value;
+        } else if (element) {
+            element.value = '';
+        }
+    }
+    
+    editButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-objet-id');
+            const type = this.getAttribute('data-type-objet');
+            
+            form.action = "/modifier_objet/" + id;
+            if(modalTitle) modalTitle.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier l\'objet';
+
+            // Champs communs
+            setValueIfExists('nom', this.getAttribute('data-nom'));
+            setValueIfExists('armoire_id', this.getAttribute('data-armoire-id'));
+            setValueIfExists('categorie_id', this.getAttribute('data-categorie-id'));
+            setValueIfExists('date_peremption', this.getAttribute('data-date-peremption'));
+            document.getElementById('is_cmr').checked = (this.getAttribute('data-is-cmr') === 'on');
+            setValueIfExists('niveau_requis', this.getAttribute('data-niveau-requis'));
+
+            // --- GESTION IMAGE (RAPATRIEMENT) ---
+            const fullImgUrl = this.getAttribute('data-full-image-url');
+            if (fullImgUrl && imgPreview && imgPreviewContainer) {
+                imgPreview.src = fullImgUrl;
+                imgPreviewContainer.style.display = 'block';
+            } else if (imgPreviewContainer) {
+                imgPreviewContainer.style.display = 'none';
+            }
+            // ------------------------------------
+
+            // GESTION TYPE - POINT 5 CORRIGÉ : D'ABORD cocher les boutons et toggle, ENSUITE remplir
+            if (type === 'produit') {
+                document.getElementById('typeProduit').checked = true;
+                document.getElementById('typeMateriel').checked = false;
+                
+                // ⬇️ APPEL DU TOGGLE AVANT LE REMPLISSAGE (évite l'écrasement)
+                if(typeof toggleTypeObjetModal === 'function') {
+                    toggleTypeObjetModal();
+                }
+                
+                // MAINTENANT on remplit les valeurs
+                setValueIfExists('unite', this.getAttribute('data-unite'));
+                setValueIfExists('capacite_initiale', this.getAttribute('data-capacite'));
+                setValueIfExists('niveau_actuel', this.getAttribute('data-niveau'));
+                
+                const seuilPct = this.getAttribute('data-seuil-pct');
+                if(seuilPct) {
+                    document.getElementById('seuil_pourcentage').value = seuilPct;
+                    document.getElementById('seuil_val').innerText = seuilPct + '%';
+                }
+                
+                // POINT 3 CORRIGÉ : Bloquer la modification de la capacité totale (elle ne doit jamais changer)
+                const capaciteField = document.getElementById('capacite_initiale');
+                if (capaciteField) {
+                    capaciteField.setAttribute('readonly', 'readonly');
+                    capaciteField.style.backgroundColor = '#e9ecef';
+                    capaciteField.style.cursor = 'not-allowed';
+                    capaciteField.title = "La contenance totale ne peut pas être modifiée. Seul le niveau actuel (reste) peut changer.";
+                }
+                
+            } else {
+                document.getElementById('typeMateriel').checked = true;
+                document.getElementById('typeProduit').checked = false;
+                
+                // ⬇️ APPEL DU TOGGLE AVANT LE REMPLISSAGE
+                if(typeof toggleTypeObjetModal === 'function') {
+                    toggleTypeObjetModal();
+                }
+                
+                // MAINTENANT on remplit les valeurs
+                setValueIfExists('quantite', this.getAttribute('data-quantite'));
+                setValueIfExists('seuil', this.getAttribute('data-seuil'));
+            }
+        });
+    });
+    
+    // Reset
+    const modalEl = document.getElementById('addObjectModal');
+    if(modalEl) {
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            form.reset();
+            form.action = "{{ url_for('inventaire.ajouter_objet') }}";
+            if(modalTitle) modalTitle.innerHTML = '<i class="bi bi-box-seam-fill me-2"></i>Ajouter un élément';
+            document.getElementById('typeMateriel').checked = true;
+            
+            // Réactiver le champ capacité au reset (pour permettre l'ajout d'un nouveau produit)
+            const capaciteField = document.getElementById('capacite_initiale');
+            if (capaciteField) {
+                capaciteField.removeAttribute('readonly');
+                capaciteField.style.backgroundColor = '';
+                capaciteField.style.cursor = '';
+                capaciteField.title = '';
+            }
+            
+            // Cacher la preview image au reset
+            if(imgPreviewContainer) imgPreviewContainer.style.display = 'none';
+            
+            if(typeof toggleTypeObjetModal === 'function') toggleTypeObjetModal();
+        });
+    }
+});
+</script>

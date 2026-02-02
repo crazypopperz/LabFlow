@@ -54,7 +54,12 @@
 .objet-table tbody tr:hover { background-color: #f8f9fa; position: relative; z-index: 10; }
 
 /* Colonnes spécifiques */
-.objet-table .image-cell { width: 80px; text-align: center; overflow: visible !important; position: relative; }
+.objet-table .image-cell {
+    width: 60px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 5px;
+}
 .objet-table .actions-cell { text-align: right; white-space: nowrap; }
 .objet-table .checkbox-column { width: 40px; text-align: center; }
 
@@ -144,8 +149,13 @@
    ============================================================ */
 .image-preview-wrapper { position: relative; display: inline-block; width: 40px; height: 40px; }
 .image-objet-thumbnail {
-    width: 40px; height: 40px; object-fit: cover; border-radius: 4px;
-    border: 1px solid #dee2e6; cursor: pointer;
+    width: 40px !important;
+    height: 40px !important;
+    object-fit: contain !important; /* Coupe l'image pour remplir le carré sans déformer */
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    display: block;
+    background-color: #fff;
 }
 .table-image-placeholder {
     width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
@@ -763,4 +773,95 @@
 .mark-read-btn:hover i::before {
     content: "\f26a"; /* Code du bi-check-square */
     font-family: 'bootstrap-icons';
+}
+
+
+/* ============================================================
+   FLACON VIRTUEL (Jauge de niveau)
+   ============================================================ */
+.virtual-flask-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.flask-body {
+    position: relative;
+    width: 30px;
+    height: 40px;
+    background-color: #f8f9fa;
+    border: 2px solid #adb5bd;
+    border-radius: 0 0 8px 8px; /* Fond arrondi */
+    border-top: none; /* Ouvert en haut */
+    overflow: hidden;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+}
+
+/* Le goulot */
+.flask-body::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 2px;
+    background: #adb5bd;
+}
+
+.flask-liquid {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    transition: height 0.5s ease-in-out, background-color 0.3s ease;
+    opacity: 0.8;
+}
+
+/* Couleurs selon le niveau */
+.flask-liquid.level-high { background: linear-gradient(to top, #198754, #20c997); } /* Vert */
+.flask-liquid.level-medium { background: linear-gradient(to top, #fd7e14, #ffc107); } /* Orange */
+.flask-liquid.level-low { background: linear-gradient(to top, #dc3545, #e55353); } /* Rouge */
+
+/* Texte à côté */
+.flask-stats {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+.flask-current { font-size: 0.85rem; font-weight: 700; color: #343a40; }
+.flask-total { font-size: 0.7rem; color: #6c757d; }
+
+
+/* ============================================================
+   BADGES DE TYPE (Inventaire)
+   ============================================================ */
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    flex-shrink: 0; /* Empêche l'écrasement si le nom est long */
+    transition: transform 0.2s ease;
+}
+
+.type-badge:hover {
+    transform: scale(1.1);
+}
+
+/* Style Produit (Chimie -> Cyan/Teal) */
+.type-produit {
+    background-color: #e0f7fa;
+    color: #006064;
+    border: 1px solid #b2ebf2;
+}
+
+/* Style Matériel (Physique -> Gris/Neutre) */
+.type-materiel {
+    background-color: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
 }

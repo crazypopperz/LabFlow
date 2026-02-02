@@ -36,6 +36,16 @@ class Utilisateur(UserMixin, db.Model):
     email = db.Column(db.String(150))
     mot_de_passe = db.Column(db.String(255), nullable=False) # Hash bcrypt/scrypt
     role = db.Column(db.String(50), default='utilisateur')
+    
+    # --- NOUVEAU : GESTION DES NIVEAUX ET VALIDATION ---
+    # Niveau d'enseignement déclaré/validé
+    niveau_enseignement = db.Column(db.String(50), default='lycee') # 'college', 'lycee', 'pro', 'superieur'
+    
+    # Statut du compte : 'en_attente', 'actif', 'desactive'
+    # On met 'actif' par défaut pour ne pas bloquer tes utilisateurs actuels
+    statut_compte = db.Column(db.String(20), default='actif') 
+    # ---------------------------------------------------
+
     etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
 
 # ============================================================
@@ -62,8 +72,25 @@ class Objet(db.Model):
     __tablename__ = 'objets'
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
-    quantite_physique = db.Column(db.Integer, default=0)
-    seuil = db.Column(db.Integer, default=0)
+    
+    # --- DISTINCTION MATÉRIEL / PRODUIT ---
+    type_objet = db.Column(db.String(20), default='materiel') # 'materiel' ou 'produit'
+    
+    # Pour les produits chimiques
+    unite = db.Column(db.String(10), default='unite') # 'mL', 'L', 'g', 'kg'
+    capacite_initiale = db.Column(db.Float, default=0.0) # Quantité Totale Initiale
+    niveau_actuel = db.Column(db.Float, default=0.0) # Quantité Restante
+    
+    # --- NOUVEAU : SEUIL EN POURCENTAGE ---
+    seuil_pourcentage = db.Column(db.Integer, default=10) # Alerte si % restant <= ce nombre
+    # -------------------------------------
+
+    # Restriction d'accès
+    niveau_requis = db.Column(db.String(50), default='tous')
+
+    quantite_physique = db.Column(db.Integer, default=0) # Sera forcé à 1 pour les produits
+    seuil = db.Column(db.Integer, default=0) # Seuil en unités (pour le matériel)
+    
     date_peremption = db.Column(db.Date, nullable=True)
     image_url = db.Column(db.String(255), nullable=True)
     fds_url = db.Column(db.String(255), nullable=True)
@@ -85,6 +112,13 @@ class Objet(db.Model):
     __table_args__ = (
         db.Index('idx_objets_etablissement_categorie', 'etablissement_id', 'categorie_id'),
     )
+    
+    # Propriété calculée pour le pourcentage restant
+    @property
+    def pourcentage_restant(self):
+        if self.type_objet == 'produit' and self.capacite_initiale > 0:
+            return round((self.niveau_actuel / self.capacite_initiale) * 100)
+        return 0
 
 class Kit(db.Model):
     __tablename__ = 'kits'

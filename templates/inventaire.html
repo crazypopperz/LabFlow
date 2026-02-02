@@ -10,6 +10,23 @@
 		<div class="filter-bar-container mb-4 fade-in-down">
 			<div class="filter-bar">
 				
+				<!-- Filtre Type -->
+				<div class="filter-group">
+					<div class="filter-icon">
+						<i class="bi bi-filter-circle"></i>
+					</div>
+					<div class="filter-content">
+						<label for="filtre-type" class="filter-label">Type</label>
+						<select id="filtre-type" class="filter-select">
+							<option value="">Tous</option>
+							<option value="materiel" {% if request.args.get('type') == 'materiel' %}selected{% endif %}>Matériel</option>
+							<option value="produit" {% if request.args.get('type') == 'produit' %}selected{% endif %}>Produits Chimiques</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="filter-separator"></div>
+				
 				<!-- Filtre Armoire -->
 				<div class="filter-group">
 					<div class="filter-icon">

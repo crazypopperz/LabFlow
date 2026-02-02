@@ -83,6 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		const armoireFilter = document.getElementById('filtre-armoire');
 		const categorieFilter = document.getElementById('filtre-categorie');
 		const etatFilter = document.getElementById('filtre-etat');
+        const typeFilter = document.getElementById('filtre-type'); // <--- NOUVEAU
 		let searchTimeout;
 
 		function fetchDynamicContent(page = 1, sortBy = null, direction = null) {
@@ -106,6 +107,10 @@ document.addEventListener("DOMContentLoaded", function () {
 			if (etatFilter && etatFilter.value) {
 				params.set('etat', etatFilter.value);
 			}
+						// --- AJOUT ICI ---
+						if (typeFilter && typeFilter.value) {
+							params.set('type', typeFilter.value);
+						}
 
 			const apiUrl = `/api/inventaire?${params.toString()}`;
 
@@ -115,10 +120,14 @@ document.addEventListener("DOMContentLoaded", function () {
 				dynamicContent.innerHTML = data.html;
 				dynamicContent.dataset.sortBy = currentSortBy;
 				dynamicContent.dataset.direction = currentDirection;
+                
+                // Réattacher les écouteurs pour les nouveaux éléments (boutons modifier, etc.)
+                // Note : Comme on utilise la délégation d'événements (document.body.addEventListener), 
+                // ce n'est pas strictement nécessaire pour les clics, mais utile pour d'autres inits.
 			})
 			.catch(error => {
 				console.error("Erreur lors de la mise à jour du contenu:", error);
-				dynamicContent.innerHTML = "<p>Erreur de chargement des données. Cette fonctionnalité est peut-être en cours de migration.</p>";
+				dynamicContent.innerHTML = "<p>Erreur de chargement des données.</p>";
 			});
 		}
 
@@ -131,6 +140,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (armoireFilter) armoireFilter.addEventListener('change', () => fetchDynamicContent(1));
 		if (categorieFilter) categorieFilter.addEventListener('change', () => fetchDynamicContent(1));
 		if (etatFilter) etatFilter.addEventListener('change', () => fetchDynamicContent(1));
+        if (typeFilter) typeFilter.addEventListener('change', () => fetchDynamicContent(1)); // <--- NOUVEAU
 	}
 	
 	// =================================================================

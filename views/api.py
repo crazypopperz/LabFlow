@@ -304,6 +304,7 @@ def api_inventaire():
             'q': request.args.get('q'),
             'armoire_id': get_clean_int('armoire'),
             'categorie_id': get_clean_int('categorie'),
+            'type': request.args.get('type'),
             'etat': request.args.get('etat')
         }
         

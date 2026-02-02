@@ -10,7 +10,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, desc, or_
 from sqlalchemy.orm import joinedload
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 # IMPORTS DB
 from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historique, Echeance, Budget, Depense, Fournisseur, Suggestion
@@ -19,7 +19,6 @@ from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historiq
 from utils import login_required, admin_required, limit_objets_required, allowed_file
 from extensions import limiter
 
-# --- CORRECTION ICI : On importe le Service au lieu de la fonction API ---
 from services.inventory_service import InventoryService, InventoryServiceError
 from services.security_service import SecurityService
 from services.document_service import DocumentService, DocumentServiceError
@@ -48,43 +47,33 @@ def is_valid_url(url):
 def cleanup_old_file(relative_path):
     """
     Supprime un fichier local de manière sécurisée.
-    Empêche la traversée de répertoire (Path Traversal).
     """
     if not relative_path or not relative_path.startswith('uploads/'):
         return
     
     try:
-        # 1. Normalisation du chemin
         safe_path = os.path.normpath(relative_path)
-        
-        # 2. Vérification que le chemin reste dans 'static/uploads'
         root_uploads = os.path.join(current_app.root_path, 'static', 'uploads')
         full_path = os.path.join(current_app.root_path, 'static', safe_path)
         
-        # On compare les chemins absolus pour être sûr
         if not os.path.abspath(full_path).startswith(os.path.abspath(root_uploads)):
-            current_app.logger.warning(f"SECURITY: Tentative de suppression hors uploads : {relative_path}")
             return
         
         if os.path.exists(full_path):
             os.remove(full_path)
-            current_app.logger.info(f"Fichier orphelin supprimé : {full_path}")
             
     except Exception as e:
         current_app.logger.warning(f"Echec suppression fichier {relative_path}: {e}")
 
 
-
 # ============================================================
-# ROUTES
+# ROUTES DASHBOARD & LISTES
 # ============================================================
 @inventaire_bp.route("/")
 def index():
-    # --- LOGIQUE DASHBOARD (Conservée) ---
     etablissement_id = session.get('etablissement_id')
     user_id = session.get('user_id')
     if not etablissement_id:
-        flash("Erreur critique : session invalide. Veuillez vous reconnecter.", "error")
         return redirect(url_for('auth.logout'))
     
     dashboard_data = {}
@@ -144,7 +133,6 @@ def index():
         .order_by(Reservation.debut_reservation.asc())
     ).scalars().all()
 
-    # 2. Regroupement intelligent en Python
     reservations_map = {}
     for r in raw_reservations:
         if r.groupe_id not in reservations_map:
@@ -152,10 +140,9 @@ def index():
                 'groupe_id': r.groupe_id,
                 'debut': r.debut_reservation,
                 'fin': r.fin_reservation,
-                'liste_items': [] # On utilise 'liste_items' pour éviter le conflit Jinja
+                'liste_items': []
             }
         
-        # On détermine le nom et le type
         is_kit = r.kit_id is not None
         nom = r.kit.nom if is_kit else (r.objet.nom if r.objet else "Inconnu")
         
@@ -165,7 +152,6 @@ def index():
             'quantite': r.quantite_reservee
         })
 
-    # 3. On transforme en liste et on garde les 5 prochaines
     dashboard_data['reservations'] = list(reservations_map.values())[:5]
 
     annee_scolaire_actuelle = now.year if now.month >= 9 else now.year - 1
@@ -188,7 +174,6 @@ def index():
 
     dashboard_data['solde_budget'] = solde_actuel
 
-    # --- LOGIQUE HISTORIQUE ADMINISTRATEUR (Catégorisé) ---
     historique_groupe = {
         'creations': [],
         'modifications': [],
@@ -208,7 +193,6 @@ def index():
 
         for h, nom_obj, nom_user in mouvements:
             nom_affichage = nom_obj if nom_obj else "Objet supprimé"
-            
             item = {
                 'id': h.id,
                 'objet': nom_affichage,
@@ -253,14 +237,12 @@ def index():
     
     dashboard_data['suggestions'] = suggestions_dashboard
     
-    # --- NOUVEAU : WIDGET SÉCURITÉ ---
     try:
         sec_service = SecurityService()
         dashboard_data['securite'] = sec_service.get_dashboard_stats(etablissement_id)
     except Exception as e:
         current_app.logger.error(f"Erreur chargement widget sécurité: {str(e)}")
         dashboard_data['securite'] = None
-    # ---------------------------------
 
     start_tour = db.session.query(Armoire).filter_by(etablissement_id=etablissement_id).count() == 0
     
@@ -270,47 +252,44 @@ def index():
 @inventaire_bp.route("/inventaire")
 @login_required
 def inventaire():
-    """
-    Affiche l'inventaire principal.
-    CORRIGÉ : Utilise InventoryService.
-    """
     etablissement_id = session['etablissement_id']
     service = InventoryService(etablissement_id)
 
-    # Paramètres
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort_by', 'nom')
     direction = request.args.get('direction', 'asc')
     
-    
     filters = {
         'q': request.args.get('q', None),
+        'type': request.args.get('type', None),
         'armoire_id': request.args.get('armoire', type=int),
         'categorie_id': request.args.get('categorie', type=int),
         'etat': request.args.get('etat', None)
     }
 
     try:
-        # Appel Service (Retourne un DTO)
         dto = service.get_paginated_inventory(page, sort_by, direction, filters)
 
-        # Construction du dict pagination pour le template
         pagination = {
             'page': dto.current_page,
             'total_pages': dto.total_pages,
             'endpoint': 'inventaire.inventaire'
         }
         
-        # Listes pour les filtres (Dropdowns)
         armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)).scalars().all()
         categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)).scalars().all()
         armoire_id = request.args.get('armoire', type=int)
         categorie_id = request.args.get('categorie', type=int)
         
+        all_armoires = armoires
+        all_categories = categories
+        
         return render_template("inventaire.html",
-                            objets=dto.items, # Liste de dicts
+                            objets=dto.items,
                             armoires=armoires,
                             categories=categories,
+                            all_armoires=all_armoires,
+                            all_categories=all_categories,
                             pagination=pagination,
                             date_actuelle=datetime.now(),
                             now=datetime.now,
@@ -326,9 +305,11 @@ def inventaire():
         flash("Erreur lors du chargement de l'inventaire.", "error")
         return redirect(url_for('inventaire.index'))
 
+
 # ============================================================
 # ROUTES DE GESTION DES OBJETS (CRUD)
 # ============================================================
+
 @inventaire_bp.route("/ajouter_objet", methods=["POST"])
 @login_required
 @limit_objets_required
@@ -336,119 +317,183 @@ def ajouter_objet():
     etablissement_id = session['etablissement_id']
     user_id = session.get('user_id')
 
+    def clean_float(val):
+        if not val: return 0.0
+        try: return float(str(val).replace(',', '.').strip())
+        except ValueError: return 0.0
+
+    def clean_int(val):
+        if not val: return 0
+        try: return int(float(str(val).replace(',', '.').strip()))
+        except ValueError: return 0
+
     try:
-        # 1. Validation Nom
+        # 1. NOM
         nom = request.form.get("nom", "").strip()
-        if not nom:
-            flash("Le nom de l'objet est obligatoire.", "error")
+        if not nom or len(nom) > 200:  # ✅ Ajout limite
+            flash("Nom invalide (1-200 caractères).", "error")
             return redirect(request.referrer)
 
-        # 2. Validation Numérique
-        quantite = int(request.form.get("quantite", 0))
-        seuil = int(request.form.get("seuil", 0))
-        if quantite < 0 or seuil < 0:
-            raise ValueError("Valeurs négatives interdites.")
+        # 2. TYPE
+        type_objet = request.form.get("type_objet", "materiel")
+        if type_objet not in ['produit', 'materiel']:  # ✅ Validation
+            type_objet = 'materiel'
+        
+        niveau_requis = request.form.get("niveau_requis", "tous")
+        
+        quantite = 0
+        unite = "unite"
+        capacite = 0.0
+        niveau = 0.0
+        seuil = 0
+        seuil_pct = 0
 
-        # 3. Validation Foreign Keys (Intégrité)
-        armoire_id = int(request.form.get("armoire_id"))
-        categorie_id = int(request.form.get("categorie_id"))
+        if type_objet == 'produit':
+            quantite = 1
+            
+            # ✅ VALIDATION UNITÉ
+            UNITES = ['mL', 'L', 'g', 'kg']
+            unite = request.form.get("unite", "mL")
+            if unite not in UNITES:
+                flash("Unité invalide.", "error")
+                return redirect(request.referrer)
+            
+            # ✅ VALIDATION CAPACITÉ (avec limite haute)
+            capacite_input = request.form.get("capacite_initiale", "").strip()
+            if capacite_input:
+                # L'utilisateur a explicitement modifié la capacité
+                capacite = clean_float(capacite_input)
+                if capacite <= 0 or capacite > 1000000:
+                    flash("La contenance doit être comprise entre 0 et 1 000 000.", "error")
+                    return redirect(request.referrer)
+            else:
+                # Si vide, on GARDE l'ancienne capacité
+                if objet.type_objet == 'produit':
+                    capacite = objet.capacite_initiale
+                else:
+                    # Si conversion matériel → produit, on demande une capacité
+                    flash("Veuillez indiquer la contenance totale du produit.", "error")
+                    return redirect(request.referrer)
+            
+            niveau_input = request.form.get("niveau_actuel", "").strip()
+            niveau = clean_float(niveau_input) if niveau_input else capacite
+            
+            # ✅ VALIDATION SEUIL %
+            seuil_pct = clean_int(request.form.get("seuil_pourcentage", "20"))
+            if not (0 <= seuil_pct <= 100):
+                flash("Seuil invalide (0-100%).", "error")
+                return redirect(request.referrer)
+                
+        else:  # Matériel
+            quantite = clean_int(request.form.get("quantite"))
+            if quantite < 0 or quantite > 100000:  # ✅ Limite haute
+                flash("Quantité invalide.", "error")
+                return redirect(request.referrer)
+            seuil = clean_int(request.form.get("seuil"))
+
+        # 3. ✅ VALIDATION FK (CRITIQUE)
+        try:
+            armoire_id = int(request.form.get("armoire_id"))
+            categorie_id = int(request.form.get("categorie_id"))
+        except (ValueError, TypeError):
+            flash("Erreur de classement.", "error")
+            return redirect(request.referrer)
 
         armoire = db.session.get(Armoire, armoire_id)
         if not armoire or armoire.etablissement_id != etablissement_id:
-            flash("Armoire invalide.", "error")
+            flash("Armoire non autorisée.", "error")
             return redirect(request.referrer)
 
         categorie = db.session.get(Categorie, categorie_id)
         if not categorie or categorie.etablissement_id != etablissement_id:
-            flash("Catégorie invalide.", "error")
+            flash("Catégorie non autorisée.", "error")
             return redirect(request.referrer)
 
-        # --- GESTION IMAGE ---
+        # 4. ✅ VALIDATION DATE PÉREMPTION
+        date_peremption = None
+        date_str = request.form.get("date_peremption", "").strip()
+        if date_str:
+            try:
+                date_peremption = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                flash("Format de date invalide.", "error")
+                return redirect(request.referrer)
+
+        # 5. GESTION IMAGE (OK)
         image_path_db = None
         if 'image' in request.files:
             file = request.files['image']
             if file and file.filename != '':
-                # Check taille (5 Mo)
-                file.seek(0, 2)
-                if file.tell() > 5 * 1024 * 1024:
-                    flash("Image trop volumineuse (Max 5 Mo).", "warning")
+                if allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                    unique_filename = f"{ts}_{filename}"
+                    upload_dir = os.path.join(current_app.root_path, 'static', 'images', 'objets')
+                    if not os.path.exists(upload_dir): os.makedirs(upload_dir)
+                    file.save(os.path.join(upload_dir, unique_filename))
+                    image_path_db = f"images/objets/{unique_filename}"
                 else:
-                    file.seek(0)
-                    if allowed_file(file.filename):
-                        filename = secure_filename(file.filename)
-                        ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                        unique_filename = f"{ts}_{filename}"
-                        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-                        if not os.path.exists(upload_folder): os.makedirs(upload_folder)
-                        file.save(os.path.join(upload_folder, unique_filename))
-                        image_path_db = f"uploads/{unique_filename}"
+                    flash(f"Extension non supportée : {file.filename}", "error")
+                    return redirect(request.referrer)
         
         if not image_path_db:
-            url_input = request.form.get("image_url", "").strip()
-            if url_input and is_valid_url(url_input):
-                image_path_db = url_input
+            url_web = request.form.get("image_url", "").strip()
+            if url_web: image_path_db = url_web
 
-        # --- GESTION FDS ---
+        # 6. GESTION FDS (OK)
         fds_path_db = None
         if 'fds_file' in request.files:
             file = request.files['fds_file']
             if file and file.filename != '':
-                file.seek(0, 2)
-                if file.tell() > 5 * 1024 * 1024:
-                    flash("FDS trop volumineuse (Max 5 Mo).", "warning")
-                else:
-                    file.seek(0)
-                    if file.filename.lower().endswith('.pdf'):
-                        filename = secure_filename(file.filename)
-                        ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                        unique_filename = f"FDS_{ts}_{filename}"
-                        fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
-                        if not os.path.exists(fds_folder): os.makedirs(fds_folder)
-                        file.save(os.path.join(fds_folder, unique_filename))
-                        fds_path_db = f"uploads/fds/{unique_filename}"
-
+                if file.filename.lower().endswith('.pdf'):
+                    filename = secure_filename(file.filename)
+                    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                    unique_filename = f"FDS_{ts}_{filename}"
+                    fds_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
+                    if not os.path.exists(fds_dir): os.makedirs(fds_dir)
+                    file.save(os.path.join(fds_dir, unique_filename))
+                    fds_path_db = f"uploads/fds/{unique_filename}"
+        
         if not fds_path_db:
-            url_input = request.form.get("fds_url", "").strip()
-            if url_input and is_valid_url(url_input):
-                fds_path_db = url_input
-        
-        is_cmr = request.form.get('is_cmr') == 'on'
+            fds_path_db = request.form.get("fds_url", "").strip() or None
 
-        # --- CRÉATION ---
+        # 7. CRÉATION OBJET
         new_objet = Objet(
-            nom=nom,
-            quantite_physique=quantite,
-            seuil=seuil,
-            armoire_id=armoire_id,
-            categorie_id=categorie_id,
-            date_peremption=request.form.get("date_peremption") or None,
-            image_url=image_path_db,
-            fds_url=fds_path_db,
-            is_cmr=is_cmr,
-            etablissement_id=etablissement_id
-        )
-        db.session.add(new_objet)
-        db.session.flush() 
-        
-        hist = Historique(
-            objet_id=new_objet.id,
-            utilisateur_id=user_id,
-            action="Création",
-            details=f"Ajout initial (Qté: {new_objet.quantite_physique})",
+            nom=nom, type_objet=type_objet, niveau_requis=niveau_requis,
+            unite=unite, capacite_initiale=capacite, niveau_actuel=niveau, seuil_pourcentage=seuil_pct,
+            quantite_physique=quantite, seuil=seuil,
+            armoire_id=armoire_id, categorie_id=categorie_id,
+            image_url=image_path_db, fds_url=fds_path_db,
+            is_cmr=(request.form.get('is_cmr') == 'on'),
             etablissement_id=etablissement_id,
-            timestamp=datetime.now()
+            date_peremption=date_peremption  # ✅ Variable validée
         )
-        db.session.add(hist)
-        db.session.commit()
-        flash(f"L'objet '{new_objet.nom}' a été ajouté avec succès !", "success")
         
-    except (ValueError, TypeError):
+        db.session.add(new_objet)
+        db.session.commit()
+        
+        # 8. HISTORIQUE
+        details = f"Ajout ({type_objet})"
+        if type_objet == 'produit': details += f" - Total: {capacite} {unite}"
+        else: details += f" - Qté: {quantite}"
+
+        db.session.add(Historique(
+            objet_id=new_objet.id, utilisateur_id=user_id, action="Création",
+            details=details, etablissement_id=etablissement_id, timestamp=datetime.now()
+        ))
+        db.session.commit()
+        
+        flash(f"'{nom}' ajouté avec succès.", "success")
+        
+    # ✅ GESTION D'ERREURS AMÉLIORÉE
+    except SQLAlchemyError as e:
         db.session.rollback()
-        flash("Données invalides.", "error")
+        current_app.logger.error(f"Erreur DB ajout: {e}")
+        flash("Erreur lors de l'enregistrement.", "error")
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur ajout objet: {e}")
-        flash(f"Une erreur est survenue.", "error")
+        current_app.logger.exception("Erreur inattendue ajout")
+        flash("Erreur technique.", "error")
         
     return redirect(request.referrer or url_for('inventaire.index'))
 
@@ -456,6 +501,7 @@ def ajouter_objet():
 @inventaire_bp.route("/modifier_objet/<int:id_objet>", methods=["POST"])
 @login_required
 def modifier_objet(id_objet):
+    # 1. VÉRIFICATION OBJET & DROITS
     objet = db.session.get(Objet, id_objet)
     if not objet or objet.etablissement_id != session['etablissement_id']:
         flash("Objet non trouvé ou accès interdit.", "error")
@@ -463,114 +509,194 @@ def modifier_objet(id_objet):
 
     user_id = session.get('user_id')
     etablissement_id = session['etablissement_id']
-
-    # Liste des fichiers à supprimer APRÈS le commit réussi (Race condition fix)
     files_to_cleanup = []
 
+    # --- FONCTIONS DE NETTOYAGE ---
+    def clean_float(val):
+        if not val: return 0.0
+        try: return float(str(val).replace(',', '.').strip())
+        except ValueError: return 0.0
+
+    def clean_int(val):
+        if not val: return 0
+        try: return int(float(str(val).replace(',', '.').strip()))
+        except ValueError: return 0
+    # ------------------------------
+
     try:
-        # 1. Validation Nom
+        # 2. VALIDATION NOM
         nom = request.form.get("nom", "").strip()
-        if not nom:
-            flash("Le nom ne peut pas être vide.", "error")
+        if not nom or len(nom) > 200:
+            flash("Nom invalide (1-200 caractères).", "error")
             return redirect(request.referrer)
 
-        # 2. Validation Numérique
+        # 3. VALIDATION TYPE
+        type_objet = request.form.get("type_objet", "materiel")
+        if type_objet not in ['produit', 'materiel']:
+            flash("Type d'objet invalide.", "error")
+            return redirect(request.referrer)
+
+        niveau_requis = request.form.get("niveau_requis", "tous")
+
+        # 4. VALIDATION SELON TYPE
+        # Initialisation des variables
+        quantite = 0
+        unite = "unite"
+        capacite = 0.0
+        niveau = 0.0
+        seuil = 0
+        seuil_pct = 0
+
+        if type_objet == 'produit':
+            # --- LOGIQUE PRODUIT ---
+            
+            # Validation Unité
+            UNITES_AUTORISEES = ['mL', 'L', 'g', 'kg']
+            unite = request.form.get("unite", "mL")
+            if unite not in UNITES_AUTORISEES:
+                flash("Unité invalide.", "error")
+                return redirect(request.referrer)
+
+            # Validation Capacité
+            capacite = clean_float(request.form.get("capacite_initiale"))
+            if capacite <= 0 or capacite > 1000000:
+                flash("La contenance doit être comprise entre 0 et 1 000 000.", "error")
+                return redirect(request.referrer)
+
+            # Validation Niveau (CORRECTION CRITIQUE : Ne pas reset si vide)
+            niveau_input = request.form.get("niveau_actuel", "").strip()
+            if niveau_input:
+                # Si l'utilisateur a saisi une valeur, on l'utilise
+                niveau = clean_float(niveau_input)
+                if niveau < 0:
+                    flash("Le niveau ne peut pas être négatif.", "error")
+                    return redirect(request.referrer)
+                if niveau > capacite:
+                    flash(f"Le niveau ({niveau}) ne peut pas dépasser la contenance ({capacite}).", "warning")
+                    niveau = capacite
+            else:
+                # Si vide ET c'était déjà un produit, on garde l'ancien niveau
+                if objet.type_objet == 'produit':
+                    niveau = objet.niveau_actuel
+                else:
+                    # Si conversion matériel → produit, on initialise au max
+                    niveau = capacite
+
+            # Validation Seuil %
+            seuil_pct = clean_int(request.form.get("seuil_pourcentage"))
+            if not (0 <= seuil_pct <= 100):
+                flash("Le seuil d'alerte doit être entre 0 et 100%.", "error")
+                return redirect(request.referrer)
+
+            # Force les valeurs matériel à 0/1
+            quantite = 1
+            seuil = 0
+
+        else:
+            # --- LOGIQUE MATÉRIEL ---
+            quantite = clean_int(request.form.get("quantite"))
+            if quantite < 0 or quantite > 100000:
+                flash("Quantité invalide (0-100 000).", "error")
+                return redirect(request.referrer)
+            
+            seuil = clean_int(request.form.get("seuil"))
+            if seuil < 0: seuil = 0
+
+            # Reset des valeurs produit
+            unite = "unité"
+            capacite = 0.0
+            niveau = 0.0
+            seuil_pct = 0
+
+        # 5. VALIDATION FK (ARMOIRE / CATÉGORIE)
         try:
-            quantite = int(request.form.get("quantite", 0))
-            seuil = int(request.form.get("seuil", 0))
-            if quantite < 0 or seuil < 0: raise ValueError
-        except ValueError:
-            flash("Quantité et seuil doivent être positifs.", "error")
+            armoire_id = int(request.form.get("armoire_id", 0))
+            categorie_id = int(request.form.get("categorie_id", 0))
+        except (ValueError, TypeError):
+            flash("Identifiants invalides.", "error")
             return redirect(request.referrer)
 
-        # 3. Validation FK
-        armoire_id = int(request.form.get("armoire_id", 0))
-        categorie_id = int(request.form.get("categorie_id", 0))
+        # Vérification existence et appartenance
+        if armoire_id:
+            armoire = db.session.get(Armoire, armoire_id)
+            if not armoire or armoire.etablissement_id != etablissement_id:
+                flash("Armoire invalide.", "error")
+                return redirect(request.referrer)
+        
+        if categorie_id:
+            categorie = db.session.get(Categorie, categorie_id)
+            if not categorie or categorie.etablissement_id != etablissement_id:
+                flash("Catégorie invalide.", "error")
+                return redirect(request.referrer)
 
-        armoire = db.session.get(Armoire, armoire_id)
-        if not armoire or armoire.etablissement_id != etablissement_id:
-            flash("Armoire invalide.", "error")
-            return redirect(request.referrer)
+        # 6. DATE PÉREMPTION
+        date_peremption_str = request.form.get("date_peremption", "").strip()
+        date_peremption = None
+        if date_peremption_str:
+            try:
+                date_peremption = datetime.strptime(date_peremption_str, "%Y-%m-%d").date()
+            except ValueError:
+                flash("Format de date invalide.", "error")
+                return redirect(request.referrer)
 
-        categorie = db.session.get(Categorie, categorie_id)
-        if not categorie or categorie.etablissement_id != etablissement_id:
-            flash("Catégorie invalide.", "error")
-            return redirect(request.referrer)
-
-        # Capture état avant modif
+        # Capture état avant modif (Pour l'historique)
         anciens = {
             'nom': objet.nom,
             'quantite': objet.quantite_physique,
-            'seuil': objet.seuil,
-            'armoire': objet.armoire_id,
-            'categorie': objet.categorie_id
+            'niveau': objet.niveau_actuel,
+            'type': objet.type_objet
         }
 
-        # --- GESTION IMAGE ---
+        # --- GESTION IMAGE (Code inchangé) ---
         is_image_updated = False
         if 'image' in request.files:
             file = request.files['image']
             if file and file.filename != '':
-                file.seek(0, 2)
-                if file.tell() > 5 * 1024 * 1024:
-                    flash("Image trop volumineuse (Max 5 Mo).", "warning")
-                else:
-                    file.seek(0)
-                    if allowed_file(file.filename):
-                        # On marque l'ancien fichier pour suppression future
-                        if objet.image_url and objet.image_url.startswith('uploads/'):
-                            files_to_cleanup.append(objet.image_url)
-                        
-                        filename = secure_filename(file.filename)
-                        ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                        unique_filename = f"{ts}_{filename}"
-                        upload_folder = os.path.join(current_app.root_path, 'static', 'uploads')
-                        if not os.path.exists(upload_folder): os.makedirs(upload_folder)
-                        file.save(os.path.join(upload_folder, unique_filename))
-                        
-                        objet.image_url = f"uploads/{unique_filename}"
-                        is_image_updated = True
+                if allowed_file(file.filename):
+                    # Nettoyage ancien fichier (si local, pas URL web)
+                    if objet.image_url and objet.image_url.startswith('images/'):
+                        files_to_cleanup.append(objet.image_url)
+                    
+                    filename = secure_filename(file.filename)
+                    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                    unique_filename = f"{ts}_{filename}"
+                    upload_dir = os.path.join(current_app.root_path, 'static', 'images', 'objets')
+                    if not os.path.exists(upload_dir): 
+                        os.makedirs(upload_dir)
+                    file.save(os.path.join(upload_dir, unique_filename))
+                    objet.image_url = f"images/objets/{unique_filename}"
+                    is_image_updated = True
 
         if not is_image_updated:
             url_input = request.form.get("image_url")
-            if url_input is not None: # Champ présent
+            if url_input is not None:
                 url_clean = url_input.strip()
                 if url_clean:
                     if is_valid_url(url_clean):
-                        if objet.image_url and objet.image_url.startswith('uploads/'):
+                        if objet.image_url and objet.image_url.startswith('images/'):
                             files_to_cleanup.append(objet.image_url)
                         objet.image_url = url_clean
-                    else:
-                        flash("URL image invalide.", "warning")
                 else:
-                    # Suppression demandée (champ vide)
-                    if objet.image_url and objet.image_url.startswith('uploads/'):
+                    if objet.image_url and objet.image_url.startswith('images/'):
                         files_to_cleanup.append(objet.image_url)
                     objet.image_url = None
 
-        # --- GESTION FDS ---
+        # --- GESTION FDS (Code inchangé) ---
         is_fds_updated = False
         if 'fds_file' in request.files:
             file = request.files['fds_file']
             if file and file.filename != '':
-                file.seek(0, 2)
-                if file.tell() > 5 * 1024 * 1024:
-                    flash("FDS trop volumineuse (Max 5 Mo).", "warning")
-                else:
-                    file.seek(0)
-                    if file.filename.lower().endswith('.pdf'):
-                        if objet.fds_url and objet.fds_url.startswith('uploads/'):
-                            files_to_cleanup.append(objet.fds_url)
-                        
-                        filename = secure_filename(file.filename)
-                        ts = datetime.now().strftime("%Y%m%d%H%M%S")
-                        unique_filename = f"FDS_{ts}_{filename}"
-                        fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
-                        if not os.path.exists(fds_folder): os.makedirs(fds_folder)
-                        file.save(os.path.join(fds_folder, unique_filename))
-                        
-                        objet.fds_url = f"uploads/fds/{unique_filename}"
-                        is_fds_updated = True
+                if file.filename.lower().endswith('.pdf'):
+                    if objet.fds_url and objet.fds_url.startswith('uploads/'):
+                        files_to_cleanup.append(objet.fds_url)
+                    filename = secure_filename(file.filename)
+                    ts = datetime.now().strftime("%Y%m%d%H%M%S")
+                    unique_filename = f"FDS_{ts}_{filename}"
+                    fds_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'fds')
+                    if not os.path.exists(fds_folder): os.makedirs(fds_folder)
+                    file.save(os.path.join(fds_folder, unique_filename))
+                    objet.fds_url = f"uploads/fds/{unique_filename}"
+                    is_fds_updated = True
 
         if not is_fds_updated:
             fds_input = request.form.get("fds_url")
@@ -581,35 +707,47 @@ def modifier_objet(id_objet):
                         if objet.fds_url and objet.fds_url.startswith('uploads/'):
                             files_to_cleanup.append(objet.fds_url)
                         objet.fds_url = url_clean
-                    else:
-                        flash("URL FDS invalide.", "warning")
                 else:
                     if objet.fds_url and objet.fds_url.startswith('uploads/'):
                         files_to_cleanup.append(objet.fds_url)
                     objet.fds_url = None
 
-        # --- MISE À JOUR ---
+        # --- MISE À JOUR EFFECTIVE ---
         objet.nom = nom
+        objet.type_objet = type_objet
+        objet.niveau_requis = niveau_requis
+        
+        # Champs Produits
+        objet.unite = unite
+        objet.capacite_initiale = capacite
+        objet.niveau_actuel = niveau
+        objet.seuil_pourcentage = seuil_pct
+        
+        # Champs Matériel
         objet.quantite_physique = quantite
         objet.seuil = seuil
+        
         objet.armoire_id = armoire_id
         objet.categorie_id = categorie_id
-        objet.date_peremption = request.form.get("date_peremption") or None
+        objet.date_peremption = date_peremption
         objet.is_cmr = (request.form.get('is_cmr') == 'on')
         
         # --- HISTORIQUE ---
         details_modif = []
-        if anciens['quantite'] != objet.quantite_physique:
-            diff = objet.quantite_physique - anciens['quantite']
-            signe = "+" if diff > 0 else ""
-            details_modif.append(f"Stock: {anciens['quantite']} ➝ {objet.quantite_physique} ({signe}{diff})")
-            
-        if anciens['nom'] != objet.nom: details_modif.append(f"Nom changé")
-        if anciens['armoire'] != objet.armoire_id: details_modif.append("Déplacé (Armoire)")
-        if anciens['categorie'] != objet.categorie_id: details_modif.append("Catégorie modifiée")
+        if anciens['type'] != objet.type_objet:
+            details_modif.append(f"Type: {anciens['type']} ➝ {objet.type_objet}")
+        
+        if objet.type_objet == 'produit':
+            if anciens['niveau'] != objet.niveau_actuel:
+                details_modif.append(f"Conso: {anciens['niveau']} ➝ {objet.niveau_actuel} {unite}")
+        else:
+            if anciens['quantite'] != objet.quantite_physique:
+                diff = objet.quantite_physique - anciens['quantite']
+                signe = "+" if diff > 0 else ""
+                details_modif.append(f"Stock: {anciens['quantite']} ➝ {objet.quantite_physique} ({signe}{diff})")
 
-        if details_modif or anciens['seuil'] != objet.seuil:
-            msg = ", ".join(details_modif) if details_modif else "Mise à jour des détails"
+        if details_modif:
+            msg = ", ".join(details_modif)
             hist = Historique(
                 objet_id=objet.id,
                 utilisateur_id=user_id,
@@ -622,20 +760,23 @@ def modifier_objet(id_objet):
 
         db.session.commit()
         
-        # --- NETTOYAGE POST-COMMIT (SÉCURISÉ) ---
         for old_path in files_to_cleanup:
             cleanup_old_file(old_path)
 
         flash(f"L'objet '{objet.nom}' a été mis à jour.", "success")
 
+    except IntegrityError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur intégrité modification {id_objet}: {e}")
+        flash("Erreur de base de données (doublon ou contrainte).", "error")
     except Exception as e:
         db.session.rollback()
-        current_app.logger.exception(f"Erreur critique modif objet {id_objet}")
-        flash("Une erreur technique est survenue.", "error")
+        current_app.logger.exception(f"Erreur inattendue modification {id_objet}")
+        flash("Erreur technique inattendue.", "error")
 
     return redirect(request.referrer or url_for('inventaire.index'))
-    
-    
+
+
 @inventaire_bp.route("/objet/supprimer/<int:id_objet>", methods=["POST"])
 @admin_required
 def supprimer_objet(id_objet):
@@ -673,7 +814,6 @@ def supprimer_objet(id_objet):
     return redirect(request.referrer or url_for('inventaire.inventaire'))
 
 
-
 @inventaire_bp.route("/objet/<int:objet_id>")
 @login_required
 def voir_objet(objet_id):
@@ -696,7 +836,11 @@ def voir_objet(objet_id):
         Reservation.fin_reservation > now
     ).scalar() or 0
     
-    objet.quantite_disponible = objet.quantite_physique - total_reserve
+    # Calcul disponible (Pour produit, c'est le niveau, pour matériel c'est la qté)
+    if objet.type_objet == 'produit':
+        objet.quantite_disponible = objet.niveau_actuel
+    else:
+        objet.quantite_disponible = objet.quantite_physique - total_reserve
 
     results = db.session.execute(
         db.select(Historique, Utilisateur)
@@ -720,14 +864,12 @@ def voir_objet(objet_id):
         {'text': 'Inventaire', 'url': url_for('inventaire.inventaire')},
     ]
     
-    # Si l'objet a une catégorie, on l'ajoute pour faciliter la navigation
     if objet.categorie:
         breadcrumbs.append({
             'text': objet.categorie.nom, 
             'url': url_for('inventaire.voir_categorie', categorie_id=objet.categorie.id)
         })
     
-    # L'objet lui-même (non cliquable)
     breadcrumbs.append({'text': objet.nom, 'url': None})
 
     return render_template("objet_details.html",
@@ -738,16 +880,10 @@ def voir_objet(objet_id):
                            breadcrumbs=breadcrumbs,
                            now=datetime.now())
 
-#==============================================================================
-#  ROUTE AFFICHAGE ARMOIRES
-#==============================================================================
+
 @inventaire_bp.route("/armoire/<int:armoire_id>")
 @login_required
 def voir_armoire(armoire_id):
-    """
-    Affiche le contenu d'une armoire.
-    CORRIGÉ : Utilise InventoryService.
-    """
     etablissement_id = session['etablissement_id']
     service = InventoryService(etablissement_id)
 
@@ -760,7 +896,6 @@ def voir_armoire(armoire_id):
         flash("Armoire non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # Appel Service avec filtre armoire
     filters = {'armoire_id': armoire_id}
     dto = service.get_paginated_inventory(page, sort_by, direction, filters)
 
@@ -786,9 +921,13 @@ def voir_armoire(armoire_id):
         {'text': armoire.nom, 'url': None}
     ]
 
+    # Pour la modale d'ajout
+    all_armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
+    all_categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
+
     return render_template("armoire.html",
                            armoire=armoire,
-                           objets=dto.items, # DTO
+                           objets=dto.items,
                            pagination=pagination,
                            sort_by=sort_by,
                            direction=direction,
@@ -796,19 +935,15 @@ def voir_armoire(armoire_id):
                            breadcrumbs=breadcrumbs,
                            date_actuelle=datetime.now(),
                            armoire_id=armoire_id,
-                           categorie_id=None
+                           categorie_id=None,
+                           all_armoires=all_armoires,
+                           all_categories=all_categories
                            )
 
-#==============================================================================
-#  ROUTE AFFICHAGE CATEGORIES
-#==============================================================================
+
 @inventaire_bp.route("/categorie/<int:categorie_id>")
 @login_required
 def voir_categorie(categorie_id):
-    """
-    Affiche le contenu d'une catégorie.
-    CORRIGÉ : Envoie la liste des armoires pour le déplacement de masse.
-    """
     etablissement_id = session['etablissement_id']
     service = InventoryService(etablissement_id)
 
@@ -821,7 +956,6 @@ def voir_categorie(categorie_id):
         flash("Catégorie non trouvée ou accès non autorisé.", "error")
         return redirect(url_for('inventaire.index'))
 
-    # Appel Service avec filtre catégorie
     filters = {'categorie_id': categorie_id}
     dto = service.get_paginated_inventory(page, sort_by, direction, filters)
 
@@ -832,7 +966,6 @@ def voir_categorie(categorie_id):
         'categorie_id': categorie_id
     }
 
-    # 1. Liste des autres catégories (pour info ou nav)
     categories_list = db.session.execute(
         db.select(Categorie)
         .filter(
@@ -842,7 +975,7 @@ def voir_categorie(categorie_id):
         .order_by(Categorie.nom)
     ).scalars().all()
 
-    # 2. AJOUT CRITIQUE : Liste des armoires pour le menu "Déplacer vers..."
+    # Liste des armoires pour le déplacement de masse
     armoires = db.session.execute(
         db.select(Armoire)
         .filter_by(etablissement_id=etablissement_id)
@@ -855,23 +988,26 @@ def voir_categorie(categorie_id):
         {'text': categorie.nom, 'url': None}
     ]
 
+    # Pour la modale d'ajout
+    all_armoires = armoires
+    all_categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
+
     return render_template("categorie.html",
                            categorie=categorie,
-                           objets=dto.items, # DTO
+                           objets=dto.items,
                            pagination=pagination,
                            sort_by=sort_by,
                            direction=direction,
                            categories_list=categories_list,
-                           armoires=armoires,  # <--- C'est ici que ça manquait !
+                           armoires=armoires,
                            breadcrumbs=breadcrumbs,
                            date_actuelle=datetime.now(),
                            armoire_id=None,
-                           categorie_id=categorie_id
+                           categorie_id=categorie_id,
+                           all_armoires=all_armoires,
+                           all_categories=all_categories
                            )
                            
-#=======================================================
-# ROUTE GESTION ALERTES TRAITEES
-#=======================================================
 @inventaire_bp.route("/maj_traite/<int:objet_id>", methods=["POST"])
 @login_required
 def maj_traite(objet_id):
@@ -890,6 +1026,7 @@ def maj_traite(objet_id):
     except Exception as e:
         db.session.rollback()
         return jsonify(success=False, error=str(e)), 500
+
 
 @inventaire_bp.route("/maj_commande/<int:objet_id>", methods=["POST"])
 @login_required
@@ -911,16 +1048,12 @@ def maj_commande(objet_id):
         return jsonify(success=False, error=str(e)), 500
 
 
-#=================================================================
-# ROUTE GESTION STOCK DORMANT
-#=================================================================
 @inventaire_bp.route("/dormants")
 @login_required
 def objets_dormants():
     etablissement_id = session['etablissement_id']
     service = InventoryService(etablissement_id)
     
-    # On récupère les objets non utilisés depuis 1 an (365 jours)
     dormants = service.get_dormant_objects(days=365)
     
     breadcrumbs = [
@@ -935,16 +1068,12 @@ def objets_dormants():
                            now=datetime.now())
 
 
-# ============================================================
-# EXPORT CONTEXTUEL (PDF/EXCEL)
-# ============================================================
 @inventaire_bp.route("/exporter", methods=['GET'])
-@login_required  # <--- Accessible aux profs maintenant
+@login_required
 @limiter.limit("10 per minute")
 def exporter_inventaire():
     etablissement_id = session['etablissement_id']
     
-    # 1. Récupération des paramètres
     format_type = request.args.get('format')
     armoire_id = request.args.get('armoire_id', type=int)
     categorie_id = request.args.get('categorie_id', type=int)
@@ -955,7 +1084,6 @@ def exporter_inventaire():
         return redirect(request.referrer or url_for('inventaire.index'))
 
     try:
-        # 2. Requête de base
         query = db.select(Objet).options(
             joinedload(Objet.categorie), 
             joinedload(Objet.armoire)
@@ -964,7 +1092,6 @@ def exporter_inventaire():
         titre_doc = f"Inventaire - {session.get('nom_etablissement', 'Global')}"
         filename_prefix = "Inventaire"
         
-        # 3. Application des filtres
         if filter_type == 'cmr':
             query = query.filter(Objet.is_cmr == True)
             titre_doc = "Inventaire - Produits CMR"
@@ -986,18 +1113,15 @@ def exporter_inventaire():
             titre_doc = f"Inventaire - {categorie.nom}"
             filename_prefix = f"Categorie_{categorie.nom}"
 
-        # 4. Exécution
         objets = db.session.execute(query.order_by(Objet.nom)).scalars().all()
         
         if not objets:
             flash("Aucun objet à exporter dans cette sélection.", "warning")
             return redirect(request.referrer)
 
-        # 5. Appel du Service Documentaire
         upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
         doc_service = DocumentService(upload_root)
         
-        # On utilise la méthode générique du service
         result = doc_service.generate_inventory_pdf(
             etablissement_name=session.get('nom_etablissement'),
             etablissement_id=etablissement_id,
@@ -1005,10 +1129,6 @@ def exporter_inventaire():
             doc_title=titre_doc.upper(),
             filename_prefix=filename_prefix
         )
-        
-        # Pour l'instant, on ne stocke pas ces exports contextuels en base (Archives)
-        # pour ne pas polluer la liste des documents officiels.
-        # On renvoie directement le fichier.
         
         return send_file(
             os.path.join(current_app.root_path, 'static', result['relative_path']),

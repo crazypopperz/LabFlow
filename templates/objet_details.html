@@ -111,25 +111,30 @@
                     <div class="d-grid gap-3"> <!-- gap-3 pour aérer un peu plus -->
                         
                         {% if session.user_role == 'admin' %}
-                        <!-- BOUTON MODIFIER -->
-                        <!-- J'ai remplacé 'btn-outline-primary' par 'btn-premium-blue' -->
-                        <!-- ET j'ai ajouté 'edit-objet-btn' pour que le JS fonctionne -->
-                        <button class="btn btn-premium-blue edit-objet-btn" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#addObjectModal"
-                                data-objet-id="{{ objet.id }}"
-                                data-nom="{{ objet.nom }}"
-                                data-quantite="{{ objet.quantite_physique }}"
-                                data-seuil="{{ objet.seuil }}"
-                                data-armoire-id="{{ objet.armoire_id }}"
-                                data-categorie-id="{{ objet.categorie_id }}"
-                                data-image-url="{{ objet.image_url }}"
-                                data-date-peremption="{{ objet.date_peremption }}"
-                                data-is-cmr="{{ 'on' if objet.is_cmr else 'off' }}"
-                                data-fds-url="{{ objet.fds_url }}">
-                            <i class="bi bi-pencil-square me-2"></i>Modifier
-                        </button>
-                        {% endif %}
+						<!-- BOUTON MODIFIER (CORRIGÉ avec TOUS les data-attributes) -->
+						<button class="btn btn-premium-blue edit-objet-btn" 
+								data-bs-toggle="modal" 
+								data-bs-target="#addObjectModal"
+								data-objet-id="{{ objet.id }}"
+								data-nom="{{ objet.nom }}"
+								data-type-objet="{{ objet.type_objet }}"
+								data-quantite="{{ objet.quantite_physique }}"
+								data-seuil="{{ objet.seuil }}"
+								data-armoire-id="{{ objet.armoire_id }}"
+								data-categorie-id="{{ objet.categorie_id }}"
+								data-date-peremption="{{ objet.date_peremption or '' }}"
+								data-image-url="{{ objet.image_url or '' }}"
+								data-full-image-url="{% if objet.image_url %}{% if objet.image_url.startswith('http') %}{{ objet.image_url }}{% else %}{{ url_for('static', filename=objet.image_url) }}{% endif %}{% endif %}"
+								data-fds-url="{{ objet.fds_url or '' }}"
+								data-is-cmr="{{ 'on' if objet.is_cmr else 'off' }}"
+								data-unite="{{ objet.unite or 'mL' }}"
+								data-capacite="{{ objet.capacite_initiale or 0 }}"
+								data-niveau="{{ objet.niveau_actuel or 0 }}"
+								data-seuil-pct="{{ objet.seuil_pourcentage or 10 }}"
+								data-niveau-requis="{{ objet.niveau_requis or 'tous' }}">
+							<i class="bi bi-pencil-square me-2"></i>Modifier
+						</button>
+						{% endif %}
                         
                         <!-- BOUTON SUGGÉRER -->
                         <!-- J'ai remplacé 'btn-outline-warning text-dark' par 'btn-premium-yellow' -->
@@ -236,5 +241,122 @@
         </div>
     </div>
 </div>
+{% include '_modals.html' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editButtons = document.querySelectorAll('.edit-objet-btn');
+    const modalTitle = document.getElementById('modal-objet-title');
+    const form = document.querySelector('#addObjectModal form');
+    
+    // Éléments pour l'image
+    const imgPreviewContainer = document.getElementById('image-preview-container');
+    const imgPreview = document.getElementById('image-preview');
+    
+    function setValueIfExists(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element && value && value !== 'null' && value !== 'undefined') {
+            element.value = value;
+        } else if (element) {
+            element.value = '';
+        }
+    }
+    
+    editButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-objet-id');
+            const type = this.getAttribute('data-type-objet');
+            
+            form.action = "/modifier_objet/" + id;
+            if(modalTitle) modalTitle.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier l\'objet';
 
+            // Champs communs
+            setValueIfExists('nom', this.getAttribute('data-nom'));
+            setValueIfExists('armoire_id', this.getAttribute('data-armoire-id'));
+            setValueIfExists('categorie_id', this.getAttribute('data-categorie-id'));
+            setValueIfExists('date_peremption', this.getAttribute('data-date-peremption'));
+            document.getElementById('is_cmr').checked = (this.getAttribute('data-is-cmr') === 'on');
+            setValueIfExists('niveau_requis', this.getAttribute('data-niveau-requis'));
+
+            // --- GESTION IMAGE (RAPATRIEMENT) ---
+            const fullImgUrl = this.getAttribute('data-full-image-url');
+            if (fullImgUrl && imgPreview && imgPreviewContainer) {
+                imgPreview.src = fullImgUrl;
+                imgPreviewContainer.style.display = 'block';
+            } else if (imgPreviewContainer) {
+                imgPreviewContainer.style.display = 'none';
+            }
+            // ------------------------------------
+
+            // GESTION TYPE - CORRIGÉ : Toggle AVANT remplissage
+            if (type === 'produit') {
+                document.getElementById('typeProduit').checked = true;
+                document.getElementById('typeMateriel').checked = false;
+                
+                // ⬇️ APPEL DU TOGGLE AVANT LE REMPLISSAGE
+                if(typeof toggleTypeObjetModal === 'function') {
+                    toggleTypeObjetModal();
+                }
+                
+                // MAINTENANT on remplit les valeurs
+                setValueIfExists('unite', this.getAttribute('data-unite'));
+                setValueIfExists('capacite_initiale', this.getAttribute('data-capacite'));
+                setValueIfExists('niveau_actuel', this.getAttribute('data-niveau'));
+                
+                const seuilPct = this.getAttribute('data-seuil-pct');
+                if(seuilPct) {
+                    document.getElementById('seuil_pourcentage').value = seuilPct;
+                    document.getElementById('seuil_val').innerText = seuilPct + '%';
+                }
+                
+                // BLOQUER la capacité totale (ne doit jamais changer)
+                const capaciteField = document.getElementById('capacite_initiale');
+                if (capaciteField) {
+                    capaciteField.setAttribute('readonly', 'readonly');
+                    capaciteField.style.backgroundColor = '#e9ecef';
+                    capaciteField.style.cursor = 'not-allowed';
+                    capaciteField.title = "La contenance totale ne peut pas être modifiée. Seul le niveau actuel (reste) peut changer.";
+                }
+                
+            } else {
+                document.getElementById('typeMateriel').checked = true;
+                document.getElementById('typeProduit').checked = false;
+                
+                // ⬇️ APPEL DU TOGGLE AVANT LE REMPLISSAGE
+                if(typeof toggleTypeObjetModal === 'function') {
+                    toggleTypeObjetModal();
+                }
+                
+                // MAINTENANT on remplit les valeurs
+                setValueIfExists('quantite', this.getAttribute('data-quantite'));
+                setValueIfExists('seuil', this.getAttribute('data-seuil'));
+            }
+        });
+    });
+    
+    // Reset au fermeture de la modale
+    const modalEl = document.getElementById('addObjectModal');
+    if(modalEl) {
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            form.reset();
+            form.action = "{{ url_for('inventaire.ajouter_objet') }}";
+            if(modalTitle) modalTitle.innerHTML = '<i class="bi bi-box-seam-fill me-2"></i>Ajouter un élément';
+            document.getElementById('typeMateriel').checked = true;
+            
+            // Réactiver le champ capacité (pour l'ajout)
+            const capaciteField = document.getElementById('capacite_initiale');
+            if (capaciteField) {
+                capaciteField.removeAttribute('readonly');
+                capaciteField.style.backgroundColor = '';
+                capaciteField.style.cursor = '';
+                capaciteField.title = '';
+            }
+            
+            // Cacher la preview image
+            if(imgPreviewContainer) imgPreviewContainer.style.display = 'none';
+            
+            if(typeof toggleTypeObjetModal === 'function') toggleTypeObjetModal();
+        });
+    }
+});
+</script>
 {% endblock %}

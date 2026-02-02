@@ -163,7 +163,7 @@ def create_app():
                 add_column('objets', 'capacite_initiale', 'FLOAT')
                 add_column('objets', 'niveau_actuel', 'FLOAT')
                 add_column('objets', 'seuil_pourcentage', 'FLOAT')
-                add_column('objets', 'niveau_requis', 'FLOAT')
+                add_column('objets', 'niveau_requis', 'VARCHAR(50) DEFAULT \'tous\'')
                 add_column('objets', 'quantite_physique', 'INTEGER')
                 add_column('objets', 'seuil', 'INTEGER')
                 add_column('objets', 'date_peremption', 'DATE')
@@ -177,6 +177,30 @@ def create_app():
                 add_column('objets', 'traite', 'BOOLEAN')
                 
                 print("🎉 Migration BDD terminée !")
+            
+                # Corriger le type de niveau_requis si déjà créé en FLOAT
+                try:
+                    with db.engine.connect() as conn:
+                        # Vérifier le type actuel
+                        result = conn.execute(text("""
+                            SELECT data_type 
+                            FROM information_schema.columns 
+                            WHERE table_name='objets' AND column_name='niveau_requis'
+                        """))
+                        row = result.fetchone()
+                        
+                        if row and 'double' in str(row[0]).lower():
+                            # C'est un FLOAT, il faut le convertir en VARCHAR
+                            conn.execute(text("ALTER TABLE objets ALTER COLUMN niveau_requis TYPE VARCHAR(50) USING niveau_requis::text"))
+                            conn.execute(text("ALTER TABLE objets ALTER COLUMN niveau_requis SET DEFAULT 'tous'"))
+                            conn.execute(text("UPDATE objets SET niveau_requis = 'tous' WHERE niveau_requis IS NULL OR niveau_requis = ''"))
+                            conn.commit()
+                            print("✅ niveau_requis corrigé (FLOAT → VARCHAR)")
+                        else:
+                            print("✓ niveau_requis déjà en VARCHAR")
+                            
+                except Exception as e:
+                    print(f"Info niveau_requis: {e}")
                 
             except Exception as e:
                 print(f"❌ ERREUR MIGRATION: {e}")

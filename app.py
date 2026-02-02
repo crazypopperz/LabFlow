@@ -128,12 +128,15 @@ def create_app():
     migrate = Migrate(app, db)
     with app.app_context():
         db.create_all()
-        if os.environ.get('FLASK_ENV') == 'production':
+        
+        # Migration automatique sur Render
+        if os.environ.get('RENDER') or os.environ.get('DATABASE_URL'):
             try:
                 from migrate_db import migrate
                 migrate()
+                print("✓ Migration effectuée avec succès")
             except Exception as e:
-                app.logger.error(f"Erreur migration : {e}")
+                print(f"❌ Erreur migration: {e}")
     CSRFProtect(app)
     mail.init_app(app)
     limiter.init_app(app)

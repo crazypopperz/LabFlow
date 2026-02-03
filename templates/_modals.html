@@ -16,16 +16,14 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">Créneau horaire</label>
                             <div class="d-flex align-items-center gap-2">
+                                <!-- On retire la boucle Jinja {% for h in range... %} -->
+                                <!-- C'est le JS qui va remplir ces options maintenant -->
                                 <select class="form-select" id="startTime">
-                                    {% for h in range(8, 18) %}
-                                        <option value="{{ '%02d:00'|format(h) }}">{{ '%02d:00'|format(h) }}</option>
-                                    {% endfor %}
+                                    <option disabled selected>Chargement...</option>
                                 </select>
                                 <span>à</span>
                                 <select class="form-select" id="endTime">
-                                    {% for h in range(9, 19) %}
-                                        <option value="{{ '%02d:00'|format(h) }}">{{ '%02d:00'|format(h) }}</option>
-                                    {% endfor %}
+                                    <option disabled selected>Chargement...</option>
                                 </select>
                             </div>
                         </div>

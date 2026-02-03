@@ -15,7 +15,18 @@
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
     {% block head_styles %}{% endblock %}
 </head>
-<body>
+<body 
+  {% if session.get('etablissement_id') %}
+      {% set params = get_etablissement_params(session.etablissement_id) %}
+      data-planning-start="{{ params.get('planning_debut', '08:00') }}"
+      data-planning-end="{{ params.get('planning_fin', '18:00') }}"
+      data-planning-step="{{ params.get('planning_intervalle', '60') }}"
+  {% else %}
+      data-planning-start="08:00"
+      data-planning-end="18:00"
+      data-planning-step="60"
+  {% endif %}
+>
     <!-- 1. Stockage invisible des messages Flash (pour le JS) -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

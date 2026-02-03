@@ -23,7 +23,7 @@ from markupsafe import Markup
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_
 from sqlalchemy.orm import joinedload
 
 # --- IMPORTS POUR EXPORT PDF (ReportLab) ---
@@ -3291,3 +3291,64 @@ def supprimer_archive(archive_id):
         flash("Erreur technique lors de la suppression.", "error")
         
     return redirect(url_for('admin.gestion_documents'))
+
+#================================================================
+# ROUTE CONFIGURATION PLANNING RESERVATION PAR ADMIN
+#================================================================
+@admin_bp.route("/config_planning", methods=['POST'])
+@admin_required
+def config_planning():
+    etablissement_id = session['etablissement_id']
+    
+    heure_debut = request.form.get('heure_debut', '08:00')
+    heure_fin = request.form.get('heure_fin', '18:00')
+    intervalle = request.form.get('intervalle', '60')
+    
+    try:
+        # 1. VALIDATION DES FORMATS
+        try:
+            h_start = datetime.strptime(heure_debut, '%H:%M').time()
+            h_end = datetime.strptime(heure_fin, '%H:%M').time()
+        except ValueError:
+            flash("Format d'heure invalide.", "error")
+            return redirect(url_for('admin.admin'))
+        
+        # 2. VÉRIFICATION COHÉRENCE (Début < Fin)
+        if h_start >= h_end:
+            flash("L'heure de début doit être strictement avant l'heure de fin.", "error")
+            return redirect(url_for('admin.admin'))
+        
+        # 3. VÉRIFICATION INTERVALLE
+        if intervalle not in ['15', '30', '45', '60', '90', '120']:
+            flash("Intervalle non autorisé.", "error")
+            return redirect(url_for('admin.admin'))
+
+        # 4. SAUVEGARDE
+        def save_param(cle, valeur):
+            param = db.session.execute(
+                select(Parametre).filter_by(etablissement_id=etablissement_id, cle=cle)
+            ).scalar_one_or_none()
+            
+            if param:
+                param.valeur = valeur
+            else:
+                db.session.add(Parametre(etablissement_id=etablissement_id, cle=cle, valeur=valeur))
+
+        save_param('planning_debut', heure_debut)
+        save_param('planning_fin', heure_fin)
+        save_param('planning_intervalle', intervalle)
+        
+        db.session.commit()
+        
+        # Nettoyage cache
+        try: cache.delete_memoized(get_etablissement_params, etablissement_id)
+        except: pass
+        
+        flash("Planning mis à jour avec succès.", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur config planning: {e}")
+        flash("Erreur technique.", "error")
+        
+    return redirect(url_for('admin.admin'))

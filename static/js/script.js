@@ -1236,4 +1236,79 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     }
+	
+	
+	// =================================================================
+    // SECTION 17 : GÉNÉRATION DYNAMIQUE DES CRÉNEAUX HORAIRES (V2 ROBUSTE)
+    // =================================================================
+    function generateTimeOptions() {
+        const startTimeSelect = document.getElementById('startTime');
+        const endTimeSelect = document.getElementById('endTime');
+        
+        if (!startTimeSelect || !endTimeSelect) return;
+
+        // Récupération sécurisée
+        const startStr = document.body.dataset.planningStart || '08:00';
+        const endStr = document.body.dataset.planningEnd || '18:00';
+        let step = parseInt(document.body.dataset.planningStep || '60', 10);
+
+        // Sécurité anti-crash
+        if (isNaN(step) || step <= 0) step = 60;
+
+        const [startH, startM] = startStr.split(':').map(Number);
+        const [endH, endM] = endStr.split(':').map(Number);
+        
+        const startTotal = startH * 60 + startM;
+        const endTotal = endH * 60 + endM;
+
+        // Vérification cohérence
+        if (startTotal >= endTotal) {
+            console.error("Erreur Planning : L'heure de début est après la fin.");
+            return;
+        }
+
+        let optionsHtml = '';
+        
+        for (let time = startTotal; time <= endTotal; time += step) {
+            const h = Math.floor(time / 60);
+            const m = time % 60;
+            const timeString = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            optionsHtml += `<option value="${timeString}">${timeString}</option>`;
+        }
+
+        startTimeSelect.innerHTML = optionsHtml;
+        endTimeSelect.innerHTML = optionsHtml;
+        
+        // Sélection par défaut intelligente
+        if (endTimeSelect.options.length > 1) {
+            endTimeSelect.selectedIndex = 1;
+        }
+
+        // --- LOGIQUE INTER-SELECT (Empêcher Fin < Début) ---
+        startTimeSelect.addEventListener('change', function() {
+            const startIndex = this.selectedIndex;
+            // Si la fin est avant ou égale au début, on la pousse après
+            if (endTimeSelect.selectedIndex <= startIndex) {
+                if (startIndex + 1 < endTimeSelect.options.length) {
+                    endTimeSelect.selectedIndex = startIndex + 1;
+                } else {
+                    endTimeSelect.selectedIndex = endTimeSelect.options.length - 1;
+                }
+            }
+        });
+
+        endTimeSelect.addEventListener('change', function() {
+            const endIndex = this.selectedIndex;
+            // Si le début est après ou égal à la fin, on le pousse avant
+            if (startTimeSelect.selectedIndex >= endIndex) {
+                if (endIndex - 1 >= 0) {
+                    startTimeSelect.selectedIndex = endIndex - 1;
+                } else {
+                    startTimeSelect.selectedIndex = 0;
+                }
+            }
+        });
+    }
+    // Appel initial
+    generateTimeOptions();
 });

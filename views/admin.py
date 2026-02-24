@@ -46,7 +46,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 # Imports Locaux
 from extensions import limiter, cache
 from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Reservation, Suggestion, DocumentReglementaire, InventaireArchive
-from utils import calculate_license_key, admin_required, login_required, log_action, get_etablissement_params, allowed_file
+from utils import calculate_license_key, admin_required, login_required, log_action, get_etablissement_params, allowed_file, validate_email, validate_password_strength
 from fpdf import FPDF
 from services.security_service import SecurityService
 from services.document_service import DocumentService, DocumentServiceError
@@ -63,8 +63,6 @@ admin_bp = Blueprint('admin', __name__, template_folder='../templates', url_pref
 
 MAX_EXPORT_LIMIT = 3000
 MAX_FILE_SIZE = 10 * 1024 * 1024 # 10 Mo
-PASSWORD_MIN_LENGTH = 12
-EMAIL_REGEX = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 MAX_IMPORT_ROWS = 5000
 MAX_JSON_SIZE = 5 * 1024 * 1024
 
@@ -80,15 +78,6 @@ UPLOAD_SUBDIR = 'armoires'
 def hash_user_id(user_id):
     return hashlib.sha256(str(user_id).encode()).hexdigest()[:8]
 
-def validate_email(email):
-    return re.match(EMAIL_REGEX, email) is not None
-
-def validate_password_strength(password):
-    if len(password) < PASSWORD_MIN_LENGTH: return False, f"Min {PASSWORD_MIN_LENGTH} caractères."
-    if not re.search(r"[a-z]", password): return False, "Min 1 minuscule."
-    if not re.search(r"[A-Z]", password): return False, "Min 1 majuscule."
-    if not re.search(r"[0-9]", password): return False, "Min 1 chiffre."
-    if not re.search(r"[^a-zA-Z0-9]", password): return False, "Min 1 caractère spécial."
     return True, ""
 
 def validate_url(url):

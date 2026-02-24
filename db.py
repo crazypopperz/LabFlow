@@ -106,8 +106,8 @@ class Objet(db.Model):
     categorie = db.relationship('Categorie', back_populates='objets')
     
     # Champs de gestion
-    en_commande = db.Column(db.Integer, default=0) 
-    traite = db.Column(db.Integer, default=0)
+    en_commande = db.Column(db.Boolean, default=False) 
+    traite = db.Column(db.Boolean, default=False)
 
     __table_args__ = (
         db.Index('idx_objets_etablissement_categorie', 'etablissement_id', 'categorie_id'),
@@ -329,7 +329,7 @@ class Echeance(db.Model):
     intitule = db.Column(db.String(100), nullable=False)
     date_echeance = db.Column(db.Date, nullable=False)
     details = db.Column(db.Text)
-    traite = db.Column(db.Integer, default=0)
+    traite = db.Column(db.Boolean, default=False)
     etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
 
 class Suggestion(db.Model):

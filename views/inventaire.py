@@ -367,13 +367,9 @@ def ajouter_objet():
                     flash("La contenance doit être comprise entre 0 et 1 000 000.", "error")
                     return redirect(request.referrer)
             else:
-                # Si vide, on GARDE l'ancienne capacité
-                if objet.type_objet == 'produit':
-                    capacite = objet.capacite_initiale
-                else:
-                    # Si conversion matériel → produit, on demande une capacité
-                    flash("Veuillez indiquer la contenance totale du produit.", "error")
-                    return redirect(request.referrer)
+                # En création, la capacité est obligatoire
+                flash("Veuillez indiquer la contenance totale du produit.", "error")
+                return redirect(request.referrer)
             
             niveau_input = request.form.get("niveau_actuel", "").strip()
             niveau = clean_float(niveau_input) if niveau_input else capacite

@@ -3300,55 +3300,53 @@ def supprimer_archive(archive_id):
 def config_planning():
     etablissement_id = session['etablissement_id']
     
+    # 1. Récupération des données du formulaire
     heure_debut = request.form.get('heure_debut', '08:00')
     heure_fin = request.form.get('heure_fin', '18:00')
-    intervalle = request.form.get('intervalle', '60')
-    
+    current_app.logger.info(f"[CONFIG_PLANNING] Etab ID {etablissement_id} a soumis : Début={heure_debut}, Fin={heure_fin}")
+
     try:
-        # 1. VALIDATION DES FORMATS
-        try:
-            h_start = datetime.strptime(heure_debut, '%H:%M').time()
-            h_end = datetime.strptime(heure_fin, '%H:%M').time()
-        except ValueError:
-            flash("Format d'heure invalide.", "error")
-            return redirect(url_for('admin.admin'))
-        
-        # 2. VÉRIFICATION COHÉRENCE (Début < Fin)
-        if h_start >= h_end:
-            flash("L'heure de début doit être strictement avant l'heure de fin.", "error")
-            return redirect(url_for('admin.admin'))
-        
-        # 3. VÉRIFICATION INTERVALLE
-        if intervalle not in ['15', '30', '45', '60', '90', '120']:
-            flash("Intervalle non autorisé.", "error")
+        # 2. Validation métier
+        if heure_debut >= heure_fin:
+            flash("L'heure de début doit être strictement antérieure à l'heure de fin.", "error")
             return redirect(url_for('admin.admin'))
 
-        # 4. SAUVEGARDE
-        def save_param(cle, valeur):
+        # 3. Fonction de sauvegarde "Upsert" (Update or Insert) pour chaque paramètre
+        def upsert_param(cle, valeur):
+            # On cherche si le paramètre existe déjà pour cet établissement
             param = db.session.execute(
                 select(Parametre).filter_by(etablissement_id=etablissement_id, cle=cle)
             ).scalar_one_or_none()
             
             if param:
-                param.valeur = valeur
+                # Si oui, on met à jour sa valeur
+                param.valeur = str(valeur)
+                current_app.logger.info(f"Paramètre '{cle}' mis à jour à '{valeur}' pour Etab {etablissement_id}.")
             else:
-                db.session.add(Parametre(etablissement_id=etablissement_id, cle=cle, valeur=valeur))
+                # Sinon, on le crée
+                db.session.add(Parametre(etablissement_id=etablissement_id, cle=cle, valeur=str(valeur)))
+                current_app.logger.info(f"Paramètre '{cle}' créé avec la valeur '{valeur}' pour Etab {etablissement_id}.")
 
-        save_param('planning_debut', heure_debut)
-        save_param('planning_fin', heure_fin)
-        save_param('planning_intervalle', intervalle)
+        # 4. Application des sauvegardes
+        upsert_param('planning_debut', heure_debut)
+        upsert_param('planning_fin', heure_fin)
         
         db.session.commit()
         
-        # Nettoyage cache
-        try: cache.delete_memoized(get_etablissement_params, etablissement_id)
-        except: pass
+        # 5. POINT CRUCIAL : Invalidation explicite du cache
+        # C'est cette ligne qui force la fonction `get_etablissement_params` à relire
+        # la base de données la prochaine fois qu'elle sera appelée.
+        try:
+            cache.delete_memoized(get_etablissement_params, etablissement_id)
+            current_app.logger.info(f"✅ Cache pour 'get_etablissement_params' (Etab {etablissement_id}) invalidé avec succès.")
+        except Exception as e:
+            current_app.logger.warning(f"⚠️ Erreur non bloquante lors de l'invalidation du cache : {e}")
         
-        flash("Planning mis à jour avec succès.", "success")
+        flash("La configuration du planning de réservation a été mise à jour.", "success")
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur config planning: {e}")
-        flash("Erreur technique.", "error")
+        current_app.logger.error(f"❌ Erreur critique lors de la configuration du planning : {e}", exc_info=True)
+        flash("Une erreur technique est survenue lors de la sauvegarde.", "error")
         
     return redirect(url_for('admin.admin'))

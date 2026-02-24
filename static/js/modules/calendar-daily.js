@@ -2,8 +2,38 @@ import { openReservationModal } from './booking-modal.js';
 import { escapeHtml } from './cart-utils.js';
 import { showToast } from './toast.js';
 
+/**
+ * @returns {{start: string, end: string}}
+ */
+function getDailyConfig() {
+    return {
+        start: container.dataset.planningDebut || '08:00',
+        end: container.dataset.planningFin || '18:00'
+    };
+}
+
+function renderDailyGrid() {
+    const config = getDailyConfig();
+    const gridContainer = document.querySelector('.daily-calendar-grid'); // L'élément qui contiendra les lignes
+    if (!gridContainer) return;
+
+    const [startH] = config.start.split(':').map(Number);
+    const [endH] = config.end.split(':').map(Number);
+
+    let html = '';
+    for (let hour = startH; hour <= endH; hour++) {
+        html += `<div class="time-slot" style="--start-hour: ${hour};">
+                     <div class="time-label">${String(hour).padStart(2, '0')}:00</div>
+                 </div>`;
+    }
+    gridContainer.innerHTML = html;
+    console.log(`Grille journalière générée de ${startH}h à ${endH}h.`);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    const tooltip = document.getElementById('reservation-tooltip');
+    renderDailyGrid();
+	
+	const tooltip = document.getElementById('reservation-tooltip');
     let activeTooltip = null;
 
     // --- GESTION DE LA MODALE DE SUPPRESSION ---

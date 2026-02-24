@@ -1248,7 +1248,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!startTimeSelect || !endTimeSelect) return;
 
         // Récupération sécurisée
-        const startStr = document.body.dataset.planningStart || '08:00';
+        const startStr = document.body.dataset.planningStart || '07:00';
         const endStr = document.body.dataset.planningEnd || '18:00';
         let step = parseInt(document.body.dataset.planningStep || '60', 10);
 

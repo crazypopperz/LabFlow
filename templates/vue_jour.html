@@ -25,7 +25,7 @@
         <!-- Bouton Nouvelle Réservation -->
         <div>
 			<button id="new-reservation-btn" 
-					class="btn btn-primary"
+					class="btn btn-primary">
 				<i class="bi bi-plus-lg me-2"></i> Nouvelle Réservation
 			</button>
 		</div>
@@ -33,8 +33,17 @@
     
     <!-- Grille Calendrier Style Google -->
     <div class="card shadow-sm border-0" style="background: white; border-radius: 8px;">
-        <div class="daily-schedule-wrapper">
-            {% for hour in range(8, 21) %}
+        <div class="daily-schedule-wrapper daily-calendar-container" 
+			data-planning-debut="{{ params.get('planning_debut', '08:00') }}"
+			data-planning-fin="{{ params.get('planning_fin', '18:00') }}">
+            
+            <!-- RECUPERATION DES PARAMETRES -->
+            {% set params = get_etablissement_params(session.etablissement_id) %}
+			{% set start_h = params.get('planning_debut', '08:00').split(':')[0]|int %}
+			{% set end_h = params.get('planning_fin', '18:00').split(':')[0]|int %}
+				
+            <!-- BOUCLE DYNAMIQUE -->
+            {% for hour in range(start_h, end_h + 1) %}
                 <div class="schedule-row" data-hour="{{ hour }}">
                     <!-- Colonne Heure -->
                     <div class="time-col">

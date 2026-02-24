@@ -1,5 +1,5 @@
 # ============================================================
-# FICHIER : app.py (Version Compatible Système Maison)
+# FICHIER : app.py (Version Optimisée & Robuste)
 # ============================================================
 import os
 import secrets
@@ -10,10 +10,11 @@ from flask import Flask, redirect, request, session, url_for, current_app, rende
 from flask_wtf.csrf import CSRFProtect
 from flask_talisman import Talisman
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text, inspect
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-# Extensions (Cache & Rate Limit) - PAS DE LOGIN_MANAGER
+# Extensions
 from extensions import limiter, cache, mail
 from flask_migrate import Migrate
 
@@ -46,6 +47,89 @@ def configure_logging(app):
         app.logger.setLevel(logging.INFO)
         app.logger.info('LabFlow startup')
 
+def run_auto_migrations(app):
+    """
+    Exécute les migrations de structure de base de données au démarrage.
+    Vérifie l'existence des colonnes et corrige les types si nécessaire.
+    """
+    # On ne lance la migration lourde que si on est sur Render ou si une DB externe est configurée
+    if not (os.environ.get('RENDER') or os.environ.get('DATABASE_URL')):
+        return
+
+    with app.app_context():
+        print("🔧 Vérification de la structure BDD...")
+        try:
+            inspector = inspect(db.engine)
+            
+            def add_column(table, column, definition):
+                try:
+                    # Vérifie si la table existe d'abord
+                    if not inspector.has_table(table):
+                        return
+                        
+                    cols = [c['name'] for c in inspector.get_columns(table)]
+                    if column not in cols:
+                        with db.engine.connect() as conn:
+                            conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {column} {definition}'))
+                            conn.commit()
+                        print(f"✅ {table}.{column} ajoutée")
+                    else:
+                        # Silencieux si existe déjà pour ne pas polluer les logs
+                        pass
+                except Exception as e:
+                    print(f"❌ Erreur {table}.{column}: {e}")
+            
+            # 1. Table utilisateurs
+            add_column('utilisateurs', 'niveau_enseignement', 'VARCHAR(50)')
+            add_column('utilisateurs', 'statut_compte', "VARCHAR(20) DEFAULT 'actif'")
+            
+            # 2. Table objets - TOUTES les colonnes nécessaires
+            add_column('objets', 'type_objet', "VARCHAR(50) DEFAULT 'materiel'")
+            add_column('objets', 'unite', "VARCHAR(20) DEFAULT 'unite'")
+            add_column('objets', 'capacite_initiale', 'FLOAT DEFAULT 0.0')
+            add_column('objets', 'niveau_actuel', 'FLOAT DEFAULT 0.0')
+            add_column('objets', 'seuil_pourcentage', 'FLOAT DEFAULT 10')
+            add_column('objets', 'niveau_requis', "VARCHAR(50) DEFAULT 'tous'")
+            add_column('objets', 'quantite_physique', 'INTEGER DEFAULT 0')
+            add_column('objets', 'seuil', 'INTEGER DEFAULT 0')
+            add_column('objets', 'date_peremption', 'DATE')
+            add_column('objets', 'image_url', 'TEXT')
+            add_column('objets', 'fds_url', 'TEXT')
+            add_column('objets', 'is_cmr', 'BOOLEAN DEFAULT FALSE')
+            add_column('objets', 'armoire_id', 'INTEGER')
+            add_column('objets', 'categorie_id', 'INTEGER')
+            add_column('objets', 'etablissement_id', 'INTEGER')
+            add_column('objets', 'en_commande', 'BOOLEAN DEFAULT FALSE')
+            add_column('objets', 'traite', 'BOOLEAN DEFAULT FALSE')
+            
+            print("✓ Structure des colonnes vérifiée.")
+            
+            # 3. Correction spécifique : niveau_requis (FLOAT -> VARCHAR)
+            # Ce correctif gère le cas où la colonne a été créée avec le mauvais type précédemment
+            try:
+                with db.engine.connect() as conn:
+                    result = conn.execute(text("""
+                        SELECT data_type 
+                        FROM information_schema.columns 
+                        WHERE table_name='objets' AND column_name='niveau_requis'
+                    """))
+                    row = result.fetchone()
+                    
+                    if row and 'double' in str(row[0]).lower():
+                        print("⚠️ Correction détectée : niveau_requis est FLOAT, conversion en VARCHAR...")
+                        conn.execute(text("ALTER TABLE objets ALTER COLUMN niveau_requis TYPE VARCHAR(50) USING niveau_requis::text"))
+                        conn.execute(text("ALTER TABLE objets ALTER COLUMN niveau_requis SET DEFAULT 'tous'"))
+                        conn.execute(text("UPDATE objets SET niveau_requis = 'tous' WHERE niveau_requis IS NULL OR niveau_requis = ''"))
+                        conn.commit()
+                        print("✅ Correction appliquée.")
+            except Exception as e:
+                print(f"Info niveau_requis: {e}")
+                
+        except Exception as e:
+            print(f"❌ ERREUR MIGRATION CRITIQUE: {e}")
+            import traceback
+            traceback.print_exc()
+
 def create_app():
     app = Flask(__name__)
     app.wsgi_app = ProxyFix(
@@ -53,7 +137,7 @@ def create_app():
     )
 
     # ============================================================
-    # 0. VÉRIFICATION ENVIRONNEMENT (FAIL FAST)
+    # 0. VÉRIFICATION ENVIRONNEMENT
     # ============================================================
     is_production = os.environ.get('FLASK_ENV') == 'production'
     REQUIRED_VARS = ['DATABASE_URL', 'GMLCL_PRO_KEY']
@@ -63,7 +147,7 @@ def create_app():
 
     missing_vars = [var for var in REQUIRED_VARS if not os.environ.get(var)]
     if missing_vars:
-        raise RuntimeError(f"ERREUR CRITIQUE : Variables d'environnement manquantes : {', '.join(missing_vars)}")
+        raise RuntimeError(f"ERREUR CRITIQUE : Variables manquantes : {', '.join(missing_vars)}")
 
     # ============================================================
     # 1. CONFIGURATION
@@ -72,9 +156,10 @@ def create_app():
 
     secret_key = os.environ.get('SECRET_KEY')
     if not secret_key:
+        # Clé de développement stable
         secret_key = 'dev-key-stable-pour-eviter-deconnexion'
         if not is_production:
-            print("⚠️  MODE DEV : Utilisation d'une SECRET_KEY fixe par défaut.")
+            print("⚠️  MODE DEV : Utilisation d'une SECRET_KEY fixe.")
     app.config['SECRET_KEY'] = secret_key
     
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
@@ -84,23 +169,15 @@ def create_app():
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql://", 1)
         
-        # Configuration SSL pour Render/Production
         if is_production and 'postgresql://' in db_url:
-            # Ajouter les paramètres SSL si pas déjà présents
-            if '?' not in db_url:
-                db_url += '?sslmode=require'
-            elif 'sslmode' not in db_url:
-                db_url += '&sslmode=require'
+            if '?' not in db_url: db_url += '?sslmode=require'
+            elif 'sslmode' not in db_url: db_url += '&sslmode=require'
         
         app.config['SQLALCHEMY_DATABASE_URI'] = db_url
         
-        # Options SQLAlchemy pour gérer SSL correctement
         if is_production:
             app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-                'connect_args': {
-                    'sslmode': 'require',
-                    'connect_timeout': 10
-                },
+                'connect_args': {'sslmode': 'require', 'connect_timeout': 10},
                 'pool_pre_ping': True,
                 'pool_recycle': 300,
             }
@@ -119,93 +196,16 @@ def create_app():
         app.config['TESTING'] = True
         app.config['WTF_CSRF_ENABLED'] = False
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        logging.warning("⚠️  MODE TESTING ACTIVÉ : Base de données en mémoire.")
 
     # ============================================================
-    # 2. INITIALISATION DES EXTENSIONS
+    # 2. INITIALISATION
     # ============================================================
     init_db_app(app)
     migrate = Migrate(app, db)
-    with app.app_context():
-        from sqlalchemy import text, inspect
-        
-        # Créer les tables si elles n'existent pas
-        db.create_all()
-        print("✅ Tables créées")
-        
-        # Migration directe des colonnes manquantes
-        if os.environ.get('RENDER') or os.environ.get('DATABASE_URL'):
-            print("🔧 Démarrage migration BDD...")
-            
-            try:
-                inspector = inspect(db.engine)
-                
-                # Fonction helper pour ajouter une colonne
-                def add_column(table, column, definition):
-                    try:
-                        cols = [c['name'] for c in inspector.get_columns(table)]
-                        if column not in cols:
-                            with db.engine.connect() as conn:
-                                conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {column} {definition}'))
-                                conn.commit()
-                            print(f"✅ {table}.{column} ajoutée")
-                        else:
-                            print(f"✓ {table}.{column} existe")
-                    except Exception as e:
-                        print(f"❌ Erreur {table}.{column}: {e}")
-                
-                # Migrations table utilisateurs
-                add_column('utilisateurs', 'niveau_enseignement', 'VARCHAR(50)')
-                
-                # Migrations table objets - TOUTES les colonnes
-                add_column('objets', 'type_objet', 'VARCHAR(50)')
-                add_column('objets', 'unite', 'VARCHAR(20)')
-                add_column('objets', 'capacite_initiale', 'FLOAT')
-                add_column('objets', 'niveau_actuel', 'FLOAT')
-                add_column('objets', 'seuil_pourcentage', 'FLOAT')
-                add_column('objets', 'niveau_requis', 'VARCHAR(50)')
-                add_column('objets', 'quantite_physique', 'INTEGER')
-                add_column('objets', 'seuil', 'INTEGER')
-                add_column('objets', 'date_peremption', 'DATE')
-                add_column('objets', 'image_url', 'TEXT')
-                add_column('objets', 'fds_url', 'TEXT')
-                add_column('objets', 'is_cmr', 'BOOLEAN')
-                add_column('objets', 'armoire_id', 'INTEGER')
-                add_column('objets', 'categorie_id', 'INTEGER')
-                add_column('objets', 'etablissement_id', 'INTEGER')
-                add_column('objets', 'en_commande', 'BOOLEAN')
-                add_column('objets', 'traite', 'BOOLEAN')
-                
-                print("🎉 Migration BDD terminée !")
-            
-                # Corriger le type de niveau_requis si déjà créé en FLOAT
-                try:
-                    with db.engine.connect() as conn:
-                        # Vérifier le type actuel
-                        result = conn.execute(text("""
-                            SELECT data_type 
-                            FROM information_schema.columns 
-                            WHERE table_name='objets' AND column_name='niveau_requis'
-                        """))
-                        row = result.fetchone()
-                        
-                        if row and 'double' in str(row[0]).lower():
-                            # C'est un FLOAT, il faut le convertir en VARCHAR
-                            conn.execute(text("ALTER TABLE objets ALTER COLUMN niveau_requis TYPE VARCHAR(50) USING niveau_requis::text"))
-                            conn.execute(text("ALTER TABLE objets ALTER COLUMN niveau_requis SET DEFAULT 'tous'"))
-                            conn.execute(text("UPDATE objets SET niveau_requis = 'tous' WHERE niveau_requis IS NULL OR niveau_requis = ''"))
-                            conn.commit()
-                            print("✅ niveau_requis corrigé (FLOAT → VARCHAR)")
-                        else:
-                            print("✓ niveau_requis déjà en VARCHAR")
-                            
-                except Exception as e:
-                    print(f"Info niveau_requis: {e}")
-                
-            except Exception as e:
-                print(f"❌ ERREUR MIGRATION: {e}")
-                import traceback
-                traceback.print_exc()
+    
+    # Exécution des migrations automatiques
+    run_auto_migrations(app)
+
     CSRFProtect(app)
     mail.init_app(app)
     limiter.init_app(app)
@@ -213,7 +213,7 @@ def create_app():
     configure_logging(app)
 
     # ============================================================
-    # 3. SÉCURITÉ HTTP (TALISMAN)
+    # 3. SÉCURITÉ HTTP
     # ============================================================
     if is_production:
         csp = {
@@ -290,20 +290,26 @@ def create_app():
     app.jinja_env.filters['annee_scolaire'] = annee_scolaire_format
 
     # ============================================================
-    # 7. CONTEXT PROCESSORS (GLOBAL DATA)
+    # 7. CONTEXT PROCESSORS
     # ============================================================
+    
+    # Injection des utilitaires (CRITIQUE pour les templates)
+    @app.context_processor
+    def inject_utilities():
+        return dict(get_etablissement_params=get_etablissement_params)
+
     @app.context_processor
     def inject_global_data():
         context = {
             'all_armoires': [], 'all_categories': [], 'alertes_total': 0,
             'licence': {'statut': 'FREE', 'is_pro': False, 'instance_id': 'N/A'},
             'nom_etablissement': None,
-            'notifs_count': 0,      # <--- AJOUT
-            'notifications_list': [] # <--- AJOUT
+            'notifs_count': 0,
+            'notifications_list': []
         }
         
         etablissement_id = session.get('etablissement_id')
-        user_id = session.get('user_id') # <--- AJOUT
+        user_id = session.get('user_id')
         
         if not etablissement_id: return context
             
@@ -343,10 +349,12 @@ def create_app():
             return context
             
         except SQLAlchemyError as e:
-            current_app.logger.error(f"Erreur context_processor : {e}")
+            # Gestion d'erreur améliorée avec Rollback
+            db.session.rollback()
+            current_app.logger.error(f"Erreur DB context_processor : {e}", exc_info=True)
             return context
         except Exception as e:
-            current_app.logger.error(f"Erreur inattendue context_processor : {e}")
+            current_app.logger.error(f"Erreur inattendue context_processor : {e}", exc_info=True)
             return context
             
     return app

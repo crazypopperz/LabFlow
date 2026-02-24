@@ -677,8 +677,7 @@ def reservation_retirer_item(groupe_id, item_id):
     user_role = session.get('user_role')
     item_type = request.args.get('type')
     
-    print(f"--- DEBUG SUPPRESSION ITEM ---")
-    print(f"User: {current_user_id} | Role: {user_role}")
+    current_app.logger.debug(f"Suppression item - User: {current_user_id}, Role: {user_role}")
     
     try:
         # On cherche la réservation
@@ -692,15 +691,12 @@ def reservation_retirer_item(groupe_id, item_id):
                 break
         
         if not target: 
-            print("❌ Item non trouvé")
+            current_app.logger.warning("Item non trouvé")
             return jsonify({'success': False, 'error': "Item non trouvé"}), 404
-        
-        print(f"Cible trouvée. Propriétaire: {target.utilisateur_id}")
 
         # --- NOTIFICATION ---
         # Condition stricte : Admin ET le propriétaire n'est pas celui qui clique
         if user_role == 'admin' and target.utilisateur_id != current_user_id:
-            print("✅ CONDITION NOTIF REMPLIE : Création de la notif...")
             
             nom_item = target.kit.nom if target.kit else (target.objet.nom if target.objet else "Inconnu")
             date_str = target.debut_reservation.strftime('%d/%m')
@@ -712,9 +708,7 @@ def reservation_retirer_item(groupe_id, item_id):
                 message=f"L'élément '{nom_item}' a été retiré de votre réservation du {date_str} par l'administrateur."
             )
             db.session.add(notif)
-            print("✅ Notif ajoutée à la session DB")
         else:
-            print("ℹ️ Pas de notif (Soit pas admin, soit suppression de sa propre résa)")
         # --------------------
 
         # Suppression ou Décrémentation
@@ -725,7 +719,6 @@ def reservation_retirer_item(groupe_id, item_id):
         
         # COMMIT UNIQUE POUR TOUT
         db.session.commit()
-        print("✅ COMMIT EFFECTUÉ")
         
         remaining = db.session.execute(select(func.count(Reservation.id)).filter_by(groupe_id=groupe_id)).scalar()
         return jsonify({'success': True, 'remaining_items': remaining})
@@ -733,7 +726,7 @@ def reservation_retirer_item(groupe_id, item_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erreur retrait item: {e}")
-        print(f"❌ ERREUR CRITIQUE : {e}")
+        current_app.logger.error(f"Erreur critique retrait item: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @api_bp.route("/reservation/<groupe_id>/modifier_heure", methods=['POST'])

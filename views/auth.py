@@ -215,24 +215,24 @@ def get_serializer():
 
 def send_async_email(app, msg):
     """Envoie l'email dans un thread séparé."""
-    print("🧵 THREAD DÉMARRÉ !!!")
+    app.logger.info("Thread email démarré")
     with app.app_context():
         try:
             mail = app.extensions.get('mail')
-            print(f"📧 Envoi vers: {msg.recipients}")
+            app.logger.info(f"Envoi email vers: {msg.recipients}")
             mail.send(msg)
-            print("✅ Email envoyé en arrière-plan")
+            app.logger.info("Email envoyé en arrière-plan")
         except Exception as e:
-            print(f"❌ Erreur mail async: {e}")
+            app.logger.error(f"Erreur mail async: {e}")
             import traceback
             traceback.print_exc()
             app.logger.error(f"Erreur envoi mail: {e}")
-    print("🧵 THREAD TERMINÉ")
+    app.logger.info("Thread email terminé")
 
 def send_reset_email(user_email, token):
     """Envoie l'email avec le lien de réinitialisation (asynchrone)."""
     try:
-        print(f"🔍 MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
+        current_app.logger.debug(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
         
         mail = current_app.extensions.get('mail')
         if not mail:
@@ -258,18 +258,12 @@ L'équipe LabFlow
 """
         
         # Envoi asynchrone
-        app = current_app._get_current_object()
-        print("🚀 AVANT création du thread")
-        thread = Thread(target=send_async_email, args=(app, msg))
-        print("🚀 Thread créé, lancement...")
-        thread.start()
-        print("🚀 Thread.start() appelé")
-        
-        print(f"📧 Email mis en file d'attente pour {user_email}")
+        app = current_app._get_current_object()    
+        current_app.logger.info(f"Email mis en file d'attente pour {user_email}")
         return True
         
     except Exception as e:
-        print(f"❌ ERREUR : {e}")
+        current_app.logger.error(f"Erreur envoi email: {e}")
         import traceback
         traceback.print_exc()
         current_app.logger.error(f"Erreur: {e}")
@@ -281,7 +275,6 @@ def forgot_password():
     """Page de demande de réinitialisation."""
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
-        print(f"🔍 DEBUG: Tentative de reset pour l'email : '{email}'")
         
         if not email:
             flash("Veuillez saisir votre adresse email.", "error")
@@ -292,7 +285,6 @@ def forgot_password():
         ).scalar_one_or_none()
         
         if user:
-            print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}")
             serializer = get_serializer()
             token = serializer.dumps(email, salt='password-reset-salt')
             
@@ -301,7 +293,7 @@ def forgot_password():
             else:
                 flash("Erreur technique lors de l'envoi.", "error")
         else:
-            print(f"⚠️ DEBUG: Aucun utilisateur trouvé pour '{email}'")
+            
             flash("Un email de réinitialisation a été envoyé si ce compte existe.", "info")
         
         return redirect(url_for('auth.login'))

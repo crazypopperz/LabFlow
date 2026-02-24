@@ -10,7 +10,6 @@ from flask import Flask, redirect, request, session, url_for, current_app, rende
 from flask_wtf.csrf import CSRFProtect
 from flask_talisman import Talisman
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import text, inspect
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -46,89 +45,6 @@ def configure_logging(app):
         app.logger.addHandler(file_handler)
         app.logger.setLevel(logging.INFO)
         app.logger.info('LabFlow startup')
-
-def run_auto_migrations(app):
-    """
-    Exécute les migrations de structure de base de données au démarrage.
-    Vérifie l'existence des colonnes et corrige les types si nécessaire.
-    """
-    # On ne lance la migration lourde que si on est sur Render ou si une DB externe est configurée
-    if not (os.environ.get('RENDER') or os.environ.get('DATABASE_URL')):
-        return
-
-    with app.app_context():
-        print("🔧 Vérification de la structure BDD...")
-        try:
-            inspector = inspect(db.engine)
-            
-            def add_column(table, column, definition):
-                try:
-                    # Vérifie si la table existe d'abord
-                    if not inspector.has_table(table):
-                        return
-                        
-                    cols = [c['name'] for c in inspector.get_columns(table)]
-                    if column not in cols:
-                        with db.engine.connect() as conn:
-                            conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {column} {definition}'))
-                            conn.commit()
-                        print(f"✅ {table}.{column} ajoutée")
-                    else:
-                        # Silencieux si existe déjà pour ne pas polluer les logs
-                        pass
-                except Exception as e:
-                    print(f"❌ Erreur {table}.{column}: {e}")
-            
-            # 1. Table utilisateurs
-            add_column('utilisateurs', 'niveau_enseignement', 'VARCHAR(50)')
-            add_column('utilisateurs', 'statut_compte', "VARCHAR(20) DEFAULT 'actif'")
-            
-            # 2. Table objets - TOUTES les colonnes nécessaires
-            add_column('objets', 'type_objet', "VARCHAR(50) DEFAULT 'materiel'")
-            add_column('objets', 'unite', "VARCHAR(20) DEFAULT 'unite'")
-            add_column('objets', 'capacite_initiale', 'FLOAT DEFAULT 0.0')
-            add_column('objets', 'niveau_actuel', 'FLOAT DEFAULT 0.0')
-            add_column('objets', 'seuil_pourcentage', 'FLOAT DEFAULT 10')
-            add_column('objets', 'niveau_requis', "VARCHAR(50) DEFAULT 'tous'")
-            add_column('objets', 'quantite_physique', 'INTEGER DEFAULT 0')
-            add_column('objets', 'seuil', 'INTEGER DEFAULT 0')
-            add_column('objets', 'date_peremption', 'DATE')
-            add_column('objets', 'image_url', 'TEXT')
-            add_column('objets', 'fds_url', 'TEXT')
-            add_column('objets', 'is_cmr', 'BOOLEAN DEFAULT FALSE')
-            add_column('objets', 'armoire_id', 'INTEGER')
-            add_column('objets', 'categorie_id', 'INTEGER')
-            add_column('objets', 'etablissement_id', 'INTEGER')
-            add_column('objets', 'en_commande', 'BOOLEAN DEFAULT FALSE')
-            add_column('objets', 'traite', 'BOOLEAN DEFAULT FALSE')
-            
-            print("✓ Structure des colonnes vérifiée.")
-            
-            # 3. Correction spécifique : niveau_requis (FLOAT -> VARCHAR)
-            # Ce correctif gère le cas où la colonne a été créée avec le mauvais type précédemment
-            try:
-                with db.engine.connect() as conn:
-                    result = conn.execute(text("""
-                        SELECT data_type 
-                        FROM information_schema.columns 
-                        WHERE table_name='objets' AND column_name='niveau_requis'
-                    """))
-                    row = result.fetchone()
-                    
-                    if row and 'double' in str(row[0]).lower():
-                        print("⚠️ Correction détectée : niveau_requis est FLOAT, conversion en VARCHAR...")
-                        conn.execute(text("ALTER TABLE objets ALTER COLUMN niveau_requis TYPE VARCHAR(50) USING niveau_requis::text"))
-                        conn.execute(text("ALTER TABLE objets ALTER COLUMN niveau_requis SET DEFAULT 'tous'"))
-                        conn.execute(text("UPDATE objets SET niveau_requis = 'tous' WHERE niveau_requis IS NULL OR niveau_requis = ''"))
-                        conn.commit()
-                        print("✅ Correction appliquée.")
-            except Exception as e:
-                print(f"Info niveau_requis: {e}")
-                
-        except Exception as e:
-            print(f"❌ ERREUR MIGRATION CRITIQUE: {e}")
-            import traceback
-            traceback.print_exc()
 
 def create_app():
     app = Flask(__name__)
@@ -204,7 +120,6 @@ def create_app():
     migrate = Migrate(app, db)
     
     # Exécution des migrations automatiques
-    run_auto_migrations(app)
 
     CSRFProtect(app)
     mail.init_app(app)

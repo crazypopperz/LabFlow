@@ -711,17 +711,17 @@ def reservation_retirer_item(groupe_id, item_id):
         else:
         # --------------------
 
-        # Suppression ou Décrémentation
-        if target.quantite_reservee > 1: 
-            target.quantite_reservee -= 1
-        else: 
-            db.session.delete(target)
-        
-        # COMMIT UNIQUE POUR TOUT
-        db.session.commit()
-        
-        remaining = db.session.execute(select(func.count(Reservation.id)).filter_by(groupe_id=groupe_id)).scalar()
-        return jsonify({'success': True, 'remaining_items': remaining})
+            # Suppression ou Décrémentation
+            if target.quantite_reservee > 1: 
+               target.quantite_reservee -= 1
+            else: 
+                db.session.delete(target)
+            
+            # COMMIT UNIQUE POUR TOUT
+            db.session.commit()
+            
+            remaining = db.session.execute(select(func.count(Reservation.id)).filter_by(groupe_id=groupe_id)).scalar()
+            return jsonify({'success': True, 'remaining_items': remaining})
         
     except Exception as e:
         db.session.rollback()
@@ -884,59 +884,6 @@ def valider_dormant(objet_id):
         return jsonify({'success': False, 'error': "Erreur"}), 500
 
 # CORRECTION : Suppression du doublon /api/api/
-@api_bp.route('/signalement', methods=['POST'])
-@login_required
-def signaler_dysfonctionnement():
-    if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
-    try:
-        data = request.json
-        equipement_id = data.get('equipement_id')
-        description = data.get('description')
-        
-        if not equipement_id or not description:
-            return jsonify({'success': False, 'error': "Description manquante."}), 400
-
-        user = db.session.get(Utilisateur, session.get('user_id'))
-        nom_operateur = user.nom_utilisateur if user else "Utilisateur Inconnu"
-
-        log = MaintenanceLog(
-            equipement_id=equipement_id,
-            date_intervention=datetime.now().date(),
-            operateur=nom_operateur,
-            resultat='signalement', 
-            observations=description
-        )
-        
-        db.session.add(log)
-        db.session.commit()
-        
-        return jsonify({'success': True})
-        
-    except Exception as e:
-        current_app.logger.error(f"Erreur signalement: {e}")
-        return jsonify({'success': False, 'error': "Erreur technique."}), 500
-
-@api_bp.route('/traiter_signalement/<int:log_id>/<action>', methods=['POST'])
-@admin_required
-def traiter_signalement(log_id, action):
-    try:
-        log = db.session.get(MaintenanceLog, log_id)
-        if not log: return jsonify({'success': False, 'error': "Introuvable"}), 404
-        
-        if action == 'valider':
-            log.resultat = 'non_conforme' 
-            log.observations += " [Validé par Admin]"
-        elif action == 'refuser':
-            db.session.delete(log)
-        
-        db.session.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-# ---======================================---
-#    AVERTISSEMENT ADMIN SUPPRESSION RESA
 # ---======================================---
 @api_bp.route("/notifications/lu/<int:notif_id>", methods=['POST'])
 @login_required

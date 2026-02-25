@@ -2241,95 +2241,6 @@ def importer_fichier():
 
     return redirect(url_for('admin.importer_page'))
 
-
-
-@admin_bp.route("/exporter_inventaire")
-@admin_required
-@limiter.limit("5 per minute")
-def exporter_inventaire():
-    etablissement_id = session['etablissement_id']
-    
-    # 1. Récupération des paramètres
-    format_type = request.args.get('format')
-    armoire_id = request.args.get('armoire_id', type=int)
-    categorie_id = request.args.get('categorie_id', type=int)
-    filter_type = request.args.get('filter') # Nouveau paramètre pour CMR
-    
-    if format_type not in ['excel', 'pdf']:
-        flash("Format non supporté.", "error")
-        return redirect(url_for('admin.admin'))
-
-    try:
-        # 2. Requête de base
-        query = db.select(Objet).options(
-            joinedload(Objet.categorie), 
-            joinedload(Objet.armoire)
-        ).filter_by(etablissement_id=etablissement_id)
-
-        titre_doc = f"Inventaire - {session.get('nom_etablissement', 'Global')}"
-        
-        # 3. Application des filtres
-        if filter_type == 'cmr':
-            # --- FILTRE CMR ---
-            query = query.filter(Objet.is_cmr == True)
-            titre_doc = f"Inventaire - Produits CMR"
-            
-        elif armoire_id:
-            armoire = db.session.get(Armoire, armoire_id)
-            if not armoire or armoire.etablissement_id != etablissement_id:
-                return redirect(url_for('admin.admin'))
-            query = query.filter(Objet.armoire_id == armoire_id)
-            titre_doc = f"Inventaire - {armoire.nom}"
-        
-        elif categorie_id:
-            categorie = db.session.get(Categorie, categorie_id)
-            if not categorie or categorie.etablissement_id != etablissement_id:
-                return redirect(url_for('admin.admin'))
-            query = query.filter(Objet.categorie_id == categorie_id)
-            titre_doc = f"Inventaire - {categorie.nom}"
-
-        # 4. Exécution
-        objets = db.session.execute(query.order_by(Objet.nom)).scalars().all()
-        
-        if not objets:
-            flash("Aucun objet trouvé pour cette sélection.", "warning")
-            return redirect(url_for('admin.admin'))
-        
-        # 5. Formatage des données (La boucle complète)
-        data_export = []
-        for obj in objets:
-            data_export.append({
-                'categorie': obj.categorie.nom if obj.categorie else "Sans catégorie",
-                'nom': obj.nom,
-                'quantite': obj.quantite_physique,
-                'seuil': obj.seuil,
-                'armoire': obj.armoire.nom if obj.armoire else "Non rangé",
-                'peremption': obj.date_peremption.strftime('%d/%m/%Y') if obj.date_peremption else "-"
-            })
-            
-        # 6. Métadonnées
-        metadata = {
-            'etablissement': titre_doc, 
-            'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
-            'total': len(data_export)
-        }
-
-        # 7. Audit Log (Obligatoire)
-        log_action('export_inventaire', 
-                  f"Format: {format_type}, Armoire: {armoire_id}, Cat: {categorie_id}, Items: {len(data_export)}")
-
-        # 8. Génération du fichier
-        if format_type == 'excel':
-            return generer_inventaire_excel(data_export, metadata)
-        else:
-            return generer_inventaire_pdf(data_export, metadata)
-
-    except Exception as e:
-        current_app.logger.error(f"Erreur critique export inventaire: {e}", exc_info=True)
-        flash("Une erreur technique est survenue lors de l'export.", "error")
-        return redirect(url_for('admin.admin'))
-
-# ============================================================
 # MODULE RAPPORTS & ACTIVITÉ (Version Durcie)
 # ============================================================
 
@@ -2567,12 +2478,19 @@ def upload_document():
     nom = request.form.get('nom')
     type_doc = request.form.get('type_doc')
     
+    EXTENSIONS_AUTORISEES_DOCS = {'pdf', 'png', 'jpg', 'jpeg'}
+
     if f and nom:
+        # Validation de l'extension
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+        if ext not in EXTENSIONS_AUTORISEES_DOCS:
+            flash(f"Format non autorisé. Formats acceptés : {', '.join(EXTENSIONS_AUTORISEES_DOCS)}", "error")
+            return redirect(url_for('admin.gestion_documents'))
+        
         # Sécurisation du nom de fichier
         filename = secure_filename(f"{etablissement_id}_{int(datetime.now().timestamp())}_{f.filename}")
         upload_path = os.path.join(current_app.root_path, 'static', 'uploads', 'docs')
         os.makedirs(upload_path, exist_ok=True)
-        
         f.save(os.path.join(upload_path, filename))
         
         doc = DocumentReglementaire(

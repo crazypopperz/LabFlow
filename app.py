@@ -222,65 +222,68 @@ def create_app():
             'notifs_count': 0,
             'notifications_list': []
         }
-        
         etablissement_id = session.get('etablissement_id')
         user_id = session.get('user_id')
-        
         if not etablissement_id: return context
-            
+
         try:
-            context['all_armoires'] = db.session.execute(
-                db.select(Armoire).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)
-            ).scalars().all()
-            
-            context['all_categories'] = db.session.execute(
-                db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)
-            ).scalars().all()
-            
+            # CACHE : Armoires et catégories (changent rarement)
+            cache_key_armoires = f"armoires_{etablissement_id}"
+            cache_key_categories = f"categories_{etablissement_id}"
+
+            all_armoires = cache.get(cache_key_armoires)
+            if all_armoires is None:
+                all_armoires = db.session.execute(
+                    db.select(Armoire).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)
+                ).scalars().all()
+                cache.set(cache_key_armoires, all_armoires, timeout=300)
+
+            all_categories = cache.get(cache_key_categories)
+            if all_categories is None:
+                all_categories = db.session.execute(
+                    db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)
+                ).scalars().all()
+                cache.set(cache_key_categories, all_categories, timeout=300)
+
+            context['all_armoires'] = all_armoires
+            context['all_categories'] = all_categories
+
+            # PAS DE CACHE : Notifications (temps réel obligatoire)
             if user_id:
                 notifs = db.session.execute(
                     db.select(Notification)
                     .filter_by(utilisateur_id=user_id, lu=False)
                     .order_by(Notification.date_creation.desc())
                 ).scalars().all()
-                
                 context['notifs_count'] = len(notifs)
                 context['notifications_list'] = notifs
-            
-            alert_info = get_alerte_info()
+
+            # CACHE : Alertes (recalcul toutes les 2 minutes)
+            cache_key_alertes = f"alertes_{etablissement_id}"
+            alert_info = cache.get(cache_key_alertes)
+            if alert_info is None:
+                alert_info = get_alerte_info()
+                cache.set(cache_key_alertes, alert_info, timeout=120)
             context['alertes_total'] = alert_info.get('alertes_total', 0)
-            
+
+            # CACHE : Licence (changement très rare)
             params_dict = get_etablissement_params(etablissement_id)
-            
             if params_dict.get('licence_statut') == 'PRO':
                 context['licence']['statut'] = 'PRO'
                 context['licence']['is_pro'] = True
-            
             if params_dict.get('instance_id'):
                 context['licence']['instance_id'] = params_dict.get('instance_id')
 
             context['nom_etablissement'] = session.get('nom_etablissement')
-            
             return context
-            
+
         except SQLAlchemyError as e:
-            # Gestion d'erreur améliorée avec Rollback
             db.session.rollback()
             current_app.logger.error(f"Erreur DB context_processor : {e}", exc_info=True)
             return context
         except Exception as e:
             current_app.logger.error(f"Erreur inattendue context_processor : {e}", exc_info=True)
             return context
-    
-    # Auto-migration au démarrage (Render version gratuite)
-    try:
-        from flask_migrate import upgrade
-        upgrade()
-        app.logger.info("Migrations appliquées avec succès.")
-    except Exception as e:
-        app.logger.error(f"Erreur migration au démarrage: {e}")
-        
-    return app
 
 if __name__ == '__main__':
     app = create_app()

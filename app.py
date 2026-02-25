@@ -271,7 +271,15 @@ def create_app():
         except Exception as e:
             current_app.logger.error(f"Erreur inattendue context_processor : {e}", exc_info=True)
             return context
-            
+    
+    # Auto-migration au démarrage (Render version gratuite)
+    try:
+        from flask_migrate import upgrade
+        upgrade()
+        app.logger.info("Migrations appliquées avec succès.")
+    except Exception as e:
+        app.logger.error(f"Erreur migration au démarrage: {e}")
+        
     return app
 
 if __name__ == '__main__':

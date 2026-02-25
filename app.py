@@ -68,14 +68,13 @@ def create_app():
     # ============================================================
     # 1. CONFIGURATION
     # ============================================================
-    app.config.from_object('config') 
 
     secret_key = os.environ.get('SECRET_KEY')
     if not secret_key:
         # Clé de développement stable
         secret_key = 'dev-key-stable-pour-eviter-deconnexion'
         if not is_production:
-            print("⚠️  MODE DEV : Utilisation d'une SECRET_KEY fixe.")
+            app.logger.warning("MODE DEV : Utilisation d'une SECRET_KEY fixe.")
     app.config['SECRET_KEY'] = secret_key
     
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)

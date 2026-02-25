@@ -195,37 +195,45 @@ def get_alerte_info():
 
     now = datetime.now()
 
-    # A. Calcul Stock & Péremption
+    # A. Calcul Stock & Péremption (Requête agrégée - sans N+1)
     try:
+        date_limite_peremption = (now + timedelta(days=30)).date()
+
+        # Une seule requête pour toutes les réservations actives par objet
+        reservations_par_objet = dict(
+            db.session.query(
+                Reservation.objet_id,
+                func.sum(Reservation.quantite_reservee)
+            ).filter(
+                Reservation.etablissement_id == etablissement_id,
+                Reservation.fin_reservation > now
+            ).group_by(Reservation.objet_id).all()
+        )
+
+        # Une seule requête pour tous les objets
         all_objets = db.session.execute(
             db.select(Objet).filter_by(etablissement_id=etablissement_id)
         ).scalars().all()
 
         count_stock = 0
         count_peremption = 0
-        date_limite_peremption = (now + timedelta(days=30)).date()
 
         for objet in all_objets:
             try:
-                # Stock
-                total_reserve = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
-                    Reservation.objet_id == objet.id,
-                    Reservation.fin_reservation > now
-                ).scalar() or 0
-                
+                # Stock — on utilise le dict précalculé, pas de requête SQL
+                total_reserve = reservations_par_objet.get(objet.id, 0)
                 quantite_disponible = objet.quantite_physique - total_reserve
                 seuil_numeric = int(objet.seuil) if objet.seuil is not None else 0
-                
-                if objet.en_commande == 0 and int(quantite_disponible) <= seuil_numeric:
+                if not objet.en_commande and int(quantite_disponible) <= seuil_numeric:
                     count_stock += 1
-                
+
                 # Péremption
-                if objet.date_peremption and objet.traite == 0:
-                    d_perim = objet.date_peremption if isinstance(objet.date_peremption, datetime) else datetime.strptime(str(objet.date_peremption), '%Y-%m-%d').date()
+                if objet.date_peremption and not objet.traite:
+                    d_perim = objet.date_peremption if isinstance(objet.date_peremption, date) else datetime.strptime(str(objet.date_peremption), '%Y-%m-%d').date()
                     if d_perim < date_limite_peremption:
                         count_peremption += 1
             except Exception:
-                continue 
+                continue
 
         alerts["alertes_stock"] = count_stock
         alerts["alertes_peremption"] = count_peremption

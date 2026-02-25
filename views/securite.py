@@ -31,7 +31,7 @@ def voir_equipement(id):
         {'text': 'Sécurité', 'url': url_for('securite.index')},
         {'text': equipement.nom, 'url': None}
     ]
-    return render_template('securite/details.html', equipement=equipement, breadcrumbs=breadcrumbs, now=datetime.now())
+    return render_template('securite/details.html', equipement=equipement, breadcrumbs=breadcrumbs)
 
 # --- API ACTIONS ---
 

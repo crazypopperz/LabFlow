@@ -212,6 +212,10 @@ def create_app():
     @app.context_processor
     def inject_utilities():
         return dict(get_etablissement_params=get_etablissement_params)
+    
+    @app.context_processor
+    def inject_now():
+        return {'now': datetime.now()}
 
     @app.context_processor
     def inject_global_data():

@@ -246,7 +246,7 @@ def index():
 
     start_tour = db.session.query(Armoire).filter_by(etablissement_id=etablissement_id).count() == 0
     
-    return render_template("index.html", start_tour=start_tour, now=datetime.now(), data=dashboard_data)
+    return render_template("index.html", start_tour=start_tour, data=dashboard_data)
 
 
 @inventaire_bp.route("/inventaire")
@@ -292,7 +292,6 @@ def inventaire():
                             all_categories=all_categories,
                             pagination=pagination,
                             date_actuelle=datetime.now(),
-                            now=datetime.now,
                             sort_by=sort_by,
                             direction=direction,
                             is_general_inventory=True,
@@ -873,8 +872,8 @@ def voir_objet(objet_id):
                            historique=historique,
                            armoires=armoires,
                            categories=categories,
-                           breadcrumbs=breadcrumbs,
-                           now=datetime.now())
+                           breadcrumbs=breadcrumbs
+                           )
 
 
 @inventaire_bp.route("/armoire/<int:armoire_id>")
@@ -1060,8 +1059,8 @@ def objets_dormants():
     
     return render_template("dormants.html", 
                            objets=dormants, 
-                           breadcrumbs=breadcrumbs,
-                           now=datetime.now())
+                           breadcrumbs=breadcrumbs
+                           )
 
 
 @inventaire_bp.route("/exporter", methods=['GET'])

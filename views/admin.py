@@ -615,7 +615,6 @@ def admin():
     # -----------------------------------
 
     return render_template("admin.html", 
-                           now=datetime.now(), 
                            licence=licence_info, 
                            etablissement=etablissement,
                            securite_stats=securite_stats)
@@ -948,7 +947,7 @@ def gestion_utilisateurs():
     ).scalars().all()
 
     breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Utilisateurs'}]
-    return render_template("admin_utilisateurs.html", utilisateurs=utilisateurs, breadcrumbs=breadcrumbs, now=datetime.now)
+    return render_template("admin_utilisateurs.html", utilisateurs=utilisateurs, breadcrumbs=breadcrumbs)
 
 @admin_bp.route("/utilisateurs/ajouter", methods=["POST"])
 @admin_required
@@ -1934,7 +1933,7 @@ def gestion_sauvegardes():
     if params.get('licence_statut') != 'PRO':
         flash("Réservé à la version PRO.", "warning")
         return redirect(url_for('admin.admin'))
-    return render_template("admin_backup.html", now=datetime.now(), breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Sauvegardes'}])
+    return render_template("admin_backup.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Sauvegardes'}])
 
 @admin_bp.route("/telecharger_db")
 @admin_required
@@ -2102,7 +2101,7 @@ def importer_page():
     etablissement_id = session['etablissement_id']
     armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
     categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
-    return render_template("admin_import.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Import'}], armoires=armoires, categories=categories, now=datetime.now())
+    return render_template("admin_import.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Import'}], armoires=armoires, categories=categories)
 
 @admin_bp.route("/telecharger_modele")
 @admin_required

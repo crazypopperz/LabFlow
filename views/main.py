@@ -52,8 +52,8 @@ def gestion_armoires():
     
     return render_template("gestion_armoires.html",
                            armoires=armoires,
-                           breadcrumbs=breadcrumbs,
-                           now=datetime.now())
+                           breadcrumbs=breadcrumbs
+                           )
 
 #============================================================
 # GESTION CATEGORIES (LOGIQUE RESTAURÉE)
@@ -78,8 +78,8 @@ def gestion_categories():
 
     return render_template("gestion_categories.html",
                            categories=categories,
-                           breadcrumbs=breadcrumbs,
-                           now=datetime.now())
+                           breadcrumbs=breadcrumbs
+                           )
 
 #================================================================
 #  GESTION CALENDRIER (SECTION MODIFIÉE)
@@ -129,8 +129,7 @@ def calendrier():
         year=year, 
         month=month, 
         reservations_map=reservations_map,
-        breadcrumbs=breadcrumbs,
-        now=datetime.now()
+        breadcrumbs=breadcrumbs
     )
 
 
@@ -193,7 +192,8 @@ def vue_jour(date_str):
     return render_template("vue_jour.html",
                            date_concernee=date_obj,
                            reservations_par_heure=reservations_par_heure,
-                           breadcrumbs=breadcrumbs)
+                           breadcrumbs=breadcrumbs
+                           )
 
 #================================================================
 # GESTION ALERTES
@@ -276,7 +276,8 @@ def alertes():
                            breadcrumbs=breadcrumbs,
                            date_actuelle=now,
                            signalements_securite=signalements_securite,
-                           now=now)
+                           now=now
+                           )
 
 #================================================================
 # GESTION FOURNISSEURS
@@ -300,7 +301,8 @@ def voir_fournisseurs():
     
     return render_template("fournisseurs.html", 
                            fournisseurs=fournisseurs,
-                           breadcrumbs=breadcrumbs)
+                           breadcrumbs=breadcrumbs
+                           )
 
 #================================================================
 #  GESTION PANIER
@@ -344,8 +346,8 @@ def a_propos():
 
     return render_template("a_propos.html", 
                            breadcrumbs=breadcrumbs,
-                           licence=licence_info,
-                           now=datetime.now())
+                           licence=licence_info
+                           )
 
 
 
@@ -407,7 +409,8 @@ def voir_budget():
                            annee=annee_courante,
                            fournisseurs=fournisseurs,
                            breadcrumbs=breadcrumbs,
-                           now=now)
+                           now=now
+                           )
 
 
 #================================================================

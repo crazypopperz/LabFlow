@@ -52,9 +52,12 @@ from services.security_service import SecurityService
 from services.document_service import DocumentService, DocumentServiceError
 
 from PIL import Image, UnidentifiedImageError
-import pillow_heif
-
-pillow_heif.register_heif_opener()
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    HEIF_SUPPORTED = True
+except ImportError:
+    HEIF_SUPPORTED = False
 
 # ============================================================
 # CONFIGURATION
@@ -136,9 +139,12 @@ def _handle_armoire_image(file_obj):
         raise ValueError("Fichier image invalide ou corrompu.")
 
     # Validation Format (Liste blanche incluant HEIC/HEIF)
-    valid_formats = ['JPEG', 'JPG', 'PNG', 'WEBP', 'HEIF', 'HEIC']
+    valid_formats = ['JPEG', 'JPG', 'PNG', 'WEBP']
+    if HEIF_SUPPORTED:
+        valid_formats.extend(['HEIF', 'HEIC'])
     if img.format is None or img.format.upper() not in valid_formats:
-        raise ValueError("Format non supporté. Utilisez JPG, PNG ou HEIC (iPhone).")
+        msg = "Format non supporté. Utilisez JPG, PNG ou HEIC (iPhone)." if HEIF_SUPPORTED else "Format non supporté. Utilisez JPG ou PNG."
+        raise ValueError(msg)
 
     # Nettoyage (Sécurité) & Conversion RGB
     if img.mode in ("RGBA", "P"):

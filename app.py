@@ -153,18 +153,18 @@ def create_app():
     # 4. BLUEPRINTS
     # ============================================================
     try:
-    app.register_blueprint(auth_bp)
-    app.logger.info("auth_bp OK")
-    app.register_blueprint(inventaire_bp)
-    app.logger.info("inventaire_bp OK")
-    app.register_blueprint(admin_bp)
-    app.logger.info("admin_bp OK")
-    app.register_blueprint(main_bp)
-    app.logger.info("main_bp OK")
-    app.register_blueprint(api_bp)
-    app.logger.info("api_bp OK")
-    app.register_blueprint(securite_bp)
-    app.logger.info("securite_bp OK")
+        app.register_blueprint(auth_bp)
+        app.logger.info("auth_bp OK")
+        app.register_blueprint(inventaire_bp)
+        app.logger.info("inventaire_bp OK")
+        app.register_blueprint(admin_bp)
+        app.logger.info("admin_bp OK")
+        app.register_blueprint(main_bp)
+        app.logger.info("main_bp OK")
+        app.register_blueprint(api_bp)
+        app.logger.info("api_bp OK")
+        app.register_blueprint(securite_bp)
+        app.logger.info("securite_bp OK")
     except Exception as e:
         import traceback
         app.logger.critical(f"ERREUR BLUEPRINT: {e}")

@@ -766,44 +766,75 @@ def reservation_modifier_heure(groupe_id):
             return jsonify({'success': False, 'error': "Introuvable ou non autorisé"}), 404
 
         # 3. VALIDATION CRITIQUE : Vérification du stock sur le nouveau créneau
-        for r in resas:
-            if r.objet_id:
-                taken = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
+        # Collecte tous les objet_ids concernés en une passe
+        objet_ids_directs = [r.objet_id for r in resas if r.objet_id]
+        kit_ids = [r.kit_id for r in resas if r.kit_id]
+
+        # Chargement des kits avec leurs composants en une seule requête
+        kits_map = {}
+        if kit_ids:
+            kits = db.session.execute(
+                db.select(Kit).options(
+                    joinedload(Kit.objets_assoc).joinedload(KitObjet.objet)
+                ).filter(Kit.id.in_(kit_ids))
+            ).unique().scalars().all()
+            kits_map = {k.id: k for k in kits}
+
+        # Collecte tous les objet_ids des kits
+        objet_ids_kits = []
+        for kit in kits_map.values():
+            objet_ids_kits.extend([ko.objet_id for ko in kit.objets_assoc])
+
+        tous_objet_ids = list(set(objet_ids_directs + objet_ids_kits))
+
+        # Une seule requête pour toutes les réservations en conflit
+        if tous_objet_ids:
+            prises = dict(
+                db.session.query(
+                    Reservation.objet_id,
+                    func.sum(Reservation.quantite_reservee)
+                ).filter(
                     Reservation.etablissement_id == etablissement_id,
-                    Reservation.groupe_id != groupe_id,  # On s'exclut
-                    Reservation.objet_id == r.objet_id,
+                    Reservation.groupe_id != groupe_id,
+                    Reservation.objet_id.in_(tous_objet_ids),
                     Reservation.debut_reservation < new_end,
                     Reservation.fin_reservation > new_start,
                     Reservation.statut == 'confirmée'
-                ).scalar() or 0
-                
-                obj = db.session.get(Objet, r.objet_id)
+                ).group_by(Reservation.objet_id).all()
+            )
+        else:
+            prises = {}
+
+        # Chargement des objets en une seule requête
+        objets_map = {}
+        if tous_objet_ids:
+            objets = db.session.execute(
+                db.select(Objet).filter(Objet.id.in_(tous_objet_ids))
+            ).scalars().all()
+            objets_map = {o.id: o for o in objets}
+
+        # Validation avec les données précalculées (zéro requête SQL)
+        for r in resas:
+            if r.objet_id:
+                obj = objets_map.get(r.objet_id)
                 if not obj:
                     return jsonify({'success': False, 'error': "Objet introuvable"}), 404
-                    
+                taken = prises.get(r.objet_id, 0)
                 dispo = obj.quantite_physique - taken
-                
                 if dispo < r.quantite_reservee:
                     return jsonify({'success': False, 'error': f"Stock insuffisant pour '{obj.nom}'"}), 400
-            
+
             elif r.kit_id:
-                kit = db.session.get(Kit, r.kit_id)
-                if not kit: return jsonify({'success': False, 'error': "Kit introuvable"}), 404
-                
+                kit = kits_map.get(r.kit_id)
+                if not kit:
+                    return jsonify({'success': False, 'error': "Kit introuvable"}), 404
                 for kit_obj in kit.objets_assoc:
                     qty_needed = kit_obj.quantite * r.quantite_reservee
-                    taken = db.session.query(func.sum(Reservation.quantite_reservee)).filter(
-                        Reservation.etablissement_id == etablissement_id,
-                        Reservation.groupe_id != groupe_id,
-                        Reservation.objet_id == kit_obj.objet_id,
-                        Reservation.debut_reservation < new_end,
-                        Reservation.fin_reservation > new_start,
-                        Reservation.statut == 'confirmée'
-                    ).scalar() or 0
-                    
-                    obj = kit_obj.objet
+                    obj = objets_map.get(kit_obj.objet_id)
+                    if not obj:
+                        continue
+                    taken = prises.get(kit_obj.objet_id, 0)
                     dispo = obj.quantite_physique - taken
-                    
                     if dispo < qty_needed:
                         return jsonify({'success': False, 'error': f"Stock insuffisant pour '{obj.nom}' (Kit)"}), 400
 

@@ -271,7 +271,9 @@ class AuditLog(db.Model):
     )
 
 class Historique(db.Model):
-    """DEPRECATED: Utilisez AuditLog pour les nouveaux enregistrements."""
+    """Journal d'activité principal : modifications objets, réservations, suppressions.
+    Note: AuditLog existe en parallèle pour les actions système (connexions, exports).
+    """
     __tablename__ = 'historique'
     id = db.Column(db.Integer, primary_key=True)
     objet_id = db.Column(db.Integer, nullable=True)

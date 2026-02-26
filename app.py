@@ -31,6 +31,7 @@ from views.securite import securite_bp
 from views.admin_users import admin_users_bp
 from views.admin_kits import admin_kits_bp
 from views.admin_budget import admin_budget_bp
+from views.admin_import import admin_import_bp
 
 # Chargement .env
 load_dotenv()
@@ -156,12 +157,13 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(inventaire_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(main_bp)
-    app.register_blueprint(api_bp)
-    app.register_blueprint(securite_bp)
     app.register_blueprint(admin_users_bp)
     app.register_blueprint(admin_kits_bp)
     app.register_blueprint(admin_budget_bp)
+    app.register_blueprint(admin_import_bp)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(api_bp)
+    app.register_blueprint(securite_bp)
 
     # ============================================================
     # 5. GESTION ERREURS

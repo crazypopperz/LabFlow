@@ -28,6 +28,7 @@ from views.admin import admin_bp
 from views.main import main_bp
 from views.api import api_bp
 from views.securite import securite_bp
+from views.admin_users import admin_users_bp
 
 # Chargement .env
 load_dotenv()
@@ -151,17 +152,12 @@ def create_app():
     # 4. BLUEPRINTS
     # ============================================================
     app.register_blueprint(auth_bp)
-    app.logger.info("auth_bp OK")
     app.register_blueprint(inventaire_bp)
-    app.logger.info("inventaire_bp OK")
     app.register_blueprint(admin_bp)
-    app.logger.info("admin_bp OK")
     app.register_blueprint(main_bp)
-    app.logger.info("main_bp OK")
     app.register_blueprint(api_bp)
-    app.logger.info("api_bp OK")
     app.register_blueprint(securite_bp)
-    app.logger.info("securite_bp OK")
+    app.register_blueprint(admin_users_bp)
 
     # ============================================================
     # 5. GESTION ERREURS

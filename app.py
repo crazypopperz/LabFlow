@@ -1,8 +1,6 @@
 # ============================================================
 # FICHIER : app.py (Version Optimisée & Robuste)
 # ============================================================
-import logging
-logging.basicConfig(level=logging.DEBUG)
 import os
 import secrets
 import logging
@@ -152,24 +150,18 @@ def create_app():
     # ============================================================
     # 4. BLUEPRINTS
     # ============================================================
-    try:
-        app.register_blueprint(auth_bp)
-        app.logger.info("auth_bp OK")
-        app.register_blueprint(inventaire_bp)
-        app.logger.info("inventaire_bp OK")
-        app.register_blueprint(admin_bp)
-        app.logger.info("admin_bp OK")
-        app.register_blueprint(main_bp)
-        app.logger.info("main_bp OK")
-        app.register_blueprint(api_bp)
-        app.logger.info("api_bp OK")
-        app.register_blueprint(securite_bp)
-        app.logger.info("securite_bp OK")
-    except Exception as e:
-        import traceback
-        app.logger.critical(f"ERREUR BLUEPRINT: {e}")
-        app.logger.critical(traceback.format_exc())
-        raise
+    app.register_blueprint(auth_bp)
+    app.logger.info("auth_bp OK")
+    app.register_blueprint(inventaire_bp)
+    app.logger.info("inventaire_bp OK")
+    app.register_blueprint(admin_bp)
+    app.logger.info("admin_bp OK")
+    app.register_blueprint(main_bp)
+    app.logger.info("main_bp OK")
+    app.register_blueprint(api_bp)
+    app.logger.info("api_bp OK")
+    app.register_blueprint(securite_bp)
+    app.logger.info("securite_bp OK")
 
     # ============================================================
     # 5. GESTION ERREURS
@@ -301,7 +293,17 @@ def create_app():
         except Exception as e:
             current_app.logger.error(f"Erreur inattendue context_processor : {e}", exc_info=True)
             return context
+# Auto-migration au démarrage (Render version gratuite)
+    with app.app_context():
+        try:
+            from flask_migrate import upgrade
+            upgrade()
+            app.logger.info("Migrations appliquées avec succès.")
+        except Exception as e:
+            app.logger.error(f"Erreur migration au démarrage: {e}")
 
+    return app
+    
 if __name__ == '__main__':
     app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=True)

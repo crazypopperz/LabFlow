@@ -40,16 +40,16 @@ def ajouter_utilisateur():
 
     if not nom_utilisateur or not mot_de_passe:
         flash("Champs obligatoires manquants.", "danger")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
     
     if email and not validate_email(email):
         flash("Format d'email invalide.", "danger")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     is_valid, error_msg = validate_password_strength(mot_de_passe)
     if not is_valid:
         flash(error_msg, "danger")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     try:
         nouvel_utilisateur = Utilisateur(
@@ -75,7 +75,7 @@ def ajouter_utilisateur():
         current_app.logger.error("Erreur création user", exc_info=True)
         flash("Erreur technique.", "danger")
 
-    return redirect(url_for('admin.gestion_utilisateurs'))
+    return redirect(url_for('admin_users.gestion_utilisateurs'))
 
 @admin_users_bp.route("/utilisateurs/modifier_email/<int:id_user>", methods=["POST"])
 @admin_required
@@ -85,12 +85,12 @@ def modifier_email_utilisateur(id_user):
     
     if email and not validate_email(email):
         flash("Format d'email invalide.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     user = db.session.get(Utilisateur, id_user)
     if not user or user.etablissement_id != etablissement_id:
         flash("Utilisateur introuvable.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     try:
         user.email = email if email else None
@@ -101,7 +101,7 @@ def modifier_email_utilisateur(id_user):
         current_app.logger.error("Erreur modif email", exc_info=True)
         flash("Erreur technique.", "error")
 
-    return redirect(url_for('admin.gestion_utilisateurs'))
+    return redirect(url_for('admin_users.gestion_utilisateurs'))
 
 @admin_users_bp.route("/utilisateurs/reinitialiser_mdp/<int:id_user>", methods=["POST"])
 @admin_required
@@ -111,18 +111,18 @@ def reinitialiser_mdp(id_user):
     
     if id_user == session['user_id']:
         flash("Action impossible sur soi-même.", "warning")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     nouveau_mdp = request.form.get('nouveau_mot_de_passe')
     is_valid, error_msg = validate_password_strength(nouveau_mdp)
     if not is_valid:
         flash(error_msg, "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     user = db.session.get(Utilisateur, id_user)
     if not user or user.etablissement_id != etablissement_id:
         flash("Utilisateur introuvable.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     try:
         user.mot_de_passe = generate_password_hash(nouveau_mdp, method='pbkdf2:sha256')
@@ -133,7 +133,7 @@ def reinitialiser_mdp(id_user):
         current_app.logger.error("Erreur reset MDP", exc_info=True)
         flash("Erreur technique.", "error")
 
-    return redirect(url_for('admin.gestion_utilisateurs'))
+    return redirect(url_for('admin_users.gestion_utilisateurs'))
 
 @admin_users_bp.route("/utilisateurs/supprimer/<int:id_user>", methods=["POST"])
 @admin_required
@@ -141,14 +141,14 @@ def reinitialiser_mdp(id_user):
 def supprimer_utilisateur(id_user):
     if id_user == session['user_id']:
         flash("Impossible de supprimer son propre compte.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
     
     etablissement_id = session['etablissement_id']
     user = db.session.get(Utilisateur, id_user)
     
     if not user or user.etablissement_id != etablissement_id:
         flash("Utilisateur introuvable.", "error")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     try:
         has_history = db.session.query(Historique).filter_by(utilisateur_id=user.id).first()
@@ -171,7 +171,7 @@ def supprimer_utilisateur(id_user):
         current_app.logger.error("Erreur suppression user", exc_info=True)
         flash("Erreur technique.", "error")
         
-    return redirect(url_for('admin.gestion_utilisateurs'))
+    return redirect(url_for('admin_users.gestion_utilisateurs'))
 
 @admin_users_bp.route("/utilisateurs/promouvoir/<int:id_user>", methods=["POST"])
 @admin_required
@@ -179,7 +179,7 @@ def supprimer_utilisateur(id_user):
 def promouvoir_utilisateur(id_user):
     if id_user == session['user_id']:
         flash("Action impossible sur soi-même.", "warning")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
     
     etablissement_id = session['etablissement_id']
     target_user = db.session.get(Utilisateur, id_user)
@@ -187,12 +187,12 @@ def promouvoir_utilisateur(id_user):
     
     if not target_user or target_user.etablissement_id != etablissement_id:
         flash("Utilisateur cible introuvable.", "danger")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     password_confirm = request.form.get('password')
     if not password_confirm or not check_password_hash(current_admin.mot_de_passe, password_confirm):
         flash("Mot de passe incorrect.", "danger")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     try:
         target_user.role = 'admin'
@@ -205,4 +205,4 @@ def promouvoir_utilisateur(id_user):
         db.session.rollback()
         current_app.logger.error("Erreur promotion", exc_info=True)
         flash("Erreur technique.", "danger")
-        return redirect(url_for('admin.gestion_utilisateurs'))
+        return redirect(url_for('admin_users.gestion_utilisateurs'))

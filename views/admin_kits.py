@@ -36,14 +36,14 @@ def ajouter_kit():
 
     if not nom:
         flash("Le nom du kit est requis.", "danger")
-        return redirect(url_for('admin.gestion_kits'))
+        return redirect(url_for('admin_kits.gestion_kits'))
 
     try:
         nouveau_kit = Kit(nom=nom, description=description, etablissement_id=etablissement_id)
         db.session.add(nouveau_kit)
         db.session.commit()
         flash(f"Kit '{nom}' créé.", "success")
-        return redirect(url_for('admin.modifier_kit', kit_id=nouveau_kit.id))
+        return redirect(url_for('admin_kits.modifier_kit', kit_id=nouveau_kit.id))
     except IntegrityError:
         db.session.rollback()
         flash("Un kit portant ce nom existe déjà.", "danger")
@@ -51,7 +51,7 @@ def ajouter_kit():
         db.session.rollback()
         current_app.logger.error("Erreur ajout kit", exc_info=True)
         flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.gestion_kits'))
+    return redirect(url_for('admin_kits.gestion_kits'))
 
 @admin_kits_bp.route("/kits/modifier/<int:kit_id>", methods=["GET", "POST"])
 @admin_required
@@ -61,7 +61,7 @@ def modifier_kit(kit_id):
     
     if not kit or kit.etablissement_id != etablissement_id:
         flash("Kit introuvable.", "danger")
-        return redirect(url_for('admin.gestion_kits'))
+        return redirect(url_for('admin_kits.gestion_kits'))
 
     if request.method == "POST":
         try:
@@ -131,7 +131,7 @@ def modifier_kit(kit_id):
             current_app.logger.error("Erreur modif kit", exc_info=True)
             flash(f"Erreur : {str(e)}", "danger")
             
-        return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
+        return redirect(url_for('admin_kits.modifier_kit', kit_id=kit_id))
 
     # Chargement des données pour l'affichage
     objets_in_kit = db.session.execute(
@@ -152,7 +152,7 @@ def modifier_kit(kit_id):
 
     breadcrumbs = [
         {'text': 'Admin', 'url': url_for('admin.admin')}, 
-        {'text': 'Kits', 'url': url_for('admin.gestion_kits')}, 
+        {'text': 'Kits', 'url': url_for('admin_kits.gestion_kits')}, 
         {'text': kit.nom}
     ]
     
@@ -169,7 +169,7 @@ def retirer_objet_kit(kit_objet_id):
     assoc = db.session.get(KitObjet, kit_objet_id)
     if not assoc or assoc.etablissement_id != etablissement_id:
         flash("Objet introuvable.", "danger")
-        return redirect(url_for('admin.gestion_kits'))
+        return redirect(url_for('admin_kits.gestion_kits'))
     kit_id = assoc.kit_id
     try:
         db.session.delete(assoc)
@@ -179,7 +179,7 @@ def retirer_objet_kit(kit_objet_id):
         db.session.rollback()
         current_app.logger.error("Erreur retrait objet kit", exc_info=True)
         flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.modifier_kit', kit_id=kit_id))
+    return redirect(url_for('admin_kits.modifier_kit', kit_id=kit_id))
 
 @admin_kits_bp.route("/kits/supprimer/<int:kit_id>", methods=["POST"])
 @admin_required
@@ -197,5 +197,5 @@ def supprimer_kit(kit_id):
             flash("Erreur technique.", "danger")
     else:
         flash("Kit introuvable.", "danger")
-    return redirect(url_for('admin.gestion_kits'))
+    return redirect(url_for('admin_kits.gestion_kits'))
 

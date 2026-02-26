@@ -35,7 +35,7 @@ def gestion_documents():
 @admin_required
 def upload_document():
     etablissement_id = session['etablissement_id']
-    if 'fichier' not in request.files: return redirect(url_for('admin.gestion_documents'))
+    if 'fichier' not in request.files: return redirect(url_for('admin_documents.gestion_documents'))
     
     f = request.files['fichier']
     nom = request.form.get('nom')
@@ -48,7 +48,7 @@ def upload_document():
         ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
         if ext not in EXTENSIONS_AUTORISEES_DOCS:
             flash(f"Format non autorisé. Formats acceptés : {', '.join(EXTENSIONS_AUTORISEES_DOCS)}", "error")
-            return redirect(url_for('admin.gestion_documents'))
+            return redirect(url_for('admin_documents.gestion_documents'))
         
         # Sécurisation du nom de fichier
         filename = secure_filename(f"{etablissement_id}_{int(datetime.now().timestamp())}_{f.filename}")
@@ -66,7 +66,7 @@ def upload_document():
         db.session.commit()
         flash("Document ajouté avec succès.", "success")
         
-    return redirect(url_for('admin.gestion_documents'))
+    return redirect(url_for('admin_documents.gestion_documents'))
 
 
 @admin_documents_bp.route("/documents/generer_inventaire")
@@ -138,7 +138,7 @@ def generer_inventaire_annuel():
         current_app.logger.error(f"Erreur critique génération inventaire: {e}", exc_info=True)
         flash("Une erreur technique inattendue est survenue.", "error")
         
-    return redirect(url_for('admin.gestion_documents'))
+    return redirect(url_for('admin_documents.gestion_documents'))
 
 
 
@@ -249,7 +249,7 @@ def supprimer_archive(archive_id):
     # Vérification de sécurité (IDOR)
     if not archive or archive.etablissement_id != etablissement_id:
         flash("Archive introuvable ou accès interdit.", "error")
-        return redirect(url_for('admin.gestion_documents'))
+        return redirect(url_for('admin_documents.gestion_documents'))
         
     try:
         # 1. Suppression du fichier physique sur le disque
@@ -270,7 +270,7 @@ def supprimer_archive(archive_id):
         current_app.logger.error(f"Erreur suppression archive: {e}", exc_info=True)
         flash("Erreur technique lors de la suppression.", "error")
         
-    return redirect(url_for('admin.gestion_documents'))
+    return redirect(url_for('admin_documents.gestion_documents'))
 
 #================================================================
 # ROUTE CONFIGURATION PLANNING RESERVATION PAR ADMIN

@@ -42,7 +42,7 @@ def telecharger_db():
     params = get_etablissement_params(etablissement_id)
     if params.get('licence_statut') != 'PRO':
         flash("Réservé PRO.", "warning")
-        return redirect(url_for('admin.gestion_sauvegardes'))
+        return redirect(url_for('admin_import.gestion_sauvegardes'))
 
     try:
         data = {
@@ -85,7 +85,7 @@ def telecharger_db():
     except Exception:
         current_app.logger.error("Erreur backup", exc_info=True)
         flash("Erreur technique.", "error")
-        return redirect(url_for('admin.gestion_sauvegardes'))
+        return redirect(url_for('admin_import.gestion_sauvegardes'))
 
 @admin_import_bp.route("/importer_db", methods=["POST"])
 @admin_required
@@ -93,7 +93,7 @@ def importer_db():
     etablissement_id = session['etablissement_id']
     if 'fichier' not in request.files:
         flash("Aucun fichier.", "error")
-        return redirect(url_for('admin.gestion_sauvegardes'))
+        return redirect(url_for('admin_import.gestion_sauvegardes'))
         
     fichier = request.files['fichier']
     
@@ -101,12 +101,12 @@ def importer_db():
     fichier.seek(0, 2)
     if fichier.tell() > MAX_JSON_SIZE:
         flash("Fichier JSON trop volumineux (Max 5Mo).", "error")
-        return redirect(url_for('admin.gestion_sauvegardes'))
+        return redirect(url_for('admin_import.gestion_sauvegardes'))
     fichier.seek(0)
 
     if fichier.filename == '' or not allowed_file(fichier.filename) or not fichier.filename.endswith('.json'):
         flash("Fichier invalide (.json requis).", "error")
-        return redirect(url_for('admin.gestion_sauvegardes'))
+        return redirect(url_for('admin_import.gestion_sauvegardes'))
 
     try:
         data = json.load(fichier)
@@ -190,7 +190,7 @@ def importer_db():
         current_app.logger.error("Erreur import DB", exc_info=True)
         flash("Erreur critique lors de l'importation.", "error")
 
-    return redirect(url_for('admin.gestion_sauvegardes'))
+    return redirect(url_for('admin_import.gestion_sauvegardes'))
 
 # ============================================================
 # IMPORT EXCEL
@@ -242,18 +242,18 @@ def importer_fichier():
     etablissement_id = session['etablissement_id']
     if 'fichier_excel' not in request.files:
         flash("Aucun fichier.", "error")
-        return redirect(url_for('admin.importer_page'))
+        return redirect(url_for('admin_import.importer_page'))
 
     fichier = request.files['fichier_excel']
     if fichier.filename == '' or not allowed_file(fichier.filename) or not fichier.filename.endswith('.xlsx'):
         flash("Fichier invalide (.xlsx requis).", "error")
-        return redirect(url_for('admin.importer_page'))
+        return redirect(url_for('admin_import.importer_page'))
 
     # Check size
     fichier.seek(0, 2)
     if fichier.tell() > MAX_FILE_SIZE:
         flash("Fichier trop volumineux.", "error")
-        return redirect(url_for('admin.importer_page'))
+        return redirect(url_for('admin_import.importer_page'))
     fichier.seek(0)
 
     try:
@@ -266,7 +266,7 @@ def importer_fichier():
         
         if not required_cols.issubset(headers.keys()):
             flash(f"Colonnes manquantes. Requis : {', '.join(required_cols)}", "error")
-            return redirect(url_for('admin.importer_page'))
+            return redirect(url_for('admin_import.importer_page'))
 
         existing_objets = {o.nom.lower() for o in db.session.execute(db.select(Objet).filter_by(etablissement_id=etablissement_id)).scalars().all()}
         armoires_map = {a.nom.lower(): a.id for a in db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()}
@@ -339,7 +339,7 @@ def importer_fichier():
         current_app.logger.error("Erreur import Excel", exc_info=True)
         flash("Erreur technique.", "error")
 
-    return redirect(url_for('admin.importer_page'))
+    return redirect(url_for('admin_import.importer_page'))
 
 # MODULE RAPPORTS & ACTIVITÉ (Version Durcie)
 # ============================================================
@@ -462,11 +462,11 @@ def exporter_rapports():
 
     if not all([date_debut_str, date_fin_str, format_type]):
         flash("Paramètres manquants.", "warning")
-        return redirect(url_for('admin.rapports'))
+        return redirect(url_for('admin_import.rapports'))
 
     if format_type not in ALLOWED_FORMATS:
         flash("Format non supporté.", "error")
-        return redirect(url_for('admin.rapports'))
+        return redirect(url_for('admin_import.rapports'))
 
     try:
         # 2. Parsing Dates
@@ -476,11 +476,11 @@ def exporter_rapports():
 
         if date_debut > date_fin:
             flash("Dates incohérentes.", "warning")
-            return redirect(url_for('admin.rapports'))
+            return redirect(url_for('admin_import.rapports'))
             
         if (date_fin - date_debut).days > MAX_EXPORT_DAYS:
             flash(f"Période limitée à {MAX_EXPORT_DAYS} jours.", "warning")
-            return redirect(url_for('admin.rapports'))
+            return redirect(url_for('admin_import.rapports'))
 
         # 3. Construction Requête
         query = db.select(
@@ -511,7 +511,7 @@ def exporter_rapports():
 
         if not resultats:
             flash("Aucune donnée trouvée pour ces critères.", "info")
-            return redirect(url_for('admin.rapports'))
+            return redirect(url_for('admin_import.rapports'))
 
         # 4. Préparation Données
         data_export = []
@@ -548,7 +548,7 @@ def exporter_rapports():
     except Exception as e:
         current_app.logger.error(f"Erreur export: {e}", exc_info=True)
         flash("Erreur technique lors de la génération.", "error")
-        return redirect(url_for('admin.rapports'))
+        return redirect(url_for('admin_import.rapports'))
 
 
 

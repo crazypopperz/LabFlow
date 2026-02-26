@@ -37,7 +37,7 @@ def ajouter_echeance():
 
     if not intitule or not date_str:
         flash("Champs obligatoires manquants.", "warning")
-        return redirect(url_for('admin.gestion_echeances'))
+        return redirect(url_for('admin_budget.gestion_echeances'))
 
     try:
         date_echeance = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -50,7 +50,7 @@ def ajouter_echeance():
         db.session.rollback()
         current_app.logger.error("Erreur ajout échéance", exc_info=True)
         flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.gestion_echeances'))
+    return redirect(url_for('admin_budget.gestion_echeances'))
 
 @admin_budget_bp.route("/echeances/modifier/<int:id>", methods=['POST'])
 @admin_required
@@ -59,7 +59,7 @@ def modifier_echeance(id):
     echeance = db.session.get(Echeance, id)
     if not echeance or echeance.etablissement_id != etablissement_id:
         flash("Échéance introuvable.", "danger")
-        return redirect(url_for('admin.gestion_echeances'))
+        return redirect(url_for('admin_budget.gestion_echeances'))
 
     try:
         echeance.intitule = request.form.get('intitule', '').strip()
@@ -74,7 +74,7 @@ def modifier_echeance(id):
         db.session.rollback()
         current_app.logger.error("Erreur modif échéance", exc_info=True)
         flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.gestion_echeances'))
+    return redirect(url_for('admin_budget.gestion_echeances'))
 
 @admin_budget_bp.route("/echeances/supprimer/<int:id>", methods=['POST'])
 @admin_required
@@ -83,7 +83,7 @@ def supprimer_echeance(id):
     echeance = db.session.get(Echeance, id)
     if not echeance or echeance.etablissement_id != etablissement_id:
         flash("Échéance introuvable.", "danger")
-        return redirect(url_for('admin.gestion_echeances'))
+        return redirect(url_for('admin_budget.gestion_echeances'))
     try:
         db.session.delete(echeance)
         db.session.commit()
@@ -92,7 +92,7 @@ def supprimer_echeance(id):
         db.session.rollback()
         current_app.logger.error("Erreur suppression échéance", exc_info=True)
         flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.gestion_echeances'))
+    return redirect(url_for('admin_budget.gestion_echeances'))
 
 # ============================================================
 # GESTION BUDGET
@@ -160,7 +160,7 @@ def definir_budget():
         db.session.rollback()
         current_app.logger.error("Erreur définition budget", exc_info=True)
         flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.budget', annee=annee if 'annee' in locals() else None))
+    return redirect(url_for('admin_budget.budget', annee=annee if 'annee' in locals() else None))
 
 @admin_budget_bp.route("/budget/depense/ajouter", methods=['POST'])
 @admin_required
@@ -252,7 +252,7 @@ def ajouter_depense():
         current_app.logger.error(f"Erreur ajout dépense: {e}", exc_info=True)
         flash("Erreur technique lors de l'ajout.", "error")
     
-    return redirect(url_for('admin.budget'))
+    return redirect(url_for('admin_budget.budget'))
 
 @admin_budget_bp.route("/budget/depense/supprimer/<int:id>", methods=['POST'])
 @admin_required
@@ -270,7 +270,7 @@ def supprimer_depense(id):
             flash("Erreur technique.", "danger")
     else:
         flash("Dépense introuvable.", "danger")
-    return redirect(url_for('admin.budget'))
+    return redirect(url_for('admin_budget.budget'))
     
 
 @admin_budget_bp.route("/budget/depense/modifier/<int:id>", methods=['POST'])
@@ -284,16 +284,16 @@ def modifier_depense(id):
     # 2. Vérifications IDOR
     if not depense or depense.etablissement_id != etablissement_id:
         flash("Dépense introuvable ou accès interdit.", "error")
-        return redirect(url_for('admin.budget'))
+        return redirect(url_for('admin_budget.budget'))
     
     if depense.budget.etablissement_id != etablissement_id:
         flash("Accès interdit (Incohérence Budget).", "error")
-        return redirect(url_for('admin.budget'))
+        return redirect(url_for('admin_budget.budget'))
 
     # 3. Vérification clôture
     if depense.budget.cloture:
         flash("Impossible de modifier une dépense d'un budget clôturé.", "warning")
-        return redirect(url_for('admin.budget'))
+        return redirect(url_for('admin_budget.budget'))
 
     try:
         # 4. Récupération données
@@ -374,7 +374,7 @@ def modifier_depense(id):
         current_app.logger.error(f"Erreur modification dépense {id}: {e}", exc_info=True)
         flash("Erreur technique lors de la modification.", "error")
 
-    return redirect(url_for('admin.budget'))
+    return redirect(url_for('admin_budget.budget'))
 
 
 
@@ -394,7 +394,7 @@ def cloturer_budget():
         db.session.rollback()
         current_app.logger.error("Erreur clôture budget", exc_info=True)
         flash("Erreur technique.", "danger")
-    return redirect(url_for('admin.budget'))
+    return redirect(url_for('admin_budget.budget'))
 
 @admin_budget_bp.route("/budget/exporter", methods=['GET'])
 @admin_required
@@ -618,4 +618,4 @@ def supprimer_fournisseur(id):
                 flash("Erreur technique.", "danger")
     else:
         flash("Fournisseur introuvable.", "danger")
-    return redirect(url_for('admin.gestion_fournisseurs'))
+    return redirect(url_for('admin_budget.gestion_fournisseurs'))

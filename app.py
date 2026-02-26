@@ -1,6 +1,8 @@
 # ============================================================
 # FICHIER : app.py (Version Optimisée & Robuste)
 # ============================================================
+import logging
+logging.basicConfig(level=logging.DEBUG)
 import os
 import secrets
 import logging

@@ -102,7 +102,7 @@ def index():
         db.select(Echeance)
         .filter(
             Echeance.etablissement_id == etablissement_id,
-            Echeance.traite == 0,
+            Echeance.traite == False,
             Echeance.date_echeance >= date_aujourdhui,
             Echeance.date_echeance <= date_limite
         )

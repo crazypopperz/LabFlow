@@ -100,7 +100,7 @@
 				<h3 class="card-title">Horaires & Planning</h3>
 				<p class="card-description">Définissez l'amplitude horaire des réservations possibles.</p>
 				
-				<form action="{{ url_for('admin.config_planning') }}" method="post" class="mt-3">
+				<form action="{{ url_for('admin_documents.config_planning') }}" method="post" class="mt-3">
 					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 					
 					{% set params = get_etablissement_params(etablissement.id) %}
@@ -176,7 +176,7 @@
 				<h3 class="card-title">Conformité & Documents</h3>
 				<p class="card-description">Gérez les documents réglementaires (DUERP, FDS) et archivez vos inventaires annuels.</p>
 				<div class="card-footer">
-					<a href="{{ url_for('admin.gestion_documents') }}" class="btn-card btn-primary">
+					<a href="{{ url_for('admin_documents.gestion_documents') }}" class="btn-card btn-primary">
 						Gérer
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
 							<path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
@@ -195,7 +195,7 @@
                 <h3 class="card-title">Gestion des Kits</h3>
                 <p class="card-description">Créez et configurez des kits de matériel prédéfinis pour faciliter les réservations</p>
                 <div class="card-footer">
-                    <a href="{{ url_for('admin.gestion_kits') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('admin_kits.gestion_kits') }}" class="btn-card btn-primary">
                         Gérer
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
@@ -214,7 +214,7 @@
                 <h3 class="card-title">Gestion des Échéances</h3>
                 <p class="card-description">Définissez et suivez les dates importantes : maintenances, contrats, commandes</p>
                 <div class="card-footer">
-                    <a href="{{ url_for('admin.gestion_echeances') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('admin_budget.gestion_echeances') }}" class="btn-card btn-primary">
                         Gérer
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
@@ -233,7 +233,7 @@
                 <h3 class="card-title">Gestion Budgétaire</h3>
                 <p class="card-description">Suivez votre budget annuel, enregistrez vos dépenses et exportez des rapports</p>
                 <div class="card-footer">
-                    <a href="{{ url_for('admin.budget') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('admin_budget.budget') }}" class="btn-card btn-primary">
                         Accéder
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
@@ -252,7 +252,7 @@
                 <h3 class="card-title">Gestion des Fournisseurs</h3>
                 <p class="card-description">Consultez, ajoutez ou supprimez les fiches des fournisseurs référencés</p>
                 <div class="card-footer">
-                    <a href="{{ url_for('admin.gestion_fournisseurs') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('admin_budget.gestion_fournisseurs') }}" class="btn-card btn-primary">
                         Gérer
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
@@ -286,7 +286,7 @@
                 <h3 class="card-title">Importation en Masse</h3>
                 <p class="card-description">Ajoutez plusieurs objets à votre inventaire en une seule fois via Excel</p>
                 <div class="card-footer">
-                    <a href="{{ url_for('admin.importer_page') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('admin_import.importer_page') }}" class="btn-card btn-primary">
                         Importer
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
@@ -305,7 +305,7 @@
                 <h3 class="card-title">Rapports d'Activité</h3>
                 <p class="card-description">Générez des rapports détaillés sur l'utilisation du matériel et les réservations</p>
                 <div class="card-footer">
-                    <a href="{{ url_for('admin.rapports') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('admin_import.rapports') }}" class="btn-card btn-primary">
                         Générer
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
@@ -403,7 +403,7 @@
                 <h3 class="card-title">Sauvegardes & Restauration</h3>
                 <p class="card-description">Gérez vos points de restauration, exportez vos données JSON et restaurez l'état du laboratoire.</p>
                 <div class="card-footer">
-                    <a href="{{ url_for('admin.gestion_sauvegardes') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('admin_import.gestion_sauvegardes') }}" class="btn-card btn-primary">
                         Accéder au gestionnaire
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>

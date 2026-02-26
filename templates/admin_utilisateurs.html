@@ -144,7 +144,7 @@
                 <h5 class="modal-title"><i class="bi bi-person-plus-fill me-2"></i>Nouvel utilisateur</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('admin.ajouter_utilisateur') }}" method="post">
+            <form action="{{ url_for('admin_users.ajouter_utilisateur') }}" method="post">
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">

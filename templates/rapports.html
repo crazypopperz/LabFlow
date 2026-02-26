@@ -28,7 +28,7 @@
                     <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-sliders me-2"></i>Configuration Export</h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ url_for('admin.exporter_rapports') }}" method="GET">
+                    <form action="{{ url_for('admin_import.exporter_rapports') }}" method="GET">
                         
                         <!-- 1. Période -->
                         <div class="mb-4">
@@ -113,13 +113,13 @@
                         
                         <!-- Onglets de filtres visuels -->
                         <div class="btn-group" role="group">
-                            <a href="{{ url_for('admin.rapports', action='all', q=search_query) }}" 
+                            <a href="{{ url_for('admin_import.rapports', action='all', q=search_query) }}" 
                                class="btn btn-sm {{ 'btn-primary' if filtre_actif == 'all' else 'btn-outline-secondary' }}">Tout</a>
-                            <a href="{{ url_for('admin.rapports', action='creation', q=search_query) }}" 
+                            <a href="{{ url_for('admin_import.rapports', action='creation', q=search_query) }}" 
                                class="btn btn-sm {{ 'btn-success' if filtre_actif == 'creation' else 'btn-outline-secondary' }}">Ajouts</a>
-                            <a href="{{ url_for('admin.rapports', action='modification', q=search_query) }}" 
+                            <a href="{{ url_for('admin_import.rapports', action='modification', q=search_query) }}" 
                                class="btn btn-sm {{ 'btn-warning' if filtre_actif == 'modification' else 'btn-outline-secondary' }}">Modifs</a>
-                            <a href="{{ url_for('admin.rapports', action='suppression', q=search_query) }}" 
+                            <a href="{{ url_for('admin_import.rapports', action='suppression', q=search_query) }}" 
                                class="btn btn-sm {{ 'btn-danger' if filtre_actif == 'suppression' else 'btn-outline-secondary' }}">Suppr.</a>
                         </div>
 
@@ -196,14 +196,14 @@
                     <nav aria-label="Navigation">
                         <ul class="pagination justify-content-center mb-0 pagination-sm">
                             <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
-                                <a class="page-link" href="{{ url_for('admin.rapports', page=pagination.prev_num, action=filtre_actif, q=search_query) }}">
+                                <a class="page-link" href="{{ url_for('admin_import.rapports', page=pagination.prev_num, action=filtre_actif, q=search_query) }}">
                                     <i class="bi bi-chevron-left"></i>
                                 </a>
                             </li>
                             {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
                                 {% if page_num %}
                                     <li class="page-item {{ 'active' if page_num == pagination.page }}">
-                                        <a class="page-link" href="{{ url_for('admin.rapports', page=page_num, action=filtre_actif, q=search_query) }}">
+                                        <a class="page-link" href="{{ url_for('admin_import.rapports', page=page_num, action=filtre_actif, q=search_query) }}">
                                             {{ page_num }}
                                         </a>
                                     </li>
@@ -212,7 +212,7 @@
                                 {% endif %}
                             {% endfor %}
                             <li class="page-item {{ 'disabled' if not pagination.has_next }}">
-                                <a class="page-link" href="{{ url_for('admin.rapports', page=pagination.next_num, action=filtre_actif, q=search_query) }}">
+                                <a class="page-link" href="{{ url_for('admin_import.rapports', page=pagination.next_num, action=filtre_actif, q=search_query) }}">
                                     <i class="bi bi-chevron-right"></i>
                                 </a>
                             </li>

@@ -39,7 +39,7 @@
 
                 <!-- Infos -->
                 <div class="kit-info">
-                    <a href="{{ url_for('admin.modifier_kit', kit_id=item.Kit.id) }}" class="kit-name stretched-link-custom">
+                    <a href="{{ url_for('admin_kits.modifier_kit', kit_id=item.Kit.id) }}" class="kit-name stretched-link-custom">
                         {{ item.Kit.nom }}
                     </a>
                     <p class="kit-desc">{{ item.Kit.description or 'Aucune description' }}</p>
@@ -55,7 +55,7 @@
                 <!-- Actions -->
                 <div class="kit-actions">
                     <!-- Modifier (CRAYON) -->
-                    <a href="{{ url_for('admin.modifier_kit', kit_id=item.Kit.id) }}" 
+                    <a href="{{ url_for('admin_kits.modifier_kit', kit_id=item.Kit.id) }}" 
                        class="btn-icon-only btn-edit" 
                        title="Modifier le contenu">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
@@ -106,7 +106,7 @@
                 <h5 class="modal-title"><i class="bi bi-box-seam me-2"></i>Nouveau Kit</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('admin.ajouter_kit') }}" method="post">
+            <form action="{{ url_for('admin_kits.ajouter_kit') }}" method="post">
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">

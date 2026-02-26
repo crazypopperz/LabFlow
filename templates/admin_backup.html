@@ -35,7 +35,7 @@
                     </p>
                 </div>
                 <div class="col-md-4 text-end">
-                    <a href="{{ url_for('admin.telecharger_db') }}" class="btn btn-primary btn-lg shadow-sm">
+                    <a href="{{ url_for('admin_import.telecharger_db') }}" class="btn btn-primary btn-lg shadow-sm">
                         <i class="bi bi-download me-2"></i>Télécharger une sauvegarde
                     </a>
                 </div>
@@ -76,7 +76,7 @@
                 <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Restauration Critique</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('admin.importer_db') }}" method="post" enctype="multipart/form-data">
+            <form action="{{ url_for('admin_import.importer_db') }}" method="post" enctype="multipart/form-data">
                 <div class="modal-body p-4">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     

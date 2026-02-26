@@ -16,7 +16,7 @@
             </div>
             Modification du Kit : <span class="text-primary">{{ kit.nom }}</span>
         </h2>
-        <a href="{{ url_for('admin.gestion_kits') }}" class="btn btn-outline-secondary">
+        <a href="{{ url_for('admin_kits.gestion_kits') }}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left me-2"></i>Retour
         </a>
     </div>
@@ -66,7 +66,7 @@
                 
                 <div class="kit-edit-body">
                     {% if objets_in_kit %}
-                    <form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
+                    <form method="post" action="{{ url_for('admin_kits.modifier_kit', kit_id=kit.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         
                         <table class="kit-edit-table">
@@ -95,7 +95,7 @@
                                                 title="Retirer du kit"
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#removeModal"
-                                                data-url="{{ url_for('admin.retirer_objet_kit', kit_objet_id=assoc.id) }}"
+                                                data-url="{{ url_for('admin_kits.retirer_objet_kit', kit_objet_id=assoc.id) }}"
                                                 data-name="{{ assoc.objet.nom }}">
                                             <i class="bi bi-x-lg"></i>
                                         </button>
@@ -158,7 +158,7 @@
                                 </td>
                                 
                                 <!-- Formulaire individuel par ligne -->
-                                <form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
+                                <form method="post" action="{{ url_for('admin_kits.modifier_kit', kit_id=kit.id) }}">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="objet_id" value="{{ objet.id }}">
                                     

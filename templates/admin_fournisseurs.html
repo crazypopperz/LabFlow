@@ -77,7 +77,7 @@
 											{% if item.depenses_count > 0 %}disabled{% endif %}
 											data-bs-toggle="modal" 
 											data-bs-target="#deleteFournisseurModal"
-											onclick="preparerSuppression('{{ url_for('admin.supprimer_fournisseur', id=item.Fournisseur.id) }}')">
+											onclick="preparerSuppression('{{ url_for('admin_budget.supprimer_fournisseur', id=item.Fournisseur.id) }}')">
 										<i class="bi bi-trash-fill"></i>
 									</button>
 								</td>
@@ -105,7 +105,7 @@
                 <h5 class="modal-title" id="modalTitle"><i class="bi bi-shop me-2"></i>Nouveau Fournisseur</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="fournisseurForm" action="{{ url_for('admin.ajouter_fournisseur') }}" method="post">
+            <form id="fournisseurForm" action="{{ url_for('admin_budget.ajouter_fournisseur') }}" method="post">
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     
@@ -175,7 +175,7 @@
     // Réinitialiser la modale pour l'ajout
     function resetModal() {
         document.getElementById('modalTitle').innerHTML = '<i class="bi bi-shop me-2"></i>Nouveau Fournisseur';
-        document.getElementById('fournisseurForm').action = "{{ url_for('admin.ajouter_fournisseur') }}";
+        document.getElementById('fournisseurForm').action = "{{ url_for('admin_budget.ajouter_fournisseur') }}";
         document.getElementById('inputNom').value = '';
         document.getElementById('inputSite').value = '';
         document.getElementById('inputLogo').value = '';

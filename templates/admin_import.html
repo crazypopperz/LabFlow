@@ -60,7 +60,7 @@
                     </div>
 
                     <div class="mt-auto pt-3">
-                        <a href="{{ url_for('admin.telecharger_modele_excel') }}" class="btn btn-outline-primary w-100 py-3 fw-bold shadow-sm">
+                        <a href="{{ url_for('admin_import.telecharger_modele_excel') }}" class="btn btn-outline-primary w-100 py-3 fw-bold shadow-sm">
                             <i class="bi bi-file-earmark-arrow-down me-2"></i>Télécharger le Modèle (.xlsx)
                         </a>
                     </div>
@@ -78,7 +78,7 @@
                 </div>
 
                 <!-- Contenu Etape 2 -->
-                <form action="{{ url_for('admin.importer_fichier') }}" method="post" enctype="multipart/form-data" class="d-flex flex-column h-100">
+                <form action="{{ url_for('admin_import.importer_fichier') }}" method="post" enctype="multipart/form-data" class="d-flex flex-column h-100">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <div class="form-group mb-4 flex-grow-1 d-flex flex-column">

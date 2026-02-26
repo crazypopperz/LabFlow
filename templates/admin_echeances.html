@@ -84,7 +84,7 @@
                                                 title="Supprimer"
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#deleteModal"
-                                                data-url="{{ url_for('admin.supprimer_echeance', id=echeance.id) }}">
+                                                data-url="{{ url_for('admin_budget.supprimer_echeance', id=echeance.id) }}">
                                             <i class="bi bi-trash-fill"></i>
                                         </button>
                                     </div>
@@ -113,7 +113,7 @@
                 <h5 class="modal-title" id="modalTitle"><i class="bi bi-calendar-plus me-2"></i>Nouvelle Échéance</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="echeanceForm" action="{{ url_for('admin.ajouter_echeance') }}" method="post">
+            <form id="echeanceForm" action="{{ url_for('admin_budget.ajouter_echeance') }}" method="post">
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     
@@ -178,7 +178,7 @@
     // Réinitialiser la modale pour l'ajout
     function resetModal() {
         document.getElementById('modalTitle').innerHTML = '<i class="bi bi-calendar-plus me-2"></i>Nouvelle Échéance';
-        document.getElementById('echeanceForm').action = "{{ url_for('admin.ajouter_echeance') }}";
+        document.getElementById('echeanceForm').action = "{{ url_for('admin_budget.ajouter_echeance') }}";
         document.getElementById('inputIntitule').value = '';
         document.getElementById('inputDate').value = '';
         document.getElementById('inputDetails').value = '';

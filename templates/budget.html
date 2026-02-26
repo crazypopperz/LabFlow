@@ -151,7 +151,7 @@
                     
                     <!-- Sélecteur d'année ALIGNÉ -->
                     {% if budgets_archives %}
-                    <form action="{{ url_for('admin.budget') }}" method="get" class="year-selector-group">
+                    <form action="{{ url_for('admin_budget.budget') }}" method="get" class="year-selector-group">
                         <label for="annee_select" class="year-label">ANNÉE :</label>
                         <select name="annee" id="annee_select" class="budget-year-select" onchange="this.form.submit()">
                             {% for ba in budgets_archives %}
@@ -208,7 +208,7 @@
                                             <button class="btn btn-sm btn-outline-danger btn-icon-only" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#deleteModal"
-                                                    data-url="{{ url_for('admin.supprimer_depense', id=depense.id) }}"
+                                                    data-url="{{ url_for('admin_budget.supprimer_depense', id=depense.id) }}"
                                                     title="Supprimer">
                                                 <i class="bi bi-trash-fill"></i>
                                             </button>
@@ -246,7 +246,7 @@
                     <h5 class="modal-title"><i class="bi bi-cash-coin me-2"></i>Budget Annuel</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="{{ url_for('admin.definir_budget') }}" method="post">
+                <form action="{{ url_for('admin_budget.definir_budget') }}" method="post">
                     <div class="modal-body">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
@@ -276,7 +276,7 @@
                     <h5 class="modal-title" id="depenseModalTitle"><i class="bi bi-cart-plus me-2"></i>Nouvelle Dépense</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="depenseForm" action="{{ url_for('admin.ajouter_depense') }}" method="post">
+                <form id="depenseForm" action="{{ url_for('admin_budget.ajouter_depense') }}" method="post">
                     <div class="modal-body">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="budget_id" value="{{ budget_affiche.id if budget_affiche else '' }}">
@@ -366,7 +366,7 @@
                 </div>
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-light fw-bold" data-bs-dismiss="modal">Annuler</button>
-                    <form action="{{ url_for('admin.cloturer_budget') }}" method="post">
+                    <form action="{{ url_for('admin_budget.cloturer_budget') }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="budget_id" value="{{ budget_affiche.id }}">
                         <button type="submit" class="btn btn-danger fw-bold">Confirmer la clôture</button>
@@ -461,7 +461,7 @@
     // Reset Modale Dépense (Ajout)
     function resetDepenseModal() {
         document.getElementById('depenseModalTitle').innerHTML = '<i class="bi bi-cart-plus me-2"></i>Nouvelle Dépense';
-        document.getElementById('depenseForm').action = "{{ url_for('admin.ajouter_depense') }}";
+        document.getElementById('depenseForm').action = "{{ url_for('admin_budget.ajouter_depense') }}";
         document.getElementById('depenseDate').value = new Date().toISOString().split('T')[0];
         document.getElementById('checkBonAchat').checked = false;
         document.getElementById('depenseContenu').value = '';

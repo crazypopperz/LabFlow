@@ -932,3 +932,13 @@ def modifier_armoire_specifique():
 
     return redirect(url_for('main.gestion_armoires'))
 
+# =======================================================
+# ROUTE DE MODIFICATION DES CATEGORIES
+# =======================================================
+# ============================================================
+# ROUTE DE MODIFICATION CATEGORIE
+# ============================================================
+@admin_bp.route("/modifier_categorie", methods=["POST"])
+@admin_required
+def modifier_categorie():
+    return _modifier_element_generique(Categorie, request.get_json())

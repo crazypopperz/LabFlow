@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 import os
 
 from markupsafe import Markup
-from extensions import limiter
+from extensions import limiter, cache
 from db import db, DocumentReglementaire, InventaireArchive, Parametre, Objet, Armoire, Categorie
 from utils import admin_required, log_action, calculate_license_key, get_etablissement_params
 from services.document_service import DocumentService, DocumentServiceError

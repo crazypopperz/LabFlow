@@ -170,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Événements (Clics désactivés pour le passé, sauf pour voir le détail si y'a des résas)
             if (!isPast || count > 0) {
-                cell.addEventListener('click', () => window.location.href = `/jour/${dateStr}`);
+                cell.addEventListener('click', () => window.location.href = `/calendrier/${dateStr}`);
             } else {
                 cell.style.cursor = 'default';
             }

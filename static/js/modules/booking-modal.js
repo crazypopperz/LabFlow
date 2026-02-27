@@ -75,11 +75,15 @@ function replaceButtonHandler(button, newHandler, options = {}) {
 }
 
 function generateTimeSelectors() {
-    const startHour = parseInt((document.body.dataset.planningStart || '08:00').split(':')[0], 10);
-    const endHour = parseInt((document.body.dataset.planningEnd || '18:00').split(':')[0], 10);
+    const container = document.querySelector('.main-container') || document.body;
+    const startStr = container.dataset.planningDebut || container.dataset.planningStart || '08:00';
+    const endStr = container.dataset.planningFin || container.dataset.planningEnd || '18:00';
+    
+    const [startH, startM] = startStr.split(':').map(Number);
+    const [endH, endM] = endStr.split(':').map(Number);
 
     let hourOptions = '';
-    for (let h = startHour; h <= endHour; h++) {
+    for (let h = startH; h <= endH; h++) {
         hourOptions += `<option value="${h}">${String(h).padStart(2, '0')}</option>`;
     }
 
@@ -92,6 +96,12 @@ function generateTimeSelectors() {
     endHourSelect.innerHTML = hourOptions;
     startMinuteSelect.innerHTML = minuteOptions;
     endMinuteSelect.innerHTML = minuteOptions;
+
+    // Appliquer les bornes depuis la config
+    startHourSelect.value = startH;
+    startMinuteSelect.value = startM;
+    endHourSelect.value = endH;
+    endMinuteSelect.value = endM;
 }
 
 /**
@@ -111,46 +121,6 @@ function getSelectedTimes() {
 
 // --- INITIALISATION ---
 // --- GÉNÉRATION DYNAMIQUE DES CRÉNEAUX HORAIRES ---
-function generateTimeOptions() {
-    // 1. Récupération des éléments DOM
-    const startSelect = document.getElementById('startTime');
-    const endSelect = document.getElementById('endTime');
-    
-    if (!startSelect || !endSelect) {
-        console.warn('Éléments startTime ou endTime introuvables');
-        return;
-    }
-
-    // 2. Lecture de la configuration depuis le <body>
-    const startStr = document.body.dataset.planningStart || '08:00';
-    const endStr = document.body.dataset.planningEnd || '18:00';
-    let step = parseInt(document.body.dataset.planningStep || '60', 10);
-    
-    // 3. Validation du pas de temps
-    if (isNaN(step) || step < 15) step = 60;
-
-    // 4. Conversion en minutes
-    const [startH, startM] = startStr.split(':').map(Number);
-    const [endH, endM] = endStr.split(':').map(Number);
-    
-    const startTotal = startH * 60 + startM;
-    const endTotal = endH * 60 + endM;
-    
-    // 5. Génération des options
-    let optionsHtml = '';
-    for (let time = startTotal; time <= endTotal; time += step) {
-        const h = Math.floor(time / 60);
-        const m = time % 60;
-        const timeString = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-        optionsHtml += `<option value="${timeString}">${timeString}</option>`;
-    }
-    
-    // 6. Injection dans le DOM
-    startSelect.innerHTML = optionsHtml;
-    endSelect.innerHTML = optionsHtml;
-}
-
-
 export function initBookingModal() {
     if (!bookingModalElement) return;
 
@@ -166,7 +136,7 @@ export function initBookingModal() {
     modalFooter = bookingModalElement.querySelector('.modal-footer');
     cancelBtn = modalFooter.querySelector('.btn-secondary');
 	
-	generateTimeOptions();
+	generateTimeSelectors();
 
     // APPEL CRITIQUE : Générer les heures au chargement
 	const timeSelectors = [startHourSelect, startMinuteSelect, endHourSelect, endMinuteSelect];
@@ -225,7 +195,7 @@ async function handleModalOpen(event) {
     if (cancelBtn) cancelBtn.style.display = 'none';
 
     // On régénère les options à l'ouverture pour être sûr (cas de changement de config sans reload)
-    generateTimeOptions();
+    generateTimeSelectors();
 
     if (editingGroupId) {
         // MODE ÉDITION
@@ -254,7 +224,7 @@ async function handleModalOpen(event) {
             { html: '<i class="bi bi-calendar-week me-2"></i>Poursuivre (Calendrier)', className: "btn btn-outline-secondary", dismiss: false }
         );
 
-        generateTimeOptions(); 
+        generateTimeSelectors(); 
         setSmartTime();      
         loadAvailabilities();
         refreshMiniCart();
@@ -263,41 +233,65 @@ async function handleModalOpen(event) {
 
 
 function setSmartTime() {
-    const startSelect = document.getElementById('startTime');
-    const endSelect = document.getElementById('endTime');
-    if (!startSelect || !endSelect) return;
-
+    if (!startHourSelect || !startMinuteSelect || !endHourSelect || !endMinuteSelect) return;
+    
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const step = parseInt(document.body.dataset.planningStep || '60', 10);
+    const selectedDate = dateInput ? dateInput.value : null;
+    const todayStr = now.toISOString().split('T')[0];
+    const isToday = selectedDate === todayStr;
+    const currentMinutes = isToday ? (now.getHours() * 60 + now.getMinutes()) : -1;
+    const step = parseInt((document.querySelector('.main-container') || document.body).dataset.planningStep || '60', 10);
 
-    // Trouver le prochain créneau disponible après maintenant
-    let bestOption = null;
-    for (const option of startSelect.options) {
-        const [h, m] = option.value.split(':').map(Number);
-        const optionMinutes = h * 60 + m;
-        if (optionMinutes > currentMinutes) {
-            bestOption = option.value;
-            break;
+    const container = document.querySelector('.main-container') || document.body;
+    const planningStartStr = container.dataset.planningDebut || '08:00';
+    const [planningStartH, planningStartM] = planningStartStr.split(':').map(Number);
+    const planningEndStr = container.dataset.planningFin || '18:00';
+    const [planningEndH, planningEndM] = planningEndStr.split(':').map(Number);
+
+    let bestH = null;
+    let bestM = 0;
+
+    if (!isToday) {
+        // Jour futur : premier créneau du planning
+        bestH = planningStartH;
+        bestM = planningStartM;
+    } else {
+        // Aujourd'hui : prochain créneau après maintenant
+        for (const hourOption of startHourSelect.options) {
+            const h = parseInt(hourOption.value, 10);
+            for (const minOption of startMinuteSelect.options) {
+                const m = parseInt(minOption.value, 10);
+                if (h * 60 + m > currentMinutes) {
+                    bestH = h;
+                    bestM = m;
+                    break;
+                }
+            }
+            if (bestH !== null) break;
+        }
+        // Si aucun créneau futur aujourd'hui
+        if (bestH === null) {
+            bestH = planningStartH;
+            bestM = planningStartM;
         }
     }
 
-    // Si aucun créneau futur, prendre le premier
-    if (!bestOption && startSelect.options.length > 0) {
-        bestOption = startSelect.options[0].value;
-    }
+    startHourSelect.value = bestH;
+    startMinuteSelect.value = bestM;
 
-    if (bestOption) {
-        startSelect.value = bestOption;
-        // Fin = début + 1 créneau
-        const [h, m] = bestOption.split(':').map(Number);
-        const endMinutes = h * 60 + m + step;
-        const endH = Math.floor(endMinutes / 60).toString().padStart(2, '0');
-        const endM = (endMinutes % 60).toString().padStart(2, '0');
-        const endTime = `${endH}:${endM}`;
-        if ([...endSelect.options].some(o => o.value === endTime)) {
-            endSelect.value = endTime;
-        }
+    const endTotalMinutes = bestH * 60 + bestM + step;
+    const endH = Math.floor(endTotalMinutes / 60);
+    const endM = endTotalMinutes % 60;
+
+    if ([...endHourSelect.options].some(o => parseInt(o.value) === endH)) {
+        endHourSelect.value = endH;
+    } else {
+        endHourSelect.value = planningEndH;
+    }
+    if ([...endMinuteSelect.options].some(o => parseInt(o.value) === endM)) {
+        endMinuteSelect.value = endM;
+    } else {
+        endMinuteSelect.value = planningEndM;
     }
 }
 
@@ -367,8 +361,12 @@ function showEditTimeButtons() {
     btnReset.className = 'btn btn-outline-secondary btn-custom-time me-2';
     btnReset.innerHTML = '<i class="bi bi-x-lg me-2"></i>Annuler';
     btnReset.onclick = () => {
-        startTimeSelect.value = originalTimes.start;
-        endTimeSelect.value = originalTimes.end;
+        const [origStartH, origStartM] = originalTimes.start.split(':').map(Number);
+		const [origEndH, origEndM] = originalTimes.end.split(':').map(Number);
+		startHourSelect.value = origStartH;
+		startMinuteSelect.value = origStartM;
+		endHourSelect.value = origEndH;
+		endMinuteSelect.value = origEndM;
         const customBtns = modalFooter.querySelectorAll('.btn-custom-time');
         customBtns.forEach(btn => btn.remove());
         if (cancelBtn) cancelBtn.style.display = 'inline-block';
@@ -385,7 +383,7 @@ function showEditTimeButtons() {
 
         try {
             const checkRes = await fetch(
-                `/api/disponibilites?date=${dateInput.value}&heure_debut=${startTimeSelect.value}&heure_fin=${endTimeSelect.value}`
+                `/api/disponibilites?date=${dateInput.value}&heure_debut=${getSelectedTimes().start}&heure_fin=${getSelectedTimes().end}`
             );
             const checkData = validateAPIResponse(await checkRes.json(), ['data']);
             await performTimeUpdate();
@@ -404,8 +402,8 @@ function showEditTimeButtons() {
 async function performTimeUpdate() {
     const payload = {
         date: dateInput.value,
-        heure_debut: startTimeSelect.value,
-        heure_fin: endTimeSelect.value
+        heure_debut: getSelectedTimes().start,
+		heure_fin: getSelectedTimes().end
     };
     
     const res = await fetch(`/api/reservation/${editingGroupId}/modifier_heure`, {

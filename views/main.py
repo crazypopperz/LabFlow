@@ -133,7 +133,7 @@ def calendrier():
     )
 
 
-@main_bp.route("/jour/<string:date_str>")
+@main_bp.route("/calendrier/<date_str>")
 @login_required
 def vue_jour(date_str):
     etablissement_id = session['etablissement_id']
@@ -149,10 +149,15 @@ def vue_jour(date_str):
         {'text': date_obj.strftime('%d %B %Y'), 'url': None}
     ]
 
+    # Lecture config planning
+    from utils import get_etablissement_params
+    params = get_etablissement_params(etablissement_id)
+    planning_debut = params.get('planning_debut', '08:00')
+    planning_fin = params.get('planning_fin', '18:00')
+
     start_of_day = datetime.combine(date_obj, datetime.min.time())
     end_of_day = datetime.combine(date_obj, datetime.max.time())
 
-    # La requête SQLAlchemy est bien présente et complète
     reservations_brutes = db.session.execute(
         db.select(
             Reservation.groupe_id,
@@ -170,30 +175,23 @@ def vue_jour(date_str):
         .order_by(Reservation.groupe_id, Reservation.debut_reservation)
     ).mappings().all()
 
-    # La logique de formatage des données est bien présente et complète
-    reservations_par_heure = {hour: {'starts': [], 'continues': []} for hour in range(24)}
+    # Structure plate — le JS gérera le positionnement
+    reservations = []
     for resa in reservations_brutes:
-        debut_dt = resa.debut_reservation.replace(tzinfo=None)
-        fin_dt = resa.fin_reservation.replace(tzinfo=None)
+        reservations.append({
+            'groupe_id': resa.groupe_id,
+            'debut': resa.debut_reservation.strftime('%H:%M'),
+            'fin': resa.fin_reservation.strftime('%H:%M'),
+            'nom_utilisateur': resa.nom_utilisateur,
+            'user_id': session.get('user_id')
+        })
 
-        start_hour = max(8, debut_dt.hour)
-        end_hour = min(20, fin_dt.hour if fin_dt.minute > 0 or fin_dt.second > 0 else fin_dt.hour - 1)
-
-        if debut_dt.date() == date_obj and 8 <= debut_dt.hour <= 20:
-            reservations_par_heure[debut_dt.hour]['starts'].append(dict(resa))
-        
-        for hour in range(start_hour, end_hour + 1):
-            if 8 <= hour <= 20:
-                if hour != debut_dt.hour or debut_dt.date() != date_obj:
-                    if not any(d.get('groupe_id') == resa.groupe_id for d in reservations_par_heure[hour]['continues']):
-                        reservations_par_heure[hour]['continues'].append(dict(resa))
-
-    # L'appel à render_template est bien présent et complet
     return render_template("vue_jour.html",
                            date_concernee=date_obj,
-                           reservations_par_heure=reservations_par_heure,
-                           breadcrumbs=breadcrumbs
-                           )
+                           reservations=reservations,
+                           planning_debut=planning_debut,
+                           planning_fin=planning_fin,
+                           breadcrumbs=breadcrumbs)
 
 #================================================================
 # GESTION ALERTES

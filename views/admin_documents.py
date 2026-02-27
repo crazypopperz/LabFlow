@@ -329,3 +329,4 @@ def config_planning():
         current_app.logger.error(f"❌ Erreur critique lors de la configuration du planning : {e}", exc_info=True)
         flash("Une erreur technique est survenue lors de la sauvegarde.", "error")
         
+    return redirect(url_for('admin.admin'))

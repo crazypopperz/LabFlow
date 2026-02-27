@@ -590,3 +590,27 @@ function toggleTypeObjetModal() {
         </div>
     </div>
 </div>
+
+<!-- ================================================================= -->
+<!-- MODALE DANGER SIMPLE (confirmDeleteBtn) -->
+<!-- ================================================================= -->
+<div class="modal fade" id="dangerModalSimple" tabindex="-1" aria-labelledby="dangerModalSimpleLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="dangerModalSimpleLabel">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Confirmation Requise
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="dangerModalSimpleText">Le message de confirmation va ici.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>

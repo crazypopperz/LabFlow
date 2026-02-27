@@ -189,8 +189,6 @@
 <form id="globalDeleteForm" method="post" action="" style="display: none;">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
-<!-- Modale de danger pour suppression -->
-{% include '_modale_danger.html' %}
 
 {% endblock %}
 
@@ -242,12 +240,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================================
     const deleteButtons = document.querySelectorAll('.btn-delete');
     const globalDeleteForm = document.getElementById('globalDeleteForm');
-    const dangerModalEl = document.getElementById('dangerModal');
+    const dangerModalEl = document.getElementById('dangerModalSimple');
     
     if (dangerModalEl && globalDeleteForm) {
-        const dangerModal = new bootstrap.Modal(dangerModalEl);
+        const dangerModalSimple = new bootstrap.Modal(dangerModalEl);
         const confirmBtn = document.getElementById('confirmDeleteBtn');
-        const modalBody = document.getElementById('dangerModalText');
+        const modalBody = document.getElementById('dangerModalSimpleText');
 
         deleteButtons.forEach(btn => {
             btn.addEventListener('click', function(e) {
@@ -259,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (modalBody) {
                     modalBody.innerHTML = `Êtes-vous sûr de vouloir supprimer la catégorie <strong>"${itemName}"</strong> ?<br>Cette action est irréversible.`;
                 }
-                dangerModal.show();
+                dangerModalSimple.show();
             });
         });
 

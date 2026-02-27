@@ -254,10 +254,50 @@ async function handleModalOpen(event) {
             { html: '<i class="bi bi-calendar-week me-2"></i>Poursuivre (Calendrier)', className: "btn btn-outline-secondary", dismiss: false }
         );
 
-        updateHourOptions(); 
+        generateTimeOptions(); 
         setSmartTime();      
         loadAvailabilities();
         refreshMiniCart();
+    }
+}
+
+
+function setSmartTime() {
+    const startSelect = document.getElementById('startTime');
+    const endSelect = document.getElementById('endTime');
+    if (!startSelect || !endSelect) return;
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const step = parseInt(document.body.dataset.planningStep || '60', 10);
+
+    // Trouver le prochain créneau disponible après maintenant
+    let bestOption = null;
+    for (const option of startSelect.options) {
+        const [h, m] = option.value.split(':').map(Number);
+        const optionMinutes = h * 60 + m;
+        if (optionMinutes > currentMinutes) {
+            bestOption = option.value;
+            break;
+        }
+    }
+
+    // Si aucun créneau futur, prendre le premier
+    if (!bestOption && startSelect.options.length > 0) {
+        bestOption = startSelect.options[0].value;
+    }
+
+    if (bestOption) {
+        startSelect.value = bestOption;
+        // Fin = début + 1 créneau
+        const [h, m] = bestOption.split(':').map(Number);
+        const endMinutes = h * 60 + m + step;
+        const endH = Math.floor(endMinutes / 60).toString().padStart(2, '0');
+        const endM = (endMinutes % 60).toString().padStart(2, '0');
+        const endTime = `${endH}:${endM}`;
+        if ([...endSelect.options].some(o => o.value === endTime)) {
+            endSelect.value = endTime;
+        }
     }
 }
 

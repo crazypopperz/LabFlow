@@ -6,9 +6,10 @@ import { showToast } from './toast.js';
  * @returns {{start: string, end: string}}
  */
 function getDailyConfig() {
+    const container = document.querySelector('.main-container');
     return {
-        start: container.dataset.planningDebut || '08:00',
-        end: container.dataset.planningFin || '18:00'
+        start: container?.dataset.planningDebut || '08:00',
+        end: container?.dataset.planningFin || '18:00'
     };
 }
 

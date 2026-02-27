@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from io import BytesIO
 import os
 
@@ -15,7 +15,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from extensions import limiter
 from db import db, Budget, Depense, Fournisseur, Echeance, Historique
-from utils import admin_required, log_action, allowed_file
+from utils import admin_required, log_action, allowed_file, validate_url
 
 admin_budget_bp = Blueprint('admin_budget', __name__, url_prefix='/admin')
 

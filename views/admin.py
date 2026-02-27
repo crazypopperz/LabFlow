@@ -46,7 +46,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 # Imports Locaux
 from extensions import limiter, cache
 from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Reservation, Suggestion, DocumentReglementaire, InventaireArchive
-from utils import calculate_license_key, admin_required, login_required, log_action, get_etablissement_params, allowed_file, validate_email, validate_password_strength
+from utils import calculate_license_key, admin_required, login_required, log_action, get_etablissement_params, allowed_file, validate_email, validate_password_strength, validate_url
 from fpdf import FPDF
 from services.security_service import SecurityService
 from services.document_service import DocumentService, DocumentServiceError
@@ -82,13 +82,6 @@ def hash_user_id(user_id):
     return hashlib.sha256(str(user_id).encode()).hexdigest()[:8]
 
     return True, ""
-
-def validate_url(url):
-    if not url: return True
-    try:
-        result = urlparse(url)
-        return all([result.scheme in ['http', 'https'], result.netloc])
-    except ValueError: return False
 
 def sanitize_for_excel(value):
     if isinstance(value, str) and value.startswith(('=', '+', '-', '@')): return f"'{value}"

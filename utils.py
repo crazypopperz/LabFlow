@@ -7,6 +7,7 @@ import re
 import unicodedata
 from functools import wraps
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 # Imports Flask
 from flask import session, flash, redirect, url_for, request, current_app
@@ -55,6 +56,13 @@ def sanitize_input(text, max_length=100):
     text = text.strip()[:max_length]
     # Retire les caractères non imprimables
     return re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+
+def validate_url(url):
+    if not url: return True
+    try:
+        result = urlparse(url)
+        return all([result.scheme in ['http', 'https'], result.netloc])
+    except ValueError: return False
 
 # -----------------------------------------------------------------------------
 # 2. LOGIQUE DE LICENCE

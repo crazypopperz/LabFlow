@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+	<meta name="description" content="LabFlow — Gestion intelligente du matériel de laboratoire">
+	<meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}LabFlow{% endblock %}</title>
@@ -80,17 +82,17 @@
     
     <!-- Script inline pour déclencher les toasts au chargement de la page -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const flashData = document.querySelectorAll('.flash-data');
-            flashData.forEach(item => {
-                // Appel de la fonction globale définie dans script.js
-                if (typeof showToast === 'function') {
-                    showToast(item.dataset.message, item.dataset.category);
-                }
-            });
-        });
-    </script>
+		window.addEventListener('load', () => {
+			document.querySelectorAll('.flash-data').forEach(item => {
+				if (typeof showToast === 'function') {
+					showToast(item.dataset.message, item.dataset.category);
+				}
+			});
+		});
+	</script>
+	{% if session.get('etablissement_id') %}
 	<script type="module" src="{{ url_for('static', filename='js/modules/booking-modal.js') }}"></script>
+	{% endif %}
 
     {% block scripts %}{% endblock %}
 </body>

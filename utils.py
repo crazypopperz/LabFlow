@@ -64,6 +64,11 @@ def validate_url(url):
         return all([result.scheme in ['http', 'https'], result.netloc])
     except ValueError: return False
 
+def invalidate_alertes_cache(etablissement_id):
+    """Invalide le cache des alertes pour forcer le recalcul."""
+    from extensions import cache
+    cache.delete(f"alertes_{etablissement_id}")
+    
 # -----------------------------------------------------------------------------
 # 2. LOGIQUE DE LICENCE
 # -----------------------------------------------------------------------------

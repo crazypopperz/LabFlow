@@ -297,6 +297,11 @@ def create_app():
         except Exception as e:
             current_app.logger.error(f"Erreur inattendue context_processor : {e}", exc_info=True)
             return context
+    
+        def invalidate_alertes_cache(etablissement_id):
+            """Invalide le cache des alertes pour forcer le recalcul."""
+            cache.delete(f"alertes_{etablissement_id}")
+    
 # Auto-migration au démarrage (Render version gratuite)
     with app.app_context():
         try:

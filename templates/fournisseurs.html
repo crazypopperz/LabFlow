@@ -113,7 +113,12 @@
     {% include '_modale_fournisseur_add.html' %}
     {% include '_modale_fournisseur_edit.html' %}
 
-    <!-- Script pour pré-remplir la modale d'édition -->
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Script pour pré-remplir la modale d'édition -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const editModal = document.getElementById('edit-fournisseur-modal');
@@ -143,7 +148,4 @@
             }
         });
     </script>
-
-{% endif %}
-
 {% endblock %}

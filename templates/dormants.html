@@ -130,7 +130,9 @@
         </div>
     </div>
 </div>
+{% endblock %]
 
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = "{{ csrf_token() }}";

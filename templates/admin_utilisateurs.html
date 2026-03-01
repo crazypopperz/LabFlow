@@ -255,6 +255,66 @@
         </div>
     </div>
 </div>
+
+<!-- Modale Promotion -->
+<div class="modal fade" id="promoteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-warning">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Passation de Pouvoir</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="" method="post" id="promoteForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <p>Vous allez nommer <strong id="promote-username"></strong> Administrateur.</p>
+                    <div class="alert alert-danger">
+                        <strong>Attention :</strong> Vous perdrez vos droits d'administrateur.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Votre mot de passe pour confirmer :</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning">Confirmer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Suppression -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Supprimer l'utilisateur</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="" method="post" id="deleteUserForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="alert alert-danger">
+                        Cette action est définitive.
+                    </div>
+                    <p>Tapez le nom de l'utilisateur pour confirmer : <strong id="delete-username-to-match"></strong></p>
+                    <input type="text" class="form-control" id="delete_confirm_input" required placeholder="Nom d'utilisateur">
+                    <div id="delete_error_message" class="text-danger mt-2 small"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
 <script>
     // Petit helper pour l'oeil (afficher/masquer)
     function togglePass(id) {
@@ -327,68 +387,7 @@
             });
         }
     });
-</script>
 
-<!-- Modale Promotion -->
-<div class="modal fade" id="promoteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-warning">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Passation de Pouvoir</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="" method="post" id="promoteForm">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <p>Vous allez nommer <strong id="promote-username"></strong> Administrateur.</p>
-                    <div class="alert alert-danger">
-                        <strong>Attention :</strong> Vous perdrez vos droits d'administrateur.
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Votre mot de passe pour confirmer :</label>
-                        <input type="password" class="form-control" name="password" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-warning">Confirmer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modale Suppression -->
-<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-danger">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Supprimer l'utilisateur</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="" method="post" id="deleteUserForm">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="alert alert-danger">
-                        Cette action est définitive.
-                    </div>
-                    <p>Tapez le nom de l'utilisateur pour confirmer : <strong id="delete-username-to-match"></strong></p>
-                    <input type="text" class="form-control" id="delete_confirm_input" required placeholder="Nom d'utilisateur">
-                    <div id="delete_error_message" class="text-danger mt-2 small"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-danger">Supprimer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-{% endblock %}
-
-{% block scripts %}
-<script>
 document.addEventListener('DOMContentLoaded', function() {
     
     // Helper pour configurer les modales

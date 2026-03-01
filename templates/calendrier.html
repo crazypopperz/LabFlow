@@ -14,19 +14,19 @@
 				</div>
 				<span class="fw-bold">Calendrier de Réservation</span>
 			</h2>
-			
-			<!-- (Si tu as des boutons d'action pour le calendrier, ils vont ici) -->
 		</div>
-			<div id="calendrier-container" class="content-card">
-				<div class="calendrier-header">
-					<button id="prev-month-btn" class="btn btn-primary btn-sm">&lt; Précédent</button>
-					<h3 id="current-month-year"></h3>
-					<button id="next-month-btn" class="btn btn-primary btn-sm">Suivant &gt;</button>
-				</div>
-				<div class="calendrier-grid"></div>
+		
+		<div id="calendrier-container" class="content-card">
+			<div class="calendrier-header">
+				<button id="prev-month-btn" class="btn btn-primary btn-sm">&lt; Précédent</button>
+				<h3 id="current-month-year"></h3>
+				<button id="next-month-btn" class="btn btn-primary btn-sm">Suivant &gt;</button>
+			</div>
+			<div class="calendrier-grid"></div>
 			</div>
 		</div>
-    <div id="reservation-tooltip" class="tooltip"></div>
+	</div>
+    <div id="reservation-tooltip" class="calendar-tooltip"></div>
 {% endblock %}
 {% block scripts %}
     <script src="{{ url_for('static', filename='js/modules/calendar-monthly.js') }}" type="module"></script>

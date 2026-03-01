@@ -24,23 +24,6 @@
             {% endfor %}
         </ul>
     </div>
-    
-    <script>
-        function markAsRead(id, btn) {
-            fetch(`/api/notifications/lu/${id}`, { 
-                method: 'POST',
-                headers: {'X-CSRFToken': "{{ csrf_token() }}"}
-            }).then(r => {
-                if(r.ok) {
-                    // Masquer la ligne visuellement
-                    const li = btn.closest('li');
-                    li.style.opacity = '0.5';
-                    li.style.textDecoration = 'line-through';
-                    setTimeout(() => li.remove(), 500);
-                }
-            });
-        }
-    </script>
     {% endif %}
 
     <!-- En-tête Principal -->
@@ -602,6 +585,22 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+        function markAsRead(id, btn) {
+            fetch(`/api/notifications/lu/${id}`, { 
+                method: 'POST',
+                headers: {'X-CSRFToken': "{{ csrf_token() }}"}
+            }).then(r => {
+                if(r.ok) {
+                    // Masquer la ligne visuellement
+                    const li = btn.closest('li');
+                    li.style.opacity = '0.5';
+                    li.style.textDecoration = 'line-through';
+                    setTimeout(() => li.remove(), 500);
+                }
+            });
+        }
+    </script>
 <script type="module">
     import { startTour } from "{{ url_for('static', filename='js/modules/tour.js') }}";
     

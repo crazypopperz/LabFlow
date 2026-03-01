@@ -42,13 +42,13 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Style spécifique pour l'animation du sablier -->
+{% block head_styles %}
 <style>
     .pulse-icon {
         animation: spin-slow 3s infinite linear;
     }
-
     @keyframes spin-slow {
         0% { transform: rotate(0deg); }
         25% { transform: rotate(180deg); }

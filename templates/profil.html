@@ -74,6 +74,21 @@
 </div>
 {% endblock %}
 
+{% block head-styles %}
+<!-- Petit style spécifique pour nettoyer les inputs -->
+<style>
+    .form-floating > .form-control {
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+    }
+    .form-floating > .form-control:focus {
+        background-color: #fff;
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+    }
+</style>
+{% endblock %}
+
 {% block scripts %}
 <script>
     // Fonction pour afficher/masquer le mot de passe
@@ -139,17 +154,4 @@
         });
     });
 </script>
-
-<!-- Petit style spécifique pour nettoyer les inputs -->
-<style>
-    .form-floating > .form-control {
-        border: 1px solid #dee2e6;
-        background-color: #f8f9fa;
-    }
-    .form-floating > .form-control:focus {
-        background-color: #fff;
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
-    }
-</style>
 {% endblock %}

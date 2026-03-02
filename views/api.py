@@ -708,20 +708,18 @@ def reservation_retirer_item(groupe_id, item_id):
                 message=f"L'élément '{nom_item}' a été retiré de votre réservation du {date_str} par l'administrateur."
             )
             db.session.add(notif)
-        else:
-        # --------------------
-
-            # Suppression ou Décrémentation
-            if target.quantite_reservee > 1: 
-               target.quantite_reservee -= 1
-            else: 
-                db.session.delete(target)
+        
+        # Suppression ou Décrémentation
+        if target.quantite_reservee > 1: 
+            target.quantite_reservee -= 1
+        else: 
+            db.session.delete(target)
             
-            # COMMIT UNIQUE POUR TOUT
-            db.session.commit()
+        # COMMIT UNIQUE POUR TOUT
+        db.session.commit()
             
-            remaining = db.session.execute(select(func.count(Reservation.id)).filter_by(groupe_id=groupe_id)).scalar()
-            return jsonify({'success': True, 'remaining_items': remaining})
+        remaining = db.session.execute(select(func.count(Reservation.id)).filter_by(groupe_id=groupe_id)).scalar()
+        return jsonify({'success': True, 'remaining_items': remaining})
         
     except Exception as e:
         db.session.rollback()

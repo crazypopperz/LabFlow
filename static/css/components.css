@@ -724,8 +724,8 @@
 }
 
 /* =========================================
-/*	LISTE PUCE MESSAGES ALERTE SUPPR RESA
-/* =========================================
+   LISTE PUCE MESSAGES ALERTE SUPPR RESA    
+   =========================================*/
 /* Notifications Dashboard */
 .alert-warning ul {
     list-style: none; /* Enlève les puces */

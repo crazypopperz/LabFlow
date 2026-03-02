@@ -258,7 +258,10 @@ L'équipe LabFlow
 """
         
         # Envoi asynchrone
-        app = current_app._get_current_object()    
+        app = current_app._get_current_object()
+        t = Thread(target=send_async_email, args=[app, msg])
+        t.daemon = True
+        t.start()
         current_app.logger.info(f"Email mis en file d'attente pour {user_email}")
         return True
         

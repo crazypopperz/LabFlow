@@ -49,7 +49,7 @@ export function showToast(message, type = 'info') {
     toastContainer.appendChild(toastElement);
 
     const toast = new bootstrap.Toast(toastElement, {
-        delay: 2000 // Disparaît après 3 secondes
+        delay: 2000 // Disparaît après 2 secondes
     });
 
     // Supprime l'élément du DOM après sa disparition pour garder la page propre

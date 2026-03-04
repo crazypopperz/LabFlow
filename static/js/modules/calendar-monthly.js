@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // En-têtes
         ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].forEach(d => {
-            gridElement.innerHTML += `<div class="cal-header">${d}</div>`;
+            gridElement.innerHTML += `<div class="day-name">${d}</div>`;
         });
 
         // Cases vides
@@ -138,10 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const cell = document.createElement('div');
             
             // Classes CSS conditionnelles
-            let classes = 'cal-day';
+            let classes = 'calendrier-cell';
             if (isToday) classes += ' today';
             if (isPast) classes += ' past-day'; // CSS à ajouter pour griser
             cell.className = classes;
+			const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+			cell.setAttribute('data-day-short', dayNames[currentDayDate.getDay()]);
+			cell.setAttribute('data-date', dateStr);
             
             // Badge HTML
             let badgeHtml = '';

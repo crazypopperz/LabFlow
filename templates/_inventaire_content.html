@@ -50,7 +50,7 @@
                 <td class="checkbox-column"><input type="checkbox" class="form-check-input objet-checkbox" value="{{ objet.id }}" data-armoire-id="{{ objet.armoire_id }}"></td>
             {% endif %}
             
-            <td data-field="nom">
+            <td data-field="nom" data-label="Nom">
                 <div class="d-flex align-items-center">
                     {% if objet.type_objet == 'produit' %}
                         <span class="badge bg-info text-dark me-2" title="Produit Chimique"><i class="bi bi-droplet-fill"></i></span>
@@ -68,7 +68,7 @@
                 </div>
             </td>
             
-            <td data-field="quantite">
+            <td data-field="quantite" data-label="Quantité">
                 {% if objet.type_objet == 'produit' %}
                     <div class="virtual-flask-container">
                         <div class="flask-body" title="{{ objet.pourcentage_restant }}% restant">
@@ -89,7 +89,7 @@
                 {% endif %}
             </td>
             
-            <td data-field="seuil">
+            <td data-field="seuil" data-label="Seuil">
                 {% if objet.type_objet == 'produit' %}
                     {{ objet.seuil_pourcentage }}%
                 {% else %}
@@ -97,14 +97,14 @@
                 {% endif %}
             </td>
             
-            <td data-field="date_peremption" class="{{ 'texte-perime' if perime else 'texte-perime-bientot' if perime_bientot }}">
+            <td data-field="date_peremption" data-label="Péremption" class="{{ 'texte-perime' if perime else 'texte-perime-bientot' if perime_bientot }}">
                 {{ objet.date_peremption.strftime('%d/%m/%Y') if objet.date_peremption else '-' }}
             </td>
             
-            <td data-field="categorie">{{ objet.categorie_nom if objet.categorie_nom else '-' }}</td>
-            <td data-field="armoire">{{ objet.armoire_nom if objet.armoire_nom else '-' }}</td>
+            <td data-field="categorie" data-label="Catégorie">{{ objet.categorie_nom if objet.categorie_nom else '-' }}</td>
+            <td data-field="armoire" data-label="Armoire">{{ objet.armoire_nom if objet.armoire_nom else '-' }}</td>
             
-            <td class="image-cell">
+            <td class="image-cell td-image">
                 <div class="image-preview-wrapper">
                     {% if objet.image_url %}
                         <img src="{{ url_for('static', filename=objet.image_url) if not objet.image_url.startswith('http') else objet.image_url }}" 
@@ -127,7 +127,7 @@
             </td>
 
             {% if session.user_id %}
-            <td class="actions-cell">
+            <td class="actions-cell td-actions">
                 <div class="d-flex align-items-center justify-content-end gap-2">
                     
                     <button type="button" class="btn btn-sm btn-outline-warning btn-suggest"

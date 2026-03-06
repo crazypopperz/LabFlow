@@ -141,7 +141,8 @@ def get_etablissement_params(etablissement_id):
             .filter_by(etablissement_id=etablissement_id)
             .where(Parametre.cle.in_([
                 'licence_statut', 'instance_id',
-                'planning_debut', 'planning_fin', 'planning_intervalle'
+                'planning_debut', 'planning_fin', 'planning_intervalle',
+                'logo_url', 'couleur_principale', 'couleur_secondaire'
             ]))
         ).scalars().all()
         

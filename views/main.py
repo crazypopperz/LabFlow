@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import os
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, session, send_from_directory, current_app)
+                   flash, session, send_from_directory, current_app, make_response)
 from sqlalchemy import func, desc
 from sqlalchemy.orm import joinedload
 from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre, Suggestion, MaintenanceLog, EquipementSecurite
@@ -433,6 +433,57 @@ def legal():
     return render_template("legal.html", breadcrumbs=breadcrumbs)
 
 
+# ================================================================
+# THÈME DYNAMIQUE
+# ================================================================
+@main_bp.route('/theme.css')
+def theme_css():
+    """Génère le CSS de thème dynamiquement selon les paramètres de l'établissement."""
+    etablissement_id = session.get('etablissement_id')
+    
+    # Valeurs par défaut
+    couleur_principale = '#1f3b73'
+    couleur_secondaire = '#01257d'
+    logo_url = None
+
+    if etablissement_id:
+        try:
+            params = db.session.execute(
+                db.select(Parametre).filter(
+                    Parametre.etablissement_id == etablissement_id,
+                    Parametre.cle.in_(['couleur_principale', 'couleur_secondaire', 'logo_url'])
+                )
+            ).scalars().all()
+            params_dict = {p.cle: p.valeur for p in params}
+            couleur_principale = params_dict.get('couleur_principale', couleur_principale)
+            couleur_secondaire = params_dict.get('couleur_secondaire', couleur_secondaire)
+            logo_url = params_dict.get('logo_url')
+        except Exception:
+            pass
+
+    css = f"""
+:root {{
+    --couleur-principale: {couleur_principale};
+    --couleur-secondaire: {couleur_secondaire};
+}}
+"""
+    if logo_url:
+        css += f"""
+.brand-logo-svg {{ display: none !important; }}
+.brand-logo-img {{ display: block !important; }}
+"""
+    else:
+        css += """
+.brand-logo-img { display: none !important; }
+.brand-logo-svg { display: block !important; }
+"""
+
+    response = make_response(css)
+    response.headers['Content-Type'] = 'text/css'
+    response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+    return response
+
+
 #================================================================
 #  GESTION FAVICON
 #================================================================
@@ -440,3 +491,5 @@ def legal():
 def favicon():
     return send_from_directory(os.path.join(current_app.root_path, 'static', 'icons'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+

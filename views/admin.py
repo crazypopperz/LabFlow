@@ -618,6 +618,75 @@ def admin():
                            etablissement=etablissement,
                            securite_stats=securite_stats)
 
+
+# ============================================================
+# THÈME & PERSONNALISATION
+# ============================================================
+@admin_bp.route("/theme", methods=["POST"])
+@admin_required
+def sauvegarder_theme():
+    etablissement_id = session.get('etablissement_id')
+    try:
+        # Couleur principale
+        couleur = request.form.get('couleur_principale', '').strip()
+        if couleur and couleur.startswith('#') and len(couleur) in [4, 7]:
+            for cle, valeur in [
+                ('couleur_principale', couleur),
+                ('couleur_secondaire', couleur)
+            ]:
+                param = db.session.execute(
+                    db.select(Parametre).filter_by(
+                        etablissement_id=etablissement_id, cle=cle
+                    )
+                ).scalar_one_or_none()
+                if param:
+                    param.valeur = valeur
+                else:
+                    db.session.add(Parametre(
+                        etablissement_id=etablissement_id,
+                        cle=cle, valeur=valeur
+                    ))
+
+        # Upload logo
+        logo_file = request.files.get('logo_file')
+        if logo_file and logo_file.filename:
+            ext = logo_file.filename.rsplit('.', 1)[-1].lower()
+            if ext in ['png', 'jpg', 'jpeg', 'svg', 'webp']:
+                filename = f"logo_{etablissement_id}.{ext}"
+                upload_path = os.path.join(
+                    current_app.root_path, 'static', 'uploads', filename
+                )
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                logo_file.save(upload_path)
+                logo_url = f"uploads/{filename}"
+
+                param = db.session.execute(
+                    db.select(Parametre).filter_by(
+                        etablissement_id=etablissement_id, cle='logo_url'
+                    )
+                ).scalar_one_or_none()
+                if param:
+                    param.valeur = logo_url
+                else:
+                    db.session.add(Parametre(
+                        etablissement_id=etablissement_id,
+                        cle='logo_url', valeur=logo_url
+                    ))
+
+        db.session.commit()
+        # Invalider le cache theme
+        from extensions import cache
+        from utils import get_etablissement_params
+        cache.delete_memoized(get_etablissement_params, etablissement_id)
+        flash("Thème mis à jour avec succès.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur sauvegarde thème: {e}")
+        flash("Erreur lors de la sauvegarde.", "error")
+
+    return redirect(url_for('admin.admin'))
+
 # ============================================================
 # GESTION CREATION CATÉGORIES
 # ============================================================

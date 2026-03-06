@@ -411,6 +411,49 @@
                     </a>
                 </div>
             </div>
+			<!-- Carte Personnalisation & Thème -->
+			<div class="admin-card">
+				<div class="card-icon-wrapper" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32" fill="white">
+						<path d="M8 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3m4 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M5 6.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m.5 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/>
+						<path d="M16 8c0 3.15-1.866 2.585-3.567 2.07C11.42 9.763 10.465 9.473 10 10c-.603.683-.475 1.819-.351 2.92C9.826 14.495 9.996 16 8 16a8 8 0 1 1 8-8m-8 7c.611 0 .654-.171.655-.176.078-.146.154-.807.132-1.807-.04-1.82.67-3.43 1.965-4.032C13.987 8.429 15 8.196 15 8a7 7 0 1 0-7 7"/>
+					</svg>
+				</div>
+				<h3 class="card-title">Personnalisation & Thème</h3>
+				<p class="card-description">Personnalisez les couleurs et le logo de votre établissement.</p>
+
+				<form action="{{ url_for('admin.sauvegarder_theme') }}" method="POST" enctype="multipart/form-data" class="mt-3">
+					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+					<!-- Couleur principale -->
+					<div class="mb-3">
+						<label class="filter-label d-block mb-1">Couleur principale</label>
+						<div class="d-flex align-items-center gap-2">
+							<input type="color" name="couleur_principale" class="form-control form-control-color"
+								   value="{{ get_etablissement_params(session.get('etablissement_id')).get('couleur_principale', '#1f3b73') }}"
+								   style="width:50px; height:38px; padding:2px; border-radius:8px;">
+							<small class="text-muted">Appliquée au header et aux boutons</small>
+						</div>
+					</div>
+
+					<!-- Logo -->
+					<div class="mb-3">
+						<label class="filter-label d-block mb-1">Logo établissement</label>
+						<input type="file" name="logo_file" class="form-control form-control-sm"
+							   accept=".png,.jpg,.jpeg,.svg,.webp">
+						<small class="text-muted">PNG, JPG ou SVG — max 2Mo</small>
+					</div>
+
+					<div class="card-footer p-0 border-0 mt-3">
+						<button type="submit" class="btn-card btn-primary">
+							Sauvegarder
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
+								<path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
+							</svg>
+						</button>
+					</div>
+				</form>
+			</div>
         </div>
     </div>
 </div>

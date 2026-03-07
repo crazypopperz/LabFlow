@@ -521,7 +521,7 @@ def api_reservation_details(groupe_id):
             .options(
                 db.joinedload(Reservation.objet), 
                 db.joinedload(Reservation.utilisateur),
-                db.joinedload(Reservation.kit).joinedload(Kit.objets_assoc).joinedload(KitObjet.objet)
+                db.joinedload(Reservation.kit).joinedload(Kit.objets_assoc).joinedload(KitObjet.objet),
                 db.joinedload(Reservation.salle)
             )
             .filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)

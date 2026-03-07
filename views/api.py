@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify, session, current_app, render_temp
 from werkzeug.exceptions import BadRequest
 
 # Imports locaux
-from db import db, Objet, Armoire, Categorie, Utilisateur, Reservation, Notification, Kit, KitObjet, Suggestion, Historique, MaintenanceLog, EquipementSecurite
+from db import db, Objet, Armoire, Categorie, Utilisateur, Reservation, Notification, Kit, KitObjet, Suggestion, Historique, MaintenanceLog, EquipementSecurite, Salle
 from extensions import limiter
 from utils import login_required, admin_required
 
@@ -522,6 +522,7 @@ def api_reservation_details(groupe_id):
                 db.joinedload(Reservation.objet), 
                 db.joinedload(Reservation.utilisateur),
                 db.joinedload(Reservation.kit).joinedload(Kit.objets_assoc).joinedload(KitObjet.objet)
+                db.joinedload(Reservation.salle)
             )
             .filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
         )
@@ -535,6 +536,7 @@ def api_reservation_details(groupe_id):
             'fin': first.fin_reservation.isoformat(),
             'user_name': first.utilisateur.nom_utilisateur if first.utilisateur else "Inconnu",
             'can_edit': (first.utilisateur_id == session.get('user_id')) or (session.get('user_role') == 'admin'),
+            'salle': first.salle.nom if first.salle else None,
             'items': []
         }
         for r in res:

@@ -194,6 +194,7 @@ class PanierItem(db.Model):
     date_reservation = db.Column(db.Date, nullable=False)
     heure_debut = db.Column(db.String(5), nullable=False)
     heure_fin = db.Column(db.String(5), nullable=False)
+    salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
     
     date_ajout = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
 
@@ -222,6 +223,7 @@ class Reservation(db.Model):
     
     # Groupement et Statut
     groupe_id = db.Column(db.String(36), nullable=False, index=True)
+    salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
     statut = db.Column(db.String(20), default='confirmée') # en_attente, confirmée, annulée
     
     # Traçabilité
@@ -447,3 +449,21 @@ class Notification(db.Model):
     type = db.Column(db.String(20), default='warning') # info, warning, danger, success
     lu = db.Column(db.Boolean, default=False)
     date_creation = db.Column(db.DateTime, default=datetime.now)
+
+# ============================================================
+# 9. SALLES
+# ============================================================
+class Salle(db.Model):
+    __tablename__ = 'salles'
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    capacite = db.Column(db.Integer, nullable=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+
+    reservations = db.relationship('Reservation', backref='salle', lazy=True)
+
+    __table_args__ = (
+        db.Index('idx_salles_etablissement', 'etablissement_id'),
+    )

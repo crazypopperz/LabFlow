@@ -496,15 +496,19 @@ async function refreshMiniCart() {
 
 async function addItem(item) {
     const payload = { type: item.type, id: item.id, quantite: 1 };
-    let url = '/api/panier/ajouter';
-    if (editingGroupId) url = `/api/reservation/${editingGroupId}/ajouter`;
-    else {
-        payload.date = dateInput.value;
-    
-	const { start, end } = getSelectedTimes();
-	payload.heure_debut = start;
-	payload.heure_fin = end;
-    }
+	let url = '/api/panier/ajouter';
+	if (editingGroupId) url = `/api/reservation/${editingGroupId}/ajouter`;
+	else {
+		payload.date = dateInput.value;
+		const { start, end } = getSelectedTimes();
+		payload.heure_debut = start;
+		payload.heure_fin = end;
+		// Salle optionnelle
+		const salleSelect = document.getElementById('bookingSalle');
+		if (salleSelect && salleSelect.value) {
+			payload.salle_id = parseInt(salleSelect.value);
+		}
+	}
 
     try {
         const res = await fetch(url, {

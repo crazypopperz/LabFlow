@@ -104,9 +104,10 @@ function renderEvents(config) {
             z-index: 10;
         `;
         el.innerHTML = `
-            <strong>${resa.debut} - ${resa.fin}</strong>
-            <span style="display:block;">${escapeHtml(resa.nom_utilisateur)}</span>
-        `;
+			<strong>${resa.debut} - ${resa.fin}</strong>
+			<span style="display:block;">${escapeHtml(resa.nom_utilisateur)}</span>
+			${resa.salle ? `<span style="display:block;font-size:0.75em;opacity:0.85;"><i class="bi bi-building me-1"></i>${escapeHtml(resa.salle)}</span>` : ''}
+		`;
         layer.appendChild(el);
     });
 }
@@ -177,6 +178,7 @@ function initTooltip() {
                         <div class="small text-muted">
                             <i class="bi bi-person-circle me-1"></i>${escapeHtml(details.user_name)}
                         </div>
+						${details.salle ? `<div class="small text-muted"><i class="bi bi-building me-1"></i>${escapeHtml(details.salle)}</div>` : ''}
                     </div>
                     ${buttonsHtml}
                 </div>

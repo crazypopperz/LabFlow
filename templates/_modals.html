@@ -33,6 +33,22 @@
 								</div>
 							</div>
                         </div>
+						<!-- Salle de destination (optionnel) -->
+						<div class="mb-3">
+							<label class="form-label fw-bold">
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" class="me-1">
+									<path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
+								</svg>
+								Salle de destination
+								<span class="text-muted fw-normal small">(optionnel)</span>
+							</label>
+							<select class="form-select" id="bookingSalle">
+								<option value="">— Aucune salle sélectionnée —</option>
+								{% for salle in all_salles %}
+								<option value="{{ salle.id }}">{{ salle.nom }}{% if salle.capacite %} ({{ salle.capacite }} élèves){% endif %}{% if salle.description %} — {{ salle.description }}{% endif %}</option>
+								{% endfor %}
+							</select>
+						</div>
                         <hr>
                         <div id="availableItems">
                             <div class="text-center py-4">

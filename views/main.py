@@ -4,7 +4,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, send_from_directory, current_app, make_response)
 from sqlalchemy import func, desc
 from sqlalchemy.orm import joinedload
-from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre, Suggestion, MaintenanceLog, EquipementSecurite
+from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre, Suggestion, MaintenanceLog, EquipementSecurite, Salle
 from utils import login_required
 
 main_bp = Blueprint(
@@ -163,9 +163,12 @@ def vue_jour(date_str):
             Reservation.groupe_id,
             Reservation.debut_reservation,
             Reservation.fin_reservation,
-            Utilisateur.nom_utilisateur
+            Reservation.salle_id,
+            Utilisateur.nom_utilisateur,
+            Salle.nom.label('salle_nom')
         )
         .join(Utilisateur, Reservation.utilisateur_id == Utilisateur.id)
+        .outerjoin(Salle, Reservation.salle_id == Salle.id)
         .filter(
             Reservation.etablissement_id == etablissement_id,
             Reservation.debut_reservation < end_of_day,
@@ -183,6 +186,7 @@ def vue_jour(date_str):
             'debut': resa.debut_reservation.strftime('%H:%M'),
             'fin': resa.fin_reservation.strftime('%H:%M'),
             'nom_utilisateur': resa.nom_utilisateur,
+            'salle': resa.salle_nom or '',
             'user_id': session.get('user_id')
         })
 

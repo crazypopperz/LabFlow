@@ -45,7 +45,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 # Imports Locaux
 from extensions import limiter, cache
-from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Reservation, Suggestion, DocumentReglementaire, InventaireArchive
+from db import db, Utilisateur, Parametre, Objet, Armoire, Categorie, Fournisseur, Kit, KitObjet, Budget, Depense, Echeance, Historique, Etablissement, Reservation, Suggestion, DocumentReglementaire, InventaireArchive, Salle
 from utils import calculate_license_key, admin_required, login_required, log_action, get_etablissement_params, allowed_file, validate_email, validate_password_strength, validate_url
 from fpdf import FPDF
 from services.security_service import SecurityService
@@ -688,6 +688,75 @@ def sauvegarder_theme():
     return redirect(url_for('admin.admin'))
 
 # ============================================================
+# GESTION DES SALLES
+# ============================================================
+@admin_bp.route("/salles")
+@admin_required
+def gestion_salles():
+    etablissement_id = session.get('etablissement_id')
+    salles = db.session.execute(
+        db.select(Salle)
+        .filter_by(etablissement_id=etablissement_id)
+        .order_by(Salle.nom)
+    ).scalars().all()
+    return render_template("admin_salles.html", salles=salles)
+
+@admin_bp.route("/salles/ajouter", methods=["POST"])
+@admin_required
+def ajouter_salle():
+    etablissement_id = session.get('etablissement_id')
+    nom = request.form.get('nom', '').strip()
+    description = request.form.get('description', '').strip()
+    capacite = request.form.get('capacite', '').strip()
+
+    if not nom:
+        flash("Le nom de la salle est obligatoire.", "error")
+        return redirect(url_for('admin.gestion_salles'))
+
+    try:
+        salle = Salle(
+            nom=nom,
+            description=description or None,
+            capacite=int(capacite) if capacite.isdigit() else None,
+            etablissement_id=etablissement_id
+        )
+        db.session.add(salle)
+        db.session.commit()
+        flash(f"Salle '{nom}' ajoutée.", "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur ajout salle: {e}")
+        flash("Erreur lors de l'ajout.", "error")
+
+    return redirect(url_for('admin.gestion_salles'))
+
+@admin_bp.route("/salles/supprimer/<int:salle_id>", methods=["POST"])
+@admin_required
+def supprimer_salle(salle_id):
+    etablissement_id = session.get('etablissement_id')
+    salle = db.session.get(Salle, salle_id)
+
+    if not salle or salle.etablissement_id != etablissement_id:
+        flash("Salle introuvable.", "error")
+        return redirect(url_for('admin.gestion_salles'))
+
+    try:
+        # Détacher les réservations liées
+        db.session.execute(
+            db.update(Reservation)
+            .where(Reservation.salle_id == salle_id)
+            .values(salle_id=None)
+        )
+        db.session.delete(salle)
+        db.session.commit()
+        flash(f"Salle '{salle.nom}' supprimée.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Erreur suppression.", "error")
+
+    return redirect(url_for('admin.gestion_salles'))
+
+# ============================================================
 # GESTION CREATION CATÉGORIES
 # ============================================================
 @admin_bp.route("/categories/ajouter", methods=["POST"])
@@ -994,9 +1063,6 @@ def modifier_armoire_specifique():
 
     return redirect(url_for('main.gestion_armoires'))
 
-# =======================================================
-# ROUTE DE MODIFICATION DES CATEGORIES
-# =======================================================
 # ============================================================
 # ROUTE DE MODIFICATION CATEGORIE
 # ============================================================

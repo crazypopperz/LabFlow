@@ -256,7 +256,8 @@ class PanierService:
                     quantite=qte,
                     date_reservation=start_dt.date(),
                     heure_debut=item_data['heure_debut'],
-                    heure_fin=item_data['heure_fin']
+                    heure_fin=item_data['heure_fin'],
+                    salle_id=int(item_data['salle_id']) if item_data.get('salle_id') else None
                 )
                 db.session.add(new_item)
 
@@ -342,7 +343,8 @@ class PanierService:
                         debut_reservation=start_dt,
                         fin_reservation=end_dt,
                         groupe_id=groupe_id,
-                        statut='confirmée'
+                        statut='confirmée',
+                        salle_id=item.salle_id
                     )
                     if item.type == 'kit': resa.kit_id = item.id_item
                     else: resa.objet_id = item.id_item

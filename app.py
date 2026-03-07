@@ -18,7 +18,7 @@ from extensions import limiter, cache, mail
 from flask_migrate import Migrate
 
 # Imports locaux
-from db import db, Parametre, Armoire, Notification, Categorie, init_app as init_db_app
+from db import db, Parametre, Salle, Armoire, Notification, Categorie, init_app as init_db_app
 from utils import get_alerte_info, is_setup_needed, annee_scolaire_format, get_etablissement_params
 
 # Imports des Blueprints
@@ -233,7 +233,8 @@ def create_app():
             'licence': {'statut': 'FREE', 'is_pro': False, 'instance_id': 'N/A'},
             'nom_etablissement': None,
             'notifs_count': 0,
-            'notifications_list': []
+            'notifications_list': [],
+            'all_salles': []
         }
         etablissement_id = session.get('etablissement_id')
         user_id = session.get('user_id')
@@ -257,7 +258,15 @@ def create_app():
                     db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)
                 ).scalars().all()
                 cache.set(cache_key_categories, all_categories, timeout=300)
-
+            
+            all_salles = db.session.execute(
+                db.select(Salle)
+                .filter_by(etablissement_id=etablissement_id)
+                .order_by(Salle.nom)
+            ).scalars().all()
+            
+            context['all_salles'] = []  # valeur par défaut déjà dans context
+            context['all_salles'] = all_salles
             context['all_armoires'] = all_armoires
             context['all_categories'] = all_categories
 

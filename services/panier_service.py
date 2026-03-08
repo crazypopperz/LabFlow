@@ -443,34 +443,34 @@ class PanierService:
             raise PanierServiceError("Erreur technique validation.")
             
     def _generer_dates_recurrence(self, date_debut, type_rec, date_fin_str, nb_occurrences):
-    """Génère la liste des dates d'occurrences (sans la date de départ)."""
-    from datetime import date, timedelta
-    dates = []
-    current = date_debut
-    max_occ = nb_occurrences - 1 if nb_occurrences else 365
-    date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date() if date_fin_str else None
+        """Génère la liste des dates d'occurrences (sans la date de départ)."""
+        from datetime import date, timedelta
+        dates = []
+        current = date_debut
+        max_occ = nb_occurrences - 1 if nb_occurrences else 365
+        date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date() if date_fin_str else None
 
-    while len(dates) < max_occ:
-        if type_rec == 'hebdo':
-            current = current + timedelta(weeks=1)
-        elif type_rec == 'bi_hebdo':
-            current = current + timedelta(weeks=2)
-        elif type_rec == 'mensuel':
-            month = current.month + 1 if current.month < 12 else 1
-            year = current.year if current.month < 12 else current.year + 1
-            try:
-                current = current.replace(year=year, month=month)
-            except ValueError:
-                import calendar
-                last_day = calendar.monthrange(year, month)[1]
-                current = current.replace(year=year, month=month, day=last_day)
-        elif type_rec == 'quotidien_ouvre':
-            current = current + timedelta(days=1)
-            while current.weekday() >= 5:  # Samedi=5, Dimanche=6
+        while len(dates) < max_occ:
+            if type_rec == 'hebdo':
+                current = current + timedelta(weeks=1)
+            elif type_rec == 'bi_hebdo':
+                current = current + timedelta(weeks=2)
+            elif type_rec == 'mensuel':
+                month = current.month + 1 if current.month < 12 else 1
+                year = current.year if current.month < 12 else current.year + 1
+                try:
+                    current = current.replace(year=year, month=month)
+                except ValueError:
+                    import calendar
+                    last_day = calendar.monthrange(year, month)[1]
+                    current = current.replace(year=year, month=month, day=last_day)
+            elif type_rec == 'quotidien_ouvre':
                 current = current + timedelta(days=1)
+                while current.weekday() >= 5:  # Samedi=5, Dimanche=6
+                    current = current + timedelta(days=1)
 
-        if date_fin and current > date_fin:
-            break
-        dates.append(current)
+            if date_fin and current > date_fin:
+                break
+            dates.append(current)
 
-    return dates
+        return dates

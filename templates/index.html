@@ -148,30 +148,36 @@
 						{% set non_zero = pts | select('gt', 0) | list %}
 						{% if non_zero %}
 						<div class="bg-light rounded p-2 border">
-							<small class="text-muted d-block mb-1" style="font-size:0.6rem;">ÉVOLUTION DU SOLDE (MOIS)</small>
+							<div class="d-flex justify-content-between align-items-center mb-1">
+								<small class="text-muted" style="font-size:0.6rem;">ÉVOLUTION DU SOLDE</small>
+								<small class="fw-bold" style="font-size:0.6rem;color:{{ color }};">
+									{{ "%.0f"|format(min_pt) }} € min
+								</small>
+							</div>
 							{% set max_pt = pts | max %}
 							{% set min_pt = pts | min %}
 							{% set range_pt = (max_pt - min_pt) if max_pt != min_pt else 1 %}
 							<svg viewBox="0 0 120 35" preserveAspectRatio="none" style="width:100%;height:35px;">
-								<!-- Zone remplie -->
 								<linearGradient id="budgetGrad" x1="0" y1="0" x2="0" y2="1">
 									<stop offset="0%" stop-color="{{ color }}" stop-opacity="0.3"/>
 									<stop offset="100%" stop-color="{{ color }}" stop-opacity="0.0"/>
 								</linearGradient>
-								<polygon
-									fill="url(#budgetGrad)"
-									points="0,35 {% for v in pts %}{{ (loop.index0 * (120.0 / (pts|length - 1))) | round(1) }},{{ (35 - ((v - min_pt) / range_pt * 30)) | round(1) }} {% endfor %}120,35"
-								/>
-								<!-- Ligne -->
-								<polyline
-									fill="none"
-									stroke="{{ color }}"
-									stroke-width="1.8"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									points="{% for v in pts %}{{ (loop.index0 * (120.0 / (pts|length - 1))) | round(1) }},{{ (35 - ((v - min_pt) / range_pt * 30)) | round(1) }} {% endfor %}"
-								/>
+								<polygon fill="url(#budgetGrad)"
+									points="0,35 {% for v in pts %}{{ (loop.index0 * (120.0 / (pts|length - 1))) | round(1) }},{{ (35 - ((v - min_pt) / range_pt * 30)) | round(1) }} {% endfor %}120,35"/>
+								<polyline fill="none" stroke="{{ color }}" stroke-width="1.8"
+									stroke-linecap="round" stroke-linejoin="round"
+									points="{% for v in pts %}{{ (loop.index0 * (120.0 / (pts|length - 1))) | round(1) }},{{ (35 - ((v - min_pt) / range_pt * 30)) | round(1) }} {% endfor %}"/>
+								<!-- Point de départ et arrivée -->
+								<circle cx="0" cy="{{ (35 - ((pts[0] - min_pt) / range_pt * 30)) | round(1) }}"
+										r="2.5" fill="{{ color }}"/>
+								<circle cx="120" cy="{{ (35 - ((pts[-1] - min_pt) / range_pt * 30)) | round(1) }}"
+										r="2.5" fill="{{ color }}"/>
 							</svg>
+							<div class="d-flex justify-content-between mt-1">
+								<small class="text-muted" style="font-size:0.6rem;">Jan</small>
+								<small class="fw-bold" style="font-size:0.6rem;color:{{ color }};">{{ "%.0f"|format(pts[-1]) }} €</small>
+								<small class="text-muted" style="font-size:0.6rem;">Déc</small>
+							</div>
 						</div>
 						{% endif %}
 
@@ -634,21 +640,41 @@
 
                         {% if data.stats.sparkline_resas %}
                         <div class="col-12">
-                            <div class="p-2 bg-light rounded border">
-                                <small class="text-muted d-block mb-1" style="font-size:0.65rem;">RÉSERVATIONS 30 JOURS</small>
-                                {% set vals = data.stats.sparkline_resas %}
-                                {% set max_val = vals | max %}
-                                {% set max_val = max_val if max_val > 0 else 1 %}
-                                <svg viewBox="0 0 120 30" preserveAspectRatio="none" style="width:100%;height:30px;">
-                                    <polyline
-                                        fill="none"
-                                        stroke="#0d6efd"
-                                        stroke-width="1.5"
-                                        points="{% for v in vals %}{{ (loop.index0 * (120.0 / (vals|length - 1))) | round(1) }},{{ (30 - (v / max_val * 28)) | round(1) }} {% endfor %}"
-                                    />
-                                </svg>
-                            </div>
-                        </div>
+							<div class="p-2 bg-light rounded border">
+								<div class="d-flex justify-content-between align-items-center mb-1">
+									<small class="text-muted" style="font-size:0.65rem;">RÉSERVATIONS 30 JOURS</small>
+									<small class="fw-bold text-primary" style="font-size:0.65rem;">
+										{{ data.stats.sparkline_resas | sum }} au total
+									</small>
+								</div>
+								{% set vals = data.stats.sparkline_resas %}
+								{% set max_val = vals | max %}
+								{% set max_val = max_val if max_val > 0 else 1 %}
+								{% set total = vals | sum %}
+								<svg viewBox="0 0 120 35" preserveAspectRatio="none" style="width:100%;height:35px;">
+									<linearGradient id="resaGrad" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stop-color="#0d6efd" stop-opacity="0.25"/>
+										<stop offset="100%" stop-color="#0d6efd" stop-opacity="0.0"/>
+									</linearGradient>
+									<polygon fill="url(#resaGrad)"
+										points="0,35 {% for v in vals %}{{ (loop.index0 * (120.0 / (vals|length - 1))) | round(1) }},{{ (35 - (v / max_val * 30)) | round(1) }} {% endfor %}120,35"/>
+									<polyline fill="none" stroke="#0d6efd" stroke-width="1.8"
+										stroke-linecap="round" stroke-linejoin="round"
+										points="{% for v in vals %}{{ (loop.index0 * (120.0 / (vals|length - 1))) | round(1) }},{{ (35 - (v / max_val * 30)) | round(1) }} {% endfor %}"/>
+									<!-- Point max -->
+									{% for v in vals %}{% if v == max_val %}
+									<circle cx="{{ (loop.index0 * (120.0 / (vals|length - 1))) | round(1) }}"
+											cy="{{ (35 - (v / max_val * 30)) | round(1) }}"
+											r="2.5" fill="#0d6efd"/>
+									{% endif %}{% endfor %}
+								</svg>
+								<div class="d-flex justify-content-between mt-1">
+									<small class="text-muted" style="font-size:0.6rem;">il y a 30j</small>
+									<small class="fw-bold text-primary" style="font-size:0.6rem;">pic : {{ max_val }}</small>
+									<small class="text-muted" style="font-size:0.6rem;">aujourd'hui</small>
+								</div>
+							</div>
+						</div>
                         {% endif %}
 
                         {% if data.stats.top_materiels %}

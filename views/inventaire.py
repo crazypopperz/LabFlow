@@ -88,6 +88,29 @@ def index():
                 Reservation.debut_reservation >= datetime.now()
             ).count()
         }
+        # Sparklines
+        now_ts = datetime.now()
+        sparkline_resas = []
+        for i in range(29, -1, -1):
+            jour = (now_ts - timedelta(days=i)).date()
+            count = db.session.query(Reservation).filter(
+                Reservation.etablissement_id == etablissement_id,
+                func.date(Reservation.debut_reservation) == jour
+            ).count()
+            sparkline_resas.append(count)
+
+        top_materiels = db.session.execute(
+            db.select(Objet.nom, func.sum(Reservation.quantite_reservee).label('total'))
+            .join(Reservation, Objet.id == Reservation.objet_id)
+            .filter(Reservation.etablissement_id == etablissement_id)
+            .group_by(Objet.nom)
+            .order_by(func.sum(Reservation.quantite_reservee).desc())
+            .limit(5)
+        ).all()
+
+        dashboard_data['stats']['sparkline_resas'] = sparkline_resas
+        dashboard_data['stats']['top_materiels'] = [{'nom': r.nom, 'total': int(r.total)} for r in top_materiels]
+
 
     admin_user = db.session.execute(db.select(Utilisateur).filter_by(role='admin', etablissement_id=etablissement_id)).scalar_one_or_none()
     dashboard_data['admin_contact'] = admin_user.email if admin_user and admin_user.email else (admin_user.nom_utilisateur if admin_user else "Non défini")

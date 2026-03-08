@@ -199,6 +199,13 @@ def checkout_panier():
     user_id = session['user_id']
     try:
         result = services.panier.valider_panier(user_id)
+        conflits = result.get('conflits', [])
+        response_data = {
+            'success': True,
+            'reservations_count': len(result.get('groupes', [])),
+            'conflits': conflits,
+            'conflits_count': len(conflits)
+        }
         
         # --- CORRECTION POUR LE TOAST JS ---
         # Le JS attend data.reservations_count

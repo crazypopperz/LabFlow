@@ -9,7 +9,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
-from db import db, Panier, PanierItem, Reservation, AuditLog, Objet, Kit
+from db import db, Panier, PanierItem, Reservation, AuditLog, Objet, Kit, ReservationRecurrence
 from services.stock_service import StockService, StockServiceError
 from services.kit_service import KitService
 
@@ -257,7 +257,8 @@ class PanierService:
                     date_reservation=start_dt.date(),
                     heure_debut=item_data['heure_debut'],
                     heure_fin=item_data['heure_fin'],
-                    salle_id=int(item_data['salle_id']) if item_data.get('salle_id') else None
+                    salle_id=int(item_data['salle_id']) if item_data.get('salle_id') else None,
+                    recurrence_data=json.dumps(item_data['recurrence']) if item_data.get('recurrence') else None
                 )
                 db.session.add(new_item)
 
@@ -332,9 +333,32 @@ class PanierService:
                 # 1. Vérification Atomique (Lock DB)
                 self.stock_service.verify_stock_atomic(items_dict, start_dt, end_dt, user_id)
                 
-                # 2. Création Réservation
+                # 2. Création Réservation (occurrence de base)
                 groupe_id = str(uuid.uuid4())
-                
+                recurrence_obj = None
+
+                # Récurrence — on prend le recurrence_data du premier item qui en a un
+                rec_data = None
+                for item in items_list:
+                    if item.recurrence_data:
+                        rec_data = json.loads(item.recurrence_data)
+                        break
+
+                if rec_data:
+                    recurrence_obj = ReservationRecurrence(
+                        etablissement_id=self.etablissement_id,
+                        utilisateur_id=user_id,
+                        type_recurrence=rec_data.get('type', 'hebdo'),
+                        date_debut=d_res,
+                        date_fin=datetime.strptime(rec_data['date_fin'], '%Y-%m-%d').date() if rec_data.get('date_fin') else None,
+                        nb_occurrences=rec_data.get('nb_occurrences'),
+                        heure_debut=h_deb,
+                        heure_fin=h_fin,
+                        salle_id=items_list[0].salle_id
+                    )
+                    db.session.add(recurrence_obj)
+                    db.session.flush()  # Pour avoir l'id
+
                 for item in items_list:
                     resa = Reservation(
                         utilisateur_id=user_id,
@@ -344,15 +368,48 @@ class PanierService:
                         fin_reservation=end_dt,
                         groupe_id=groupe_id,
                         statut='confirmée',
-                        salle_id=item.salle_id
+                        salle_id=item.salle_id,
+                        recurrence_id=recurrence_obj.id if recurrence_obj else None
                     )
                     if item.type == 'kit': resa.kit_id = item.id_item
                     else: resa.objet_id = item.id_item
-                    
                     db.session.add(resa)
                     audit_details.append(f"{item.type}#{item.id_item} (x{item.quantite}) [{h_deb}-{h_fin}]")
-                
                 resultats.append(groupe_id)
+
+                # Génération des occurrences récurrentes
+                if rec_data and recurrence_obj:
+                    dates_recurrentes = self._generer_dates_recurrence(
+                        d_res, rec_data.get('type', 'hebdo'),
+                        rec_data.get('date_fin'), rec_data.get('nb_occurrences')
+                    )
+                    conflits = []
+                    for date_occ in dates_recurrentes:
+                        try:
+                            start_occ, end_occ = self._parse_and_validate_dates(date_occ.isoformat(), h_deb, h_fin)
+                            items_dict = [{'type': i.type, 'id': i.id_item, 'quantite': i.quantite} for i in items_list]
+                            self.stock_service.verify_stock_atomic(items_dict, start_occ, end_occ, user_id)
+                            groupe_occ = str(uuid.uuid4())
+                            for item in items_list:
+                                resa_occ = Reservation(
+                                    utilisateur_id=user_id,
+                                    etablissement_id=self.etablissement_id,
+                                    quantite_reservee=item.quantite,
+                                    debut_reservation=start_occ,
+                                    fin_reservation=end_occ,
+                                    groupe_id=groupe_occ,
+                                    statut='confirmée',
+                                    salle_id=item.salle_id,
+                                    recurrence_id=recurrence_obj.id
+                                )
+                                if item.type == 'kit': resa_occ.kit_id = item.id_item
+                                else: resa_occ.objet_id = item.id_item
+                                db.session.add(resa_occ)
+                            resultats.append(groupe_occ)
+                        except StockServiceError:
+                            conflits.append(date_occ.isoformat())
+                    if conflits:
+                        resultats_meta = {'conflits': conflits}
 
             # 3. Nettoyage
             db.session.execute(delete(PanierItem).where(PanierItem.id_panier == panier.id))
@@ -384,3 +441,36 @@ class PanierService:
             db.session.rollback()
             logger.error(f"Checkout CRITICAL DB ERROR | User {user_id} | {e}")
             raise PanierServiceError("Erreur technique validation.")
+            
+    def _generer_dates_recurrence(self, date_debut, type_rec, date_fin_str, nb_occurrences):
+    """Génère la liste des dates d'occurrences (sans la date de départ)."""
+    from datetime import date, timedelta
+    dates = []
+    current = date_debut
+    max_occ = nb_occurrences - 1 if nb_occurrences else 365
+    date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date() if date_fin_str else None
+
+    while len(dates) < max_occ:
+        if type_rec == 'hebdo':
+            current = current + timedelta(weeks=1)
+        elif type_rec == 'bi_hebdo':
+            current = current + timedelta(weeks=2)
+        elif type_rec == 'mensuel':
+            month = current.month + 1 if current.month < 12 else 1
+            year = current.year if current.month < 12 else current.year + 1
+            try:
+                current = current.replace(year=year, month=month)
+            except ValueError:
+                import calendar
+                last_day = calendar.monthrange(year, month)[1]
+                current = current.replace(year=year, month=month, day=last_day)
+        elif type_rec == 'quotidien_ouvre':
+            current = current + timedelta(days=1)
+            while current.weekday() >= 5:  # Samedi=5, Dimanche=6
+                current = current + timedelta(days=1)
+
+        if date_fin and current > date_fin:
+            break
+        dates.append(current)
+
+    return dates

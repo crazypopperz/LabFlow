@@ -4,7 +4,7 @@
  * @param {string} message Le message à afficher.
  * @param {string} type Le type de toast ('success', 'danger', 'warning', 'info'). Par défaut 'info'.
  */
-export function showToast(message, type = 'info') {
+export function showToast(message, type = 'info', duration = 3000) {
     // Crée le conteneur de toasts s'il n'est pas déjà dans la page
     let toastContainer = document.getElementById('toast-container');
     if (!toastContainer) {
@@ -49,8 +49,8 @@ export function showToast(message, type = 'info') {
     toastContainer.appendChild(toastElement);
 
     const toast = new bootstrap.Toast(toastElement, {
-        delay: 2000 // Disparaît après 2 secondes
-    });
+		delay: duration
+	});
 
     // Supprime l'élément du DOM après sa disparition pour garder la page propre
     toastElement.addEventListener('hidden.bs.toast', () => {

@@ -88,35 +88,43 @@
                         </thead>
                         <tbody>
                             {% for salle in salles %}
-                            <tr>
-                                <td class="fw-semibold">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" height="16" fill="#6c757d" class="me-1">
-                                        <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Z"/>
-                                    </svg>
-                                    {{ salle.nom }}
-                                </td>
-                                <td class="text-muted small">{{ salle.description or '—' }}</td>
-                                <td class="text-center">
-                                    {% if salle.capacite %}
-                                        <span class="badge bg-light text-dark border">{{ salle.capacite }} élèves</span>
-                                    {% else %}
-                                        <span class="text-muted">—</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end">
-                                    <form action="{{ url_for('admin.supprimer_salle', salle_id=salle.id) }}"
-                                          method="POST" class="d-inline"
-                                          onsubmit="return confirm('Supprimer la salle {{ salle.nom }} ? Les réservations associées perdront leur salle.')">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" fill="currentColor">
-                                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360Z"/>
-                                            </svg>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
+							<tr>
+								<form action="{{ url_for('admin.modifier_salle', salle_id=salle.id) }}" method="POST">
+									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+									<td>
+										<input type="text" name="nom" value="{{ salle.nom }}"
+											   class="form-control form-control-sm" required maxlength="100">
+									</td>
+									<td>
+										<input type="text" name="description" value="{{ salle.description or '' }}"
+											   class="form-control form-control-sm" maxlength="255"
+											   placeholder="Description...">
+									</td>
+									<td class="text-center">
+										<input type="number" name="capacite" value="{{ salle.capacite or '' }}"
+											   class="form-control form-control-sm text-center"
+											   style="width:80px;margin:auto;" min="1" max="999">
+									</td>
+									<td class="text-end">
+										<button type="submit" class="btn btn-sm btn-outline-success me-1" title="Sauvegarder">
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" fill="currentColor">
+												<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+											</svg>
+										</button>
+									</form>
+										<form action="{{ url_for('admin.supprimer_salle', salle_id=salle.id) }}"
+											  method="POST" class="d-inline"
+											  onsubmit="return confirm('Supprimer {{ salle.nom }} ?')">
+											<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+											<button type="submit" class="btn btn-sm btn-outline-danger">
+												<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" fill="currentColor">
+													<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360Z"/>
+												</svg>
+											</button>
+										</form>
+									</td>
+							</tr>
+							{% endfor %}
                         </tbody>
                     </table>
                 </div>

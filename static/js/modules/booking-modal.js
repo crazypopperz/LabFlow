@@ -160,7 +160,9 @@ export function initBookingModal() {
         }
     }
 
+    initRecurrence();
     bookingModalElement.addEventListener('show.bs.modal', handleModalOpen);
+	bookingModalElement.addEventListener('show.bs.modal', handleModalOpen);
     bookingModalElement.addEventListener('hidden.bs.modal', () => {
         resetModalState();
         forceCleanup();
@@ -350,6 +352,67 @@ function onTimeChange() {
     }, 350);
 }
 
+// ============================================================
+// RÉCURRENCE
+// ============================================================
+function initRecurrence() {
+    const toggle = document.getElementById('recurrenceToggle');
+    const options = document.getElementById('recurrenceOptions');
+    const limiteDate = document.getElementById('limiteDate');
+    const limiteOcc = document.getElementById('limiteOccurrences');
+    const dateFinInput = document.getElementById('recurrenceDateFin');
+    const nbOccInput = document.getElementById('recurrenceNbOccurrences');
+
+    if (!toggle) return;
+
+    toggle.addEventListener('change', () => {
+        options.style.display = toggle.checked ? 'block' : 'none';
+        updateRecurrencePreview();
+    });
+
+    document.querySelectorAll('input[name="recurrenceLimite"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            dateFinInput.style.display = limiteDate.checked ? 'block' : 'none';
+            nbOccInput.style.display = limiteOcc.checked ? 'block' : 'none';
+            updateRecurrencePreview();
+        });
+    });
+
+    dateFinInput.addEventListener('change', updateRecurrencePreview);
+    nbOccInput.addEventListener('input', updateRecurrencePreview);
+    document.getElementById('recurrenceType')?.addEventListener('change', updateRecurrencePreview);
+}
+
+function updateRecurrencePreview() {
+    const preview = document.getElementById('recurrencePreview');
+    if (!preview) return;
+    const type = document.getElementById('recurrenceType')?.value;
+    const limiteDate = document.getElementById('limiteDate')?.checked;
+    const dateFin = document.getElementById('recurrenceDateFin')?.value;
+    const nbOcc = document.getElementById('recurrenceNbOccurrences')?.value;
+    const labels = {
+        'hebdo': 'chaque semaine',
+        'quotidien_ouvre': 'chaque jour ouvré',
+        'bi_hebdo': 'toutes les 2 semaines',
+        'mensuel': 'chaque mois'
+    };
+    let text = `Réservation répétée ${labels[type] || ''}`;
+    if (limiteDate && dateFin) text += ` jusqu'au ${dateFin}`;
+    else if (!limiteDate && nbOcc) text += ` pendant ${nbOcc} occurrences`;
+    preview.textContent = text;
+}
+
+function getRecurrenceData() {
+    const toggle = document.getElementById('recurrenceToggle');
+    if (!toggle?.checked) return null;
+    const limiteDate = document.getElementById('limiteDate')?.checked;
+    return {
+        type: document.getElementById('recurrenceType')?.value,
+        date_fin: limiteDate ? document.getElementById('recurrenceDateFin')?.value : null,
+        nb_occurrences: !limiteDate ? parseInt(document.getElementById('recurrenceNbOccurrences')?.value) : null
+    };
+}
+
 // --- GESTION DES BOUTONS DYNAMIQUES (EDITION) ---
 
 function showEditTimeButtons() {
@@ -507,6 +570,10 @@ async function addItem(item) {
 		const salleSelect = document.getElementById('bookingSalle');
 		if (salleSelect && salleSelect.value) {
 			payload.salle_id = parseInt(salleSelect.value);
+		}
+		const recurrence = getRecurrenceData();
+		if (recurrence) {
+			payload.recurrence = recurrence;
 		}
 	}
 

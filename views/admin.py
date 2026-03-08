@@ -730,6 +730,26 @@ def ajouter_salle():
 
     return redirect(url_for('admin.gestion_salles'))
 
+@admin_bp.route("/salles/modifier/<int:salle_id>", methods=["POST"])
+@admin_required
+def modifier_salle(salle_id):
+    etablissement_id = session.get('etablissement_id')
+    salle = db.session.get(Salle, salle_id)
+    if not salle or salle.etablissement_id != etablissement_id:
+        flash("Salle introuvable.", "error")
+        return redirect(url_for('admin.gestion_salles'))
+    try:
+        salle.nom = request.form.get('nom', '').strip() or salle.nom
+        salle.description = request.form.get('description', '').strip() or None
+        cap = request.form.get('capacite', '').strip()
+        salle.capacite = int(cap) if cap.isdigit() else None
+        db.session.commit()
+        flash(f"Salle '{salle.nom}' modifiée.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Erreur modification.", "error")
+    return redirect(url_for('admin.gestion_salles'))
+
 @admin_bp.route("/salles/supprimer/<int:salle_id>", methods=["POST"])
 @admin_required
 def supprimer_salle(salle_id):

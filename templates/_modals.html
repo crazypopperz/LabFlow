@@ -49,6 +49,54 @@
 								{% endfor %}
 							</select>
 						</div>
+						<!-- Récurrence -->
+						<div class="mb-3">
+							<div class="form-check form-switch">
+								<input class="form-check-input" type="checkbox" id="recurrenceToggle">
+								<label class="form-check-label fw-bold" for="recurrenceToggle">
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" class="me-1">
+										<path d="M160-160v-80h110l-16-14q-52-46-73-105t-21-119q0-111 66.5-197.5T400-790v84q-72 26-116 88.5T240-478q0 45 15 87t43 75l22 20v-104h80v240H160Zm400-10v-84q72-26 116-88.5T720-482q0-45-15-87t-43-75l-22-20v104h-80v-240h240v80H690l16 14q52 46 73 105t21 119q0 111-66.5 197.5T560-170Z"/>
+									</svg>
+									Répéter cette réservation
+								</label>
+							</div>
+
+							<div id="recurrenceOptions" style="display:none;" class="mt-3 p-3 bg-light rounded-3 border">
+								
+								<!-- Type de récurrence -->
+								<div class="mb-3">
+									<label class="filter-label d-block mb-1">Fréquence</label>
+									<select class="form-select form-select-sm" id="recurrenceType">
+										<option value="hebdo">Chaque semaine</option>
+										<option value="quotidien_ouvre">Chaque jour ouvré</option>
+										<option value="bi_hebdo">Toutes les 2 semaines</option>
+										<option value="mensuel">Chaque mois</option>
+									</select>
+								</div>
+
+								<!-- Limite -->
+								<div class="mb-3">
+									<label class="filter-label d-block mb-1">Arrêter</label>
+									<div class="d-flex gap-2 mb-2">
+										<div class="form-check">
+											<input class="form-check-input" type="radio" name="recurrenceLimite" 
+												   id="limiteDate" value="date" checked>
+											<label class="form-check-label small" for="limiteDate">À une date</label>
+										</div>
+										<div class="form-check">
+											<input class="form-check-input" type="radio" name="recurrenceLimite" 
+												   id="limiteOccurrences" value="occurrences">
+											<label class="form-check-label small" for="limiteOccurrences">Après N fois</label>
+										</div>
+									</div>
+									<input type="date" id="recurrenceDateFin" class="form-control form-control-sm">
+									<input type="number" id="recurrenceNbOccurrences" class="form-control form-control-sm" 
+										   style="display:none;" min="2" max="52" value="4" placeholder="Nombre d'occurrences">
+								</div>
+
+								<div id="recurrencePreview" class="small text-muted fst-italic"></div>
+							</div>
+						</div>
                         <hr>
                         <div id="availableItems">
                             <div class="text-center py-4">

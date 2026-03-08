@@ -224,14 +224,19 @@ function setupGlobalActions() {
                 const json = await res.json();
 
                 if (res.ok && json.success) {
-                    const count = json.data.reservations_count;
-                    const accord = count > 1 ? "s" : "";
-                    
-                    showToast(`Succès ! ${count} réservation${accord} créée${accord}.`, "success");
-                    setTimeout(() => {
-                        window.location.href = '/calendrier';
-                    }, 1500);
-                } else {
+					const count = json.data.reservations_count;
+					const accord = count > 1 ? "s" : "";
+					const conflits = json.data.conflits || [];
+					if (conflits.length > 0) {
+						const datesStr = conflits.map(d => new Date(d).toLocaleDateString('fr-FR')).join(', ');
+						showToast(`${count} réservation${accord} créée${accord}. ⚠️ ${conflits.length} créneau(x) ignoré(s) : ${datesStr}`, "warning", 6000);
+					} else {
+						showToast(`Succès ! ${count} réservation${accord} créée${accord}.`, "success");
+					}
+					setTimeout(() => {
+						window.location.href = '/calendrier';
+					}, conflits.length > 0 ? 6000 : 1500);
+				} else {
                     showToast(json.error || "Erreur lors de la validation", "error");
                     btnConfirm.disabled = false;
                     btnConfirm.innerHTML = originalText;

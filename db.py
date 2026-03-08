@@ -195,6 +195,7 @@ class PanierItem(db.Model):
     heure_debut = db.Column(db.String(5), nullable=False)
     heure_fin = db.Column(db.String(5), nullable=False)
     salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
+    recurrence_data = db.Column(db.Text, nullable=True)
     
     date_ajout = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
 
@@ -224,6 +225,7 @@ class Reservation(db.Model):
     # Groupement et Statut
     groupe_id = db.Column(db.String(36), nullable=False, index=True)
     salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
+    recurrence_id = db.Column(db.Integer, db.ForeignKey('reservation_recurrences.id'), nullable=True)
     statut = db.Column(db.String(20), default='confirmée') # en_attente, confirmée, annulée
     
     # Traçabilité
@@ -467,3 +469,26 @@ class Salle(db.Model):
     __table_args__ = (
         db.Index('idx_salles_etablissement', 'etablissement_id'),
     )
+
+# ============================================================
+# 10. RÉCURRENCE DES RÉSERVATIONS
+# ============================================================
+class ReservationRecurrence(db.Model):
+    __tablename__ = 'reservation_recurrences'
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
+    # Type : 'hebdo', 'quotidien_ouvre', 'bi_hebdo', 'mensuel'
+    type_recurrence = db.Column(db.String(20), nullable=False)
+    # Limites
+    date_debut = db.Column(db.Date, nullable=False)
+    date_fin = db.Column(db.Date, nullable=True)
+    nb_occurrences = db.Column(db.Integer, nullable=True)
+    # Créneau
+    heure_debut = db.Column(db.String(5), nullable=False)  # HH:MM
+    heure_fin = db.Column(db.String(5), nullable=False)
+    salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+
+    reservations = db.relationship('Reservation', backref='recurrence', lazy=True,
+                                   foreign_keys='Reservation.recurrence_id')

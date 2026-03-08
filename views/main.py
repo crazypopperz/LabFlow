@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import os
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, send_from_directory, current_app, make_response)
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, distinct
 from sqlalchemy.orm import joinedload
 from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre, Suggestion, MaintenanceLog, EquipementSecurite, Salle
 from utils import login_required
@@ -158,24 +158,34 @@ def vue_jour(date_str):
     start_of_day = datetime.combine(date_obj, datetime.min.time())
     end_of_day = datetime.combine(date_obj, datetime.max.time())
 
-    reservations_brutes = db.session.execute(
+    subq = (
         db.select(
             Reservation.groupe_id,
-            Reservation.debut_reservation,
-            Reservation.fin_reservation,
-            Reservation.salle_id,
-            Utilisateur.nom_utilisateur,
-            Salle.nom.label('salle_nom')
+            db.func.min(Reservation.debut_reservation).label('debut'),
+            db.func.min(Reservation.fin_reservation).label('fin'),
+            db.func.min(Reservation.salle_id).label('salle_id'),
+            db.func.min(Reservation.utilisateur_id).label('utilisateur_id')
         )
-        .join(Utilisateur, Reservation.utilisateur_id == Utilisateur.id)
-        .outerjoin(Salle, Reservation.salle_id == Salle.id)
         .filter(
             Reservation.etablissement_id == etablissement_id,
             Reservation.debut_reservation < end_of_day,
             Reservation.fin_reservation > start_of_day
         )
-        .distinct(Reservation.groupe_id)
-        .order_by(Reservation.groupe_id, Reservation.debut_reservation)
+        .group_by(Reservation.groupe_id)
+        .subquery()
+    )
+    reservations_brutes = db.session.execute(
+        db.select(
+            subq.c.groupe_id,
+            subq.c.debut,
+            subq.c.fin,
+            subq.c.salle_id,
+            Utilisateur.nom_utilisateur,
+            Salle.nom.label('salle_nom')
+        )
+        .join(Utilisateur, Utilisateur.id == subq.c.utilisateur_id)
+        .outerjoin(Salle, Salle.id == subq.c.salle_id)
+        .order_by(subq.c.debut)
     ).mappings().all()
 
     # Structure plate — le JS gérera le positionnement
@@ -183,8 +193,8 @@ def vue_jour(date_str):
     for resa in reservations_brutes:
         reservations.append({
             'groupe_id': resa.groupe_id,
-            'debut': resa.debut_reservation.strftime('%H:%M'),
-            'fin': resa.fin_reservation.strftime('%H:%M'),
+            'debut': resa.debut.strftime('%H:%M'),
+            'fin': resa.fin.strftime('%H:%M'),
             'nom_utilisateur': resa.nom_utilisateur,
             'salle': resa.salle_nom or '',
             'user_id': session.get('user_id')

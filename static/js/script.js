@@ -638,29 +638,45 @@ document.addEventListener("DOMContentLoaded", function () {
                             hasValidResults = true; 
                         } else {
                             let html = '';
-                            data.forEach(item => {
-                                const rawImage = item.image || item.image_url;
-                                let imgUrl = 'https://via.placeholder.com/40?text=IMG';
-
-                                if (rawImage) {
-                                    imgUrl = rawImage.startsWith('http') ? rawImage : `/static/${rawImage}`;
-                                }
-
-                                const armoire = item.armoire || 'Sans armoire';
-                                const quantite = item.quantite !== undefined ? item.quantite : '?';
-
-                                html += `
-                                    <a href="/objet/${item.id}" class="search-result-item">
-                                        <img src="${imgUrl}" alt="${item.nom}" class="search-result-img">
-                                        <div class="search-result-info">
-                                            <h6>${item.nom}</h6>
-                                            <small>${armoire} • Qté: ${quantite}</small>
-                                        </div>
-                                    </a>
-                                `;
-                            });
-                            resultsContainer.innerHTML = html;
-                            hasValidResults = true; // ✅ Résultats chargés avec succès
+							// Grouper par type
+							const types = {
+								'objet': { label: 'Matériel', icon: '📦' },
+								'kit': { label: 'Kits', icon: '🧰' },
+								'reservation': { label: 'Réservations', icon: '📅' },
+								'utilisateur': { label: 'Utilisateurs', icon: '👤' }
+							};
+							const grouped = {};
+							data.forEach(item => {
+								if (!grouped[item.type]) grouped[item.type] = [];
+								grouped[item.type].push(item);
+							});
+							Object.entries(grouped).forEach(([type, items]) => {
+								const meta = types[type] || { label: type, icon: '•' };
+								html += `<div class="search-result-section-label">${meta.icon} ${meta.label}</div>`;
+								items.forEach(item => {
+									const rawImage = item.image;
+									let imgHtml = '';
+									if (rawImage) {
+										const imgUrl = rawImage.startsWith('http') ? rawImage : `/static/${rawImage}`;
+										imgHtml = `<img src="${imgUrl}" alt="${item.nom}" class="search-result-img">`;
+									} else {
+										const initiale = item.nom.charAt(0).toUpperCase();
+										imgHtml = `<div class="search-result-img search-result-initiale">${initiale}</div>`;
+									}
+									const sousTitre = item.sous_titre || '';
+									html += `
+										<a href="${item.url || '#'}" class="search-result-item">
+											${imgHtml}
+											<div class="search-result-info">
+												<h6>${item.nom}</h6>
+												${sousTitre ? `<small>${sousTitre}</small>` : ''}
+											</div>
+										</a>
+									`;
+								});
+							});
+							resultsContainer.innerHTML = html;
+							hasValidResults = true;
                         }
                     })
                     .catch(error => {

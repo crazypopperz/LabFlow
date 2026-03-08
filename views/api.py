@@ -282,9 +282,88 @@ def api_disponibilites():
 @login_required
 @limiter.limit("30 per minute")
 def search():
-    services = get_services()
+    etablissement_id = session.get('etablissement_id')
     query_text = request.args.get('q', '').strip()
-    results = services.inventory.search_objets(query_text)
+    if not query_text or len(query_text) < 2:
+        return jsonify({"success": True, "data": []})
+
+    results = []
+
+    # Objets
+    objets = db.session.execute(
+        db.select(Objet)
+        .filter(Objet.etablissement_id == etablissement_id, Objet.nom.ilike(f"%{query_text}%"))
+        .limit(5)
+    ).scalars().all()
+    for o in objets:
+        results.append({
+            'type': 'objet',
+            'id': o.id,
+            'nom': o.nom,
+            'sous_titre': o.armoire.nom if o.armoire else None,
+            'image': o.image_url,
+            'url': f'/inventaire?search={o.nom}'
+        })
+
+    # Kits
+    kits = db.session.execute(
+        db.select(Kit)
+        .filter(Kit.etablissement_id == etablissement_id, Kit.nom.ilike(f"%{query_text}%"))
+        .limit(3)
+    ).scalars().all()
+    for k in kits:
+        results.append({
+            'type': 'kit',
+            'id': k.id,
+            'nom': k.nom,
+            'sous_titre': 'Kit',
+            'image': None,
+            'url': f'/inventaire'
+        })
+
+    # Réservations
+    from datetime import datetime as dt
+    resas = db.session.execute(
+        db.select(Reservation, Utilisateur.nom_utilisateur)
+        .join(Utilisateur, Reservation.utilisateur_id == Utilisateur.id)
+        .filter(
+            Reservation.etablissement_id == etablissement_id,
+            Utilisateur.nom_utilisateur.ilike(f"%{query_text}%"),
+            Reservation.debut_reservation >= dt.now()
+        )
+        .distinct(Reservation.groupe_id)
+        .limit(3)
+    ).all()
+    for resa, nom in resas:
+        results.append({
+            'type': 'reservation',
+            'id': resa.groupe_id,
+            'nom': f'Réservation — {nom}',
+            'sous_titre': resa.debut_reservation.strftime('%d/%m/%Y %H:%M'),
+            'image': None,
+            'url': f'/calendrier/{resa.debut_reservation.strftime("%Y-%m-%d")}'
+        })
+
+    # Utilisateurs (admin uniquement)
+    if session.get('user_role') == 'admin':
+        users = db.session.execute(
+            db.select(Utilisateur)
+            .filter(
+                Utilisateur.etablissement_id == etablissement_id,
+                Utilisateur.nom_utilisateur.ilike(f"%{query_text}%")
+            )
+            .limit(3)
+        ).scalars().all()
+        for u in users:
+            results.append({
+                'type': 'utilisateur',
+                'id': u.id,
+                'nom': u.nom_utilisateur,
+                'sous_titre': u.role,
+                'image': None,
+                'url': f'/admin/utilisateurs'
+            })
+
     return jsonify({"success": True, "data": results})
 
 @api_bp.route("/inventaire")

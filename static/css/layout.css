@@ -203,6 +203,26 @@
 .dropdown-results::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 3px; }
 .dropdown-results::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
 
+.search-result-section-label {
+    padding: 6px 14px 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 0.08em;
+}
+.search-result-initiale {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.15);
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
 /* ===================================
    HEADER - ICÔNES ET BADGES
    =================================== */

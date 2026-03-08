@@ -198,6 +198,32 @@ def index():
 
     dashboard_data['solde_budget'] = solde_actuel
 
+    # Sparkline budget — évolution du solde par mois
+    dashboard_data['budget_sparkline'] = None
+    if budget_actuel:
+        depenses_par_mois = db.session.execute(
+            db.select(
+                func.extract('month', Depense.date_depense).label('mois'),
+                func.sum(Depense.montant).label('total')
+            )
+            .filter_by(budget_id=budget_actuel.id, etablissement_id=etablissement_id)
+            .group_by(func.extract('month', Depense.date_depense))
+            .order_by(func.extract('month', Depense.date_depense))
+        ).all()
+        depenses_map = {int(r.mois): float(r.total) for r in depenses_par_mois}
+        solde_courant = float(budget_actuel.montant_initial)
+        points = []
+        for mois in range(1, 13):
+            depense_mois = depenses_map.get(mois, 0)
+            solde_courant -= depense_mois
+            points.append(round(solde_courant, 2))
+        dashboard_data['budget_sparkline'] = {
+            'points': points,
+            'montant_initial': float(budget_actuel.montant_initial),
+            'total_depenses': float(total_depenses),
+            'pourcentage_consomme': round((float(total_depenses) / float(budget_actuel.montant_initial) * 100), 1) if budget_actuel.montant_initial > 0 else 0
+        }
+
     historique_groupe = {
         'creations': [],
         'modifications': [],

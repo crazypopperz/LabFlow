@@ -114,18 +114,78 @@
                     </div>
                     <h3 class="h5 mb-0 fw-bold text-dark">Suivi Budgétaire</h3>
                 </div>
-                <div class="p-4 d-flex flex-column justify-content-center flex-grow-1">
-                    {% if data.solde_budget is not none %}
-                        <div class="text-center">
-                            <span class="d-block text-muted small text-uppercase fw-bold mb-2">Solde Actuel</span>
-                            <span class="display-6 fw-bold {{ 'text-success' if data.solde_budget >= 0 else 'text-danger' }}">
-                                {{ "%.2f"|format(data.solde_budget) }} €
-                            </span>
-                        </div>
-                    {% else %}
-                        <p class="text-center text-muted mb-0">Aucun budget défini.</p>
-                    {% endif %}
-                </div>
+                <div class="p-4 flex-grow-1">
+					{% if data.solde_budget is not none and data.budget_sparkline %}
+						{% set spark = data.budget_sparkline %}
+						{% set pct = spark.pourcentage_consomme %}
+						{% set color = '#28a745' if pct < 60 else ('#ffc107' if pct < 85 else '#dc3545') %}
+
+						<!-- Solde principal -->
+						<div class="text-center mb-3">
+							<span class="d-block text-muted small text-uppercase fw-bold mb-1">Solde Actuel</span>
+							<span class="display-6 fw-bold" style="color: {{ color }}">
+								{{ "%.2f"|format(data.solde_budget) }} €
+							</span>
+						</div>
+
+						<!-- Barre de consommation -->
+						<div class="mb-3">
+							<div class="d-flex justify-content-between mb-1">
+								<small class="text-muted" style="font-size:0.65rem;">CONSOMMÉ</small>
+								<small class="fw-bold" style="font-size:0.65rem;color:{{ color }}">{{ pct }}%</small>
+							</div>
+							<div class="bg-light rounded" style="height:8px;">
+								<div class="rounded" style="height:8px;width:{{ [pct, 100]|min }}%;background:{{ color }};transition:width 0.8s ease;"></div>
+							</div>
+							<div class="d-flex justify-content-between mt-1">
+								<small class="text-muted" style="font-size:0.6rem;">{{ "%.0f"|format(spark.total_depenses) }} € dépensés</small>
+								<small class="text-muted" style="font-size:0.6rem;">{{ "%.0f"|format(spark.montant_initial) }} € initial</small>
+							</div>
+						</div>
+
+						<!-- Sparkline SVG évolution solde -->
+						{% set pts = spark.points %}
+						{% set non_zero = pts | select('gt', 0) | list %}
+						{% if non_zero %}
+						<div class="bg-light rounded p-2 border">
+							<small class="text-muted d-block mb-1" style="font-size:0.6rem;">ÉVOLUTION DU SOLDE (MOIS)</small>
+							{% set max_pt = pts | max %}
+							{% set min_pt = pts | min %}
+							{% set range_pt = (max_pt - min_pt) if max_pt != min_pt else 1 %}
+							<svg viewBox="0 0 120 35" preserveAspectRatio="none" style="width:100%;height:35px;">
+								<!-- Zone remplie -->
+								<linearGradient id="budgetGrad" x1="0" y1="0" x2="0" y2="1">
+									<stop offset="0%" stop-color="{{ color }}" stop-opacity="0.3"/>
+									<stop offset="100%" stop-color="{{ color }}" stop-opacity="0.0"/>
+								</linearGradient>
+								<polygon
+									fill="url(#budgetGrad)"
+									points="0,35 {% for v in pts %}{{ (loop.index0 * (120.0 / (pts|length - 1))) | round(1) }},{{ (35 - ((v - min_pt) / range_pt * 30)) | round(1) }} {% endfor %}120,35"
+								/>
+								<!-- Ligne -->
+								<polyline
+									fill="none"
+									stroke="{{ color }}"
+									stroke-width="1.8"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									points="{% for v in pts %}{{ (loop.index0 * (120.0 / (pts|length - 1))) | round(1) }},{{ (35 - ((v - min_pt) / range_pt * 30)) | round(1) }} {% endfor %}"
+								/>
+							</svg>
+						</div>
+						{% endif %}
+
+					{% elif data.solde_budget is not none %}
+						<div class="text-center">
+							<span class="d-block text-muted small text-uppercase fw-bold mb-2">Solde Actuel</span>
+							<span class="display-6 fw-bold {{ 'text-success' if data.solde_budget >= 0 else 'text-danger' }}">
+								{{ "%.2f"|format(data.solde_budget) }} €
+							</span>
+						</div>
+					{% else %}
+						<p class="text-center text-muted mb-0">Aucun budget défini.</p>
+					{% endif %}
+				</div>
                 <div class="p-3 bg-light border-top">
                     <a href="{{ url_for('main.voir_budget') }}" class="btn-dashboard w-100">
 						<i class="bi bi-eye me-2"></i>Consulter le budget

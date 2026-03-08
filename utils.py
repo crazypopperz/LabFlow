@@ -241,7 +241,7 @@ def get_alerte_info():
                 total_reserve = reservations_par_objet.get(objet.id, 0)
                 quantite_disponible = objet.quantite_physique - total_reserve
                 seuil_numeric = int(objet.seuil) if objet.seuil is not None else 0
-                if not objet.en_commande and int(quantite_disponible) <= seuil_numeric:
+                if not objet.en_commande and int(objet.quantite_physique) <= seuil_numeric:
                     count_stock += 1
 
                 # Péremption

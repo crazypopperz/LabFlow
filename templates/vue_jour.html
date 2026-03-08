@@ -26,7 +26,53 @@
             </button>
         </div>
     </div>
+	
+	<!-- Barre de filtres -->
+	<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+		<!-- Filtre salle -->
+		<div class="d-flex align-items-center gap-1">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" height="16" fill="#6c757d">
+				<path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
+			</svg>
+			<select id="filtre-salle" class="form-select form-select-sm" style="width:auto;min-width:140px;">
+				<option value="">Toutes les salles</option>
+				{% for salle in salles %}
+				<option value="{{ salle.id }}">{{ salle.nom }}</option>
+				{% endfor %}
+			</select>
+		</div>
 
+		<!-- Filtre utilisateur (admin uniquement) -->
+		{% if session.user_role == 'admin' %}
+		<div class="d-flex align-items-center gap-1">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" height="16" fill="#6c757d">
+				<path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15.5 46.5 44T800-272v112H160Z"/>
+			</svg>
+			<select id="filtre-utilisateur" class="form-select form-select-sm" style="width:auto;min-width:160px;">
+				<option value="">Tous les utilisateurs</option>
+				{% for u in utilisateurs %}
+				<option value="{{ u.id }}">{{ u.nom_utilisateur }}</option>
+				{% endfor %}
+			</select>
+		</div>
+		{% endif %}
+
+		<!-- Bouton reset -->
+		<button id="reset-filtres-calendrier" class="btn btn-sm btn-outline-secondary" title="Réinitialiser">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" fill="currentColor">
+				<path d="M440-122q-121-15-200.5-105.5T160-440q0-66 26-126t72-106l57 57q-38 34-56.5 79T240-440q0 88 56 155.5T440-202v80Zm80 0v-80q87-16 143.5-83T720-440q0-100-70-170t-170-70h-3l44 44-56 56-140-140 140-140 56 56-44 44h3q134 0 227 93t93 227q0 121-79.5 211.5T520-122Z"/>
+			</svg>
+		</button>
+
+		<!-- Export PDF -->
+		<button id="export-pdf-btn" class="btn btn-sm btn-outline-dark ms-auto" title="Imprimer / Exporter PDF">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" fill="currentColor" class="me-1">
+				<path d="M640-240H320q-33 0-56.5-23.5T240-320v-480q0-33 23.5-56.5T320-880h320q33 0 56.5 23.5T720-800v480q0 33-23.5 56.5T640-240ZM160-80q-33 0-56.5-23.5T80-160v-560h80v560h560v80H160Z"/>
+			</svg>
+			Imprimer
+		</button>
+	</div>
+	
     <!-- Grille Calendrier -->
     <div class="card shadow-sm border-0">
         <div id="daily-grid-container" class="daily-grid-container">
@@ -45,4 +91,32 @@
 
 {% block scripts %}
     <script src="{{ url_for('static', filename='js/modules/calendar-daily.js') }}" type="module"></script>
+	<script>
+	// Filtres calendrier
+	document.getElementById('filtre-salle')?.addEventListener('change', appliquerFiltres);
+	document.getElementById('filtre-utilisateur')?.addEventListener('change', appliquerFiltres);
+	document.getElementById('reset-filtres-calendrier')?.addEventListener('click', () => {
+		document.getElementById('filtre-salle').value = '';
+		const fu = document.getElementById('filtre-utilisateur');
+		if (fu) fu.value = '';
+		appliquerFiltres();
+	});
+
+	function appliquerFiltres() {
+		const salle = document.getElementById('filtre-salle')?.value;
+		const user = document.getElementById('filtre-utilisateur')?.value;
+		document.querySelectorAll('.reservation-block').forEach(block => {
+			const blockSalle = block.dataset.salleId || '';
+			const blockUser = block.dataset.userId || '';
+			const salleOk = !salle || blockSalle === salle;
+			const userOk = !user || blockUser === user;
+			block.style.opacity = (salleOk && userOk) ? '1' : '0.15';
+		});
+	}
+
+	// Export PDF
+	document.getElementById('export-pdf-btn')?.addEventListener('click', () => {
+		window.print();
+	});
+	</script>
 {% endblock %}

@@ -197,14 +197,31 @@ def vue_jour(date_str):
             'fin': resa.fin.strftime('%H:%M'),
             'nom_utilisateur': resa.nom_utilisateur,
             'salle': resa.salle_nom or '',
+            'salle_id': str(resa.salle_id) if resa.salle_id else '',
             'user_id': session.get('user_id')
         })
+    
+    # Filtres calendrier
+    from db import Salle
+    salles_dispo = db.session.execute(
+        db.select(Salle)
+        .filter_by(etablissement_id=etablissement_id)
+        .order_by(Salle.nom)
+    ).scalars().all()
 
+    utilisateurs_dispo = db.session.execute(
+        db.select(Utilisateur.id, Utilisateur.nom_utilisateur)
+        .filter_by(etablissement_id=etablissement_id)
+        .order_by(Utilisateur.nom_utilisateur)
+    ).mappings().all()
+    
     return render_template("vue_jour.html",
                            date_concernee=date_obj,
                            reservations=reservations,
                            planning_debut=planning_debut,
                            planning_fin=planning_fin,
+                           salles=salles_dispo,
+                           utilisateurs=utilisateurs_dispo,
                            breadcrumbs=breadcrumbs)
 
 #================================================================

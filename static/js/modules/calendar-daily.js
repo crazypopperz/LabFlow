@@ -55,6 +55,20 @@ function renderGrid(config) {
 // ============================================================
 // RENDU DES ÉVÉNEMENTS
 // ============================================================
+function getUserColor(userId) {
+    const colors = [
+        '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
+        '#8b5cf6', '#06b6d4', '#f97316', '#ec4899',
+        '#14b8a6', '#6366f1'
+    ];
+    if (!userId) return colors[0];
+    let hash = 0;
+    for (let i = 0; i < String(userId).length; i++) {
+        hash = String(userId).charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+}
+
 function renderEvents(config) {
     const layer = document.getElementById('events-layer');
     if (!layer) return;
@@ -85,6 +99,8 @@ function renderEvents(config) {
 
         const el = document.createElement('div');
         el.className = 'event-item start';
+		el.dataset.salleId = resa.salle_id ? String(resa.salle_id) : '';
+		el.dataset.userId = resa.user_id ? String(resa.user_id) : '';
         el.dataset.groupeId = resa.groupe_id;
         el.style.cssText = `
             position: absolute;
@@ -92,7 +108,7 @@ function renderEvents(config) {
             left: 4px;
             right: 4px;
             height: ${Math.max(heightPx - 2, 20)}px;
-            background: #3b82f6;
+            background: ${getUserColor(resa.user_id)};
             color: white;
             border-radius: 6px;
             padding: 4px 8px;

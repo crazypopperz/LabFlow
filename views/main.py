@@ -180,6 +180,7 @@ def vue_jour(date_str):
             subq.c.debut,
             subq.c.fin,
             subq.c.salle_id,
+            subq.c.utilisateur_id.label('resa_utilisateur_id'),
             Utilisateur.nom_utilisateur,
             Salle.nom.label('salle_nom')
         )
@@ -198,7 +199,7 @@ def vue_jour(date_str):
             'nom_utilisateur': resa.nom_utilisateur,
             'salle': resa.salle_nom or '',
             'salle_id': str(resa.salle_id) if resa.salle_id else '',
-            'user_id': session.get('user_id')
+            'user_id': str(resa.resa_utilisateur_id) if resa.resa_utilisateur_id else ''
         })
     
     # Filtres calendrier

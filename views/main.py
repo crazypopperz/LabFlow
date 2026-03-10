@@ -136,94 +136,98 @@ def calendrier():
 @main_bp.route("/calendrier/<date_str>")
 @login_required
 def vue_jour(date_str):
-    etablissement_id = session['etablissement_id']
-    try:
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except ValueError:
-        flash("Format de date invalide.", "danger")
-        return redirect(url_for('main.calendrier'))
+    try
+        etablissement_id = session['etablissement_id']
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Format de date invalide.", "danger")
+            return redirect(url_for('main.calendrier'))
 
-    breadcrumbs = [
-        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
-        {'text': 'Calendrier', 'url': url_for('main.calendrier')},
-        {'text': date_obj.strftime('%d %B %Y'), 'url': None}
-    ]
+        breadcrumbs = [
+            {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+            {'text': 'Calendrier', 'url': url_for('main.calendrier')},
+            {'text': date_obj.strftime('%d %B %Y'), 'url': None}
+        ]
 
-    # Lecture config planning
-    from utils import get_etablissement_params
-    params = get_etablissement_params(etablissement_id)
-    planning_debut = params.get('planning_debut', '08:00')
-    planning_fin = params.get('planning_fin', '18:00')
+        # Lecture config planning
+        from utils import get_etablissement_params
+        params = get_etablissement_params(etablissement_id)
+        planning_debut = params.get('planning_debut', '08:00')
+        planning_fin = params.get('planning_fin', '18:00')
 
-    start_of_day = datetime.combine(date_obj, datetime.min.time())
-    end_of_day = datetime.combine(date_obj, datetime.max.time())
+        start_of_day = datetime.combine(date_obj, datetime.min.time())
+        end_of_day = datetime.combine(date_obj, datetime.max.time())
 
-    subq = (
-        db.select(
-            Reservation.groupe_id,
-            db.func.min(Reservation.debut_reservation).label('debut'),
-            db.func.min(Reservation.fin_reservation).label('fin'),
-            db.func.min(Reservation.salle_id).label('salle_id'),
-            db.func.min(Reservation.utilisateur_id).label('utilisateur_id')
+        subq = (
+            db.select(
+                Reservation.groupe_id,
+                db.func.min(Reservation.debut_reservation).label('debut'),
+                db.func.min(Reservation.fin_reservation).label('fin'),
+                db.func.min(Reservation.salle_id).label('salle_id'),
+                db.func.min(Reservation.utilisateur_id).label('utilisateur_id')
+            )
+            .filter(
+                Reservation.etablissement_id == etablissement_id,
+                Reservation.debut_reservation < end_of_day,
+                Reservation.fin_reservation > start_of_day
+            )
+            .group_by(Reservation.groupe_id)
+            .subquery()
         )
-        .filter(
-            Reservation.etablissement_id == etablissement_id,
-            Reservation.debut_reservation < end_of_day,
-            Reservation.fin_reservation > start_of_day
-        )
-        .group_by(Reservation.groupe_id)
-        .subquery()
-    )
-    reservations_brutes = db.session.execute(
-        db.select(
-            subq.c.groupe_id,
-            subq.c.debut,
-            subq.c.fin,
-            subq.c.salle_id,
-            subq.c.utilisateur_id.label('resa_utilisateur_id'),
-            Utilisateur.nom_utilisateur,
-            Salle.nom.label('salle_nom')
-        )
-        .join(Utilisateur, Utilisateur.id == subq.c.utilisateur_id)
-        .outerjoin(Salle, Salle.id == subq.c.salle_id)
-        .order_by(subq.c.debut)
-    ).mappings().all()
+        reservations_brutes = db.session.execute(
+            db.select(
+                subq.c.groupe_id,
+                subq.c.debut,
+                subq.c.fin,
+                subq.c.salle_id,
+                subq.c.utilisateur_id.label('resa_utilisateur_id'),
+                Utilisateur.nom_utilisateur,
+                Salle.nom.label('salle_nom')
+            )
+            .join(Utilisateur, Utilisateur.id == subq.c.utilisateur_id)
+            .outerjoin(Salle, Salle.id == subq.c.salle_id)
+            .order_by(subq.c.debut)
+        ).mappings().all()
 
-    # Structure plate — le JS gérera le positionnement
-    reservations = []
-    for resa in reservations_brutes:
-        reservations.append({
-            'groupe_id': resa.groupe_id,
-            'debut': resa.debut.strftime('%H:%M'),
-            'fin': resa.fin.strftime('%H:%M'),
-            'nom_utilisateur': resa.nom_utilisateur,
-            'salle': resa.salle_nom or '',
-            'salle_id': str(resa.salle_id) if resa.salle_id else '',
-            'user_id': str(resa.resa_utilisateur_id) if resa.resa_utilisateur_id else ''
-        })
-    
-    # Filtres calendrier
-    from db import Salle
-    salles_dispo = db.session.execute(
-        db.select(Salle)
-        .filter_by(etablissement_id=etablissement_id)
-        .order_by(Salle.nom)
-    ).scalars().all()
+        # Structure plate — le JS gérera le positionnement
+        reservations = []
+        for resa in reservations_brutes:
+            reservations.append({
+                'groupe_id': resa.groupe_id,
+                'debut': resa.debut.strftime('%H:%M'),
+                'fin': resa.fin.strftime('%H:%M'),
+                'nom_utilisateur': resa.nom_utilisateur,
+                'salle': resa.salle_nom or '',
+                'salle_id': str(resa.salle_id) if resa.salle_id else '',
+                'user_id': str(resa.resa_utilisateur_id) if resa.resa_utilisateur_id else ''
+            })
+        
+        # Filtres calendrier
+        from db import Salle
+        salles_dispo = db.session.execute(
+            db.select(Salle)
+            .filter_by(etablissement_id=etablissement_id)
+            .order_by(Salle.nom)
+        ).scalars().all()
 
-    utilisateurs_dispo = db.session.execute(
-        db.select(Utilisateur.id, Utilisateur.nom_utilisateur)
-        .filter_by(etablissement_id=etablissement_id)
-        .order_by(Utilisateur.nom_utilisateur)
-    ).mappings().all()
-    
-    return render_template("vue_jour.html",
-                           date_concernee=date_obj,
-                           reservations=reservations,
-                           planning_debut=planning_debut,
-                           planning_fin=planning_fin,
-                           salles=salles_dispo,
-                           utilisateurs=utilisateurs_dispo,
-                           breadcrumbs=breadcrumbs)
+        utilisateurs_dispo = db.session.execute(
+            db.select(Utilisateur.id, Utilisateur.nom_utilisateur)
+            .filter_by(etablissement_id=etablissement_id)
+            .order_by(Utilisateur.nom_utilisateur)
+        ).mappings().all()
+        
+        return render_template("vue_jour.html",
+                               date_concernee=date_obj,
+                               reservations=reservations,
+                               planning_debut=planning_debut,
+                               planning_fin=planning_fin,
+                               salles=salles_dispo,
+                               utilisateurs=utilisateurs_dispo,
+                               breadcrumbs=breadcrumbs)
+    except Exception as e:
+        current_app.logger.error(f"ERREUR VUE_JOUR: {e}", exc_info=True)
+        raise
 
 #================================================================
 # GESTION ALERTES

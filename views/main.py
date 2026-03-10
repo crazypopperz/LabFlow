@@ -136,7 +136,7 @@ def calendrier():
 @main_bp.route("/calendrier/<date_str>")
 @login_required
 def vue_jour(date_str):
-    try
+    try:
         etablissement_id = session['etablissement_id']
         try:
             date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()

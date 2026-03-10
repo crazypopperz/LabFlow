@@ -185,7 +185,7 @@ def vue_jour(date_str):
                 Utilisateur.nom_utilisateur,
                 Salle.nom.label('salle_nom')
             )
-            .join(Utilisateur, Utilisateur.id == subq.c.utilisateur_id)
+            .join(Utilisateur, Utilisateur.id == subq.c.resa_utilisateur_id)
             .outerjoin(Salle, Salle.id == subq.c.salle_id)
             .order_by(subq.c.debut)
         ).mappings().all()

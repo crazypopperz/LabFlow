@@ -194,13 +194,13 @@ def vue_jour(date_str):
         reservations = []
         for resa in reservations_brutes:
             reservations.append({
-                'groupe_id': resa.groupe_id,
+                'groupe_id': str(resa.groupe_id),
                 'debut': resa.debut.strftime('%H:%M'),
                 'fin': resa.fin.strftime('%H:%M'),
-                'nom_utilisateur': resa.nom_utilisateur,
-                'salle': resa.salle_nom or '',
-                'salle_id': str(resa.salle_id) if resa.salle_id else '',
-                'user_id': str(resa.resa_utilisateur_id) if resa.resa_utilisateur_id else ''
+                'nom_utilisateur': str(resa.nom_utilisateur or ''),
+                'salle': str(resa.salle_nom or ''),
+                'salle_id': str(resa.salle_id) if resa.salle_id is not None else '',
+                'user_id': str(int(resa.resa_utilisateur_id)) if resa.resa_utilisateur_id is not None else ''
             })
         
         # Filtres calendrier

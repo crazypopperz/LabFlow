@@ -165,7 +165,7 @@ def vue_jour(date_str):
                 db.func.min(Reservation.debut_reservation).label('debut'),
                 db.func.min(Reservation.fin_reservation).label('fin'),
                 db.func.min(Reservation.salle_id).label('salle_id'),
-                db.func.min(Reservation.utilisateur_id).label('utilisateur_id')
+                db.func.min(Reservation.utilisateur_id).label('resa_utilisateur_id')
             )
             .filter(
                 Reservation.etablissement_id == etablissement_id,
@@ -181,7 +181,7 @@ def vue_jour(date_str):
                 subq.c.debut,
                 subq.c.fin,
                 subq.c.salle_id,
-                subq.c.utilisateur_id.label('resa_utilisateur_id'),
+                subq.c.resa_utilisateur_id,
                 Utilisateur.nom_utilisateur,
                 Salle.nom.label('salle_nom')
             )
@@ -204,7 +204,6 @@ def vue_jour(date_str):
             })
         
         # Filtres calendrier
-        from db import Salle
         salles_dispo = db.session.execute(
             db.select(Salle)
             .filter_by(etablissement_id=etablissement_id)

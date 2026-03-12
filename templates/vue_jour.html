@@ -105,7 +105,7 @@
 	function appliquerFiltres() {
 		const salle = document.getElementById('filtre-salle')?.value;
 		const user = document.getElementById('filtre-utilisateur')?.value;
-		document.querySelectorAll('.reservation-block').forEach(block => {
+		document.querySelectorAll('.event-item').forEach(block => {
 			const blockSalle = block.dataset.salleId || '';
 			const blockUser = block.dataset.userId || '';
 			const salleOk = !salle || blockSalle === salle;

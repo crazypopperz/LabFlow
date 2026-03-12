@@ -351,7 +351,7 @@ class PanierService:
                         type_recurrence=rec_data.get('type', 'hebdo'),
                         date_debut=d_res,
                         date_fin=datetime.strptime(rec_data['date_fin'], '%Y-%m-%d').date() if rec_data.get('date_fin') else None,
-                        nb_occurrences=rec_data.get('nb_occurrences'),
+                        nb_occurrences=int(rec_data['nb_occurrences']) if rec_data.get('nb_occurrences') else None,
                         heure_debut=h_deb,
                         heure_fin=h_fin,
                         salle_id=items_list[0].salle_id
@@ -381,7 +381,7 @@ class PanierService:
                 if rec_data and recurrence_obj:
                     dates_recurrentes = self._generer_dates_recurrence(
                         d_res, rec_data.get('type', 'hebdo'),
-                        rec_data.get('date_fin'), rec_data.get('nb_occurrences')
+                        rec_data.get('date_fin'), int(rec_data['nb_occurrences']) if rec_data.get('nb_occurrences') else None
                     )
                     conflits = []
                     for date_occ in dates_recurrentes:
@@ -447,7 +447,7 @@ class PanierService:
         from datetime import date, timedelta
         dates = []
         current = date_debut
-        max_occ = nb_occurrences - 1 if nb_occurrences else 365
+        max_occ = int(nb_occurrences) - 1 if nb_occurrences else 365
         date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date() if date_fin_str else None
 
         while len(dates) < max_occ:

@@ -33,7 +33,7 @@
 					   value="{{ etablissement.code_invitation }}" 
 					   readonly
 					   style="font-family: monospace; font-size: 1.75rem; letter-spacing: 0.1em; background: #f8f9fa;">
-				<button class="btn btn-primary btn-lg" onclick="copierCode()" type="button">
+				<button class="btn btn-primary btn-lg" onclick="copierCode(event)" type="button">
 					<i class="bi bi-clipboard me-1"></i> Copier
 				</button>
 			</div>
@@ -483,7 +483,7 @@
 
 {% block scripts %}
 <script>
-	function copierCode() {
+	function copierCode(event) {
 		const input = document.getElementById('codeInvitation');
 		input.select();
 		navigator.clipboard.writeText(input.value).then(() => {

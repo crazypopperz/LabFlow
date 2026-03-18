@@ -248,6 +248,10 @@ class PanierService:
                 if new_total > self.MAX_QTY_PER_ITEM:
                     raise PanierServiceError("Quantité totale excessive.")
                 existing_item.quantite = new_total
+                if item_data.get('recurrence'):
+                    existing_item.recurrence_data = json.dumps(item_data['recurrence'])
+                if item_data.get('salle_id'):
+                    existing_item.salle_id = int(item_data['salle_id'])
             else:
                 new_item = PanierItem(
                     id_panier=panier.id,

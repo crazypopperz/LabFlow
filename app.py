@@ -124,11 +124,11 @@ def create_app():
     migrate = Migrate(app, db)
     
     # Exécution des migrations automatiques
-
-    CSRFProtect(app)
     mail.init_app(app)
     limiter.init_app(app)
     cache.init_app(app)
+    csrf = CSRFProtect(app)
+    csrf.exempt(api_bp)
     configure_logging(app)
 
     # ============================================================

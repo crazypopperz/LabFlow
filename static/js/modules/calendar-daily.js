@@ -100,7 +100,8 @@ function renderEvents(config) {
         const el = document.createElement('div');
         el.className = 'event-item start';
 		el.dataset.salleId = resa.salle_id ? String(resa.salle_id) : '';
-		el.dataset.userId = resa.user_id ? String(resa.user_id) : '';
+        el.dataset.userId = resa.user_id ? String(resa.user_id) : '';
+        el.dataset.recurrenceId = resa.recurrence_id ? String(resa.recurrence_id) : '';
         el.dataset.groupeId = resa.groupe_id;
         el.style.cssText = `
             position: absolute;
@@ -179,7 +180,7 @@ function initTooltip() {
                         <button class="btn-edit-resa" data-groupe-id="${groupId}" data-date="${details.debut.substring(0, 10)}" title="Modifier">
                             <i class="bi bi-pencil-fill"></i>
                         </button>
-                        <button class="btn-delete-resa text-danger" data-groupe-id="${groupId}" title="Supprimer">
+                        <button class="btn-delete-resa text-danger" data-groupe-id="${groupId}" data-recurrence-id="${details.recurrence_id || ''}" title="Supprimer">
                             <i class="bi bi-trash-fill"></i>
                         </button>
                     </div>`;
@@ -222,6 +223,13 @@ function initTooltip() {
                 if (deleteBtn) {
                     deleteBtn.addEventListener('click', function() {
                         groupIdToDelete = this.dataset.groupeId;
+                        // Afficher checkbox série si récurrence
+                        const el = document.getElementById('chk-serie-container');
+                        const chk = document.getElementById('chk-supprimer-serie');
+                        const hasRecurrence = this.dataset.recurrenceId;
+						console.log('recurrenceId:', hasRecurrence, 'el:', el, 'chk:', chk);
+                        if (el) el.style.display = hasRecurrence ? 'block' : 'none';
+                        if (chk) chk.checked = false;
                         if (deleteModalInstance) deleteModalInstance.show();
                         else if (confirm("Supprimer ?")) performDeletion(groupIdToDelete);
                     });
@@ -255,10 +263,11 @@ function initTooltip() {
             confirmDeleteBtn.disabled = true;
             confirmDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
         }
+        const supprimerSerie = document.getElementById('chk-supprimer-serie')?.checked || false;
         fetch('/api/supprimer_reservation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-            body: JSON.stringify({ groupe_id: groupId })
+            body: JSON.stringify({ groupe_id: groupId, supprimer_serie: supprimerSerie })
         })
         .then(res => res.json())
         .then(data => {

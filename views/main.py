@@ -165,6 +165,7 @@ def vue_jour(date_str):
                 db.func.min(Reservation.debut_reservation).label('debut'),
                 db.func.min(Reservation.fin_reservation).label('fin'),
                 db.func.min(Reservation.salle_id).label('salle_id'),
+                db.func.min(Reservation.recurrence_id).label('recurrence_id'),
                 db.func.min(Reservation.utilisateur_id).label('resa_utilisateur_id')
             )
             .filter(
@@ -183,6 +184,7 @@ def vue_jour(date_str):
                 subq.c.salle_id,
                 subq.c.resa_utilisateur_id,
                 Utilisateur.nom_utilisateur,
+                subq.c.recurrence_id,
                 Salle.nom.label('salle_nom')
             )
             .join(Utilisateur, Utilisateur.id == subq.c.resa_utilisateur_id)
@@ -200,7 +202,8 @@ def vue_jour(date_str):
                 'nom_utilisateur': str(resa.nom_utilisateur or ''),
                 'salle': str(resa.salle_nom or ''),
                 'salle_id': str(resa.salle_id) if resa.salle_id is not None else '',
-                'user_id': str(int(resa.resa_utilisateur_id)) if resa.resa_utilisateur_id is not None else ''
+                'user_id': str(int(resa.resa_utilisateur_id)) if resa.resa_utilisateur_id is not None else '',
+                'recurrence_id': str(resa.recurrence_id) if resa.recurrence_id is not None else ''
             })
         
         # Filtres calendrier

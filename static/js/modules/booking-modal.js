@@ -205,6 +205,11 @@ async function handleModalOpen(event) {
         cancelBtn = replaceButtonHandler(cancelBtn, null, {
             text: "Fermer", className: "btn btn-dark", dismiss: true
         });
+        validateBtn = replaceButtonHandler(validateBtn, async (e) => {
+            e.preventDefault();
+            await saveReservationChanges();
+        }, { html: '<i class="bi bi-check-lg me-2"></i>Enregistrer', className: "btn btn-success" });
+        if (validateBtn) validateBtn.style.display = 'inline-block';
         await loadExistingReservation(editingGroupId);
 
     } else {
@@ -226,7 +231,8 @@ async function handleModalOpen(event) {
             { html: '<i class="bi bi-calendar-week me-2"></i>Poursuivre (Calendrier)', className: "btn btn-outline-secondary", dismiss: false }
         );
 
-        generateTimeSelectors(); 
+        generateTimeSelectors();
+		initRecurrence();
         setSmartTime();      
         loadAvailabilities();
         refreshMiniCart();
@@ -483,6 +489,31 @@ async function performTimeUpdate() {
 }
 
 // --- LOGIQUE MÉTIER ---
+async function saveReservationChanges() {
+    const salleSelect = document.getElementById('bookingSalle');
+    const payload = {
+        salle_id: salleSelect ? salleSelect.value : null,
+        recurrence: getRecurrenceData()
+    };
+    try {
+        console.log('Payload envoyé:', JSON.stringify(payload));
+		const res = await fetch(`/api/reservation/${editingGroupId}/modifier`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Réservation modifiée avec succès', 'success');
+            if (bookingModalInstance) bookingModalInstance.hide();
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast(data.error || 'Erreur lors de la modification', 'error');
+        }
+    } catch (err) {
+        showToast('Erreur technique', 'error');
+    }
+}
 
 async function loadExistingReservation(groupId) {
     try {
@@ -506,7 +537,31 @@ async function loadExistingReservation(groupId) {
 			originalTimes = { start, end }; // On garde le format HH:MM pour la comparaison
 		}
 
-        renderMiniCart(data.items, false); 
+        renderMiniCart(data.items, false);
+		// Pré-remplir salle
+        const salleSelect = document.getElementById('bookingSalle');
+        if (salleSelect && data.salle_id) salleSelect.value = data.salle_id;
+        // Pré-remplir récurrence
+        if (data.recurrence) {
+            const toggle = document.getElementById('recurrenceToggle');
+            if (toggle) {
+                toggle.checked = true;
+                toggle.dispatchEvent(new Event('change'));
+                const typeSelect = document.getElementById('recurrenceType');
+                if (typeSelect) typeSelect.value = data.recurrence.type || 'hebdo';
+                if (data.recurrence.nb_occurrences) {
+                    const radios = document.querySelectorAll('input[name="recurrenceLimite"]');
+                    if (radios[1]) { radios[1].checked = true; radios[1].dispatchEvent(new Event('change')); }
+                    const nbInput = document.getElementById('recurrenceNbOccurrences');
+                    if (nbInput) nbInput.value = data.recurrence.nb_occurrences;
+                } else if (data.recurrence.date_fin) {
+                    const radios = document.querySelectorAll('input[name="recurrenceLimite"]');
+                    if (radios[0]) { radios[0].checked = true; radios[0].dispatchEvent(new Event('change')); }
+                    const dateFinInput = document.getElementById('recurrenceDateFin');
+                    if (dateFinInput) dateFinInput.value = data.recurrence.date_fin;
+                }
+            }
+        }
         loadAvailabilities();
     } catch (error) {
         bookingCartContainer.innerHTML = `<div class="text-danger text-center p-3">${ERROR_MESSAGES.LOADING_ERROR}</div>`;
@@ -578,9 +633,17 @@ async function addItem(item) {
 	}
 
     try {
-        const res = await fetch(url, {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const toggle = document.getElementById('recurrenceToggle');
+		console.log('toggle element:', toggle);
+		console.log('toggle checked:', toggle?.checked);
+		console.log('recurrence data:', getRecurrenceData());
+		const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken || ''
+            },
             body: JSON.stringify(payload)
         });
         const data = validateAPIResponse(await res.json());

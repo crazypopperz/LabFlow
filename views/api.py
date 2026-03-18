@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify, session, current_app, render_temp
 from werkzeug.exceptions import BadRequest
 
 # Imports locaux
-from db import db, Objet, Armoire, Categorie, Utilisateur, Reservation, Notification, Kit, KitObjet, Suggestion, Historique, MaintenanceLog, EquipementSecurite, Salle
+from db import db, Objet, Armoire, Categorie, Utilisateur, Reservation, Notification, Kit, KitObjet, Suggestion, Historique, MaintenanceLog, EquipementSecurite, Salle, ReservationRecurrence
 from extensions import limiter
 from utils import login_required, admin_required
 
@@ -21,6 +21,8 @@ from services.inventory_service import InventoryService, InventoryServiceError
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
+
+from flask_wtf.csrf import CSRFProtect
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -608,7 +610,8 @@ def api_reservation_details(groupe_id):
                 db.joinedload(Reservation.objet), 
                 db.joinedload(Reservation.utilisateur),
                 db.joinedload(Reservation.kit).joinedload(Kit.objets_assoc).joinedload(KitObjet.objet),
-                db.joinedload(Reservation.salle)
+                db.joinedload(Reservation.salle),
+                db.joinedload(Reservation.recurrence)
             )
             .filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
         )
@@ -623,6 +626,13 @@ def api_reservation_details(groupe_id):
             'user_name': first.utilisateur.nom_utilisateur if first.utilisateur else "Inconnu",
             'can_edit': (first.utilisateur_id == session.get('user_id')) or (session.get('user_role') == 'admin'),
             'salle': first.salle.nom if first.salle else None,
+            'salle_id': first.salle_id,
+            'recurrence_id': first.recurrence_id,
+            'recurrence': {
+                'type': first.recurrence.type_recurrence,
+                'nb_occurrences': first.recurrence.nb_occurrences,
+                'date_fin': first.recurrence.date_fin.isoformat() if first.recurrence.date_fin else None
+            } if first.recurrence else None,
             'items': []
         }
         for r in res:
@@ -636,21 +646,56 @@ def api_reservation_details(groupe_id):
         current_app.logger.error(f"Erreur details: {e}")
         return jsonify({'error': "Erreur serveur"}), 500
 
+@api_bp.route("/reservation/<groupe_id>/modifier", methods=['POST'])
+@login_required
+def api_modifier_reservation(groupe_id):
+    if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
+    etablissement_id = session.get('etablissement_id')
+    data = request.get_json()
+    try:
+        current_app.logger.info(f"MODIFIER_RESERVATION data reçu: {request.get_json()}")
+        reservations = db.session.execute(
+            db.select(Reservation).filter_by(groupe_id=groupe_id, etablissement_id=etablissement_id)
+        ).scalars().all()
+        if not reservations: return jsonify({'success': False, 'error': 'Introuvable'}), 404
+        first = reservations[0]
+        if first.utilisateur_id != session.get('user_id') and session.get('user_role') != 'admin':
+            return jsonify({'success': False, 'error': 'Non autorisé'}), 403
+        # Mise à jour salle
+        salle_id = data.get('salle_id')
+        for r in reservations:
+            r.salle_id = int(salle_id) if salle_id else None
+        # Mise à jour récurrence
+        rec = data.get('recurrence')
+        if rec:
+            from datetime import date
+            if first.recurrence_id:
+                rec_obj = db.session.get(ReservationRecurrence, first.recurrence_id)
+                if rec_obj:
+                    rec_obj.type_recurrence = rec.get('type', rec_obj.type_recurrence)
+                    rec_obj.nb_occurrences = int(rec['nb_occurrences']) if rec.get('nb_occurrences') else None
+                    rec_obj.date_fin = date.fromisoformat(rec['date_fin']) if rec.get('date_fin') else None
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur modifier_reservation: {e}")
+        return jsonify({'success': False, 'error': 'Erreur serveur'}), 500
+
 @api_bp.route("/supprimer_reservation", methods=['POST'])
 @login_required
 def api_supprimer_reservation():
     if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     etablissement_id = session.get('etablissement_id')
-    gid = request.get_json().get('groupe_id')
+    data = request.get_json()
+    gid = data.get('groupe_id')
+    supprimer_serie = data.get('supprimer_serie', False)
     current_user_id = session.get('user_id')
-
     try:
         existing = db.session.execute(db.select(Reservation).filter_by(groupe_id=gid, etablissement_id=etablissement_id).limit(1)).scalar()
         if not existing: return jsonify({'success': False, 'error': "Introuvable"}), 404
-        
         if session.get('user_role') != 'admin' and existing.utilisateur_id != current_user_id:
             return jsonify({'success': False, 'error': "Interdit"}), 403
-
         # --- NOTIFICATION ---
         if existing.utilisateur_id != current_user_id:
             date_str = existing.debut_reservation.strftime('%d/%m')
@@ -658,12 +703,22 @@ def api_supprimer_reservation():
                 utilisateur_id=existing.utilisateur_id,
                 etablissement_id=etablissement_id,
                 type='danger',
-                message=f"Votre réservation complète du {date_str} a été annulée par l'administrateur."
+                message=f"Votre réservation du {date_str} a été annulée par l'administrateur."
             )
             db.session.add(notif)
         # --------------------
-
-        db.session.execute(db.delete(Reservation).where(Reservation.groupe_id == gid))
+        if supprimer_serie and existing.recurrence_id:
+            # Supprimer toutes les réservations de la série
+            recurrence_id = existing.recurrence_id
+            db.session.execute(db.delete(Reservation).where(
+                Reservation.recurrence_id == recurrence_id,
+                Reservation.etablissement_id == etablissement_id
+            ))
+            db.session.execute(db.delete(ReservationRecurrence).where(
+                ReservationRecurrence.id == recurrence_id
+            ))
+        else:
+            db.session.execute(db.delete(Reservation).where(Reservation.groupe_id == gid))
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:

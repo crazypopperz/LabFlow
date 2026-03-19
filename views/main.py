@@ -5,7 +5,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from sqlalchemy import func, desc, distinct
 from sqlalchemy.orm import joinedload
 from db import db, Armoire, Categorie, Fournisseur, Objet, Reservation, Utilisateur, Echeance, Depense, Budget, Parametre, Suggestion, MaintenanceLog, EquipementSecurite, Salle
-from utils import login_required
+from utils import login_required, get_etablissement_params
 
 main_bp = Blueprint(
     'main', 
@@ -151,7 +151,6 @@ def vue_jour(date_str):
         ]
 
         # Lecture config planning
-        from utils import get_etablissement_params
         params = get_etablissement_params(etablissement_id)
         planning_debut = params.get('planning_debut', '08:00')
         planning_fin = params.get('planning_fin', '18:00')
@@ -219,6 +218,8 @@ def vue_jour(date_str):
             .order_by(Utilisateur.nom_utilisateur)
         ).mappings().all()
         
+        params = get_etablissement_params(etablissement_id)
+        logo_url = params.get('logo_url')
         return render_template("vue_jour.html",
                                date_concernee=date_obj,
                                reservations=reservations,
@@ -226,6 +227,7 @@ def vue_jour(date_str):
                                planning_fin=planning_fin,
                                salles=salles_dispo,
                                utilisateurs=utilisateurs_dispo,
+                               logo_url=logo_url,
                                breadcrumbs=breadcrumbs)
     except Exception as e:
         current_app.logger.error(f"ERREUR VUE_JOUR: {e}", exc_info=True)

@@ -15,7 +15,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from extensions import limiter
 from db import db, Budget, Depense, Fournisseur, Echeance, Historique
-from utils import admin_required, log_action, allowed_file, validate_url
+from utils import admin_required, log_action, allowed_file, validate_url, get_etablissement_params 
 
 admin_budget_bp = Blueprint('admin_budget', __name__, url_prefix='/admin')
 
@@ -437,13 +437,17 @@ def exporter_budget():
             })
             total += d.montant
         
+        params = get_etablissement_params(etablissement_id)
+        logo_url = params.get('logo_url')
+        logo_path = os.path.join(current_app.root_path, logo_url.lstrip('/')) if logo_url else None
         metadata = {
             'etablissement': session.get('nom_etablissement', 'Mon Établissement'),
             'date_debut': date_debut.strftime('%d/%m/%Y'),
             'date_fin': date_fin.strftime('%d/%m/%Y'),
             'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
             'nombre_depenses': len(data_export),
-            'total': total
+            'total': total,
+            'logo_path': logo_path
         }
         
         if format_type == 'excel': 

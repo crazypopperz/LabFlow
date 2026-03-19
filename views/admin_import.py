@@ -21,7 +21,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 
 from extensions import limiter
 from db import db, Objet, Armoire, Categorie, Utilisateur, Historique, Etablissement, Reservation, InventaireArchive
-from utils import admin_required, log_action, allowed_file
+from utils import admin_required, log_action, allowed_file, get_etablissement_params
 
 admin_import_bp = Blueprint('admin_import', __name__, url_prefix='/admin')
 
@@ -530,12 +530,16 @@ def exporter_rapports():
         if group_by == 'action' and selected_actions:
             filtre_info = ", ".join(selected_actions)
 
+        params = get_etablissement_params(session.get('etablissement_id'))
+        logo_url = params.get('logo_url')
+        logo_path = os.path.join(current_app.root_path, 'static', logo_url.lstrip('/static/')) if logo_url else None
         metadata = {
             'etablissement': session.get('nom_etablissement', 'LabFlow'),
             'periode': f"Du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}",
             'total': len(data_export),
             'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
-            'filtre': filtre_info # On pourra l'afficher dans le PDF si on veut
+            'filtre': filtre_info,
+            'logo_path': logo_path
         }
 
         log_action('export_rapport', f"Format: {format_type}, Rows: {len(data_export)}")

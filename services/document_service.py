@@ -50,13 +50,22 @@ class FileSystemError(DocumentServiceError):
 
 class LogoGraphique(Flowable):
     """Composant graphique vectoriel."""
-    def __init__(self, width=40, height=40, primary_color=colors.blue):
+    def __init__(self, width=40, height=40, primary_color=colors.blue, logo_path=None):
         Flowable.__init__(self)
         self.width = width
         self.height = height
         self.primary_color = primary_color
+        self.logo_path = logo_path
 
     def draw(self):
+        if self.logo_path and os.path.exists(self.logo_path):
+            try:
+                from reportlab.lib.utils import ImageReader
+                img = ImageReader(self.logo_path)
+                self.canv.drawImage(img, 0, 0, width=self.width, height=self.height, preserveAspectRatio=True, mask='auto')
+                return
+            except Exception:
+                pass
         self.canv.setFillColor(self.primary_color)
         self.canv.rect(0, 0, 8, 15, fill=1, stroke=0)
         self.canv.rect(12, 0, 8, 25, fill=1, stroke=0)
@@ -137,7 +146,8 @@ class DocumentService:
             elements = []
 
             # En-tête
-            logo = LogoGraphique(width=40, height=40, primary_color=self.config['color_primary'])
+            logo_path = self.config.get('logo_path')
+            logo = LogoGraphique(width=60, height=60, primary_color=self.config['color_primary'], logo_path=logo_path)
             titre_bloc = [
                 Paragraph(doc_title, self.style_titre), # Titre personnalisé
                 Paragraph(f"Arrêté au {date.today().strftime('%d/%m/%Y')} - {escape(etablissement_name)}", self.style_sous_titre)

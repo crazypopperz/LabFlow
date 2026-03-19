@@ -18,7 +18,7 @@ from db import db, Objet, Armoire, Categorie, Reservation, Utilisateur, Historiq
 # IMPORTS UTILS
 from utils import login_required, admin_required, limit_objets_required, allowed_file
 from extensions import limiter
-from utils import invalidate_alertes_cache
+from utils import invalidate_alertes_cache, get_etablissement_params
 
 from services.inventory_service import InventoryService, InventoryServiceError
 from services.security_service import SecurityService
@@ -1170,9 +1170,11 @@ def exporter_inventaire():
             flash("Aucun objet à exporter dans cette sélection.", "warning")
             return redirect(request.referrer)
 
+        params = get_etablissement_params(etablissement_id)
+        logo_url = params.get('logo_url')
+        logo_path = os.path.join(current_app.root_path, logo_url.lstrip('/')) if logo_url else None
         upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
-        doc_service = DocumentService(upload_root)
-        
+        doc_service = DocumentService(upload_root, config={'logo_path': logo_path})
         result = doc_service.generate_inventory_pdf(
             etablissement_name=session.get('nom_etablissement'),
             etablissement_id=etablissement_id,

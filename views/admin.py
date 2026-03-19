@@ -179,11 +179,22 @@ def _rollback_file(path):
 # ============================================================
 
 class LogoGraphique(Flowable):
-    def __init__(self, width=40, height=40):
+    def __init__(self, width=40, height=40, logo_path=None):
         Flowable.__init__(self)
         self.width = width
         self.height = height
+        self.logo_path = logo_path
+
     def draw(self):
+        if self.logo_path and os.path.exists(self.logo_path):
+            try:
+                from reportlab.lib.utils import ImageReader
+                img = ImageReader(self.logo_path)
+                self.canv.drawImage(img, 0, 0, width=self.width, height=self.height, preserveAspectRatio=True, mask='auto')
+                return
+            except Exception:
+                pass
+        # Fallback : logo LabFlow vectoriel
         self.canv.setFillColor(colors.HexColor('#1F3B73'))
         self.canv.rect(0, 0, 8, 15, fill=1, stroke=0)
         self.canv.rect(12, 0, 8, 25, fill=1, stroke=0)
@@ -192,6 +203,35 @@ class LogoGraphique(Flowable):
         self.canv.setStrokeColor(colors.HexColor('#FFD700'))
         self.canv.setLineWidth(2)
         self.canv.line(-5, 5, 35, 40)
+
+class LogoEtablissement(Flowable):
+    def __init__(self, logo_path, width=80, height=80):
+        Flowable.__init__(self)
+        self.logo_path = logo_path
+        self.width = width
+        self.height = height
+    def draw(self):
+        try:
+            from reportlab.lib.utils import ImageReader
+            img = ImageReader(self.logo_path)
+            self.canv.drawImage(img, 0, 0, width=self.width, height=self.height, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
+
+def get_logo_etablissement_path(etablissement_id):
+    """Retourne le chemin absolu du logo établissement si disponible."""
+    from utils import get_etablissement_params
+    try:
+        params = get_etablissement_params(etablissement_id)
+        logo_url = params.get('logo_url')
+        if logo_url:
+            # logo_url est de type 'uploads/logo_1.png'
+            logo_path = os.path.join(current_app.root_path, 'static', logo_url.lstrip('/static/'))
+            if os.path.exists(logo_path):
+                return logo_path
+    except Exception:
+        pass
+    return None
 
 def ajouter_logo_excel(ws):
     """Ajoute le logo LabFlow dans le fichier Excel si disponible."""
@@ -216,7 +256,15 @@ def generer_budget_pdf_pro(data_export, metadata):
     style_titre = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=LABFLOW_BLUE, alignment=TA_CENTER)
     style_normal = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=10)
     style_cell = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9)
-    elements.append(Paragraph(metadata['etablissement'], style_titre))
+    logo_path = metadata.get('logo_path')
+    logo = LogoGraphique(width=60, height=60, logo_path=logo_path)
+    titre_bloc = [
+        Paragraph(metadata['etablissement'], style_titre),
+        Paragraph(f"Rapport budgétaire", ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray))
+    ]
+    header_table = Table([[logo, titre_bloc]], colWidths=[2*cm, 14*cm])
+    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (0,0), (-1,-1), 0)]))
+    elements.append(header_table)
     elements.append(Spacer(1, 0.5*cm))
     elements.append(Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
     elements.append(Spacer(1, 0.5*cm))
@@ -313,7 +361,8 @@ def generer_rapport_pdf(data, metadata):
     doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), rightMargin=1.0*cm, leftMargin=1.0*cm, topMargin=1.0*cm, bottomMargin=1.0*cm, title=f"Rapport - {metadata['etablissement']}")
     elements = []
     styles = getSampleStyleSheet()
-    logo = LogoGraphique(width=40, height=40)
+    logo_path = metadata.get('logo_path')
+    logo = LogoGraphique(width=60, height=60, logo_path=logo_path)
     titre_style = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1F3B73'), alignment=TA_LEFT)
     sous_titre_style = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray, alignment=TA_LEFT)
     titre_bloc = [Paragraph(f"RAPPORT D'ACTIVITÉ", titre_style), Paragraph(f"{escape(metadata['etablissement'])}", sous_titre_style)]

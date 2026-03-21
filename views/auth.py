@@ -257,7 +257,7 @@ L'équipe LabFlow
         current_app.logger.info(f"Email SendGrid envoyé à {user_email}")
         return True
     except Exception as e:
-        current_app.logger.error(f"Erreur SendGrid: {e}")
+        current_app.logger.error(f"Erreur SendGrid: {type(e).__name__}: {e}", exc_info=True)
         return False
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])

@@ -230,21 +230,17 @@ def send_async_email(app, msg):
     app.logger.info("Thread email terminé")
 
 def send_reset_email(user_email, token):
-    """Envoie l'email avec le lien de réinitialisation (asynchrone)."""
+    """Envoie l'email avec SendGrid."""
     try:
-        current_app.logger.debug(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
-        
-        mail = current_app.extensions.get('mail')
-        if not mail:
-            current_app.logger.error("Flask-Mail n'est pas initialisé.")
-            return False
-
-        msg = Message("Réinitialisation de votre mot de passe LabFlow",
-                      recipients=[user_email])
-        
+        import sendgrid
+        from sendgrid.helpers.mail import Mail as SGMail
         reset_url = url_for('auth.reset_password', token=token, _external=True)
-        
-        msg.body = f"""Bonjour,
+        sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
+        message = SGMail(
+            from_email='help.labflow@gmail.com',
+            to_emails=user_email,
+            subject='Réinitialisation de votre mot de passe LabFlow',
+            plain_text_content=f"""Bonjour,
 
 Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LabFlow.
 
@@ -256,20 +252,12 @@ Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
 Cordialement,
 L'équipe LabFlow
 """
-        
-        # Envoi asynchrone
-        app = current_app._get_current_object()
-        t = Thread(target=send_async_email, args=[app, msg])
-        t.daemon = True
-        t.start()
-        current_app.logger.info(f"Email mis en file d'attente pour {user_email}")
+        )
+        sg.send(message)
+        current_app.logger.info(f"Email SendGrid envoyé à {user_email}")
         return True
-        
     except Exception as e:
-        current_app.logger.error(f"Erreur envoi email: {e}")
-        import traceback
-        traceback.print_exc()
-        current_app.logger.error(f"Erreur: {e}")
+        current_app.logger.error(f"Erreur SendGrid: {e}")
         return False
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])

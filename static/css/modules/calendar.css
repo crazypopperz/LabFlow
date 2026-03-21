@@ -79,6 +79,28 @@
     pointer-events: none;
 }
 
+.charge-bar-container {
+    position: relative;
+    height: 15px;
+    background: #e5e7eb;
+    border-radius: 5px;
+    margin: 6px 4px 0;
+    overflow: hidden;
+}
+.charge-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+.charge-bar-count {
+    position: absolute;
+    right: 2px;
+    top: -14px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #6b7280;
+}
+
 /* --- 4. INTERACTIONS & ÉTATS (Mois) --- */
 
 /* Survol Case */

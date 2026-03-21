@@ -149,8 +149,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Badge HTML
             let badgeHtml = '';
             if (count > 0) {
-                let colorClass = count > 4 ? 'bg-danger' : (count > 2 ? 'bg-warning text-dark' : 'bg-info text-dark');
-                badgeHtml = `<div class="reservation-badge ${colorClass}">${count} réserv.</div>`;
+                let colorClass, label, pct;
+                if (count >= 6) {
+                    colorClass = '#ef4444'; label = 'Chargé'; pct = 100;
+                } else if (count >= 3) {
+                    colorClass = '#f59e0b'; label = 'Moyen'; pct = Math.round(count / 6 * 100);
+                } else {
+                    colorClass = '#10b981'; label = 'Léger'; pct = Math.round(count / 6 * 100);
+                }
+                badgeHtml = `
+                    <div class="charge-bar-container" title="${count} réservation(s) - ${label}">
+                        <div class="charge-bar-fill" style="width:${pct}%;background:${colorClass};"></div>
+                        <span class="charge-bar-count">${count}</span>
+                    </div>`;
             }
 
             // Bouton "+" (Uniquement si jour futur ou aujourd'hui)

@@ -195,6 +195,9 @@ document.addEventListener("DOMContentLoaded", function () {
 				const itemName = form.dataset.itemName || 'cet élément';
 				message = `Êtes-vous sûr de vouloir supprimer l'élément "${itemName}" ? Cette action est définitive.`;
 				actionUrl = form ? form.action : '#';
+			} else if (openModalButton.dataset.action) {
+				message = openModalButton.dataset.message || "Êtes-vous sûr ?";
+				actionUrl = openModalButton.dataset.action;
 			}
 			
 			if (modalText) modalText.innerHTML = message;

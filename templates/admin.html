@@ -459,8 +459,18 @@
 					<div class="mb-3">
 						<label class="filter-label d-block mb-1">Logo établissement</label>
 						<input type="file" name="logo_file" class="form-control form-control-sm"
-							   accept=".png,.jpg,.jpeg,.svg,.webp">
+								   accept=".png,.jpg,.jpeg,.svg,.webp">
 						<small class="text-muted">PNG, JPG ou SVG — max 2Mo</small>
+						{% set params = get_etablissement_params(session.etablissement_id) %}
+						{% if params.get('logo_url') %}
+						<div class="mt-2 d-flex align-items-center gap-2">
+							<img src="/static/{{ params.get('logo_url') }}" height="40" class="border rounded">
+							<button type="button" class="btn btn-sm btn-outline-danger"
+								data-bs-toggle="modal" data-bs-target="#supprimerLogoModal">
+								<i class="bi bi-trash me-1"></i>Supprimer le logo
+							</button>
+						</div>
+						{% endif %}
 					</div>
 
 					<div class="card-footer p-0 border-0 mt-3">

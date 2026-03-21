@@ -662,7 +662,7 @@ function toggleTypeObjetModal() {
 </div>
 
 <!-- ================================================================= -->
-<!-- MODALE DANGER SIMPLE (confirmDeleteBtn) -->
+<!-- 10. MODALE DANGER SIMPLE (confirmDeleteBtn) -->
 <!-- ================================================================= -->
 <div class="modal fade" id="dangerModalSimple" tabindex="-1" aria-labelledby="dangerModalSimpleLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -680,6 +680,34 @@ function toggleTypeObjetModal() {
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                 <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ======================================================== -->
+<!-- 11. MODALE SUPPRESSION LOGO -->
+<!-- ======================================================== -->
+<div class="modal fade" id="supprimerLogoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-trash-fill me-2"></i>Supprimer le logo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                <p class="mt-3 fs-5">Voulez-vous vraiment supprimer le logo de votre établissement ?</p>
+                <p class="text-muted small">Le logo LabFlow sera restauré par défaut.</p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+                <a href="{{ url_for('admin.supprimer_logo') }}" class="btn btn-danger px-4">
+                    <i class="bi bi-trash-fill me-2"></i>Supprimer
+                </a>
             </div>
         </div>
     </div>

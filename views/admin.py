@@ -736,6 +736,36 @@ def sauvegarder_theme():
 
     return redirect(url_for('admin.admin'))
 
+@admin_bp.route("/supprimer_logo", methods=["GET", "POST"])
+@admin_required
+def supprimer_logo():
+    etablissement_id = session.get('etablissement_id')
+    try:
+        param = db.session.execute(
+            db.select(Parametre).filter_by(
+                etablissement_id=etablissement_id, cle='logo_url'
+            )
+        ).scalar_one_or_none()
+        if param:
+            # Supprimer le fichier
+            logo_path = os.path.join(current_app.root_path, 'static', param.valeur)
+            if os.path.exists(logo_path):
+                os.remove(logo_path)
+            db.session.delete(param)
+            db.session.commit()
+            # Invalider cache
+            from extensions import cache
+            from utils import get_etablissement_params
+            cache.delete_memoized(get_etablissement_params, etablissement_id)
+            flash("Logo supprimé avec succès.", "success")
+        else:
+            flash("Aucun logo à supprimer.", "warning")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur suppression logo: {e}")
+        flash("Erreur lors de la suppression.", "error")
+    return redirect(url_for('admin.admin'))
+
 # ============================================================
 # GESTION DES SALLES
 # ============================================================

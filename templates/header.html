@@ -3,7 +3,6 @@
         <div class="container-fluid">
             <!-- Logo + Nom (toujours visible) -->
             <a class="navbar-brand d-flex align-items-center" href="{{ url_for('inventaire.index') }}">
-				{% set logo = get_etablissement_params(session.get('etablissement_id')).get('logo_url') %}
 				
 				<!-- Logo LF toujours visible -->
 				<svg class="brand-logo me-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="45" height="45">
@@ -17,14 +16,6 @@
 					<rect x="20" y="20" width="472" height="472" rx="110" ry="110" fill="url(#headerGradientDesktop)"/>
 					<text x="256" y="370" font-family="Arial, sans-serif" font-size="280" font-weight="900" fill="white" text-anchor="middle" letter-spacing="10">LF</text>
 				</svg>
-
-				<!-- Logo établissement si uploadé -->
-				{% if logo %}
-				<img src="{{ url_for('static', filename=logo) }}"
-					 class="brand-logo-img me-2"
-					 style="width:36px;height:36px;object-fit:contain;border-radius:6px;"
-					 alt="Logo établissement">
-				{% endif %}
 
 				<div class="brand-text">
 					<span class="mb-0 fs-5 fw-bold">LabFlow</span>

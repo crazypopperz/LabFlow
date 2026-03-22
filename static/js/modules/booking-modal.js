@@ -75,7 +75,7 @@ function replaceButtonHandler(button, newHandler, options = {}) {
 }
 
 function generateTimeSelectors() {
-    const container = document.querySelector('.main-container') || document.body;
+    const container = document.querySelector('.main-container') || document.getElementById('bookingModal') || document.body;
     const startStr = container.dataset.planningDebut || container.dataset.planningStart || '08:00';
     const endStr = container.dataset.planningFin || container.dataset.planningEnd || '18:00';
     
@@ -368,7 +368,6 @@ function initRecurrence() {
     const limiteOcc = document.getElementById('limiteOccurrences');
     const dateFinInput = document.getElementById('recurrenceDateFin');
     const nbOccInput = document.getElementById('recurrenceNbOccurrences');
-
     if (!toggle) return;
 
     toggle.addEventListener('change', () => {
@@ -380,12 +379,20 @@ function initRecurrence() {
         radio.addEventListener('change', () => {
             dateFinInput.style.display = limiteDate.checked ? 'block' : 'none';
             nbOccInput.style.display = limiteOcc.checked ? 'block' : 'none';
+            const help = document.getElementById('occurrencesHelp');
+            if (help) help.style.display = limiteOcc.checked ? 'block' : 'none';
             updateRecurrencePreview();
         });
     });
 
     dateFinInput.addEventListener('change', updateRecurrencePreview);
-    nbOccInput.addEventListener('input', updateRecurrencePreview);
+
+    nbOccInput.addEventListener('input', () => {
+        const help = document.getElementById('occurrencesHelp');
+        if (help) help.style.display = nbOccInput.style.display !== 'none' ? 'block' : 'none';
+        updateRecurrencePreview();
+    });
+
     document.getElementById('recurrenceType')?.addEventListener('change', updateRecurrencePreview);
 }
 
@@ -742,8 +749,10 @@ function renderAvailableItems(data) {
 }
 
 function renderMiniCart(items, readOnly) {
+    const badge = document.getElementById('cartItemCount');
     if (!Array.isArray(items) || items.length === 0) {
         bookingCartContainer.innerHTML = '<div class="text-muted fst-italic text-center mt-3">Votre panier est vide.</div>';
+        if (badge) badge.style.display = 'none';
         return;
     }
     let html = '<ul class="list-group list-group-flush">';
@@ -763,6 +772,10 @@ function renderMiniCart(items, readOnly) {
             </li>`;
     });
     bookingCartContainer.innerHTML = html + '</ul>';
+    if (badge) {
+        badge.textContent = items.length;
+        badge.style.display = 'inline-block';
+    }
 }
 
 function setupDelegatedEvents() {

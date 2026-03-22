@@ -397,3 +397,28 @@
     font-weight: 600;
     background: #fff5f5;
 }
+
+/* ============================================================
+   MODALE RÉSERVATION
+   ============================================================ */
+.booking-modal-dialog {
+    max-width: 900px;
+}
+
+.booking-col-params {
+    overflow-y: auto;
+}
+
+.booking-col-items {
+    overflow-y: auto;
+    max-height: 450px;
+}
+
+.booking-time-select {
+    width: 70px;
+}
+
+.booking-panier-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}

@@ -103,6 +103,7 @@ function renderEvents(config) {
         el.dataset.userId = resa.user_id ? String(resa.user_id) : '';
         el.dataset.recurrenceId = resa.recurrence_id ? String(resa.recurrence_id) : '';
         el.dataset.groupeId = resa.groupe_id;
+        const isRecurrent = resa.recurrence_id ? true : false;
         el.style.cssText = `
             position: absolute;
             top: ${topPx}px;
@@ -119,11 +120,12 @@ function renderEvents(config) {
             overflow: hidden;
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
             z-index: 10;
+            ${isRecurrent ? 'border: 2px dashed rgba(255,255,255,0.7);' : ''}
         `;
         el.innerHTML = `
-			<strong>${resa.debut} - ${resa.fin}</strong>
-			<span style="display:block;">${escapeHtml(resa.nom_utilisateur)}</span>
-			${resa.salle ? `<span style="display:block;font-size:0.75em;opacity:0.85;"><i class="bi bi-building me-1"></i>${escapeHtml(resa.salle)}</span>` : ''}
+            ${isRecurrent ? '<i class="bi bi-arrow-repeat" style="font-size:0.7rem;opacity:0.9;float:right;margin-top:2px;"></i>' : ''}
+            <strong>${resa.debut} - ${resa.fin}</strong>
+            <span style="display:block;">${escapeHtml(resa.nom_utilisateur)}</span>
 		`;
         layer.appendChild(el);
     });

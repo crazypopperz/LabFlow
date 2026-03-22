@@ -15,7 +15,7 @@
             </div>
             <div>
                 <h1 class="h3 mb-0 fw-bold text-dark">Documentation LabFlow</h1>
-                <p class="text-muted mb-0">Guide technique et fonctionnel complet</p>
+                <p class="text-muted mb-0">Guide complet — prise en main et fonctionnalités</p>
             </div>
         </div>
         <button onclick="window.print()" class="btn btn-outline-secondary d-none d-md-block">
@@ -28,31 +28,43 @@
         <div class="col-lg-3 d-none d-lg-block">
             <nav id="doc-navbar" class="h-100 flex-column align-items-stretch pe-4 border-end position-sticky" style="top: 2rem;">
                 <nav class="nav nav-pills flex-column">
-                    <a class="nav-link active fw-bold mb-2" href="#section-intro">
+                    <a class="nav-link active fw-bold mb-1" href="#section-intro">
                         <i class="bi bi-info-circle me-2"></i>Introduction
                     </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-tech">
-                        <i class="bi bi-code-slash me-2"></i>Architecture
+                    <a class="nav-link fw-bold mb-1" href="#section-connexion">
+                        <i class="bi bi-door-open me-2"></i>Première connexion
                     </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-inventaire">
+                    <a class="nav-link fw-bold mb-1" href="#section-dashboard">
+                        <i class="bi bi-speedometer2 me-2"></i>Tableau de bord
+                    </a>
+                    <a class="nav-link fw-bold mb-1" href="#section-inventaire">
                         <i class="bi bi-box-seam me-2"></i>Inventaire
                     </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-reservation">
+                    <a class="nav-link fw-bold mb-1" href="#section-reservation">
                         <i class="bi bi-calendar-check me-2"></i>Réservations
                     </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-securite">
-                        <i class="bi bi-shield-check me-2"></i>Sécurité
+                    <a class="nav-link fw-bold mb-1" href="#section-recurrence">
+                        <i class="bi bi-arrow-repeat me-2"></i>Récurrences
                     </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-budget">
+                    <a class="nav-link fw-bold mb-1" href="#section-calendrier">
+                        <i class="bi bi-calendar3 me-2"></i>Calendrier
+                    </a>
+                    <a class="nav-link fw-bold mb-1" href="#section-panier">
+                        <i class="bi bi-cart3 me-2"></i>Panier
+                    </a>
+                    <a class="nav-link fw-bold mb-1" href="#section-kits">
+                        <i class="bi bi-collection me-2"></i>Kits
+                    </a>
+                    <a class="nav-link fw-bold mb-1" href="#section-budget">
                         <i class="bi bi-wallet2 me-2"></i>Budget
                     </a>
                     {% if session.user_role == 'admin' %}
-                    <a class="nav-link fw-bold mb-2" href="#section-admin">
+                    <a class="nav-link fw-bold mb-1" href="#section-admin">
                         <i class="bi bi-gear-fill me-2"></i>Administration
                     </a>
                     {% endif %}
-                    <a class="nav-link fw-bold mb-2" href="#section-support">
-                        <i class="bi bi-life-preserver me-2"></i>Support & Dépannage
+                    <a class="nav-link fw-bold mb-1" href="#section-support">
+                        <i class="bi bi-life-preserver me-2"></i>Support
                     </a>
                 </nav>
             </nav>
@@ -61,30 +73,32 @@
         <!-- CONTENU -->
         <div class="col-lg-9">
             <div data-bs-spy="scroll" data-bs-target="#doc-navbar" data-bs-smooth-scroll="true" tabindex="0">
-                
+
                 <!-- 1. INTRODUCTION -->
                 <section id="section-intro" class="mb-5">
                     <h3 class="fw-bold text-dark mb-4">À propos de LabFlow</h3>
                     <p class="lead text-muted">
-                        LabFlow est une solution SaaS de gestion de laboratoire scolaire (SVT/Physique-Chimie) conçue pour simplifier le quotidien des enseignants et des gestionnaires.
+                        LabFlow est une application de gestion intelligente du matériel de laboratoire, conçue pour les établissements scolaires (collèges, lycées, enseignement supérieur). Elle simplifie le quotidien des enseignants et des gestionnaires.
                     </p>
+                    <!-- 📸 CAPTURE : dashboard.png — tableau de bord (vue utilisateur ou admin selon le rôle) -->
+                    <img src="{{ url_for('static', filename='images/doc/dashboard.png') }}" class="img-fluid rounded shadow-sm my-3 w-100" alt="Tableau de bord LabFlow">
                     <div class="row g-3 mt-2">
                         <div class="col-md-4">
                             <div class="p-3 border rounded bg-light h-100">
-                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Centralisation</h6>
-                                <p class="small mb-0">Tout votre matériel, vos produits et vos documents au même endroit.</p>
+                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Réservation</h6>
+                                <p class="small mb-0">Réservez du matériel en quelques clics, avec gestion des conflits en temps réel.</p>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="p-3 border rounded bg-light h-100">
-                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Planification</h6>
-                                <p class="small mb-0">Un calendrier intuitif pour éviter les conflits de réservation.</p>
+                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Inventaire</h6>
+                                <p class="small mb-0">Suivi complet du stock, alertes péremption et seuil bas automatiques.</p>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="p-3 border rounded bg-light h-100">
-                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Sécurité</h6>
-                                <p class="small mb-0">Suivi rigoureux des maintenances et des produits dangereux.</p>
+                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Collaboration</h6>
+                                <p class="small mb-0">Toute l'équipe pédagogique partage le même outil en temps réel.</p>
                             </div>
                         </div>
                     </div>
@@ -92,34 +106,129 @@
 
                 <hr class="my-5">
 
-                <!-- 2. ARCHITECTURE TECHNIQUE -->
-                <section id="section-tech" class="mb-5">
+                <!-- 2. PREMIÈRE CONNEXION -->
+                <section id="section-connexion" class="mb-5">
                     <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-code-slash text-primary me-2"></i>Architecture Technique
+                        <i class="bi bi-door-open text-primary me-2"></i>Première connexion
                     </h3>
-                    <p>LabFlow est construit sur une stack technologique moderne et robuste, garantissant performance et sécurité.</p>
-                    
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-body">
-                            <h5 class="fw-bold mb-3">Le Cœur (Backend)</h5>
-                            <ul class="list-unstyled">
-                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>Python (Flask) :</strong> Le moteur de l'application. Léger, rapide et sécurisé.</li>
-                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>SQLAlchemy (ORM) :</strong> Gestion avancée de la base de données relationnelle.</li>
-                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>SQLite / PostgreSQL :</strong> Stockage des données (compatible cloud et local).</li>
-                            </ul>
+
+                    <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden mb-4" id="accConnexion">
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#con1">
+                                    <i class="bi bi-people me-2 text-primary"></i>Rejoindre un établissement existant
+                                </button>
+                            </h2>
+                            <div id="con1" class="accordion-collapse collapse show" data-bs-parent="#accConnexion">
+                                <div class="accordion-body text-muted">
+                                    <ol class="mb-2">
+                                        <li>Sur la page de connexion, cliquez sur <strong>"Rejoindre une équipe"</strong></li>
+                                        <li>Saisissez le <strong>code d'invitation</strong> fourni par votre administrateur</li>
+                                        <li>Créez votre identifiant et mot de passe</li>
+                                        <li>Votre compte est activé immédiatement</li>
+                                    </ol>
+                                    <!-- 📸 CAPTURE : Page de connexion avec les deux boutons -->
+                                    <img src="{{ url_for('static', filename='images/doc/login.png') }}" class="img-fluid rounded shadow-sm mt-2" alt="Page de connexion">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#con2">
+                                    <i class="bi bi-building me-2 text-success"></i>Créer un nouvel établissement
+                                </button>
+                            </h2>
+                            <div id="con2" class="accordion-collapse collapse" data-bs-parent="#accConnexion">
+                                <div class="accordion-body text-muted">
+                                    <ol class="mb-0">
+                                        <li>Cliquez sur <strong>"Créer mon établissement"</strong></li>
+                                        <li>Renseignez le nom de votre établissement</li>
+                                        <li>Créez votre compte administrateur</li>
+                                        <li>Vous obtenez automatiquement le rôle <strong>Admin</strong></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#con3">
+                                    <i class="bi bi-key me-2 text-warning"></i>Mot de passe oublié
+                                </button>
+                            </h2>
+                            <div id="con3" class="accordion-collapse collapse" data-bs-parent="#accConnexion">
+                                <div class="accordion-body text-muted">
+                                    Cliquez sur <strong>"Mot de passe oublié ?"</strong> sur la page de connexion. Saisissez votre adresse email. Un lien de réinitialisation vous sera envoyé, valable <strong>1 heure</strong>.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info border-0 shadow-sm">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Identifiant ≠ Email :</strong> Lors de la connexion, utilisez votre <strong>identifiant</strong> (ex: prof_dupont), pas votre adresse email.
+                    </div>
+                </section>
+
+                <hr class="my-5">
+
+                <!-- 3. TABLEAU DE BORD -->
+                <section id="section-dashboard" class="mb-5">
+                    <h3 class="fw-bold text-dark mb-4">
+                        <i class="bi bi-speedometer2 text-primary me-2"></i>Tableau de bord
+                    </h3>
+                    <p class="text-muted">Le tableau de bord est votre page d'accueil. Il vous donne une vue d'ensemble de l'activité du laboratoire.</p>
+
+                    <!-- 📸 CAPTURE : dashboard.png — tableau de bord complet -->
+                    <img src="{{ url_for('static', filename='images/doc/dashboard.png') }}" class="img-fluid rounded shadow-sm my-3 w-100" alt="Tableau de bord">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <h6 class="fw-bold"><i class="bi bi-graph-up text-primary me-2"></i>Statistiques clés</h6>
+                                    <p class="small text-muted mb-0">Nombre d'objets, réservations du mois, graphique sparkline des 30 derniers jours et top 5 des matériels les plus réservés.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <h6 class="fw-bold"><i class="bi bi-wallet2 text-success me-2"></i>Suivi budgétaire</h6>
+                                    <p class="small text-muted mb-0">Solde restant avec indicateur coloré (vert/orange/rouge) et graphique d'évolution mensuel.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <h6 class="fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Alertes actives</h6>
+                                    <p class="small text-muted mb-0">Matériel sous le seuil de stock, produits proches de la péremption, suggestions en attente.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <h6 class="fw-bold"><i class="bi bi-search text-info me-2"></i>Recherche globale</h6>
+                                    <p class="small text-muted mb-0">Cherchez du matériel, des réservations ou des utilisateurs depuis la barre de recherche en haut de page.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <hr class="my-5">
 
-                <!-- 3. INVENTAIRE -->
+                <!-- 4. INVENTAIRE -->
                 <section id="section-inventaire" class="mb-5">
                     <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-box-seam text-primary me-2"></i>Gestion de l'Inventaire
+                        <i class="bi bi-box-seam text-primary me-2"></i>Gestion de l'inventaire
                     </h3>
-                    
-                    <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden" id="accInventaire">
+
+                    <!-- 📸 CAPTURE : Page inventaire avec liste des objets -->
+                    <img src="{{ url_for('static', filename='images/doc/inventaire.png') }}" class="img-fluid rounded shadow-sm my-3 w-100" alt="Inventaire">
+
+                    <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden mb-4" id="accInventaire">
                         <div class="accordion-item border-0 border-bottom">
                             <h2 class="accordion-header">
                                 <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv1">
@@ -128,54 +237,138 @@
                             </h2>
                             <div id="inv1" class="accordion-collapse collapse show" data-bs-parent="#accInventaire">
                                 <div class="accordion-body text-muted">
-                                    L'inventaire est structuré par <strong>Armoires</strong> (localisation physique) et par <strong>Catégories</strong> (type de matériel). 
-                                    Vous pouvez créer autant d'armoires et de catégories que nécessaire via le menu "Gérer".
+                                    L'inventaire est structuré par <strong>Armoires</strong> (localisation physique) et par <strong>Catégories</strong> (type de matériel). Vous pouvez créer autant d'armoires et de catégories que nécessaire via le menu "Gérer".
                                 </div>
                             </div>
                         </div>
                         <div class="accordion-item border-0 border-bottom">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv2">
-                                    Fiches de Données de Sécurité (FDS)
+                                    Filtrer et rechercher le matériel
                                 </button>
                             </h2>
                             <div id="inv2" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
                                 <div class="accordion-body text-muted">
-                                    Pour les produits chimiques, vous pouvez associer une FDS (PDF ou lien URL). 
-                                    Une icône <i class="bi bi-file-earmark-pdf text-danger"></i> apparaîtra dans la liste pour un accès rapide en cas d'urgence.
+                                    Utilisez la barre de filtres pour affiner l'affichage par <strong>Type</strong> (objet / produit chimique), <strong>Armoire</strong>, <strong>Catégorie</strong> ou <strong>État</strong> (disponible / stock bas). La quantité affichée est calculée en temps réel, tenant compte des réservations en cours.
                                 </div>
                             </div>
+                        </div>
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv3">
+                                    Produits chimiques et CMR
+                                </button>
+                            </h2>
+                            <div id="inv3" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
+                                <div class="accordion-body text-muted">
+                                    Les produits chimiques sont gérés avec un niveau en mL (ex: 500 mL sur 1000 mL). Les produits <strong>CMR</strong> (Cancérigènes, Mutagènes, Reprotoxiques) sont signalés par un badge rouge et peuvent être exportés séparément pour la réglementation.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv4">
+                                    Fiches de données de sécurité (FDS)
+                                </button>
+                            </h2>
+                            <div id="inv4" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
+                                <div class="accordion-body text-muted">
+                                    Chaque produit chimique peut avoir une FDS associée (fichier PDF). Elle est accessible directement depuis la fiche de l'objet. L'administrateur peut l'uploader lors de la création ou modification de l'objet.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 bg-light shadow-sm">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="bi bi-download me-2 text-primary"></i>Exports inventaire</h6>
+                            <p class="small text-muted mb-0">Exportez l'inventaire en <strong>PDF ou Excel</strong> : complet, par armoire, par catégorie ou CMR uniquement. Les exports PDF incluent le logo de votre établissement.</p>
                         </div>
                     </div>
                 </section>
 
                 <hr class="my-5">
 
-                <!-- 4. RÉSERVATIONS -->
+                <!-- 5. RÉSERVATIONS -->
                 <section id="section-reservation" class="mb-5">
                     <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-calendar-check text-success me-2"></i>Système de Réservation
+                        <i class="bi bi-calendar-check text-primary me-2"></i>Faire une réservation
                     </h3>
-                    <p>Le module de réservation empêche les conflits de stock en temps réel.</p>
-                    
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm bg-light">
+
+                    <p class="text-muted">La réservation de matériel se fait depuis le calendrier journalier.</p>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm h-100 text-center p-3">
                                 <div class="card-body">
-                                    <h6 class="fw-bold">1. Le Panier</h6>
-                                    <p class="small text-muted mb-0">
-                                        Ajoutez des objets ou des kits à votre panier. Le système vérifie instantanément la disponibilité pour la date choisie.
-                                    </p>
+                                    <div class="display-6 mb-2">1️⃣</div>
+                                    <h6 class="fw-bold">Choisir un jour</h6>
+                                    <p class="small text-muted mb-0">Cliquez sur un jour dans le calendrier mensuel pour accéder à la vue journalière.</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm bg-light">
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm h-100 text-center p-3">
                                 <div class="card-body">
-                                    <h6 class="fw-bold">2. Le Calendrier</h6>
-                                    <p class="small text-muted mb-0">
-                                        Visualisez toutes les réservations sur une vue mensuelle ou journalière. Cliquez sur une réservation pour voir le détail ou la modifier.
-                                    </p>
+                                    <div class="display-6 mb-2">2️⃣</div>
+                                    <h6 class="fw-bold">Configurer</h6>
+                                    <p class="small text-muted mb-0">Définissez le créneau horaire, la salle (optionnel) et activez la récurrence si besoin.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-0 shadow-sm h-100 text-center p-3">
+                                <div class="card-body">
+                                    <div class="display-6 mb-2">3️⃣</div>
+                                    <h6 class="fw-bold">Valider</h6>
+                                    <p class="small text-muted mb-0">Ajoutez le matériel, cliquez sur "Voir mon panier" puis confirmez.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 📸 CAPTURE : Modale de réservation ouverte avec matériel dans le panier -->
+                    <img src="{{ url_for('static', filename='images/doc/modale_reservation.png') }}" class="img-fluid rounded shadow-sm my-3 w-100" alt="Modale de réservation">
+
+                    <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden" id="accResa">
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#resa1">
+                                    La modale de réservation
+                                </button>
+                            </h2>
+                            <div id="resa1" class="accordion-collapse collapse show" data-bs-parent="#accResa">
+                                <div class="accordion-body text-muted">
+                                    La modale est organisée en 3 zones :
+                                    <ul class="mt-2 mb-0">
+                                        <li><strong>Mon panier</strong> (haut) — matériel déjà sélectionné</li>
+                                        <li><strong>Paramètres</strong> (gauche) — horaire, salle, récurrence</li>
+                                        <li><strong>Matériel disponible</strong> (droite) — liste filtrée selon le créneau choisi</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#resa2">
+                                    Modifier une réservation existante
+                                </button>
+                            </h2>
+                            <div id="resa2" class="accordion-collapse collapse" data-bs-parent="#accResa">
+                                <div class="accordion-body text-muted">
+                                    Dans la vue journalière, cliquez sur un bloc de réservation puis sur l'icône <i class="bi bi-pencil-fill text-primary"></i>. Vous pouvez modifier l'horaire, la salle, ajouter ou retirer du matériel. Cliquez sur <strong>"Enregistrer"</strong> pour valider.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#resa3">
+                                    Supprimer une réservation
+                                </button>
+                            </h2>
+                            <div id="resa3" class="accordion-collapse collapse" data-bs-parent="#accResa">
+                                <div class="accordion-body text-muted">
+                                    Cliquez sur le bloc, puis sur l'icône <i class="bi bi-trash-fill text-danger"></i>. Pour une réservation récurrente, vous pouvez cocher <strong>"Supprimer toute la série"</strong> pour annuler toutes les occurrences liées.
                                 </div>
                             </div>
                         </div>
@@ -184,44 +377,137 @@
 
                 <hr class="my-5">
 
-                <!-- 5. SÉCURITÉ -->
-                <section id="section-securite" class="mb-5">
+                <!-- 6. RÉCURRENCES -->
+                <section id="section-recurrence" class="mb-5">
                     <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-shield-check text-danger me-2"></i>Sécurité & Maintenance
+                        <i class="bi bi-arrow-repeat text-primary me-2"></i>Réservations récurrentes
                     </h3>
-                    <p>Ce module critique permet de suivre la conformité des équipements (Hottes, Extincteurs, Douches...).</p>
+                    <p class="text-muted">Planifiez une série de réservations identiques sans les saisir une par une.</p>
 
-                    <div class="alert alert-light border-start border-4 border-danger shadow-sm">
-                        <h6 class="fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Signalement d'incident</h6>
-                        <p class="small mb-0">
-                            Tout utilisateur peut signaler un dysfonctionnement via le bouton <strong>"Signaler"</strong>. 
-                            L'administrateur reçoit une alerte immédiate sur son tableau de bord et peut traiter la demande.
-                        </p>
+                    <!-- 📸 CAPTURE : Section récurrence dépliée dans la modale -->
+                    <img src="{{ url_for('static', filename='images/doc/recurrence.png') }}" class="img-fluid rounded shadow-sm my-3 w-100" alt="Options de récurrence">
+
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3">Fréquences disponibles</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start gap-2 p-2 bg-light rounded">
+                                        <i class="bi bi-calendar-week text-primary mt-1"></i>
+                                        <div>
+                                            <strong class="small">Chaque semaine</strong>
+                                            <p class="small text-muted mb-0">Même jour, même heure, toutes les semaines</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start gap-2 p-2 bg-light rounded">
+                                        <i class="bi bi-calendar-day text-success mt-1"></i>
+                                        <div>
+                                            <strong class="small">Chaque jour ouvré</strong>
+                                            <p class="small text-muted mb-0">Du lundi au vendredi, weekends exclus</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start gap-2 p-2 bg-light rounded">
+                                        <i class="bi bi-calendar2-week text-warning mt-1"></i>
+                                        <div>
+                                            <strong class="small">Toutes les 2 semaines</strong>
+                                            <p class="small text-muted mb-0">Même jour, même heure, tous les 14 jours</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-start gap-2 p-2 bg-light rounded">
+                                        <i class="bi bi-calendar-month text-danger mt-1"></i>
+                                        <div>
+                                            <strong class="small">Chaque mois</strong>
+                                            <p class="small text-muted mb-0">Même jour du mois, chaque mois</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info border-0 shadow-sm">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Nombre de répétitions :</strong> Le chiffre saisi inclut la réservation en cours. Exemple : <strong>4 = aujourd'hui + 3 répétitions</strong>.
+                    </div>
+
+                    <div class="card border-0 bg-light shadow-sm">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="bi bi-eye me-2 text-primary"></i>Reconnaître une réservation récurrente</h6>
+                            <p class="small text-muted mb-0">Dans le calendrier journalier, les blocs récurrents ont une <strong>bordure pointillée blanche</strong> et une <strong>icône ↻</strong> dans le coin supérieur droit. Voir capture dans la section Calendrier.</p>
+                        </div>
                     </div>
                 </section>
 
                 <hr class="my-5">
 
-                <!-- 6. BUDGET -->
-                <section id="section-budget" class="mb-5">
+                <!-- 7. CALENDRIER -->
+                <section id="section-calendrier" class="mb-5">
                     <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-wallet2 text-info me-2"></i>Suivi Budgétaire
+                        <i class="bi bi-calendar3 text-primary me-2"></i>Le calendrier
                     </h3>
+
+                    <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden mb-4" id="accCal">
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#cal1">
+                                    Vue mensuelle — indicateur de charge
+                                </button>
+                            </h2>
+                            <div id="cal1" class="accordion-collapse collapse show" data-bs-parent="#accCal">
+                                <div class="accordion-body text-muted">
+                                    <!-- 📸 CAPTURE : Calendrier mensuel avec jours colorés -->
+                                    <img src="{{ url_for('static', filename='images/doc/calendrier_mois.png') }}" class="img-fluid rounded shadow-sm mb-3 w-100" alt="Calendrier mensuel">
+                                    Chaque jour avec des réservations affiche une <strong>barre colorée</strong> indiquant la charge :
+                                    <ul class="mt-2 mb-0">
+                                        <li><span class="badge" style="background:#10b981;">Vert</span> — peu chargé (1-2 réservations)</li>
+                                        <li><span class="badge" style="background:#f59e0b;">Orange</span> — charge moyenne (3-5 réservations)</li>
+                                        <li><span class="badge" style="background:#ef4444;">Rouge</span> — journée chargée (6+ réservations)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#cal2">
+                                    Vue journalière — détail et filtres
+                                </button>
+                            </h2>
+                            <div id="cal2" class="accordion-collapse collapse" data-bs-parent="#accCal">
+                                <div class="accordion-body text-muted">
+                                    <!-- 📸 CAPTURE : calendrier_jour.png — vue journalière avec blocs colorés dont un récurrent (bordure pointillée) -->
+                                    <img src="{{ url_for('static', filename='images/doc/calendrier_jour.png') }}" class="img-fluid rounded shadow-sm mb-3 w-100" alt="Vue journalière">
+                                    Chaque bloc affiche l'horaire, l'utilisateur et la salle. La couleur est unique par utilisateur pour une lecture rapide. La barre de filtres permet de filtrer par <strong>salle</strong> ou par <strong>utilisateur</strong> (admin). Le bouton <strong>Imprimer</strong> génère un PDF avec votre logo établissement.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <hr class="my-5">
+
+                <!-- 8. PANIER -->
+                <section id="section-panier" class="mb-5">
+                    <h3 class="fw-bold text-dark mb-4">
+                        <i class="bi bi-cart3 text-primary me-2"></i>Mon panier
+                    </h3>
+                    <p class="text-muted">Le panier est votre zone de préparation avant la confirmation définitive.</p>
+
+                    <!-- 📸 CAPTURE : Page panier avec une ou plusieurs réservations -->
+                    <img src="{{ url_for('static', filename='images/doc/panier.png') }}" class="img-fluid rounded shadow-sm my-3 w-100" alt="Panier de réservation">
+
                     <div class="card border-0 shadow-sm">
                         <div class="card-body">
                             <ul class="list-unstyled mb-0">
-                                <li class="mb-3">
-                                    <strong><i class="bi bi-check2 text-primary me-2"></i>Années Fiscales :</strong> 
-                                    Le budget est géré par année scolaire. Basculez d'une année à l'autre via le sélecteur.
-                                </li>
-                                <li class="mb-3">
-                                    <strong><i class="bi bi-check2 text-primary me-2"></i>Dépenses :</strong> 
-                                    Enregistrez vos commandes. Le solde restant est calculé en temps réel.
-                                </li>
-                                <li>
-                                    <strong><i class="bi bi-check2 text-primary me-2"></i>Clôture :</strong> 
-                                    En fin d'année, l'administrateur peut clôturer le budget pour figer les comptes (irréversible).
-                                </li>
+                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i>Vérifiez la date, l'horaire et le matériel sélectionné</li>
+                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i>Retirez un objet via l'icône 🗑️</li>
+                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i>Videz entièrement le panier si besoin</li>
+                                <li><i class="bi bi-caret-right-fill text-success me-2"></i>Cliquez sur <strong>"Confirmer la réservation"</strong> pour valider — le stock est mis à jour immédiatement</li>
                             </ul>
                         </div>
                     </div>
@@ -229,50 +515,132 @@
 
                 <hr class="my-5">
 
-                <!-- 7. ADMINISTRATION -->
+                <!-- 9. KITS -->
+                <section id="section-kits" class="mb-5">
+                    <h3 class="fw-bold text-dark mb-4">
+                        <i class="bi bi-collection text-primary me-2"></i>Kits de matériel
+                    </h3>
+                    <p class="text-muted">Un kit est un ensemble de matériel prédéfini pour un type d'expérience. Par exemple : <em>"Kit Chromatographie"</em> = béchers + papier filtre + solvants + pipettes.</p>
+
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="bi bi-plus-circle text-success me-2"></i>Utiliser un kit</h6>
+                            <p class="small text-muted mb-0">Dans la modale de réservation, les kits apparaissent dans la section <strong>KITS</strong> de la liste du matériel disponible. Cliquez sur <strong>+</strong> pour ajouter tout le kit d'un coup.</p>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info border-0 shadow-sm">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Les kits sont créés et gérés par l'administrateur. Si vous avez besoin d'un kit spécifique, contactez votre administrateur.
+                    </div>
+                </section>
+
+                <hr class="my-5">
+
+                <!-- 10. BUDGET -->
+                <section id="section-budget" class="mb-5">
+                    <h3 class="fw-bold text-dark mb-4">
+                        <i class="bi bi-wallet2 text-primary me-2"></i>Suivi budgétaire
+                    </h3>
+                    <p class="text-muted">Consultez et gérez le budget annuel du laboratoire.</p>
+
+                    <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden" id="accBudget">
+                        <div class="accordion-item border-0 border-bottom">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#bud1">
+                                    Consulter le budget
+                                </button>
+                            </h2>
+                            <div id="bud1" class="accordion-collapse collapse show" data-bs-parent="#accBudget">
+                                <div class="accordion-body text-muted">
+                                    La page budget affiche le montant initial, les dépenses enregistrées et le solde restant. Une barre de progression colorée indique la consommation du budget (vert &lt; 60%, orange &lt; 85%, rouge ≥ 85%).
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#bud2">
+                                    Exporter le rapport budgétaire
+                                </button>
+                            </h2>
+                            <div id="bud2" class="accordion-collapse collapse" data-bs-parent="#accBudget">
+                                <div class="accordion-body text-muted">
+                                    Depuis la page budget (admin), choisissez une période et exportez en <strong>PDF ou Excel</strong>. Le PDF inclut votre logo établissement.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 {% if session.user_role == 'admin' %}
+                <hr class="my-5">
+
+                <!-- 11. ADMINISTRATION -->
                 <section id="section-admin" class="mb-5">
                     <h3 class="fw-bold text-dark mb-4">
                         <i class="bi bi-gear-fill text-secondary me-2"></i>Administration
                     </h3>
-                    
+
+                    <!-- 📸 CAPTURE : admin.png — interface d'administration complète -->
+                    <img src="{{ url_for('static', filename='images/doc/admin.png') }}" class="img-fluid rounded shadow-sm my-3 w-100" alt="Interface administrateur">
+
                     <div class="row g-4 mb-4">
                         <div class="col-md-6">
                             <div class="card h-100 border-0 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="fw-bold text-primary"><i class="bi bi-cloud-download me-2"></i>Sauvegardes</h5>
-                                    <p class="text-muted small">
-                                        Exportez toutes vos données (Inventaire, Historique, Paramètres) dans un fichier JSON sécurisé. 
-                                        <strong>C'est votre assurance vie :</strong> faites-le régulièrement.
-                                    </p>
+                                    <h5 class="fw-bold text-primary"><i class="bi bi-people me-2"></i>Utilisateurs</h5>
+                                    <p class="text-muted small">Activez/désactivez des comptes, changez les rôles (utilisateur ↔ admin). Partagez le <strong>code d'invitation</strong> pour permettre à de nouveaux membres de rejoindre l'établissement.</p>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="card h-100 border-0 shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="fw-bold text-success"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Import Excel</h5>
-                                    <p class="text-muted small">
-                                        Ajoutez des centaines d'objets en une fois grâce au modèle Excel fourni. Idéal pour l'initialisation du laboratoire.
-                                    </p>
+                                    <h5 class="fw-bold text-success"><i class="bi bi-box-seam me-2"></i>Inventaire</h5>
+                                    <p class="text-muted small">Ajoutez, modifiez ou supprimez du matériel. Gérez les armoires, catégories, kits. Importez en masse via Excel ou exportez en PDF/Excel.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-warning"><i class="bi bi-palette me-2"></i>Personnalisation</h5>
+                                    <p class="text-muted small">Uploadez votre logo établissement (apparaît sur les exports PDF et impressions) et personnalisez la couleur de l'interface.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-info"><i class="bi bi-cloud-download me-2"></i>Sauvegardes</h5>
+                                    <p class="text-muted small">Exportez toutes vos données en JSON. <strong>Faites-le régulièrement</strong> — c'est votre assurance vie en cas de problème.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Focus Continuité -->
                     <div class="card bg-light border-0 shadow-sm">
                         <div class="card-body">
-                            <h5 class="fw-bold mb-3"><i class="bi bi-arrow-repeat me-2"></i>Continuité de Service (Changement de PC)</h5>
-                            <p class="small text-muted mb-2">
-                                Si vous devez changer d'ordinateur ou réinstaller l'application, suivez cette procédure pour ne rien perdre :
-                            </p>
-                            <ol class="small text-muted mb-0">
-                                <li>Sur l'ancien poste, allez dans <strong>Admin > Sauvegardes</strong> et cliquez sur "Télécharger la base".</li>
-                                <li>Installez LabFlow sur le nouveau poste (créez un compte admin temporaire).</li>
-                                <li>Allez dans <strong>Admin > Sauvegardes</strong> et importez votre fichier JSON.</li>
-                                <li>Tout est restauré : vos données, vos comptes utilisateurs et votre <strong>Licence PRO</strong>.</li>
-                            </ol>
+                            <h5 class="fw-bold mb-3"><i class="bi bi-file-earmark-bar-graph me-2"></i>Exports et rapports disponibles</h5>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Export</th>
+                                            <th>Formats</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-muted small">
+                                        <tr><td>Inventaire complet</td><td>PDF, Excel</td><td>Tout le matériel</td></tr>
+                                        <tr><td>Par armoire</td><td>PDF, Excel</td><td>Matériel d'une armoire</td></tr>
+                                        <tr><td>Par catégorie</td><td>PDF, Excel</td><td>Matériel d'une catégorie</td></tr>
+                                        <tr><td>CMR uniquement</td><td>PDF, Excel</td><td>Produits dangereux</td></tr>
+                                        <tr><td>Rapport d'activité</td><td>PDF, Excel</td><td>Historique réservations</td></tr>
+                                        <tr><td>Budget</td><td>PDF, Excel</td><td>Dépenses sur une période</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -280,47 +648,74 @@
 
                 <hr class="my-5">
 
-                <!-- 8. SUPPORT & DÉPANNAGE -->
+                <!-- 12. SUPPORT -->
                 <section id="section-support" class="mb-5">
                     <h3 class="fw-bold text-dark mb-4">
                         <i class="bi bi-life-preserver text-danger me-2"></i>Support & Dépannage
                     </h3>
 
                     <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden mb-4" id="accSupport">
-                        
-                        <!-- Problème de Licence -->
                         <div class="accordion-item border-0 border-bottom">
                             <h2 class="accordion-header">
                                 <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#sup1">
-                                    Ma licence PRO s'est désactivée, pourquoi ?
+                                    Je n'arrive plus à me connecter
                                 </button>
                             </h2>
                             <div id="sup1" class="accordion-collapse collapse show" data-bs-parent="#accSupport">
                                 <div class="accordion-body text-muted">
-                                    La licence est liée à l'<strong>Identifiant unique de votre installation</strong> (Instance ID).
-                                    <br>Si vous changez d'ordinateur ou réinstallez l'application, cet identifiant change et la licence se désactive par sécurité.
-                                    <br><strong>Solution :</strong> Contactez le support en fournissant votre nouvel "Identifiant Instance" (visible dans la page À Propos) pour obtenir une nouvelle clé.
+                                    <ol class="mb-0">
+                                        <li>Vérifiez que vous utilisez bien votre <strong>identifiant</strong> (pas votre email)</li>
+                                        <li>Utilisez <strong>"Mot de passe oublié ?"</strong> pour recevoir un lien de réinitialisation</li>
+                                        <li>Si votre compte a été désactivé, contactez votre administrateur</li>
+                                    </ol>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Bug Application -->
-                        <div class="accordion-item border-0">
+                        <div class="accordion-item border-0 border-bottom">
                             <h2 class="accordion-header">
                                 <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#sup2">
-                                    J'ai rencontré un bug ou une erreur
+                                    Un objet n'apparaît pas comme disponible
                                 </button>
                             </h2>
                             <div id="sup2" class="accordion-collapse collapse" data-bs-parent="#accSupport">
                                 <div class="accordion-body text-muted">
-                                    Si une page affiche une erreur ou ne fonctionne pas comme prévu :
+                                    La disponibilité est calculée en temps réel. Si un objet apparaît indisponible :
+                                    <ul class="mb-0">
+                                        <li>Il est peut-être déjà réservé sur ce créneau par un autre utilisateur</li>
+                                        <li>Son stock peut être épuisé (quantité physique = 0)</li>
+                                        <li>Essayez un créneau horaire différent</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#sup3">
+                                    J'ai rencontré un bug ou une erreur
+                                </button>
+                            </h2>
+                            <div id="sup3" class="accordion-collapse collapse" data-bs-parent="#accSupport">
+                                <div class="accordion-body text-muted">
                                     <ol class="mb-0">
-                                        <li>Essayez de rafraîchir la page (F5).</li>
-                                        <li>Vérifiez que vous êtes bien connecté.</li>
-                                        <li>Si le problème persiste, contactez le support en décrivant l'action qui a provoqué l'erreur.</li>
+                                        <li>Rafraîchissez la page (F5)</li>
+                                        <li>Vérifiez que vous êtes bien connecté</li>
+                                        <li>Si le problème persiste, contactez le support en décrivant l'action qui a provoqué l'erreur</li>
                                     </ol>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Conseils -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>Conseils et bonnes pratiques</h6>
+                            <ul class="list-unstyled mb-0">
+                                <li class="mb-2"><i class="bi bi-check text-success me-2"></i><strong>Réservez à l'avance</strong> — le stock est bloqué dès la confirmation</li>
+                                <li class="mb-2"><i class="bi bi-check text-success me-2"></i><strong>Utilisez les récurrences</strong> — pour un cours hebdomadaire, une seule saisie suffit</li>
+                                <li class="mb-2"><i class="bi bi-check text-success me-2"></i><strong>Vérifiez les alertes</strong> — anticipez les ruptures de stock</li>
+                                <li><i class="bi bi-check text-success me-2"></i><strong>Signalez les besoins</strong> — via le système de suggestions dans l'inventaire</li>
+                            </ul>
                         </div>
                     </div>
 
@@ -329,7 +724,7 @@
                         <div class="card-body p-5 text-center">
                             <h4 class="fw-bold mb-2">Besoin d'une assistance personnalisée ?</h4>
                             <p class="opacity-75 mb-4">Notre équipe est là pour vous accompagner.</p>
-                            <a href="mailto:contact.gmlcl@gmail.com" class="btn btn-light text-primary fw-bold px-5 rounded-pill shadow-sm">
+                            <a href="mailto:help.labflow@gmail.com" class="btn btn-light text-primary fw-bold px-5 rounded-pill shadow-sm">
                                 <i class="bi bi-envelope-fill me-2"></i>Contacter le support
                             </a>
                         </div>
@@ -338,8 +733,8 @@
 
                 <!-- Footer Doc -->
                 <div class="text-center mt-5 pt-5 border-top text-muted">
-                    <p class="mb-1 fw-bold">LabFlow v1.0</p>
-                    <small>Développé pour simplifier la gestion des laboratoires scolaires.</small>
+                    <p class="mb-1 fw-bold">LabFlow v2.0</p>
+                    <small>Développé pour simplifier la gestion des laboratoires scolaires — Académie Nancy-Metz © 2026</small>
                 </div>
 
             </div>
@@ -348,12 +743,12 @@
 </div>
 
 <style>
-    /* Style spécifique pour la navigation latérale */
     #doc-navbar .nav-link {
         color: #64748b;
         border-radius: 8px;
-        padding: 10px 15px;
+        padding: 8px 15px;
         transition: all 0.2s;
+        font-size: 0.9rem;
     }
     #doc-navbar .nav-link:hover {
         background-color: #f1f5f9;
@@ -363,8 +758,6 @@
         background-color: #e0e7ff;
         color: #4f46e5;
     }
-    
-    /* Impression propre */
     @media print {
         .col-lg-3, .btn, header, footer { display: none !important; }
         .col-lg-9 { width: 100% !important; }

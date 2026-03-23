@@ -342,3 +342,102 @@
     content: "•"; color: #1F3B73; font-weight: bold;
     position: absolute; left: 0; font-size: 1.2rem; line-height: 1;
 }
+
+/* ================================================================
+   KITS
+   ================================================================ */
+.kit-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+.kit-card:hover {
+    border-color: var(--couleur-principale);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.kit-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--couleur-principale), #667eea);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.kit-icon svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+}
+.kit-info {
+    flex: 1;
+    min-width: 0;
+}
+.kit-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #1e293b;
+    text-decoration: none;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+.kit-name:hover { color: var(--couleur-principale); }
+.kit-desc {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+.count-badge svg {
+    width: 14px;
+    height: 14px;
+    fill: var(--couleur-principale);
+}
+.kit-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.btn-icon-only {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.btn-icon-only svg { width: 18px; height: 18px; }
+.btn-edit { background: #e0e7ff; color: #4f46e5; }
+.btn-edit svg { fill: #4f46e5; }
+.btn-edit:hover { background: #4f46e5; color: white; }
+.btn-edit:hover svg { fill: white; }
+.btn-delete-kit { background: #fee2e2; color: #dc2626; }
+.btn-delete-kit svg { fill: #dc2626; }
+.btn-delete-kit:hover { background: #dc2626; color: white; }
+.btn-delete-kit:hover svg { fill: white; }

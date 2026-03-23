@@ -510,7 +510,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-        // --- B. GESTION DES CASES ENFANTS (NOUVEAU) ---
+        // --- B1. GESTION DES CASES ENFANTS (NOUVEAU) ---
         if (e.target.classList.contains('objet-checkbox')) {
             const table = e.target.closest('table');
             const masterCheckbox = table ? table.querySelector('#select-all-checkbox') : null;
@@ -521,6 +521,23 @@ document.addEventListener("DOMContentLoaded", function () {
                 const all = table.querySelectorAll('.objet-checkbox');
                 const allChecked = Array.from(all).every(cb => cb.checked);
                 masterCheckbox.checked = allChecked;
+            }
+        }
+		
+		// --- B2. MISE À JOUR BARRE DE SÉLECTION ---
+        if (e.target.classList.contains('objet-checkbox') || e.target.id === 'select-all-checkbox') {
+            const selectionnes = document.querySelectorAll('.objet-checkbox:checked');
+            const barre = document.getElementById('barre-selection');
+            const nb = document.getElementById('nb-selectionnes');
+            if (barre) {
+                if (selectionnes.length > 0) {
+                    barre.classList.remove('d-none');
+                    barre.classList.add('d-flex');
+                } else {
+                    barre.classList.add('d-none');
+                    barre.classList.remove('d-flex');
+                }
+                if (nb) nb.textContent = selectionnes.length;
             }
         }
 
@@ -731,7 +748,7 @@ document.addEventListener("DOMContentLoaded", function () {
     
 	
 	// =================================================================
-	// SECTION 6 : ANIMATION DE LA CLOCHE D'ALERTE
+	// SECTION 6A : ANIMATION DE LA CLOCHE D'ALERTE
 	// =================================================================
 	const alertIcon = document.getElementById('alert-icon-link');
 	if (alertIcon) {
@@ -743,6 +760,90 @@ document.addEventListener("DOMContentLoaded", function () {
 			alertIcon.classList.add('has-alerts-medium');
 		}
 	}
+	
+	// ==================================================================
+    // SECTION 6B : SUPPRESSION EN MASSE
+    // ==================================================================
+    const btnSupprimer = document.getElementById('btn-supprimer-selection');
+    const btnAnnuler = document.getElementById('btn-annuler-selection');
+
+    if (btnAnnuler) {
+        btnAnnuler.addEventListener('click', () => {
+            document.querySelectorAll('.objet-checkbox:checked').forEach(cb => cb.checked = false);
+            const master = document.getElementById('select-all-checkbox');
+            if (master) master.checked = false;
+            const barre = document.getElementById('barre-selection');
+            if (barre) { barre.classList.add('d-none'); barre.classList.remove('d-flex'); }
+        });
+    }
+
+    if (btnSupprimer) {
+        btnSupprimer.addEventListener('click', async () => {
+            const ids = Array.from(document.querySelectorAll('.objet-checkbox:checked')).map(cb => parseInt(cb.value));
+            if (ids.length === 0) return;
+
+            // Vérification préalable
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            try {
+                const res = await fetch('/verifier_suppression', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ ids })
+                });
+                const data = await res.json();
+                pendingSupprIds = ids;
+
+                // Construire le message
+                let texte = `Vous allez supprimer ${ids.length} élément(s) de votre inventaire.`;
+                let avertissement = '';
+                if (data.bloques_resa?.length > 0) {
+                    avertissement += `<div class="alert alert-warning border-0 small mt-2 mb-1"><i class="bi bi-calendar-x me-2"></i><strong>Réservations associées :</strong> ${data.bloques_resa.join(', ')} — les réservations liées seront également supprimées.</div>`;
+                }
+                if (data.bloques_kit?.length > 0) {
+                    avertissement += `<div class="alert alert-info border-0 small mt-2 mb-1"><i class="bi bi-collection me-2"></i><strong>Présents dans des kits :</strong> ${data.bloques_kit.join(', ')} — ils seront retirés des kits concernés.</div>`;
+                }
+
+                document.getElementById('masse-texte').innerHTML = texte + avertissement;
+                document.getElementById('masse-titre').textContent = `Supprimer ${ids.length} élément(s) ?`;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSupprimerMasse')).show();
+            } catch (err) {
+                showToast('Erreur lors de la vérification.', 'error');
+            }
+        });
+    }
+	
+	// Confirmation suppression masse
+    let pendingSupprIds = [];
+    const btnConfirmerMasse = document.getElementById('btnConfirmerSuppMasse');
+    if (btnConfirmerMasse) {
+        btnConfirmerMasse.addEventListener('click', async () => {
+            if (!pendingSupprIds.length) return;
+            btnConfirmerMasse.disabled = true;
+            btnConfirmerMasse.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                const res = await fetch('/supprimer_masse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ ids: pendingSupprIds })
+                });
+                const data = await res.json();
+                bootstrap.Modal.getInstance(document.getElementById('modalSupprimerMasse'))?.hide();
+                if (data.success) {
+                    showToast(`${data.deleted} élément(s) supprimé(s) avec succès.`, 'success');
+                    setTimeout(() => window.location.reload(), 800);
+                } else {
+                    showToast(data.error || 'Erreur.', 'error');
+                }
+            } catch (err) {
+                showToast('Erreur technique.', 'error');
+            } finally {
+                btnConfirmerMasse.disabled = false;
+                btnConfirmerMasse.innerHTML = '<i class="bi bi-trash-fill me-2"></i>Supprimer définitivement';
+                pendingSupprIds = [];
+            }
+        });
+    }
 
     // ==================================================================
 	// SECTION 7 : FILTRE DE kit

@@ -671,6 +671,132 @@ def admin():
 # ============================================================
 # THÈME & PERSONNALISATION
 # ============================================================
+# ================================================================
+# PACKS ONBOARDING
+# ================================================================
+@admin_bp.route("/packs", methods=["GET"])
+@admin_required
+def packs_onboarding():
+    """Page de sélection des packs de matériel."""
+    from static.data.packs_onboarding import PACKS_ONBOARDING
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Packs de matériel', 'url': None}
+    ]
+    return render_template("admin_packs.html", packs=PACKS_ONBOARDING, breadcrumbs=breadcrumbs)
+
+
+@admin_bp.route("/packs/importer/<pack_id>", methods=["POST"])
+@admin_required
+def importer_pack(pack_id):
+    """Importe un pack : crée armoires, catégories et objets."""
+    from static.data.packs_onboarding import PACKS_ONBOARDING
+    etablissement_id = session.get('etablissement_id')
+
+    pack = next((p for p in PACKS_ONBOARDING if p["id"] == pack_id), None)
+    if not pack:
+        return jsonify({"success": False, "error": "Pack introuvable"}), 404
+
+    try:
+        stats = {"armoires": 0, "categories": 0, "objets": 0, "ignores": 0}
+
+        # 1. Créer les armoires (si elles n'existent pas déjà)
+        armoires_map = {}
+        for arm_data in pack["armoires"]:
+            existing = db.session.execute(
+                db.select(Armoire).filter_by(
+                    nom=arm_data["nom"],
+                    etablissement_id=etablissement_id
+                )
+            ).scalar_one_or_none()
+            if existing:
+                armoires_map[arm_data["nom"]] = existing
+            else:
+                new_arm = Armoire(
+                    nom=arm_data["nom"],
+                    description=arm_data["description"],
+                    etablissement_id=etablissement_id
+                )
+                db.session.add(new_arm)
+                db.session.flush()
+                armoires_map[arm_data["nom"]] = new_arm
+                stats["armoires"] += 1
+
+        # 2. Créer les catégories (si elles n'existent pas déjà)
+        categories_map = {}
+        for cat_nom in pack["categories"]:
+            existing = db.session.execute(
+                db.select(Categorie).filter_by(
+                    nom=cat_nom,
+                    etablissement_id=etablissement_id
+                )
+            ).scalar_one_or_none()
+            if existing:
+                categories_map[cat_nom] = existing
+            else:
+                new_cat = Categorie(
+                    nom=cat_nom,
+                    etablissement_id=etablissement_id
+                )
+                db.session.add(new_cat)
+                db.session.flush()
+                categories_map[cat_nom] = new_cat
+                stats["categories"] += 1
+
+        # 3. Créer les objets (si ils n'existent pas déjà)
+        for obj_data in pack["objets"]:
+            existing = db.session.execute(
+                db.select(Objet).filter_by(
+                    nom=obj_data["nom"],
+                    etablissement_id=etablissement_id
+                )
+            ).scalar_one_or_none()
+            if existing:
+                stats["ignores"] += 1
+                continue
+
+            armoire = armoires_map.get(obj_data["armoire"])
+            categorie = categories_map.get(obj_data["categorie"])
+
+            new_obj = Objet(
+                nom=obj_data["nom"],
+                type_objet=obj_data["type_objet"],
+                etablissement_id=etablissement_id,
+                armoire_id=armoire.id if armoire else None,
+                categorie_id=categorie.id if categorie else None,
+                quantite_physique=obj_data["quantite_physique"],
+                seuil=obj_data["seuil"],
+                unite=obj_data.get("unite", "unité"),
+                is_cmr=obj_data.get("is_cmr", False),
+                image_url=obj_data.get("image_url"),
+                fds_url=obj_data.get("fds_url"),
+                en_commande=False,
+                traite=False,
+            )
+
+            # Champs spécifiques aux produits chimiques
+            if obj_data["type_objet"] == "produit":
+                new_obj.capacite_initiale = obj_data.get("capacite_initiale")
+                new_obj.niveau_actuel = obj_data.get("niveau_actuel")
+                new_obj.seuil_pourcentage = obj_data.get("seuil_pourcentage", 50)
+
+            db.session.add(new_obj)
+            stats["objets"] += 1
+
+        db.session.commit()
+        log_action('import_pack', f"Pack '{pack['nom']}' importé : {stats}")
+        return jsonify({
+            "success": True,
+            "message": f"Pack importé avec succès ! {stats['armoires']} armoires, {stats['categories']} catégories et {stats['objets']} objets créés. {stats['ignores']} éléments ignorés (déjà existants).",
+            "stats": stats
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur import pack: {e}", exc_info=True)
+        return jsonify({"success": False, "error": "Erreur technique lors de l'import"}), 500
+
 @admin_bp.route("/theme", methods=["POST"])
 @admin_required
 def sauvegarder_theme():

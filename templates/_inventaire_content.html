@@ -1,7 +1,7 @@
 <table class="objet-table">
     <thead>
         <tr>
-            {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}
+            {% if session.user_role == 'admin' %}
                 <th class="checkbox-column"><input type="checkbox" id="select-all-checkbox" title="Tout sélectionner"></th>
             {% endif %}
             
@@ -46,7 +46,7 @@
         {% endif %}
 
         <tr class="{{ 'row-perime' if perime else 'row-perime-bientot' if perime_bientot }}" data-objet-id="{{ objet.id }}">
-            {% if session.user_role == 'admin' and pagination.endpoint != 'inventaire.inventaire' %}
+            {% if session.user_role == 'admin' %}
                 <td class="checkbox-column"><input type="checkbox" class="form-check-input objet-checkbox" value="{{ objet.id }}" data-armoire-id="{{ objet.armoire_id }}"></td>
             {% endif %}
             

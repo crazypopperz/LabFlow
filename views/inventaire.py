@@ -862,6 +862,84 @@ def supprimer_objet(id_objet):
 
     return redirect(request.referrer or url_for('inventaire.inventaire'))
 
+@inventaire_bp.route("/supprimer_masse", methods=["POST"])
+@admin_required
+def supprimer_masse():
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'JSON requis'}), 415
+    etablissement_id = session.get('etablissement_id')
+    ids = request.get_json().get('ids', [])
+    if not ids:
+        return jsonify({'success': False, 'error': 'Aucun élément sélectionné'}), 400
+    try:
+        from db import KitObjet
+        deleted = 0
+        with db.session.no_autoflush:
+            for obj_id in ids:
+                objet = db.session.get(Objet, obj_id)
+                if not objet or objet.etablissement_id != etablissement_id:
+                    continue
+                hist = Historique(
+                    objet_id=None,
+                    utilisateur_id=session.get('user_id'),
+                    action="Suppression",
+                    details=f"Suppression en masse : {objet.nom}",
+                    etablissement_id=etablissement_id,
+                    timestamp=datetime.now()
+                )
+                db.session.add(hist)
+                db.session.execute(
+                    db.delete(KitObjet).where(KitObjet.objet_id == objet.id)
+                )
+                db.session.execute(
+                    db.delete(Reservation).where(Reservation.objet_id == objet.id)
+                )
+                db.session.delete(objet)
+                deleted += 1
+        db.session.commit()
+        invalidate_alertes_cache(etablissement_id)
+        return jsonify({'success': True, 'deleted': deleted})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur suppression masse: {e}")
+        return jsonify({'success': False, 'error': 'Erreur technique'}), 500
+
+@inventaire_bp.route("/verifier_suppression", methods=["POST"])
+@admin_required
+def verifier_suppression():
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'JSON requis'}), 415
+    etablissement_id = session.get('etablissement_id')
+    ids = request.get_json().get('ids', [])
+    bloques_resa = []
+    bloques_kit = []
+    try:
+        from db import KitObjet
+        for obj_id in ids:
+            objet = db.session.get(Objet, obj_id)
+            if not objet or objet.etablissement_id != etablissement_id:
+                continue
+            # Vérifier réservations actives
+            nb_resas = db.session.execute(
+                db.select(db.func.count(Reservation.id))
+                .where(Reservation.objet_id == objet.id)
+            ).scalar()
+            if nb_resas > 0:
+                bloques_resa.append(objet.nom)
+            # Vérifier kits
+            nb_kits = db.session.execute(
+                db.select(db.func.count(KitObjet.id))
+                .where(KitObjet.objet_id == objet.id)
+            ).scalar()
+            if nb_kits > 0:
+                bloques_kit.append(objet.nom)
+        return jsonify({
+            'success': True,
+            'bloques_resa': bloques_resa,
+            'bloques_kit': bloques_kit
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @inventaire_bp.route("/objet/<int:objet_id>")
 @login_required

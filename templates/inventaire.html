@@ -111,7 +111,21 @@
 			</div>
 		</div>
 
-        {% if objets %}
+        {% if session.user_role == 'admin' %}
+		<div id="barre-selection" class="d-none mb-3 p-3 bg-danger-subtle border border-danger rounded-3 d-flex align-items-center gap-3">
+			<span class="fw-bold text-danger">
+				<i class="bi bi-check2-square me-2"></i>
+				<span id="nb-selectionnes">0</span> élément(s) sélectionné(s)
+			</span>
+			<button type="button" class="btn btn-danger btn-sm ms-auto" id="btn-supprimer-selection">
+				<i class="bi bi-trash-fill me-2"></i>Supprimer la sélection
+			</button>
+			<button type="button" class="btn btn-outline-secondary btn-sm" id="btn-annuler-selection">
+				<i class="bi bi-x me-1"></i>Annuler
+			</button>
+		</div>
+		{% endif %}
+		{% if objets %}
             <div id="dynamic-content" data-endpoint="inventaire" data-sort-by="{{ sort_by }}" data-direction="{{ direction }}">
                 {% include '_inventaire_content.html' %}
             </div>

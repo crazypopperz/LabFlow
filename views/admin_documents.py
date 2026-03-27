@@ -5,7 +5,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import os
 
@@ -28,7 +28,7 @@ def gestion_documents():
     # Récupération des archives d'inventaire
     archives = db.session.execute(db.select(InventaireArchive).filter_by(etablissement_id=etablissement_id).order_by(InventaireArchive.date_archive.desc())).scalars().all()
     
-    breadcrumbs = [{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Documents & Conformité'}]
+    breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Documents et Conformité', 'url': None}]
     return render_template("admin_documents.html", docs=docs, archives=archives, breadcrumbs=breadcrumbs)
 
 @admin_documents_bp.route("/documents/upload", methods=['POST'])
@@ -216,6 +216,10 @@ def activer_licence():
             return redirect(url_for('main.a_propos'))
         
         cle_attendue = calculate_license_key(param_instance.valeur.strip())
+        if not cle_attendue:
+            current_app.logger.error("GMLCL_PRO_KEY manquante ou instance_id vide")
+            flash("Erreur de configuration serveur.", "error")
+            return redirect(url_for("main.a_propos"))
         if not secrets.compare_digest(cle_fournie, cle_attendue):
             flash("Clé incorrecte.", "error")
             return redirect(url_for('main.a_propos'))

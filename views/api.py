@@ -304,7 +304,7 @@ def search():
             'nom': o.nom,
             'sous_titre': o.armoire.nom if o.armoire else None,
             'image': o.image_url,
-            'url': f'/inventaire?search={o.nom}'
+            'url': f'/objet/{o.id}'
         })
 
     # Kits

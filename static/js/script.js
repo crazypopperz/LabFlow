@@ -114,7 +114,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 			const apiUrl = `/api/inventaire?${params.toString()}`;
 
-			fetch(apiUrl)
+			fetch(apiUrl, { credentials: 'same-origin' })
 			.then(response => response.json())
 			.then(data => {
 				dynamicContent.innerHTML = data.html;

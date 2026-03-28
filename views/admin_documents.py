@@ -1,3 +1,4 @@
+import secrets
 # ============================================================
 # FICHIER : views/admin_documents.py
 # Documents réglementaires, archives, licence, planning

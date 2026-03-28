@@ -237,7 +237,7 @@ def activer_licence():
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur activation licence: {str(e)}", exc_info=True)
+        current_app.logger.error(f"Erreur activation licence: {type(e).__name__}: {str(e)}", exc_info=True)
         flash("Erreur technique lors de l'activation.", "error")
     
     return redirect(url_for('main.a_propos'))

@@ -295,7 +295,7 @@ def annee_scolaire_format(year):
 # ===============================================
 #  VERIFICATION DES UPLOADS
 # ===============================================
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'json', 'csv', 'xlsx'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'pdf', 'json', 'csv', 'xlsx'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

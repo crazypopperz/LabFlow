@@ -786,6 +786,8 @@ def importer_pack(pack_id):
 
         db.session.commit()
         log_action('import_pack', f"Pack '{pack['nom']}' importé : {stats}")
+        cache.delete(f"armoires_{etablissement_id}")
+        cache.delete(f"categories_{etablissement_id}")
         return jsonify({
             "success": True,
             "message": f"Pack importé avec succès ! {stats['armoires']} armoires, {stats['categories']} catégories et {stats['objets']} objets créés. {stats['ignores']} éléments ignorés (déjà existants).",

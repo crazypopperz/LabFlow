@@ -97,9 +97,19 @@ class InventoryService:
                         Objet.date_peremption <= today + timedelta(days=30)
                     )
                 elif filters['etat'] == 'stock':
-                    # Logique stock bas (complexe car dépend du type)
-                    # On filtre en Python après récupération pour simplifier la requête SQL
-                    pass 
+                    from sqlalchemy import case, and_, or_
+                    # Matériel : quantite_physique <= seuil
+                    # Produit : niveau_actuel / capacite_initiale * 100 <= seuil_pourcentage
+                    stock_bas_materiel = and_(
+                        Objet.type_objet == 'materiel',
+                        Objet.quantite_physique <= Objet.seuil
+                    )
+                    stock_bas_produit = and_(
+                        Objet.type_objet == 'produit',
+                        Objet.capacite_initiale > 0,
+                        (Objet.niveau_actuel * 100.0 / Objet.capacite_initiale) <= Objet.seuil_pourcentage
+                    )
+                    query = query.filter(or_(stock_bas_materiel, stock_bas_produit)) 
 
             ALLOWED_SORT = {
                 'nom': Objet.nom, 'quantite': Objet.quantite_physique,

@@ -301,6 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // MAINTENANT on remplit les valeurs
                 setValueIfExists('unite', this.getAttribute('data-unite'));
+                if (typeof updateStepByUnite === 'function') updateStepByUnite();
                 setValueIfExists('capacite_initiale', this.getAttribute('data-capacite'));
                 setValueIfExists('niveau_actuel', this.getAttribute('data-niveau'));
                 
@@ -310,14 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('seuil_val').innerText = seuilPct + '%';
                 }
                 
-                // BLOQUER la capacité totale (ne doit jamais changer)
-                const capaciteField = document.getElementById('capacite_initiale');
-                if (capaciteField) {
-                    capaciteField.setAttribute('readonly', 'readonly');
-                    capaciteField.style.backgroundColor = '#e9ecef';
-                    capaciteField.style.cursor = 'not-allowed';
-                    capaciteField.title = "La contenance totale ne peut pas être modifiée. Seul le niveau actuel (reste) peut changer.";
-                }
+
                 
             } else {
                 document.getElementById('typeMateriel').checked = true;

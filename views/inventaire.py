@@ -516,7 +516,7 @@ def ajouter_objet():
         
         db.session.add(new_objet)
         db.session.commit()
-        invalidate_alertes_cache(etablissement_id)
+        invalidate_alertes_cache(session['etablissement_id'])
         
         # 8. HISTORIQUE
         details = f"Ajout ({type_objet})"
@@ -528,7 +528,7 @@ def ajouter_objet():
             details=details, etablissement_id=etablissement_id, timestamp=datetime.now()
         ))
         db.session.commit()
-        invalidate_alertes_cache(etablissement_id)
+        invalidate_alertes_cache(session['etablissement_id'])
         
         flash(f"'{nom}' ajouté avec succès.", "success")
         
@@ -806,7 +806,7 @@ def modifier_objet(id_objet):
             db.session.add(hist)
 
         db.session.commit()
-        invalidate_alertes_cache(etablissement_id)
+        invalidate_alertes_cache(session['etablissement_id'])
         
         for old_path in files_to_cleanup:
             cleanup_old_file(old_path)
@@ -852,7 +852,7 @@ def supprimer_objet(id_objet):
         # Suppression
         db.session.delete(objet)
         db.session.commit()
-        invalidate_alertes_cache(etablissement_id)
+        invalidate_alertes_cache(session['etablissement_id'])
         flash(f"L'objet '{nom_objet}' a été supprimé.", "success")
         
     except Exception as e:
@@ -897,7 +897,7 @@ def supprimer_masse():
                 db.session.delete(objet)
                 deleted += 1
         db.session.commit()
-        invalidate_alertes_cache(etablissement_id)
+        invalidate_alertes_cache(session['etablissement_id'])
         return jsonify({'success': True, 'deleted': deleted})
     except Exception as e:
         db.session.rollback()
@@ -1149,7 +1149,7 @@ def maj_traite(objet_id):
     try:
         objet.traite = 1 if data.get("traite") else 0
         db.session.commit()
-        invalidate_alertes_cache(etablissement_id)
+        invalidate_alertes_cache(session['etablissement_id'])
         return jsonify(success=True)
     except Exception as e:
         db.session.rollback()
@@ -1170,7 +1170,7 @@ def maj_commande(objet_id):
     try:
         objet.en_commande = 1 if data.get("en_commande") else 0
         db.session.commit()
-        invalidate_alertes_cache(etablissement_id)
+        invalidate_alertes_cache(session['etablissement_id'])
         return jsonify(success=True)
     except Exception as e:
         db.session.rollback()

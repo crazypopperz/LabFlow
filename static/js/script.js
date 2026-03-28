@@ -1034,7 +1034,6 @@ document.addEventListener("DOMContentLoaded", function () {
             // =========================================================
             // 1. LE GRAND NETTOYAGE (RESET FORCÉ)
             // =========================================================
-            console.log("🧹 Nettoyage de la modale...");
 
             // Reset Image
             if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
@@ -1079,7 +1078,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 // On vérifie si l'attribut est strictement égal à 'on'
                 const isCmr = button.dataset.isCmr === 'on';
                 
-                console.log(`[DEBUG] Edit Objet ID: ${objetId} | CMR: ${isCmr} (Raw: ${button.dataset.isCmr})`);
 
 				// 2. Remplissage Champs Standards (Boucle)
 				const fields = {
@@ -1099,6 +1097,52 @@ document.addEventListener("DOMContentLoaded", function () {
 						input.value = value;
 					}
 				}
+
+                // 3. GESTION TYPE OBJET (produit / materiel)
+                const typeObjet = button.dataset.typeObjet || 'materiel';
+                const typeProduitRadio = form.querySelector('#typeProduit');
+                const typeMaterielRadio = form.querySelector('#typeMateriel');
+                const capaciteField = form.querySelector('#capacite_initiale');
+                const niveauField = form.querySelector('#niveau_actuel');
+                const uniteField = form.querySelector('#unite');
+                const seuilPctInput = form.querySelector('#seuil_pourcentage');
+                const seuilValLabel = form.querySelector('#seuil_val');
+
+                if (typeObjet === 'produit') {
+                    if (typeProduitRadio) typeProduitRadio.checked = true;
+                    if (typeMaterielRadio) typeMaterielRadio.checked = false;
+                    if (typeof toggleTypeObjetModal === 'function') toggleTypeObjetModal();
+
+                    const capaciteVal = parseFloat(button.dataset.capacite || '0');
+                    const niveauVal = button.dataset.niveau || '0';
+                    const uniteVal = button.dataset.unite || '';
+                    const seuilPct = button.dataset.seuilPct || '';
+
+                    if (uniteField) {
+                        uniteField.value = uniteVal;
+                        if (typeof updateStepByUnite === 'function') updateStepByUnite();
+                    }
+                    if (niveauField) niveauField.value = niveauVal;
+                    if (seuilPctInput && seuilPct) {
+                        seuilPctInput.value = seuilPct;
+                        if (seuilValLabel) seuilValLabel.innerText = seuilPct + '%';
+                    }
+                    if (capaciteField) {
+                        capaciteField.value = capaciteVal || '';
+                        capaciteField.removeAttribute('readonly');
+                        capaciteField.style.backgroundColor = '';
+                        capaciteField.style.cursor = '';
+                        capaciteField.title = '';
+                    }
+                } else {
+                    if (typeMaterielRadio) typeMaterielRadio.checked = true;
+                    if (typeProduitRadio) typeProduitRadio.checked = false;
+                    if (typeof toggleTypeObjetModal === 'function') toggleTypeObjetModal();
+                    const quantiteField = form.querySelector('#quantite');
+                    const seuilField = form.querySelector('#seuil');
+                    if (quantiteField) quantiteField.value = button.dataset.quantite || '';
+                    if (seuilField) seuilField.value = button.dataset.seuil || '';
+                }
 
                 // 3. APPLICATION CMR (CORRIGÉ)
                 // On cible l'input dans le formulaire spécifique
@@ -1191,7 +1235,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 const stockActuel = parseInt(btnSuggest.dataset.stock) || 0;
                 const seuilAlerte = parseInt(btnSuggest.dataset.seuil) || 0;
                 
-                console.log(`Calcul suggestion : Stock=${stockActuel}, Seuil=${seuilAlerte}`); // Debug console
 
                 // Remplissage UI
                 if (objetNomElement) objetNomElement.textContent = objetNom;

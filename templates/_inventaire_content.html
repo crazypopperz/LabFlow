@@ -5,12 +5,12 @@
                 <th class="checkbox-column"><input type="checkbox" id="select-all-checkbox" title="Tout sélectionner"></th>
             {% endif %}
             
-            <th class="sortable"><a href="#">Nom</a></th>
-            <th class="sortable"><a href="#">Quantité / Niveau</a></th>
-            <th class="sortable"><a href="#">Seuil</a></th>
-            <th class="sortable"><a href="#">Péremption</a></th>
-            <th class="sortable"><a href="#">Catégorie</a></th>
-            <th class="sortable"><a href="#">Armoire</a></th>
+            {% if sort_by == "nom" and direction == "asc" %}{% set next_dir = "desc" %}{% else %}{% set next_dir = "asc" %}{% endif %}<th class="sortable"><a href="?sort_by=nom&direction={{ next_dir }}">Nom</a></th>
+            {% if sort_by == "quantite" and direction == "asc" %}{% set next_dir = "desc" %}{% else %}{% set next_dir = "asc" %}{% endif %}<th class="sortable"><a href="?sort_by=quantite&direction={{ next_dir }}">Quantité / Niveau</a></th>
+            {% if sort_by == "seuil" and direction == "asc" %}{% set next_dir = "desc" %}{% else %}{% set next_dir = "asc" %}{% endif %}<th class="sortable"><a href="?sort_by=seuil&direction={{ next_dir }}">Seuil</a></th>
+            {% if sort_by == "date_peremption" and direction == "asc" %}{% set next_dir = "desc" %}{% else %}{% set next_dir = "asc" %}{% endif %}<th class="sortable"><a href="?sort_by=date_peremption&direction={{ next_dir }}">Péremption</a></th>
+            {% if sort_by == "categorie" and direction == "asc" %}{% set next_dir = "desc" %}{% else %}{% set next_dir = "asc" %}{% endif %}<th class="sortable"><a href="?sort_by=categorie&direction={{ next_dir }}">Catégorie</a></th>
+            {% if sort_by == "armoire" and direction == "asc" %}{% set next_dir = "desc" %}{% else %}{% set next_dir = "asc" %}{% endif %}<th class="sortable"><a href="?sort_by=armoire&direction={{ next_dir }}">Armoire</a></th>
             <th>Image</th>
             <th>État</th>
             {% if session.user_id %}<th>Actions</th>{% endif %}
@@ -159,9 +159,10 @@
                     </button>
                     
                     {% if session.user_role == 'admin' %}
-                    <form class="d-inline m-0 p-0" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post" onsubmit="return confirm('Supprimer définitivement ?');">
+                    <form class="d-inline m-0 p-0" action="{{ url_for('inventaire.supprimer_objet', id_objet=objet.id) }}" method="post">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-delete-objet"
+                                data-objet-nom="{{ objet.nom }}">
                             <i class="bi bi-trash"></i>
                         </button>
                     </form>
@@ -175,121 +176,3 @@
 </table>
 {% include '_pagination.html' %}
 
-<!-- SCRIPT POUR REMPLIR LA MODALE DE MODIFICATION -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const editButtons = document.querySelectorAll('.edit-objet-btn');
-    const modalTitle = document.getElementById('modal-objet-title');
-    const form = document.querySelector('#addObjectModal form');
-    
-    // Éléments pour l'image
-    const imgPreviewContainer = document.getElementById('image-preview-container');
-    const imgPreview = document.getElementById('image-preview');
-    
-    function setValueIfExists(elementId, value) {
-        const element = document.getElementById(elementId);
-        if (element && value && value !== 'null' && value !== 'undefined') {
-            element.value = value;
-        } else if (element) {
-            element.value = '';
-        }
-    }
-    
-    editButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.getAttribute('data-objet-id');
-            const type = this.getAttribute('data-type-objet');
-            
-            form.action = "/modifier_objet/" + id;
-            if(modalTitle) modalTitle.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier l\'objet';
-
-            // Champs communs
-            setValueIfExists('nom', this.getAttribute('data-nom'));
-            setValueIfExists('armoire_id', this.getAttribute('data-armoire-id'));
-            setValueIfExists('categorie_id', this.getAttribute('data-categorie-id'));
-            setValueIfExists('date_peremption', this.getAttribute('data-date-peremption'));
-            document.getElementById('is_cmr').checked = (this.getAttribute('data-is-cmr') === 'on');
-            setValueIfExists('niveau_requis', this.getAttribute('data-niveau-requis'));
-
-            // --- GESTION IMAGE (RAPATRIEMENT) ---
-            const fullImgUrl = this.getAttribute('data-full-image-url');
-            if (fullImgUrl && imgPreview && imgPreviewContainer) {
-                imgPreview.src = fullImgUrl;
-                imgPreviewContainer.style.display = 'block';
-            } else if (imgPreviewContainer) {
-                imgPreviewContainer.style.display = 'none';
-            }
-            // ------------------------------------
-
-            // GESTION TYPE - POINT 5 CORRIGÉ : D'ABORD cocher les boutons et toggle, ENSUITE remplir
-            if (type === 'produit') {
-                document.getElementById('typeProduit').checked = true;
-                document.getElementById('typeMateriel').checked = false;
-                
-                // ⬇️ APPEL DU TOGGLE AVANT LE REMPLISSAGE (évite l'écrasement)
-                if(typeof toggleTypeObjetModal === 'function') {
-                    toggleTypeObjetModal();
-                }
-                
-                // MAINTENANT on remplit les valeurs
-                setValueIfExists('unite', this.getAttribute('data-unite'));
-                setValueIfExists('capacite_initiale', this.getAttribute('data-capacite'));
-                setValueIfExists('niveau_actuel', this.getAttribute('data-niveau'));
-                
-                const seuilPct = this.getAttribute('data-seuil-pct');
-                if(seuilPct) {
-                    document.getElementById('seuil_pourcentage').value = seuilPct;
-                    document.getElementById('seuil_val').innerText = seuilPct + '%';
-                }
-                
-                // POINT 3 CORRIGÉ : Bloquer la modification de la capacité totale (elle ne doit jamais changer)
-                const capaciteField = document.getElementById('capacite_initiale');
-                if (capaciteField) {
-                    capaciteField.setAttribute('readonly', 'readonly');
-                    capaciteField.style.backgroundColor = '#e9ecef';
-                    capaciteField.style.cursor = 'not-allowed';
-                    capaciteField.title = "La contenance totale ne peut pas être modifiée. Seul le niveau actuel (reste) peut changer.";
-                }
-                
-            } else {
-                document.getElementById('typeMateriel').checked = true;
-                document.getElementById('typeProduit').checked = false;
-                
-                // ⬇️ APPEL DU TOGGLE AVANT LE REMPLISSAGE
-                if(typeof toggleTypeObjetModal === 'function') {
-                    toggleTypeObjetModal();
-                }
-                
-                // MAINTENANT on remplit les valeurs
-                setValueIfExists('quantite', this.getAttribute('data-quantite'));
-                setValueIfExists('seuil', this.getAttribute('data-seuil'));
-            }
-        });
-    });
-    
-    // Reset
-    const modalEl = document.getElementById('addObjectModal');
-    if(modalEl) {
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            form.reset();
-            form.action = "{{ url_for('inventaire.ajouter_objet') }}";
-            if(modalTitle) modalTitle.innerHTML = '<i class="bi bi-box-seam-fill me-2"></i>Ajouter un élément';
-            document.getElementById('typeMateriel').checked = true;
-            
-            // Réactiver le champ capacité au reset (pour permettre l'ajout d'un nouveau produit)
-            const capaciteField = document.getElementById('capacite_initiale');
-            if (capaciteField) {
-                capaciteField.removeAttribute('readonly');
-                capaciteField.style.backgroundColor = '';
-                capaciteField.style.cursor = '';
-                capaciteField.title = '';
-            }
-            
-            // Cacher la preview image au reset
-            if(imgPreviewContainer) imgPreviewContainer.style.display = 'none';
-            
-            if(typeof toggleTypeObjetModal === 'function') toggleTypeObjetModal();
-        });
-    }
-});
-</script>

@@ -164,9 +164,8 @@
             <form id="dangerModalForm" action="" method="post">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body p-4">
-					<p class="mb-0 fs-5">Voulez-vous vraiment supprimer cette réservation ?</p>
-					<p class="text-muted small mt-2">Cette action est irréversible et remettra le stock en circulation.</p>
-				</div>
+                    <p id="dangerModalText" class="mb-0 fs-5">Êtes-vous sûr de vouloir effectuer cette action ?</p>
+                </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                     <button type="submit" class="btn btn-danger">Confirmer</button>
@@ -244,7 +243,7 @@
                                     </div>
                                     <div class="col-5">
                                         <label for="unite" class="form-label fw-bold small">Unité</label>
-                                        <select class="form-select form-select-sm" id="unite" name="unite">
+                                        <select class="form-select form-select-sm" id="unite" name="unite" onchange="updateStepByUnite()">
                                             <option value="mL">mL</option>
                                             <option value="L">L</option>
                                             <option value="g">g</option>
@@ -368,6 +367,11 @@
                             <div class="card border-0 shadow-sm">
                                 <div class="card-body p-2 bg-white rounded">
                                      <label class="form-label fw-bold text-muted small mt-3">SÉCURITÉ (FDS)</label>
+                                    <div id="fds-current-status" class="alert alert-success py-1 px-2 mb-2 small align-items-center gap-2" style="display:none">
+                                        <i class="bi bi-file-earmark-pdf-fill text-danger"></i>
+                                        <span>FDS active — <a id="fds-current-link" href="#" target="_blank"><span id="fds-current-type"></span></a></span>
+                                    </div>
+                                    <div id="fds-help-text" class="text-muted small mb-2">Ajoutez un fichier ou un lien pour la sécurité.</div>
                                     <div class="nav nav-tabs mb-2" id="nav-tab-fds" role="tablist">
                                         <button class="nav-link active py-1 px-3 small" data-bs-toggle="tab" data-bs-target="#nav-file-fds" type="button">PDF</button>
                                         <button class="nav-link py-1 px-3 small" data-bs-toggle="tab" data-bs-target="#nav-url-fds" type="button">Lien</button>
@@ -397,6 +401,15 @@
 </div>
 
 <script>
+function updateStepByUnite() {
+    const unite = document.getElementById('unite').value;
+    const step = (unite === 'L' || unite === 'kg') ? '0.1' : '1';
+    const capaciteField = document.getElementById('capacite_initiale');
+    const niveauField = document.getElementById('niveau_actuel');
+    if (capaciteField) capaciteField.step = step;
+    if (niveauField) niveauField.step = step;
+}
+
 function toggleTypeObjetModal() {
     const isProduit = document.getElementById('typeProduit').checked;
     

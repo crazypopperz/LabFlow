@@ -3,9 +3,10 @@
 # Sauvegarde, restauration, import/export, rapports
 # ============================================================
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, send_file
+from werkzeug.utils import secure_filename as sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
-from datetime import datetime
+from datetime import datetime, date
 from io import BytesIO
 import os
 import json
@@ -20,7 +21,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
 from extensions import limiter
-from db import db, Objet, Armoire, Categorie, Utilisateur, Historique, Etablissement, Reservation, InventaireArchive
+from db import db, Objet, Armoire, Categorie, Utilisateur, Historique, Etablissement, Reservation, InventaireArchive, Fournisseur, Budget, Echeance, KitObjet, Suggestion, Depense, Kit
 from utils import admin_required, log_action, allowed_file, get_etablissement_params
 
 admin_import_bp = Blueprint('admin_import', __name__, url_prefix='/admin')
@@ -33,7 +34,13 @@ def gestion_sauvegardes():
     if params.get('licence_statut') != 'PRO':
         flash("Réservé à la version PRO.", "warning")
         return redirect(url_for('admin.admin'))
-    return render_template("admin_backup.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Sauvegardes'}])
+    return render_template("admin_backup.html", breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Sauvegardes & Restauration', 'url': None}])
+
+def json_serial(obj):
+    import datetime
+    if isinstance(obj, (datetime.date, datetime.datetime)):
+        return obj.isoformat()
+    raise TypeError(f"Type {type(obj)} non sérialisable")
 
 @admin_import_bp.route("/telecharger_db")
 @admin_required
@@ -59,7 +66,7 @@ def telecharger_db():
             data['fournisseurs'].append({'id': f.id, 'nom': f.nom, 'site_web': f.site_web, 'logo': f.logo})
         for o in db.session.execute(db.select(Objet).filter_by(etablissement_id=etablissement_id)).scalars():
             data['objets'].append({
-                'id': o.id, 'nom': o.nom, 'quantite': o.quantite_physique, 'seuil': o.seuil,
+                'id': o.id, 'nom': o.nom, 'type_objet': o.type_objet, 'quantite': o.quantite_physique, 'seuil': o.seuil,
                 'armoire_id': o.armoire_id, 'categorie_id': o.categorie_id, 'date_peremption': o.date_peremption,
                 'image_url': o.image_url, 'fds_url': o.fds_url
             })
@@ -87,6 +94,7 @@ def telecharger_db():
         flash("Erreur technique.", "error")
         return redirect(url_for('admin_import.gestion_sauvegardes'))
 
+MAX_JSON_SIZE = 10 * 1024 * 1024  # 10 Mo
 @admin_import_bp.route("/importer_db", methods=["POST"])
 @admin_required
 def importer_db():
@@ -153,7 +161,7 @@ def importer_db():
                     except: pass
 
                 db.session.add(Objet(
-                    nom=o['nom'], quantite_physique=o['quantite'], seuil=o['seuil'],
+                    nom=o['nom'], type_objet=o.get('type_objet', 'materiel'), quantite_physique=o['quantite'], seuil=o['seuil'],
                     armoire_id=new_armoire_id, categorie_id=new_cat_id, date_peremption=date_perim,
                     image_url=o.get('image_url'), fds_url=o.get('fds_url'), etablissement_id=etablissement_id
                 ))
@@ -201,7 +209,7 @@ def importer_page():
     etablissement_id = session['etablissement_id']
     armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
     categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
-    return render_template("admin_import.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Import'}], armoires=armoires, categories=categories)
+    return render_template("admin_import.html", breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Importation en masse', 'url': None}])
 
 @admin_import_bp.route("/telecharger_modele")
 @admin_required
@@ -431,10 +439,7 @@ def rapports():
             'type_badge': type_badge
         })
 
-    breadcrumbs = [
-        {'text': 'Admin', 'url': url_for('admin.admin')}, 
-        {'text': 'Historique Complet'}
-    ]
+    breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Rapport d\'activité', 'url': None}]
 
     return render_template("rapports.html", 
                            logs=logs, 

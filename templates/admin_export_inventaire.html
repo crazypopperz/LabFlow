@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Export Inventaire — LabFlow{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
+                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                <i class="bi bi-clipboard2-data-fill fs-3"></i>
+            </div>
+            <div>
+                <h1 class="h3 mb-0 fw-bold text-dark">Export de l'inventaire</h1>
+                <p class="text-muted mb-0">Téléchargez votre inventaire en PDF ou Excel</p>
+            </div>
+        </div>
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Carte Tout l'inventaire -->
+        <div class="col-md-6 col-lg-3">
+            <div class="export-card h-100">
+                <div class="export-card-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                    <i class="bi bi-boxes text-white fs-3"></i>
+                </div>
+                <h5 class="fw-bold mt-3 mb-1">Inventaire complet</h5>
+                <p class="text-muted small mb-4">Tout le matériel et les produits de votre laboratoire.</p>
+                <div class="mt-auto d-flex gap-2">
+                    <a href="{{ url_for('inventaire.exporter_inventaire', format='pdf') }}"
+                       class="btn btn-outline-danger btn-sm flex-fill">
+                        <i class="bi bi-file-pdf me-1"></i>PDF
+                    </a>
+                    <a href="{{ url_for('inventaire.exporter_inventaire', format='excel') }}"
+                       class="btn btn-outline-success btn-sm flex-fill">
+                        <i class="bi bi-file-excel me-1"></i>Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carte CMR -->
+        <div class="col-md-6 col-lg-3">
+            <div class="export-card h-100">
+                <div class="export-card-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                    <i class="bi bi-radioactive text-white fs-3"></i>
+                </div>
+                <h5 class="fw-bold mt-3 mb-1">Produits CMR</h5>
+                <p class="text-muted small mb-4">Uniquement les produits cancérigènes, mutagènes et reprotoxiques.</p>
+                <div class="mt-auto d-flex gap-2">
+                    <a href="{{ url_for('inventaire.exporter_inventaire', format='pdf', cmr='true') }}"
+                       class="btn btn-outline-danger btn-sm flex-fill">
+                        <i class="bi bi-file-pdf me-1"></i>PDF
+                    </a>
+                    <a href="{{ url_for('inventaire.exporter_inventaire', format='excel', cmr='true') }}"
+                       class="btn btn-outline-success btn-sm flex-fill">
+                        <i class="bi bi-file-excel me-1"></i>Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carte Par armoire -->
+        <div class="col-md-6 col-lg-3">
+            <div class="export-card h-100">
+                <div class="export-card-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                    <i class="bi bi-archive text-white fs-3"></i>
+                </div>
+                <h5 class="fw-bold mt-3 mb-1">Par armoire</h5>
+                <p class="text-muted small mb-2">Exportez le contenu d'une armoire spécifique.</p>
+                <select id="select_armoire" class="form-select form-select-sm mb-3">
+                    <option value="" selected disabled>— Choisir une armoire —</option>
+                    {% for a in all_armoires %}
+                        <option value="{{ a.id }}">{{ a.nom }}</option>
+                    {% endfor %}
+                </select>
+                <div class="mt-auto d-flex gap-2">
+                    <button onclick="exporterFiltré('pdf', 'armoire')"
+                            class="btn btn-outline-danger btn-sm flex-fill">
+                        <i class="bi bi-file-pdf me-1"></i>PDF
+                    </button>
+                    <button onclick="exporterFiltré('excel', 'armoire')"
+                            class="btn btn-outline-success btn-sm flex-fill">
+                        <i class="bi bi-file-excel me-1"></i>Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carte Par catégorie -->
+        <div class="col-md-6 col-lg-3">
+            <div class="export-card h-100">
+                <div class="export-card-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <i class="bi bi-tags text-white fs-3"></i>
+                </div>
+                <h5 class="fw-bold mt-3 mb-1">Par catégorie</h5>
+                <p class="text-muted small mb-2">Exportez le contenu d'une catégorie spécifique.</p>
+                <select id="select_categorie" class="form-select form-select-sm mb-3">
+                    <option value="" selected disabled>— Choisir une catégorie —</option>
+                    {% for c in all_categories %}
+                        <option value="{{ c.id }}">{{ c.nom }}</option>
+                    {% endfor %}
+                </select>
+                <div class="mt-auto d-flex gap-2">
+                    <button onclick="exporterFiltré('pdf', 'categorie')"
+                            class="btn btn-outline-danger btn-sm flex-fill">
+                        <i class="bi bi-file-pdf me-1"></i>PDF
+                    </button>
+                    <button onclick="exporterFiltré('excel', 'categorie')"
+                            class="btn btn-outline-success btn-sm flex-fill">
+                        <i class="bi bi-file-excel me-1"></i>Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+function exporterFiltré(format, type) {
+    const select = document.getElementById('select_' + type);
+    const val = select?.value;
+    if (!val) {
+        select.classList.add('is-invalid');
+        setTimeout(() => select.classList.remove('is-invalid'), 2000);
+        return;
+    }
+    const baseUrl = "{{ url_for('inventaire.exporter_inventaire') }}";
+    const url = `${baseUrl}?format=${format}&${type}_id=${val}`;
+    window.location.href = url;
+}
+</script>
+{% endblock %}

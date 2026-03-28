@@ -25,8 +25,7 @@ def gestion_utilisateurs():
         .limit(100)
     ).scalars().all()
 
-    breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Utilisateurs'}]
-    return render_template("admin_utilisateurs.html", utilisateurs=utilisateurs, breadcrumbs=breadcrumbs)
+    return render_template("admin_utilisateurs.html", utilisateurs=utilisateurs, breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Gestion des utilisateurs', 'url': None}])
 
 @admin_users_bp.route("/utilisateurs/ajouter", methods=["POST"])
 @admin_required

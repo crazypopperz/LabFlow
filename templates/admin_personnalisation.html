@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Personnalisation — LabFlow{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
+                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <i class="bi bi-palette-fill fs-3"></i>
+            </div>
+            <div>
+                <h1 class="h3 mb-0 fw-bold text-dark">Personnalisation & Thème</h1>
+                <p class="text-muted mb-0">Adaptez l'apparence de LabFlow à votre établissement</p>
+            </div>
+        </div>
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+
+        <!-- Couleur principale -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center"
+                             style="width:48px;height:48px;background:linear-gradient(135deg,#667eea,#764ba2);">
+                            <i class="bi bi-droplet-fill text-white fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Couleur principale</h5>
+                            <p class="text-muted small mb-0">Appliquée au header, boutons et accents</p>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('admin.sauvegarder_theme') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="couleur">
+
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <input type="color" name="couleur_principale" id="couleur_principale"
+                                   class="form-control form-control-color shadow-sm"
+                                   value="{{ params.get('couleur_principale', '#1f3b73') }}"
+                                   style="width:64px;height:56px;padding:4px;border-radius:12px;cursor:pointer;">
+                            <div>
+                                <div class="fw-bold" id="couleur-preview-label">{{ params.get('couleur_principale', '#1f3b73') }}</div>
+                                <div class="text-muted small">Cliquez sur le sélecteur pour changer</div>
+                            </div>
+                        </div>
+
+                        <!-- Aperçu -->
+                        <div class="p-3 rounded-3 mb-4" id="apercu-couleur"
+                             style="background: {{ params.get('couleur_principale', '#1f3b73') }};">
+                            <div class="d-flex align-items-center gap-2 text-white">
+                                <i class="bi bi-eye me-1"></i>
+                                <span class="fw-bold small">Aperçu de la couleur dans l'interface</span>
+                            </div>
+                        </div>
+
+						<button type="submit" class="btn btn-primary w-100 mb-2">
+							<i class="bi bi-check-circle me-2"></i>Appliquer la couleur
+						</button>
+                    </form>
+					<form action="{{ url_for('admin.sauvegarder_theme') }}" method="POST">
+						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+						<input type="hidden" name="action" value="couleur">
+						<input type="hidden" name="couleur_principale" value="#1f3b73">
+						<button type="submit" class="btn btn-outline-secondary w-100">
+							<i class="bi bi-arrow-counterclockwise me-2"></i>Réinitialiser la couleur par défaut
+						</button>
+					</form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logo -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center"
+                             style="width:48px;height:48px;background:linear-gradient(135deg,#f59e0b,#ef4444);">
+                            <i class="bi bi-image-fill text-white fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Logo établissement</h5>
+                            <p class="text-muted small mb-0">Affiché sur les exports PDF et impressions</p>
+                        </div>
+                    </div>
+
+                    <!-- Logo actuel -->
+                    {% if params.get('logo_url') %}
+                    <div class="text-center p-3 bg-light rounded-3 mb-3">
+                        <img src="/static/{{ params.get('logo_url') }}"
+                             height="80" class="rounded shadow-sm"
+                             alt="Logo actuel">
+                        <p class="text-muted small mt-2 mb-0">Logo actuel</p>
+                    </div>
+                    {% else %}
+                    <div class="text-center p-4 bg-light rounded-3 mb-3 border border-dashed">
+                        <i class="bi bi-image text-muted fs-1"></i>
+                        <p class="text-muted small mt-2 mb-0">Aucun logo défini</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Upload -->
+                    <form action="{{ url_for('admin.sauvegarder_theme') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="logo">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Nouveau logo</label>
+                            <input type="file" name="logo_file" class="form-control form-control-sm"
+                                   accept=".png,.jpg,.jpeg,.svg,.webp">
+                            <div class="form-text">PNG, JPG, SVG ou WebP — max 2 Mo</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-upload me-2"></i>Téléverser le logo
+                        </button>
+                    </form>
+
+                    <!-- Supprimer logo -->
+                    {% if params.get('logo_url') %}
+                    <button type="button" class="btn btn-outline-danger w-100"
+                            data-bs-toggle="modal" data-bs-target="#supprimerLogoModal">
+                        <i class="bi bi-trash me-2"></i>Supprimer le logo actuel
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% include '_modals.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Aperçu couleur en temps réel
+const input = document.getElementById('couleur_principale');
+const apercu = document.getElementById('apercu-couleur');
+const label = document.getElementById('couleur-preview-label');
+
+if (input) {
+    input.addEventListener('input', () => {
+        if (apercu) apercu.style.background = input.value;
+        if (label) label.textContent = input.value;
+    });
+}
+
+// Bouton reset aperçu
+document.querySelector('input[name="couleur_principale"][type="hidden"]')?.closest('form')
+    ?.querySelector('button')?.addEventListener('click', () => {
+        if (apercu) apercu.style.background = '#1f3b73';
+        if (label) label.textContent = '#1f3b73';
+        if (input) input.value = '#1f3b73';
+    });
+</script>
+{% endblock %}

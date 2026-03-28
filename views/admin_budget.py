@@ -24,7 +24,7 @@ admin_budget_bp = Blueprint('admin_budget', __name__, url_prefix='/admin')
 def gestion_echeances():
     etablissement_id = session['etablissement_id']
     echeances = db.session.execute(db.select(Echeance).filter_by(etablissement_id=etablissement_id).order_by(Echeance.date_echeance.asc())).scalars().all()
-    breadcrumbs = [{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Échéances'}]
+    breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Gestion des échéances', 'url': None}]
     return render_template("admin_echeances.html", echeances=echeances, breadcrumbs=breadcrumbs, date_actuelle=date.today())
 
 @admin_budget_bp.route("/echeances/ajouter", methods=['POST'])
@@ -132,7 +132,7 @@ def budget():
     if budgets_archives and budgets_archives[0].annee >= annee_scolaire_actuelle: annee_proposee = budgets_archives[0].annee + 1
     fournisseurs = db.session.execute(db.select(Fournisseur).filter_by(etablissement_id=etablissement_id).order_by(Fournisseur.nom)).scalars().all()
     
-    return render_template("budget.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Budget'}], 
+    return render_template("budget.html", breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Gestion du budget', 'url': None}], 
                            budget_affiche=budget_affiche, budget_actuel_pour_modales=budget_actuel_pour_modales,
                            annee_proposee_pour_creation=annee_proposee, depenses=depenses, total_depenses=total_depenses,
                            solde=solde, fournisseurs=fournisseurs, budgets_archives=budgets_archives,
@@ -473,7 +473,7 @@ def gestion_fournisseurs():
         .filter(Fournisseur.etablissement_id == etablissement_id)
         .group_by(Fournisseur.id).order_by(Fournisseur.nom)
     ).all()
-    return render_template("admin_fournisseurs.html", fournisseurs=fournisseurs, breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Fournisseurs'}])
+    return render_template("admin_fournisseurs.html", fournisseurs=fournisseurs, breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Gestion des fournisseurs', 'url': None}])
 
 @admin_budget_bp.route("/fournisseurs/ajouter", methods=["POST"])
 @admin_required

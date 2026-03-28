@@ -15,6 +15,7 @@ def index():
     equipements = security_service.get_all_equipements(session['etablissement_id'])
     breadcrumbs = [
         {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text' : 'Administration', 'url' : url_for('admin.admin')},
         {'text': 'Sécurité & Maintenance', 'url': None}
     ]
     return render_template('securite/index.html', equipements=equipements, breadcrumbs=breadcrumbs)

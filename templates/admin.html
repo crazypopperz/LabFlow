@@ -352,69 +352,24 @@
                 </div>
             </div>
 
-            <!-- Carte Export Inventaire -->
-			<div class="admin-card card-wide">
-				<div class="card-icon-wrapper card-icon-cyan">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px">
-						<path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160v-40h240v40h160q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Z"/>
-					</svg>
-				</div>
-				<h3 class="card-title">Exporter l'Inventaire</h3>
-				<p class="card-description">Téléchargez la liste de votre matériel.</p>
-				
-				<div class="mb-3">
-					<!-- Sélecteur de Type (Radios) -->
-					<div class="btn-group w-100 mb-3" role="group" aria-label="Type d'export">
-    
-						<!-- Option TOUT -->
-						<input type="radio" class="btn-check" name="export_type" id="exp_all" value="all" checked onchange="toggleExportFilters()">
-						<!-- J'ai ajouté la classe 'btn-export-select' ici -->
-						<label class="btn btn-outline-light text-dark border btn-export-select" for="exp_all">Tout</label>
-
-						<!-- Option ARMOIRE -->
-						<input type="radio" class="btn-check" name="export_type" id="exp_armoire" value="armoire" onchange="toggleExportFilters()">
-						<!-- Et ici -->
-						<label class="btn btn-outline-light text-dark border btn-export-select" for="exp_armoire">Par Armoire</label>
-
-						<!-- Option CATÉGORIE -->
-						<input type="radio" class="btn-check" name="export_type" id="exp_cat" value="categorie" onchange="toggleExportFilters()">
-						<!-- Et là -->
-						<label class="btn btn-outline-light text-dark border btn-export-select" for="exp_cat">Par Catégorie</label>
-						
-						<!-- Option CMR -->
-						<input type="radio" class="btn-check" name="export_type" id="exp_cmr" value="cmr" onchange="toggleExportFilters()">
-						<label class="btn btn-outline-light text-dark border btn-export-select text-danger fw-bold" for="exp_cmr">CMR</label>
-					
-					</div>
-					<!-- Selects -->
-					<div id="div_select_armoire" style="display:none;">
-						<select id="select_armoire" class="form-select form-select-sm">
-							<option value="" selected disabled>-- Choisir une armoire --</option>
-							{% for a in all_armoires %}
-								<option value="{{ a.id }}">{{ a.nom }}</option>
-							{% endfor %}
-						</select>
-					</div>
-
-					<div id="div_select_categorie" style="display:none;">
-						<select id="select_categorie" class="form-select form-select-sm">
-							<option value="" selected disabled>-- Choisir une catégorie --</option>
-							{% for c in all_categories %}
-								<option value="{{ c.id }}">{{ c.nom }}</option>
-							{% endfor %}
-						</select>
-					</div>
-				</div>
-
-				<div class="card-footer card-footer-multiple">
-					<button onclick="lancerExport('pdf', this)" class="btn-card btn-secondary w-100 mb-2">
-						<i class="bi bi-file-pdf me-2"></i>Export PDF
-					</button>
-					<button onclick="lancerExport('excel', this)" class="btn-card btn-secondary w-100">
-						<i class="bi bi-file-excel me-2"></i>Export Excel
-					</button>
-				</div>
-			</div>
+			<!-- Carte Export Inventaire -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper card-icon-cyan">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px">
+                        <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160v-40h240v40h160q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Z"/>
+                    </svg>
+                </div>
+                <h3 class="card-title">Exporter l'Inventaire</h3>
+                <p class="card-description">Téléchargez votre inventaire en PDF ou Excel : complet, par armoire, par catégorie ou CMR uniquement.</p>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin.export_inventaire_page') }}" class="btn-card btn-primary">
+                        Exporter
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
+                            <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -449,6 +404,24 @@
                     </a>
                 </div>
             </div>
+			<!-- Carte Reset -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px" fill="white">
+                        <path d="M440-122q-121-15-200.5-105.5T160-440q0-66 26-126t72-108l57 57q-38 37-56.5 87T240-440q0 97 63 166.5T440-186v64Zm80 0v-64q97-13 160-82.5T743-440q0-100-70-170t-170-70h-13l44 44-56 56-140-140 140-140 56 56-44 44h13q134 0 227 93t93 227q0 121-79.5 211.5T520-122Z"/>
+                    </svg>
+                </div>
+                <h3 class="card-title">Reset Établissement</h3>
+                <p class="card-description">Supprimez sélectivement les données de votre établissement : inventaire, réservations, kits, armoires...</p>
+                <div class="card-footer">
+                    <a href="{{ url_for('admin.reset_etablissement_page') }}" class="btn-card btn-primary">
+                        Accéder au reset
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
+                            <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
 			<!-- Carte Personnalisation & Thème -->
 			<div class="admin-card">
 				<div class="card-icon-wrapper" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
@@ -459,48 +432,14 @@
 				</div>
 				<h3 class="card-title">Personnalisation & Thème</h3>
 				<p class="card-description">Personnalisez les couleurs et le logo de votre établissement.</p>
-
-				<form action="{{ url_for('admin.sauvegarder_theme') }}" method="POST" enctype="multipart/form-data" class="mt-3">
-					<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-					<!-- Couleur principale -->
-					<div class="mb-3">
-						<label class="filter-label d-block mb-1">Couleur principale</label>
-						<div class="d-flex align-items-center gap-2">
-							<input type="color" name="couleur_principale" class="form-control form-control-color"
-								   value="{{ get_etablissement_params(session.get('etablissement_id')).get('couleur_principale', '#1f3b73') }}"
-								   style="width:50px; height:38px; padding:2px; border-radius:8px;">
-							<small class="text-muted">Appliquée au header et aux boutons</small>
-						</div>
-					</div>
-
-					<!-- Logo -->
-					<div class="mb-3">
-						<label class="filter-label d-block mb-1">Logo établissement</label>
-						<input type="file" name="logo_file" class="form-control form-control-sm"
-								   accept=".png,.jpg,.jpeg,.svg,.webp">
-						<small class="text-muted">PNG, JPG ou SVG — max 2Mo</small>
-						{% set params = get_etablissement_params(session.etablissement_id) %}
-						{% if params.get('logo_url') %}
-						<div class="mt-2 d-flex align-items-center gap-2">
-							<img src="/static/{{ params.get('logo_url') }}" height="40" class="border rounded">
-							<button type="button" class="btn btn-sm btn-outline-danger"
-								data-bs-toggle="modal" data-bs-target="#supprimerLogoModal">
-								<i class="bi bi-trash me-1"></i>Supprimer le logo
-							</button>
-						</div>
-						{% endif %}
-					</div>
-
-					<div class="card-footer p-0 border-0 mt-3">
-						<button type="submit" class="btn-card btn-primary">
-							Sauvegarder
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
-								<path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
-							</svg>
-						</button>
-					</div>
-				</form>
+				<div class="card-footer">
+					<a href="{{ url_for('admin.personnalisation_page') }}" class="btn-card btn-primary">
+						Personnaliser
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
+							<path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
+						</svg>
+					</a>
+				</div>
 			</div>
         </div>
     </div>

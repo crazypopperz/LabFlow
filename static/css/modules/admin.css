@@ -441,3 +441,47 @@
 .btn-delete-kit svg { fill: #dc2626; }
 .btn-delete-kit:hover { background: #dc2626; color: white; }
 .btn-delete-kit:hover svg { fill: white; }
+
+
+/* ========================================================
+   CARTE EXPORT INVENTAIRE
+   ===================================================== */
+.export-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+}
+
+.export-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--couleur-principale), #667eea);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.export-card:hover {
+    border-color: var(--couleur-principale);
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+}
+
+.export-card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.export-card:hover::before {
+    transform: scaleX(1);
+}

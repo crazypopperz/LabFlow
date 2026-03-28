@@ -797,6 +797,18 @@ def importer_pack(pack_id):
         current_app.logger.error(f"Erreur import pack: {e}", exc_info=True)
         return jsonify({"success": False, "error": "Erreur technique lors de l'import"}), 500
 
+@admin_bp.route("/personnalisation", methods=["GET"])
+@admin_required
+def personnalisation_page():
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Personnalisation', 'url': None}
+    ]
+    params = get_etablissement_params(session.get('etablissement_id'))
+    return render_template("admin_personnalisation.html", breadcrumbs=breadcrumbs, params=params)
+
+
 @admin_bp.route("/theme", methods=["POST"])
 @admin_required
 def sauvegarder_theme():
@@ -860,7 +872,7 @@ def sauvegarder_theme():
         current_app.logger.error(f"Erreur sauvegarde thème: {e}")
         flash("Erreur lors de la sauvegarde.", "error")
 
-    return redirect(url_for('admin.admin'))
+    return redirect(url_for('admin.personnalisation_page'))
 
 @admin_bp.route("/supprimer_logo", methods=["GET", "POST"])
 @admin_required
@@ -892,6 +904,159 @@ def supprimer_logo():
         flash("Erreur lors de la suppression.", "error")
     return redirect(url_for('admin.admin'))
 
+# ================================================================
+# EXPORT INVENTAIRE
+# ================================================================
+@admin_bp.route("/export-inventaire", methods=["GET"])
+@admin_required
+def export_inventaire_page():
+    from db import Armoire, Categorie
+    etablissement_id = session.get('etablissement_id')
+    armoires = db.session.execute(
+        db.select(Armoire).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)
+    ).scalars().all()
+    categories = db.session.execute(
+        db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)
+    ).scalars().all()
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Export inventaire', 'url': None}
+    ]
+    return render_template("admin_export_inventaire.html",
+                           breadcrumbs=breadcrumbs,
+                           all_armoires=armoires,
+                           all_categories=categories)
+
+
+# ================================================================
+# RESET ÉTABLISSEMENT
+# ================================================================
+@admin_bp.route("/reset", methods=["GET"])
+@admin_required
+def reset_etablissement_page():
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Reset établissement', 'url': None}
+    ]
+    etablissement = db.session.execute(
+        db.select(Etablissement).filter_by(id=session.get('etablissement_id'))
+    ).scalar_one_or_none()
+    return render_template("admin_reset.html", breadcrumbs=breadcrumbs, etablissement=etablissement)
+
+
+@admin_bp.route("/reset", methods=["POST"])
+@admin_required
+def reset_etablissement():
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'JSON requis'}), 415
+    etablissement_id = session.get('etablissement_id')
+    data = request.get_json()
+    confirmation = data.get('confirmation', '')
+    elements = data.get('elements', [])
+
+    # Vérification confirmation
+    etablissement = db.session.execute(
+        db.select(Etablissement).filter_by(id=etablissement_id)
+    ).scalar_one_or_none()
+    if not etablissement or confirmation != etablissement.nom:
+        return jsonify({'success': False, 'error': 'Confirmation incorrecte'}), 400
+
+    try:
+        from db import KitObjet, ReservationRecurrence, Salle
+        stats = {}
+
+        if 'reservations' in elements:
+            count = db.session.execute(
+                db.select(db.func.count(Reservation.id))
+                .where(Reservation.etablissement_id == etablissement_id)
+            ).scalar()
+            db.session.execute(
+                db.delete(Reservation).where(Reservation.etablissement_id == etablissement_id)
+            )
+            db.session.execute(
+                db.delete(ReservationRecurrence).where(ReservationRecurrence.etablissement_id == etablissement_id)
+            )
+            stats['reservations'] = count
+
+        if 'kits' in elements:
+            kits = db.session.execute(
+                db.select(Kit).filter_by(etablissement_id=etablissement_id)
+            ).scalars().all()
+            for kit in kits:
+                db.session.execute(db.delete(KitObjet).where(KitObjet.kit_id == kit.id))
+                db.session.delete(kit)
+            stats['kits'] = len(kits)
+
+        if 'inventaire' in elements:
+            objets = db.session.execute(
+                db.select(Objet).filter_by(etablissement_id=etablissement_id)
+            ).scalars().all()
+            for obj in objets:
+                db.session.execute(db.delete(KitObjet).where(KitObjet.objet_id == obj.id))
+                db.session.execute(db.delete(Reservation).where(Reservation.objet_id == obj.id))
+                db.session.delete(obj)
+            stats['inventaire'] = len(objets)
+
+        if 'armoires' in elements:
+            count = db.session.execute(
+                db.select(db.func.count(Armoire.id))
+                .where(Armoire.etablissement_id == etablissement_id)
+            ).scalar()
+            db.session.execute(
+                db.delete(Armoire).where(Armoire.etablissement_id == etablissement_id)
+            )
+            stats['armoires'] = count
+
+        if 'categories' in elements:
+            count = db.session.execute(
+                db.select(db.func.count(Categorie.id))
+                .where(Categorie.etablissement_id == etablissement_id)
+            ).scalar()
+            db.session.execute(
+                db.delete(Categorie).where(Categorie.etablissement_id == etablissement_id)
+            )
+            stats['categories'] = count
+
+        if 'salles' in elements:
+            count = db.session.execute(
+                db.select(db.func.count(Salle.id))
+                .where(Salle.etablissement_id == etablissement_id)
+            ).scalar()
+            db.session.execute(
+                db.delete(Salle).where(Salle.etablissement_id == etablissement_id)
+            )
+            stats['salles'] = count
+
+        if 'fournisseurs' in elements:
+            count = db.session.execute(
+                db.select(db.func.count(Fournisseur.id))
+                .where(Fournisseur.etablissement_id == etablissement_id)
+            ).scalar()
+            db.session.execute(
+                db.delete(Fournisseur).where(Fournisseur.etablissement_id == etablissement_id)
+            )
+            stats['fournisseurs'] = count
+
+        if 'budget' in elements:
+            budgets = db.session.execute(
+                db.select(Budget).filter_by(etablissement_id=etablissement_id)
+            ).scalars().all()
+            for budget in budgets:
+                db.session.execute(db.delete(Depense).where(Depense.budget_id == budget.id))
+                db.session.delete(budget)
+            stats['budget'] = len(budgets)
+
+        db.session.commit()
+        log_action('reset_etablissement', f"Reset: {list(elements)}")
+        return jsonify({'success': True, 'stats': stats})
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur reset: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Erreur technique'}), 500
+
 # ============================================================
 # GESTION DES SALLES
 # ============================================================
@@ -904,7 +1069,7 @@ def gestion_salles():
         .filter_by(etablissement_id=etablissement_id)
         .order_by(Salle.nom)
     ).scalars().all()
-    return render_template("admin_salles.html", salles=salles)
+    return render_template("admin_salles.html", salles=salles, breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Gestion des salles', 'url': None}])
 
 @admin_bp.route("/salles/ajouter", methods=["POST"])
 @admin_required

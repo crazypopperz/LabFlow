@@ -1,147 +1,496 @@
 {% extends "base.html" %}
-
-{% block title %}Importation en Masse - LabFlow{% endblock %}
+{% block title %}Assistant d'Importation - LabFlow{% endblock %}
 
 {% block content %}
-
 <div class="main-container">
     {% include '_breadcrumb.html' %}
 
     <!-- En-tête -->
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #0dcaf0 0%, #0d6efd 100%);">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
+                 style="width:48px;height:48px;background:linear-gradient(135deg,#0dcaf0 0%,#0d6efd 100%);">
                 <i class="bi bi-file-earmark-spreadsheet-fill fs-3"></i>
             </div>
-            <span class="fw-bold">Importation en Masse</span>
+            <span class="fw-bold">Assistant d'Importation</span>
         </h2>
+        <a href="{{ url_for('admin_import.telecharger_modele_excel') }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-file-earmark-arrow-down me-2"></i>Télécharger le modèle LabFlow
+        </a>
     </div>
 
-    <div class="row g-4">
-        
-        <!-- COLONNE GAUCHE : Instructions -->
-        <div class="col-lg-6">
-            <div class="import-card">
-                <!-- Titre Etape 1 -->
-                <div class="import-card-header">
-                    <span class="step-number">1</span>
-                    <h4>Préparer le fichier</h4>
-                </div>
-                
-                <!-- Contenu Etape 1 -->
-                <div class="d-flex flex-column gap-3 h-100">
-                    <p class="text-muted mb-0">
-                        Pour importer de nouveaux objets, téléchargez le modèle Excel officiel. 
-                        Remplissez-le en respectant scrupuleusement les colonnes.
-                    </p>
+    <!-- STEPPER -->
+    <div class="d-flex align-items-center mb-4 gap-0" id="stepper">
+        <div class="step-item active" id="step-indicator-1">
+            <div class="step-circle">1</div>
+            <div class="step-label">Upload</div>
+        </div>
+        <div class="step-line" id="step-line-1"></div>
+        <div class="step-item" id="step-indicator-2">
+            <div class="step-circle">2</div>
+            <div class="step-label">Mapping</div>
+        </div>
+        <div class="step-line" id="step-line-2"></div>
+        <div class="step-item" id="step-indicator-3">
+            <div class="step-circle">3</div>
+            <div class="step-label">Prévisualisation</div>
+        </div>
+    </div>
 
-                    <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start gap-3 mb-0">
-                        <i class="bi bi-exclamation-triangle-fill fs-4 text-warning-emphasis mt-1"></i>
+    <!-- ==================== ETAPE 1 : UPLOAD ==================== -->
+    <div id="etape-1">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1"><i class="bi bi-cloud-upload me-2 text-primary"></i>Déposez votre fichier Excel</h5>
+                <p class="text-muted small mb-4">Votre fichier existant OU le modèle LabFlow téléchargé ci-dessus. La première ligne doit contenir les en-têtes de colonnes.</p>
+
+                <div class="file-drop-zone" id="drop-zone">
+                    <i class="bi bi-file-earmark-excel drop-icon fs-1 text-success"></i>
+                    <h5 class="fw-bold mt-3 mb-1">Glissez votre fichier ici</h5>
+                    <p class="text-muted small mb-3">ou cliquez pour parcourir</p>
+                    <span class="badge bg-light text-dark border">.xlsx uniquement — max 5 Mo</span>
+                    <input type="file" id="fichier_excel" accept=".xlsx" class="file-input">
+                </div>
+
+                <div id="upload-error" class="alert alert-danger mt-3 d-none"></div>
+
+                <div class="mt-4 text-end">
+                    <button class="btn btn-primary px-5" id="btn-analyser" disabled>
+                        <i class="bi bi-arrow-right-circle me-2"></i>Analyser le fichier
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ETAPE 2 : MAPPING ==================== -->
+    <div id="etape-2" class="d-none">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1"><i class="bi bi-diagram-3 me-2 text-primary"></i>Associez vos colonnes aux champs LabFlow</h5>
+                <p class="text-muted small mb-4">LabFlow a détecté vos colonnes automatiquement. Vérifiez et ajustez si nécessaire.</p>
+
+                <!-- Aperçu du fichier -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-muted text-uppercase small mb-2">Aperçu de votre fichier</h6>
+                    <div class="table-responsive rounded border">
+                        <table class="table table-sm table-hover mb-0" id="apercu-table">
+                            <thead class="table-light"></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div class="text-muted small mt-1" id="nb-lignes-info"></div>
+                </div>
+
+                <!-- Mapping -->
+                <h6 class="fw-bold text-muted text-uppercase small mb-3">Association des colonnes</h6>
+                <div class="row g-3" id="mapping-fields">
+                    <!-- Généré dynamiquement par JS -->
+                </div>
+
+                <div id="mapping-error" class="alert alert-danger mt-3 d-none"></div>
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary" id="btn-retour-1">
+                        <i class="bi bi-arrow-left me-2"></i>Retour
+                    </button>
+                    <button class="btn btn-primary px-5" id="btn-previsualiser">
+                        <i class="bi bi-eye me-2"></i>Prévisualiser l'import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ETAPE 3 : PRÉVISUALISATION ==================== -->
+    <div id="etape-3" class="d-none">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1"><i class="bi bi-check2-all me-2 text-primary"></i>Prévisualisation de l'import</h5>
+                <p class="text-muted small mb-4">Vérifiez les données avant de confirmer. Les lignes en erreur ne seront pas importées.</p>
+
+                <!-- Compteurs -->
+                <div class="row g-3 mb-4" id="compteurs">
+                    <div class="col-4">
+                        <div class="card border-0 bg-success bg-opacity-10 text-center p-3">
+                            <div class="fs-2 fw-bold text-success" id="count-ok">0</div>
+                            <div class="small text-muted">Prêts à importer</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card border-0 bg-danger bg-opacity-10 text-center p-3">
+                            <div class="fs-2 fw-bold text-danger" id="count-erreurs">0</div>
+                            <div class="small text-muted">Erreurs</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card border-0 bg-warning bg-opacity-10 text-center p-3">
+                            <div class="fs-2 fw-bold text-warning" id="count-ignores">0</div>
+                            <div class="small text-muted">Ignorés (déjà existants)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Option créer manquants -->
+                <div id="alert-manquants" class="alert alert-warning d-none mb-3">
+                    <div class="fw-bold mb-2"><i class="bi bi-exclamation-triangle me-2"></i>Armoires/Catégories inconnues détectées</div>
+                    <div id="liste-manquants" class="small mb-2"></div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="creer-manquants">
+                        <label class="form-check-label small fw-bold" for="creer-manquants">
+                            Créer automatiquement les armoires et catégories manquantes
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Encadré explicatif -->
+                <div class="alert alert-info border-0 shadow-sm mb-3">
+                    <div class="d-flex gap-3 align-items-start">
+                        <i class="bi bi-info-circle-fill fs-5 text-info mt-1"></i>
                         <div>
-                            <strong class="text-warning-emphasis">Préalable important :</strong>
-                            <p class="mb-0 small text-muted mt-1">
-                                Assurez-vous d'avoir créé toutes vos 
-                                <a href="{{ url_for('main.gestion_armoires') }}" class="fw-bold text-dark text-decoration-underline">Armoires</a> 
-                                et 
-                                <a href="{{ url_for('main.gestion_categories') }}" class="fw-bold text-dark text-decoration-underline">Catégories</a> 
-                                dans l'application <strong>avant</strong> de télécharger ce fichier.
-                            </p>
+                            <strong>Comment fonctionne cet import ?</strong>
+                            <ul class="mb-0 mt-1 small">
+                                <li>Les lignes <span class="badge bg-success">✓ OK</span> seront importées dans votre inventaire.</li>
+                                <li>Les lignes <span class="badge bg-danger">✗ Erreur</span> ne seront <strong>pas importées</strong>. Pour les récupérer, corrigez votre fichier Excel et relancez l'import.</li>
+                                <li>Les lignes <span class="badge bg-warning text-dark">⚠ Ignoré</span> existent déjà dans LabFlow — elles ne seront pas dupliquées.</li>
+                            </ul>
                         </div>
                     </div>
-
-                    <div class="alert alert-info border-0 bg-light text-dark mb-0">
-                        <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-2"></i>Règles de remplissage :</h6>
-                        <ul class="help-list mb-0">
-                            <li>Les colonnes <strong>Nom</strong>, <strong>Quantité</strong> et <strong>Seuil</strong> sont obligatoires.</li>
-                            <li>Utilisez les menus déroulants pour l'Armoire et la Catégorie.</li>
-                            <li>La date doit être au format <strong>AAAA-MM-JJ</strong> (ex: 2025-12-31).</li>
-                        </ul>
-                    </div>
-
-                    <div class="mt-auto pt-3">
-                        <a href="{{ url_for('admin_import.telecharger_modele_excel') }}" class="btn btn-outline-primary w-100 py-3 fw-bold shadow-sm">
-                            <i class="bi bi-file-earmark-arrow-down me-2"></i>Télécharger le Modèle (.xlsx)
-                        </a>
-                    </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- COLONNE DROITE : Upload -->
-        <div class="col-lg-6">
-            <div class="import-card">
-                <!-- Titre Etape 2 -->
-                <div class="import-card-header">
-                    <span class="step-number">2</span>
-                    <h4>Importer les données</h4>
+                <div class="table-responsive rounded border" style="max-height:400px;overflow-y:auto;">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Ligne</th>
+                                <th>Nom</th>
+                                <th>Type</th>
+                                <th>Statut</th>
+                                <th>Message</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preview-tbody"></tbody>
+                    </table>
                 </div>
 
-                <!-- Contenu Etape 2 -->
-                <form action="{{ url_for('admin_import.importer_fichier') }}" method="post" enctype="multipart/form-data" class="d-flex flex-column h-100">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div id="preview-error" class="alert alert-danger mt-3 d-none"></div>
 
-                    <div class="form-group mb-4 flex-grow-1 d-flex flex-column">
-                        <div class="file-drop-zone" id="drop-zone">
-                            <i class="bi bi-cloud-upload-fill drop-icon"></i>
-                            <h5 class="fw-bold text-dark mb-2">Déposez votre fichier ici</h5>
-                            <p class="text-muted small mb-0 file-msg">ou cliquez pour parcourir vos dossiers</p>
-                            
-                            <input type="file" name="fichier_excel" id="fichier_excel" class="file-input" accept=".xlsx" required>
-                        </div>
-                    </div>
-
-                    <div class="mt-auto">
-                        <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm">
-                            <i class="bi bi-play-circle-fill me-2"></i>Lancer l'Importation
-                        </button>
-                    </div>
-                </form>
+                <div class="mt-4 d-flex justify-content-between align-items-center">
+                    <button class="btn btn-outline-secondary" id="btn-retour-2">
+                        <i class="bi bi-arrow-left me-2"></i>Retour
+                    </button>
+                    <button class="btn btn-success px-5 fw-bold" id="btn-confirmer" disabled>
+                        <i class="bi bi-check-circle-fill me-2"></i>Confirmer l'importation
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- ==================== ETAPE 4 : SUCCÈS ==================== -->
+    <div id="etape-succes" class="d-none">
+        <div class="card border-0 shadow-sm text-center p-5">
+            <div class="mb-3">
+                <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width:80px;height:80px;">
+                    <i class="bi bi-check-circle-fill text-success fs-1"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold mb-2">Importation réussie !</h4>
+            <p class="text-muted mb-4"><span id="succes-count" class="fw-bold text-success"></span> objets ont été ajoutés à votre inventaire.</p>
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="{{ url_for('inventaire.inventaire') }}" class="btn btn-primary">
+                    <i class="bi bi-box-seam me-2"></i>Voir l'inventaire
+                </a>
+                <button class="btn btn-outline-secondary" id="btn-recommencer">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Nouvel import
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const fileInput = document.getElementById('fichier_excel');
-        const dropZone = document.getElementById('drop-zone');
-        const fileMsg = dropZone.querySelector('.file-msg');
-        const dropIcon = dropZone.querySelector('.drop-icon');
-        const originalMsg = fileMsg.innerHTML;
+// ================================================================
+// ASSISTANT IMPORT — LOGIQUE 3 ETAPES
+// ================================================================
 
-        // Gestion du changement de fichier
-        fileInput.addEventListener('change', function() {
-            if (this.files && this.files.length > 0) {
-                const fileName = this.files[0].name;
-                fileMsg.innerHTML = `Fichier prêt : <strong class="text-success">${fileName}</strong>`;
-                dropZone.classList.add('file-selected');
-                dropIcon.classList.remove('bi-cloud-upload-fill');
-                dropIcon.classList.add('bi-file-earmark-excel-fill');
-            } else {
-                fileMsg.innerHTML = originalMsg;
-                dropZone.classList.remove('file-selected');
-                dropIcon.classList.add('bi-cloud-upload-fill');
-                dropIcon.classList.remove('bi-file-earmark-excel-fill');
-            }
-        });
+const CHAMPS_LABFLOW = [
+    { key: 'nom',             label: 'Nom',                  requis: true,  desc: 'Nom ou désignation de l\'objet' },
+    { key: 'quantite',        label: 'Quantité / Stock',     requis: true,  desc: 'Nombre d\'unités ou niveau actuel' },
+    { key: 'seuil',           label: 'Seuil d\'alerte',      requis: false, desc: 'Quantité minimale avant alerte' },
+    { key: 'armoire',         label: 'Armoire',              requis: false, desc: 'Localisation dans le labo' },
+    { key: 'categorie',       label: 'Catégorie',            requis: false, desc: 'Famille ou type de produit' },
+    { key: 'type_objet',      label: 'Type',                 requis: false, desc: '"materiel" ou "produit"' },
+    { key: 'is_cmr',          label: 'CMR',                  requis: false, desc: '"oui" si produit CMR' },
+    { key: 'unite',           label: 'Unité',                requis: false, desc: 'mL, L, g, kg ou unité' },
+    { key: 'date_peremption', label: 'Date de péremption',   requis: false, desc: 'Format AAAA-MM-JJ' },
+];
 
-        // Effets visuels au Drag & Drop
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            }, false);
-        });
+let fichierActuel = null;
+let mappingActuel = {};
+let headersActuels = [];
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-            }, false);
-        });
+// --- STEPPER ---
+function goToStep(n) {
+    ['etape-1','etape-2','etape-3','etape-succes'].forEach(id => {
+        document.getElementById(id).classList.add('d-none');
     });
+    if (n === 'succes') {
+        document.getElementById('etape-succes').classList.remove('d-none');
+    } else {
+        document.getElementById('etape-' + n).classList.remove('d-none');
+    }
+    [1,2,3].forEach(i => {
+        const ind = document.getElementById('step-indicator-' + i);
+        const line = document.getElementById('step-line-' + i);
+        ind.classList.toggle('active', i <= n);
+        ind.classList.toggle('done', i < n);
+        if (line) line.classList.toggle('done', i < n);
+    });
+}
+
+// --- ETAPE 1 : UPLOAD ---
+const fileInput = document.getElementById('fichier_excel');
+const dropZone = document.getElementById('drop-zone');
+const btnAnalyser = document.getElementById('btn-analyser');
+
+fileInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+        fichierActuel = this.files[0];
+        dropZone.querySelector('p').textContent = fichierActuel.name;
+        dropZone.classList.add('file-selected');
+        btnAnalyser.disabled = false;
+    }
+});
+
+['dragenter','dragover'].forEach(e => dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(e => dropZone.addEventListener(e, ev => {
+    ev.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e === 'drop' && ev.dataTransfer.files[0]) {
+        fichierActuel = ev.dataTransfer.files[0];
+        dropZone.querySelector('p').textContent = fichierActuel.name;
+        dropZone.classList.add('file-selected');
+        btnAnalyser.disabled = false;
+    }
+}));
+
+btnAnalyser.addEventListener('click', async function() {
+    const errDiv = document.getElementById('upload-error');
+    errDiv.classList.add('d-none');
+    btnAnalyser.disabled = true;
+    btnAnalyser.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyse en cours...';
+
+    const fd = new FormData();
+    fd.append('fichier_excel', fichierActuel);
+    fd.append('csrf_token', '{{ csrf_token() }}');
+
+    try {
+        const resp = await fetch('{{ url_for("admin_import.analyser_excel") }}', {
+            method: 'POST', body: fd, credentials: 'same-origin'
+        });
+        const data = await resp.json();
+        if (!data.success) {
+            errDiv.textContent = data.error;
+            errDiv.classList.remove('d-none');
+            btnAnalyser.disabled = false;
+            btnAnalyser.innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Analyser le fichier';
+            return;
+        }
+        headersActuels = data.headers;
+        mappingActuel = data.mapping_suggere;
+        afficherEtape2(data);
+        goToStep(2);
+    } catch(e) {
+        errDiv.textContent = 'Erreur réseau. Réessayez.';
+        errDiv.classList.remove('d-none');
+        btnAnalyser.disabled = false;
+        btnAnalyser.innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Analyser le fichier';
+    }
+});
+
+// --- ETAPE 2 : MAPPING ---
+function afficherEtape2(data) {
+    // Aperçu
+    const thead = document.querySelector('#apercu-table thead');
+    const tbody = document.querySelector('#apercu-table tbody');
+    thead.innerHTML = '<tr>' + data.headers.map(h => `<th class="small">${h || '—'}</th>`).join('') + '</tr>';
+    tbody.innerHTML = data.apercu.map(row =>
+        '<tr>' + row.map(v => `<td class="small text-muted">${v}</td>`).join('') + '</tr>'
+    ).join('');
+    document.getElementById('nb-lignes-info').textContent = `${data.nb_lignes} ligne(s) détectée(s) dans votre fichier`;
+
+    // Champs mapping
+    const container = document.getElementById('mapping-fields');
+    container.innerHTML = '';
+    CHAMPS_LABFLOW.forEach(champ => {
+        const suggestedIdx = data.mapping_suggere[champ.key];
+        const options = ['<option value="">— Ignorer ce champ —</option>']
+            .concat(data.headers.map((h, i) =>
+                `<option value="${i}" ${suggestedIdx === i ? 'selected' : ''}>${h || 'Colonne ' + (i+1)}</option>`
+            )).join('');
+
+        container.innerHTML += `
+        <div class="col-md-6">
+            <div class="card border-0 bg-light p-3 h-100">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="fw-bold small">${champ.label}</span>
+                    ${champ.requis ? '<span class="badge bg-danger" style="font-size:0.6rem;">Requis</span>' : ''}
+                    ${suggestedIdx !== undefined ? '<span class="badge bg-success" style="font-size:0.6rem;"><i class="bi bi-magic"></i> Auto</span>' : ''}
+                </div>
+                <p class="text-muted" style="font-size:0.75rem;margin-bottom:0.5rem;">${champ.desc}</p>
+                <select class="form-select form-select-sm mapping-select" data-field="${champ.key}">
+                    ${options}
+                </select>
+            </div>
+        </div>`;
+    });
+}
+
+document.getElementById('btn-retour-1').addEventListener('click', () => goToStep(1));
+
+document.getElementById('btn-previsualiser').addEventListener('click', async function() {
+    // Récupérer le mapping depuis les selects
+    const selects = document.querySelectorAll('.mapping-select');
+    const mapping = {};
+    selects.forEach(s => {
+        if (s.value !== '') mapping[s.dataset.field] = parseInt(s.value);
+    });
+
+    if (!('nom' in mapping)) {
+        const errDiv = document.getElementById('mapping-error');
+        errDiv.textContent = 'Vous devez associer au moins la colonne "Nom".';
+        errDiv.classList.remove('d-none');
+        return;
+    }
+    document.getElementById('mapping-error').classList.add('d-none');
+    mappingActuel = mapping;
+
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Prévisualisation...';
+
+    const fd = new FormData();
+    fd.append('fichier_excel', fichierActuel);
+    fd.append('csrf_token', '{{ csrf_token() }}');
+    fd.append('mapping', JSON.stringify(mapping));
+    fd.append('mode', 'preview');
+    fd.append('creer_manquants', 'false');
+
+    try {
+        const resp = await fetch('{{ url_for("admin_import.confirmer_import") }}', {
+            method: 'POST', body: fd, credentials: 'same-origin'
+        });
+        const data = await resp.json();
+        if (!data.success) {
+            document.getElementById('mapping-error').textContent = data.error;
+            document.getElementById('mapping-error').classList.remove('d-none');
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-eye me-2"></i>Prévisualiser l\'import';
+            return;
+        }
+        afficherEtape3(data);
+        goToStep(3);
+    } catch(e) {
+        document.getElementById('mapping-error').textContent = 'Erreur réseau.';
+        document.getElementById('mapping-error').classList.remove('d-none');
+    }
+    this.disabled = false;
+    this.innerHTML = '<i class="bi bi-eye me-2"></i>Prévisualiser l\'import';
+});
+
+// --- ETAPE 3 : PRÉVISUALISATION ---
+function afficherEtape3(data) {
+    document.getElementById('count-ok').textContent = data.nb_ok;
+    document.getElementById('count-erreurs').textContent = data.nb_erreurs;
+    document.getElementById('count-ignores').textContent = data.nb_ignores;
+
+    // Alerte manquants
+    const alertManquants = document.getElementById('alert-manquants');
+    const listeManquants = document.getElementById('liste-manquants');
+    if (data.armoires_a_creer.length > 0 || data.categories_a_creer.length > 0) {
+        alertManquants.classList.remove('d-none');
+        let txt = '';
+        if (data.armoires_a_creer.length > 0) txt += `<strong>Armoires à créer :</strong> ${data.armoires_a_creer.join(', ')}<br>`;
+        if (data.categories_a_creer.length > 0) txt += `<strong>Catégories à créer :</strong> ${data.categories_a_creer.join(', ')}`;
+        listeManquants.innerHTML = txt;
+    } else {
+        alertManquants.classList.add('d-none');
+    }
+
+    // Tableau résultats
+    const tbody = document.getElementById('preview-tbody');
+    tbody.innerHTML = data.resultats.map(r => {
+        const badge = r.statut === 'ok'
+            ? '<span class="badge bg-success">✓ OK</span>'
+            : r.statut === 'ignore'
+            ? '<span class="badge bg-warning text-dark">⚠ Ignoré</span>'
+            : '<span class="badge bg-danger">✗ Erreur</span>';
+        const typeIcon = r.type_objet === 'produit'
+            ? '<span class="badge bg-info text-dark small"><i class="bi bi-droplet-fill"></i></span>'
+            : r.statut === 'ok' ? '<span class="badge bg-light border small"><i class="bi bi-box-seam"></i></span>' : '—';
+        return `<tr class="${r.statut === 'erreur' ? 'table-danger' : r.statut === 'ignore' ? 'table-warning' : ''}">
+            <td class="small text-muted">${r.ligne}</td>
+            <td class="small fw-bold">${r.nom}</td>
+            <td>${typeIcon}</td>
+            <td>${badge}</td>
+            <td class="small text-muted">${r.message}</td>
+        </tr>`;
+    }).join('');
+
+    // Activer bouton confirmer seulement si nb_ok > 0
+    document.getElementById('btn-confirmer').disabled = data.nb_ok === 0;
+}
+
+document.getElementById('btn-retour-2').addEventListener('click', () => goToStep(2));
+
+document.getElementById('btn-confirmer').addEventListener('click', async function() {
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importation en cours...';
+
+    const creerManquants = document.getElementById('creer-manquants').checked;
+
+    const fd = new FormData();
+    fd.append('fichier_excel', fichierActuel);
+    fd.append('csrf_token', '{{ csrf_token() }}');
+    fd.append('mapping', JSON.stringify(mappingActuel));
+    fd.append('mode', 'import');
+    fd.append('creer_manquants', creerManquants ? 'true' : 'false');
+
+    try {
+        const resp = await fetch('{{ url_for("admin_import.confirmer_import") }}', {
+            method: 'POST', body: fd, credentials: 'same-origin'
+        });
+        const data = await resp.json();
+        if (data.success) {
+            document.getElementById('succes-count').textContent = data.created;
+            goToStep('succes');
+        } else {
+            document.getElementById('preview-error').textContent = data.error;
+            document.getElementById('preview-error').classList.remove('d-none');
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Confirmer l\'importation';
+        }
+    } catch(e) {
+        document.getElementById('preview-error').textContent = 'Erreur réseau.';
+        document.getElementById('preview-error').classList.remove('d-none');
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Confirmer l\'importation';
+    }
+});
+
+document.getElementById('btn-recommencer').addEventListener('click', () => {
+    fichierActuel = null;
+    mappingActuel = {};
+    headersActuels = [];
+    fileInput.value = '';
+    dropZone.querySelector('p').textContent = 'ou cliquez pour parcourir';
+    dropZone.classList.remove('file-selected');
+    btnAnalyser.disabled = true;
+    btnAnalyser.innerHTML = '<i class="bi bi-arrow-right-circle me-2"></i>Analyser le fichier';
+    goToStep(1);
+});
 </script>
+
 {% endblock %}

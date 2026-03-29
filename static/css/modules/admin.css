@@ -485,3 +485,25 @@
 .export-card:hover::before {
     transform: scaleX(1);
 }
+/* ================================================================
+   ASSISTANT IMPORT — STEPPER
+   ================================================================ */
+#stepper { display: flex; align-items: center; }
+.step-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.step-circle {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #e9ecef; color: #6c757d;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem;
+    transition: all 0.3s;
+}
+.step-item.active .step-circle { background: #0d6efd; color: white; }
+.step-item.done .step-circle { background: #198754; color: white; }
+.step-label { font-size: 0.75rem; color: #6c757d; font-weight: 600; }
+.step-item.active .step-label { color: #0d6efd; }
+.step-item.done .step-label { color: #198754; }
+.step-line {
+    flex: 1; height: 3px; background: #e9ecef;
+    margin: 0 8px; margin-bottom: 18px; transition: background 0.3s;
+}
+.step-line.done { background: #198754; }

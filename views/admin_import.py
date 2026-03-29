@@ -2,7 +2,7 @@
 # FICHIER : views/admin_import.py
 # Sauvegarde, restauration, import/export, rapports
 # ============================================================
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, send_file, jsonify
 from werkzeug.utils import secure_filename as sanitize_filename
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
@@ -14,15 +14,16 @@ import io
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.worksheet.datavalidation import DataValidation
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 
-from extensions import limiter
+from extensions import limiter, cache
 from db import db, Objet, Armoire, Categorie, Utilisateur, Historique, Etablissement, Reservation, InventaireArchive, Fournisseur, Budget, Echeance, KitObjet, Suggestion, Depense, Kit
-from utils import admin_required, log_action, allowed_file, get_etablissement_params
+from utils import admin_required, log_action, allowed_file, get_etablissement_params, invalidate_alertes_cache
 
 admin_import_bp = Blueprint('admin_import', __name__, url_prefix='/admin')
 
@@ -201,153 +202,288 @@ def importer_db():
     return redirect(url_for('admin_import.gestion_sauvegardes'))
 
 # ============================================================
-# IMPORT EXCEL
+# IMPORT EXCEL — ASSISTANT 3 ETAPES
 # ============================================================
-@admin_import_bp.route("/importer", methods=['GET'])
-@admin_required
-def importer_page():
-    etablissement_id = session['etablissement_id']
-    armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
-    categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
-    return render_template("admin_import.html", breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Importation en masse', 'url': None}])
+
+# Mots-clés pour la détection automatique des colonnes
+MAPPING_KEYWORDS = {
+    'nom': ['nom', 'designation', 'désignation', 'produit', 'article', 'libelle', 'libellé', 'intitule', 'intitulé', 'materiel', 'matériel'],
+    'quantite': ['qte', 'quantite', 'quantité', 'stock', 'nombre', 'qté'],
+    'seuil': ['seuil', 'alerte', 'minimum', 'mini', 'min'],
+    'armoire': ['armoire', 'localisation', 'emplacement', 'lieu', 'salle', 'rangement'],
+    'categorie': ['categorie', 'catégorie', 'famille', 'type', 'classe'],
+    'date_peremption': ['peremption', 'péremption', 'expiration', 'dlc', 'dlu', 'date'],
+    'type_objet': ['type_objet', 'type objet', 'nature'],
+    'is_cmr': ['cmr', 'cancero', 'cancéro', 'dangereux'],
+    'unite': ['unite', 'unité', 'unit'],
+}
+
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 Mo
+MAX_IMPORT_ROWS = 500
+
+
+def detect_mapping(headers):
+    """Détecte automatiquement le mapping colonnes -> champs LabFlow"""
+    mapping = {}
+    for field, keywords in MAPPING_KEYWORDS.items():
+        for i, header in enumerate(headers):
+            if header and any(kw in str(header).lower().replace(' ', '') for kw in keywords):
+                if field not in mapping:
+                    mapping[field] = i
+                break
+    return mapping
+
 
 @admin_import_bp.route("/telecharger_modele")
 @admin_required
 def telecharger_modele_excel():
-    etablissement_id = session['etablissement_id']
+    etablissement_id = session["etablissement_id"]
     armoires = db.session.execute(db.select(Armoire.nom).filter_by(etablissement_id=etablissement_id).order_by(Armoire.nom)).scalars().all()
     categories = db.session.execute(db.select(Categorie.nom).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)).scalars().all()
-
     wb = Workbook()
     ws = wb.active
     ws.title = "Inventaire"
-    ws.append(["Nom", "Quantité", "Seuil", "Armoire", "Catégorie", "Date Péremption", "Image (URL)"])
-    
-    # Styles et validations (simplifié)
+    ws.append(["Nom", "Type", "CMR", "Quantite", "Seuil", "Armoire", "Categorie", "Date Peremption", "Image URL"])
     ws_data = wb.create_sheet("Data_Listes")
-    ws_data.sheet_state = 'hidden'
+    ws_data.sheet_state = "hidden"
     for i, nom in enumerate(armoires, 1): ws_data.cell(row=i, column=1, value=nom)
     for i, nom in enumerate(categories, 1): ws_data.cell(row=i, column=2, value=nom)
-    
+    dv_type = DataValidation(type="list", formula1='"materiel,produit"', allow_blank=True)
+    ws.add_data_validation(dv_type)
+    dv_type.add("B2:B1000")
+    dv_cmr = DataValidation(type="list", formula1='"oui,non"', allow_blank=True)
+    ws.add_data_validation(dv_cmr)
+    dv_cmr.add("C2:C1000")
     if armoires:
-        dv = DataValidation(type="list", formula1=f"'Data_Listes'!$A$1:$A${len(armoires)}", allow_blank=True)
         ws.add_data_validation(dv)
-        dv.add('D2:D1000')
+        dv.add("F2:F1000")
     if categories:
-        dv = DataValidation(type="list", formula1=f"'Data_Listes'!$B$1:$B${len(categories)}", allow_blank=True)
         ws.add_data_validation(dv)
-        dv.add('E2:E1000')
-
+        dv.add("G2:G1000")
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name='modele_import.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    return send_file(buffer, as_attachment=True, download_name="modele_import.xlsx", mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-@admin_import_bp.route("/importer", methods=['POST'])
+@admin_import_bp.route("/importer", methods=['GET'])
 @admin_required
-@limiter.limit("10 per minute")
-def importer_fichier():
-    etablissement_id = session['etablissement_id']
+def importer_page():
+    return render_template("admin_import.html", breadcrumbs=[
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Importation en masse', 'url': None}
+    ])
+
+
+@admin_import_bp.route("/analyser_excel", methods=['POST'])
+@admin_required
+@limiter.limit("20 per minute")
+def analyser_excel():
+    """Etape 1+2 : Analyse le fichier et retourne colonnes + apercu + mapping suggere"""
     if 'fichier_excel' not in request.files:
-        flash("Aucun fichier.", "error")
-        return redirect(url_for('admin_import.importer_page'))
-
+        return jsonify({'success': False, 'error': 'Aucun fichier fourni'}), 400
     fichier = request.files['fichier_excel']
-    if fichier.filename == '' or not allowed_file(fichier.filename) or not fichier.filename.endswith('.xlsx'):
-        flash("Fichier invalide (.xlsx requis).", "error")
-        return redirect(url_for('admin_import.importer_page'))
-
-    # Check size
+    if not fichier.filename.endswith('.xlsx'):
+        return jsonify({'success': False, 'error': 'Format invalide — .xlsx uniquement'}), 400
     fichier.seek(0, 2)
     if fichier.tell() > MAX_FILE_SIZE:
-        flash("Fichier trop volumineux.", "error")
-        return redirect(url_for('admin_import.importer_page'))
+        return jsonify({'success': False, 'error': 'Fichier trop volumineux (max 5 Mo)'}), 400
     fichier.seek(0)
-
     try:
-        wb = load_workbook(fichier)
+        wb = load_workbook(fichier, data_only=True)
         ws = wb.active
-        
-        # 1. Validation des en-têtes
-        headers = {cell.value: idx for idx, cell in enumerate(ws[1], 0) if cell.value}
-        required_cols = {'Nom', 'Quantité', 'Seuil', 'Armoire', 'Catégorie'}
-        
-        if not required_cols.issubset(headers.keys()):
-            flash(f"Colonnes manquantes. Requis : {', '.join(required_cols)}", "error")
-            return redirect(url_for('admin_import.importer_page'))
+        headers = [cell.value for cell in ws[1]]
+        if not any(headers):
+            return jsonify({'success': False, 'error': 'La première ligne doit contenir les en-têtes de colonnes'}), 400
+        apercu = []
+        for row in ws.iter_rows(min_row=2, max_row=6, values_only=True):
+            if any(cell is not None for cell in row):
+                apercu.append([str(v) if v is not None else '' for v in row])
+        mapping_suggere = detect_mapping(headers)
+        etablissement_id = session['etablissement_id']
+        armoires = db.session.execute(db.select(Armoire.nom).filter_by(etablissement_id=etablissement_id)).scalars().all()
+        categories = db.session.execute(db.select(Categorie.nom).filter_by(etablissement_id=etablissement_id)).scalars().all()
+        return jsonify({
+            'success': True,
+            'headers': [str(h) if h else '' for h in headers],
+            'apercu': apercu,
+            'mapping_suggere': mapping_suggere,
+            'nb_lignes': ws.max_row - 1,
+            'armoires': list(armoires),
+            'categories': list(categories)
+        })
+    except Exception as e:
+        current_app.logger.error(f'Erreur analyse Excel: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': 'Erreur lors de la lecture du fichier'}), 500
 
-        existing_objets = {o.nom.lower() for o in db.session.execute(db.select(Objet).filter_by(etablissement_id=etablissement_id)).scalars().all()}
-        armoires_map = {a.nom.lower(): a.id for a in db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()}
-        categories_map = {c.nom.lower(): c.id for c in db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()}
-        
-        success_count = 0
-        errors = []
-        
-        # 2. Lecture avec limite de lignes
+
+@admin_import_bp.route("/confirmer_import", methods=['POST'])
+@admin_required
+@limiter.limit("5 per minute")
+def confirmer_import():
+    """Etape 3 : Recoit le mapping + fichier, previsualise ou confirme l'import"""
+    etablissement_id = session['etablissement_id']
+    if 'fichier_excel' not in request.files:
+        return jsonify({'success': False, 'error': 'Fichier manquant'}), 400
+    fichier = request.files['fichier_excel']
+    mode = request.form.get('mode', 'preview')
+    creer_manquants = request.form.get('creer_manquants', 'false') == 'true'
+    try:
+        mapping = json.loads(request.form.get('mapping', '{}'))
+    except Exception:
+        return jsonify({'success': False, 'error': 'Mapping invalide'}), 400
+    if 'nom' not in mapping:
+        return jsonify({'success': False, 'error': 'La colonne Nom est obligatoire'}), 400
+    try:
+        wb = load_workbook(fichier, data_only=True)
+        ws = wb.active
+        armoires_map = {a.nom.lower().strip(): a for a in db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()}
+        categories_map = {c.nom.lower().strip(): c for c in db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()}
+        existing_noms = {o.nom.lower() for o in db.session.execute(db.select(Objet).filter_by(etablissement_id=etablissement_id)).scalars().all()}
+        resultats = []
+        objets_a_creer = []
+        armoires_a_creer = set()
+        categories_a_creer = set()
+
         for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
-            if i > MAX_IMPORT_ROWS:
-                errors.append(f"Limite de {MAX_IMPORT_ROWS} lignes atteinte. Le reste a été ignoré.")
+            if i > MAX_IMPORT_ROWS + 1:
                 break
-                
-            if not row: continue
-            
-            # Récupération via le mapping des colonnes
-            try:
-                nom = row[headers['Nom']]
-                qte = row[headers['Quantité']]
-                seuil = row[headers['Seuil']]
-                arm_nom = row[headers['Armoire']]
-                cat_nom = row[headers['Catégorie']]
-                
-                # Colonnes optionnelles
-                date_val = row[headers['Date Péremption']] if 'Date Péremption' in headers else None
-                img_val = row[headers['Image (URL)']] if 'Image (URL)' in headers else None
-            except IndexError:
-                continue # Ligne malformée
+            if not any(row):
+                continue
 
-            if not all([nom, qte is not None, seuil is not None]):
-                errors.append(f"Ligne {i}: Données obligatoires manquantes")
+            def get_val(field):
+                idx = mapping.get(field)
+                if idx is None:
+                    return None
+                try:
+                    return row[int(idx)]
+                except Exception:
+                    return None
+
+            nom = get_val('nom')
+            if not nom or str(nom).strip() == '':
+                resultats.append({'ligne': i, 'statut': 'erreur', 'message': 'Nom manquant', 'nom': '—'})
                 continue
-                
-            if str(nom).lower() in existing_objets: continue
-            
-            arm_id = armoires_map.get(str(arm_nom).lower().strip()) if arm_nom else None
-            cat_id = categories_map.get(str(cat_nom).lower().strip()) if cat_nom else None
-            
-            if not arm_id or not cat_id:
-                errors.append(f"Ligne {i}: Armoire ou Catégorie inconnue")
+            nom = str(nom).strip()
+            if nom.lower() in existing_noms:
+                resultats.append({'ligne': i, 'statut': 'ignore', 'message': 'Déjà existant', 'nom': nom})
                 continue
-                
+
+            qte_raw = get_val('quantite')
+            seuil_raw = get_val('seuil')
+            arm_nom = str(get_val('armoire') or '').strip()
+            cat_nom = str(get_val('categorie') or '').strip()
+            type_objet = str(get_val('type_objet') or 'materiel').lower().strip()
+            if type_objet not in ['materiel', 'produit']:
+                type_objet = 'materiel'
+            is_cmr_raw = str(get_val('is_cmr') or 'non').lower().strip()
+            is_cmr = is_cmr_raw in ['oui', 'yes', '1', 'true', 'x']
+            unite_raw = str(get_val('unite') or '').strip()
+            unite = unite_raw if unite_raw in ['mL', 'L', 'g', 'kg', 'unité'] else ('unité' if type_objet == 'materiel' else 'mL')
+            date_val = get_val('date_peremption')
             date_perim = None
             if date_val:
-                if isinstance(date_val, datetime): date_perim = date_val.date()
-                elif isinstance(date_val, str):
-                    try: date_perim = datetime.strptime(date_val.split(' ')[0], '%Y-%m-%d').date()
-                    except: pass
+                from datetime import datetime as dt
+                if hasattr(date_val, 'date'):
+                    date_perim = date_val.date()
+                else:
+                    try:
+                        date_perim = dt.strptime(str(date_val).split(' ')[0], '%Y-%m-%d').date()
+                    except Exception:
+                        pass
 
+            erreurs = []
+            if qte_raw is None:
+                erreurs.append('Quantité manquante')
+            if not arm_nom:
+                erreurs.append('Armoire manquante')
+            elif arm_nom.lower() not in armoires_map:
+                if creer_manquants:
+                    armoires_a_creer.add(arm_nom)
+                else:
+                    erreurs.append(f'Armoire inconnue : {arm_nom}')
+            if not cat_nom:
+                erreurs.append('Catégorie manquante')
+            elif cat_nom.lower() not in categories_map:
+                if creer_manquants:
+                    categories_a_creer.add(cat_nom)
+                else:
+                    erreurs.append(f'Catégorie inconnue : {cat_nom}')
+
+            if erreurs:
+                resultats.append({'ligne': i, 'statut': 'erreur', 'message': ', '.join(erreurs), 'nom': nom})
+            else:
+                resultats.append({'ligne': i, 'statut': 'ok', 'message': 'Prêt à importer', 'nom': nom,
+                                   'type_objet': type_objet, 'is_cmr': is_cmr})
+                objets_a_creer.append({
+                    'nom': nom, 'quantite': qte_raw, 'seuil': seuil_raw or 1,
+                    'arm_nom': arm_nom, 'cat_nom': cat_nom, 'type_objet': type_objet,
+                    'is_cmr': is_cmr, 'unite': unite, 'date_perim': str(date_perim) if date_perim else None
+                })
+
+        if mode == 'preview':
+            return jsonify({
+                'success': True,
+                'resultats': resultats,
+                'nb_ok': sum(1 for r in resultats if r['statut'] == 'ok'),
+                'nb_erreurs': sum(1 for r in resultats if r['statut'] == 'erreur'),
+                'nb_ignores': sum(1 for r in resultats if r['statut'] == 'ignore'),
+                'armoires_a_creer': list(armoires_a_creer),
+                'categories_a_creer': list(categories_a_creer)
+            })
+
+        # MODE IMPORT REEL
+        created = 0
+        for arm_nom in armoires_a_creer:
+            a = Armoire(nom=arm_nom, etablissement_id=etablissement_id)
+            db.session.add(a)
+            db.session.flush()
+            armoires_map[arm_nom.lower()] = a
+        for cat_nom in categories_a_creer:
+            c = Categorie(nom=cat_nom, etablissement_id=etablissement_id)
+            db.session.add(c)
+            db.session.flush()
+            categories_map[cat_nom.lower()] = c
+        for obj in objets_a_creer:
+            arm = armoires_map.get(obj['arm_nom'].lower())
+            cat = categories_map.get(obj['cat_nom'].lower())
+            if not arm or not cat:
+                continue
+            try:
+                qte = int(float(str(obj['quantite'])))
+            except Exception:
+                qte = 0
+            try:
+                seuil = int(float(str(obj['seuil'])))
+            except Exception:
+                seuil = 1
+            date_perim = None
+            if obj['date_perim']:
+                from datetime import datetime as dt
+                try:
+                    date_perim = dt.strptime(obj['date_perim'], '%Y-%m-%d').date()
+                except Exception:
+                    pass
             db.session.add(Objet(
-                nom=str(nom), quantite_physique=int(qte), seuil=int(seuil),
-                armoire_id=arm_id, categorie_id=cat_id, date_peremption=date_perim,
-                image_url=str(img_val) if img_val else None,
+                nom=obj['nom'], quantite_physique=qte, seuil=seuil,
+                armoire_id=arm.id, categorie_id=cat.id,
+                type_objet=obj['type_objet'], is_cmr=obj['is_cmr'],
+                unite=obj['unite'], date_peremption=date_perim,
                 etablissement_id=etablissement_id
             ))
-            success_count += 1
-            
-        if errors:
-            db.session.rollback()
-            for e in errors[:5]: flash(e, "error")
-            if len(errors) > 5: flash(f"... et {len(errors)-5} autres erreurs.", "error")
-        else:
-            db.session.commit()
-            log_action('import_excel', f"{success_count} objets importés")
-            flash(f"{success_count} objets importés.", "success")
+            created += 1
+
+        db.session.commit()
+        invalidate_alertes_cache(etablissement_id)
+        cache.delete(f'armoires_{etablissement_id}')
+        cache.delete(f'categories_{etablissement_id}')
+        log_action('import_excel', f'{created} objets importés via assistant')
+        return jsonify({'success': True, 'created': created})
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error("Erreur import Excel", exc_info=True)
-        flash("Erreur technique.", "error")
-
-    return redirect(url_for('admin_import.importer_page'))
+        current_app.logger.error(f'Erreur import Excel: {e}', exc_info=True)
+        return jsonify({'success': False, 'error': "Erreur technique lors de l'import"}), 500
 
 # MODULE RAPPORTS & ACTIVITÉ (Version Durcie)
 # ============================================================

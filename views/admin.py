@@ -662,7 +662,9 @@ def admin():
         securite_stats = None
     # -----------------------------------
 
+    nb_admins = db.session.execute(db.select(db.func.count()).select_from(Utilisateur).filter_by(etablissement_id=etablissement_id, role="admin")).scalar()
     return render_template("admin.html", 
+                           nb_admins=nb_admins,
                            licence=licence_info, 
                            etablissement=etablissement,
                            securite_stats=securite_stats)

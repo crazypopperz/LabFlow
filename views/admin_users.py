@@ -3,7 +3,7 @@
 # Gestion des utilisateurs (CRUD, droits, mots de passe)
 # ============================================================
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import limiter
@@ -194,14 +194,55 @@ def promouvoir_utilisateur(id_user):
         return redirect(url_for('admin_users.gestion_utilisateurs'))
 
     try:
+        # Limite 3 admins par établissement
+        nb_admins = db.session.execute(
+            db.select(db.func.count()).select_from(Utilisateur)
+            .filter_by(etablissement_id=etablissement_id, role='admin')
+        ).scalar()
+        if nb_admins >= 3:
+            flash("Limite atteinte : 3 administrateurs maximum par établissement.", "warning")
+            return redirect(url_for('admin_users.gestion_utilisateurs'))
+        if target_user.role == 'admin':
+            flash(f"{target_user.nom_utilisateur} est déjà administrateur.", "info")
+            return redirect(url_for('admin_users.gestion_utilisateurs'))
         target_user.role = 'admin'
-        current_admin.role = 'utilisateur'
         db.session.commit()
-        session['user_role'] = 'utilisateur'
-        flash(f"Passation réussie ! {target_user.nom_utilisateur} est administrateur.", "success")
-        return redirect(url_for('inventaire.index'))
+        log_action('promouvoir_admin', f"{target_user.nom_utilisateur} promu administrateur")
+        flash(f"{target_user.nom_utilisateur} est maintenant administrateur.", "success")
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
     except Exception:
         db.session.rollback()
         current_app.logger.error("Erreur promotion", exc_info=True)
         flash("Erreur technique.", "danger")
         return redirect(url_for('admin_users.gestion_utilisateurs'))
+
+
+@admin_users_bp.route("/utilisateurs/retrograder/<int:id_user>", methods=["POST"])
+@admin_required
+@limiter.limit("3 per minute")
+def retrograder_utilisateur(id_user):
+    if id_user == session['user_id']:
+        flash("Impossible de se rétrograder soi-même.", "warning")
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
+    etablissement_id = session['etablissement_id']
+    target_user = db.session.get(Utilisateur, id_user)
+    if not target_user or target_user.etablissement_id != etablissement_id:
+        flash("Utilisateur introuvable.", "danger")
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
+    # Vérifier qu'il reste au moins 1 admin
+    nb_admins = db.session.execute(
+        db.select(db.func.count()).select_from(Utilisateur)
+        .filter_by(etablissement_id=etablissement_id, role='admin')
+    ).scalar()
+    if nb_admins <= 1:
+        flash("Impossible : il doit rester au moins un administrateur.", "warning")
+        return redirect(url_for('admin_users.gestion_utilisateurs'))
+    try:
+        target_user.role = 'utilisateur'
+        db.session.commit()
+        log_action('retrograder_admin', f"{target_user.nom_utilisateur} rétrogradé en utilisateur")
+        flash(f"{target_user.nom_utilisateur} est maintenant simple utilisateur.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Erreur technique.", "danger")
+    return redirect(url_for('admin_users.gestion_utilisateurs'))

@@ -724,9 +724,8 @@ def modifier_objet(id_objet):
                             files_to_cleanup.append(objet.image_url)
                         objet.image_url = url_clean
                 else:
-                    if objet.image_url and objet.image_url.startswith('images/'):
-                        files_to_cleanup.append(objet.image_url)
-                    objet.image_url = None
+                    # Champ vide = on garde l'image existante (pas d'effacement involontaire)
+                    pass
 
         # --- GESTION FDS (Code inchangé) ---
         is_fds_updated = False
@@ -755,9 +754,8 @@ def modifier_objet(id_objet):
                             files_to_cleanup.append(objet.fds_url)
                         objet.fds_url = url_clean
                 else:
-                    if objet.fds_url and objet.fds_url.startswith('uploads/'):
-                        files_to_cleanup.append(objet.fds_url)
-                    objet.fds_url = None
+                    # Champ vide = on garde la FDS existante (pas d'effacement involontaire)
+                    pass
 
         # --- MISE À JOUR EFFECTIVE ---
         objet.nom = nom

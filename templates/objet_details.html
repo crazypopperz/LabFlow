@@ -155,20 +155,35 @@
             
             <!-- Indicateurs de Stock -->
             <div class="row g-3 mb-4">
+                {% if objet.type_objet == 'produit' %}
                 <div class="col-md-6">
                     <div class="stock-indicator">
-                        <div class="stock-value text-primary">{{ objet.quantite_physique }}</div>
+                        <div class="stock-value text-primary">{{ objet.niveau_actuel }} <small class="fs-6 text-muted">{{ objet.unite }}</small></div>
+                        <div class="stock-label">Niveau actuel</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="stock-indicator">
+                        <div class="stock-value text-secondary">{{ objet.capacite_initiale }} <small class="fs-6 text-muted">{{ objet.unite }}</small></div>
+                        <div class="stock-label">Capacité totale</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-md-6">
+                    <div class="stock-indicator">
+                        <div class="stock-value text-primary">{{ objet.quantite_physique }} <small class="fs-6 text-muted">unité(s)</small></div>
                         <div class="stock-label">Stock Physique Total</div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="stock-indicator">
                         <div class="stock-value {{ 'text-success' if objet.quantite_disponible > objet.seuil else 'text-danger' }}">
-                            {{ objet.quantite_disponible }}
+                            {{ objet.quantite_disponible }} <small class="fs-6 text-muted">unité(s)</small>
                         </div>
-                        <div class="stock-label">Actuellement disponible à la réservation</div>
+                        <div class="stock-label">Disponible à la réservation</div>
                     </div>
                 </div>
+                {% endif %}
             </div>
 
             <!-- Alerte Seuil -->

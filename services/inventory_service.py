@@ -111,8 +111,13 @@ class InventoryService:
                     )
                     query = query.filter(or_(stock_bas_materiel, stock_bas_produit)) 
 
+            from sqlalchemy import case as sa_case
+            quantite_sort = sa_case(
+                (Objet.type_objet == 'produit', Objet.niveau_actuel),
+                else_=Objet.quantite_physique
+            )
             ALLOWED_SORT = {
-                'nom': Objet.nom, 'quantite': Objet.quantite_physique,
+                'nom': Objet.nom, 'quantite': quantite_sort,
                 'seuil': Objet.seuil, 'date_peremption': Objet.date_peremption,
                 'categorie': Categorie.nom, 'armoire': Armoire.nom
             }

@@ -50,6 +50,10 @@
             </svg>
             <span>{{ 'Version Pro' if licence.is_pro else 'Version Gratuite' }}</span>
         </div>
+        <div class="license-status license-free mt-2">
+            <i class="bi bi-shield-fill-check"></i>
+            <span>{{ nb_admins }} administrateur{{ 's' if nb_admins > 1 else '' }} enregistré{{ 's' if nb_admins > 1 else '' }}</span>
+        </div>
     </div>
 
     <!-- Info box -->

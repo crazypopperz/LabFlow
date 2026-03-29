@@ -97,6 +97,16 @@
                     </button>
                     {% endif %}
 
+                    <!-- 3b. Rétrograder (Si admin, pas soi-même) -->
+                    {% if (user.id|string != session.user_id|string) and (user.role == 'admin') %}
+                    <form method="POST" action="{{ url_for('admin_users.retrograder_utilisateur', id_user=user.id) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-icon-only btn-delete-danger"
+                                title="Rétrograder en utilisateur simple">
+                            <i class="bi bi-arrow-down-circle"></i>
+                        </button>
+                    </form>
+                    {% endif %}
                     <!-- 4. Supprimer (Si pas soi-même) -->
                     {% if user.id|string != session.user_id|string %}
                     <button class="btn-icon-only btn-delete-danger"

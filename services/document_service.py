@@ -139,8 +139,8 @@ class DocumentService:
                 rightMargin=margin, leftMargin=margin,
                 topMargin=margin, bottomMargin=margin,
                 title=f"{filename_prefix} - {etablissement_name}",
-                author="LabFlow",
-                creator="LabFlow System"
+                author="Scientral",
+                creator="Scientral System"
             )
 
             elements = []

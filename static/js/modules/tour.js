@@ -6,7 +6,7 @@
 const steps = [
     {
         element: null,
-        title: "Bienvenue sur LabFlow ! 👋",
+        title: "Bienvenue sur Scientral ! 👋",
         content: "Prenons une minute pour découvrir votre nouvel outil de gestion de laboratoire. C'est parti !"
     },
     {
@@ -56,7 +56,7 @@ export function startTour(force = false) {
         return;
     }
 
-    if (!force && localStorage.getItem('labflow_tour_seen') === 'true') {
+    if (!force && localStorage.getItem('scientral_tour_seen') === 'true') {
         return;
     }
     
@@ -174,7 +174,7 @@ function endTour() {
     tooltip.classList.remove('active');
     document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
     
-    localStorage.setItem('labflow_tour_seen', 'true');
+    localStorage.setItem('scientral_tour_seen', 'true');
 
     // --- CORRECTION : REMONTER EN HAUT DE PAGE ---
     window.scrollTo({

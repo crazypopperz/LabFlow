@@ -89,7 +89,7 @@ def sanitize_for_excel(value):
 
 def generer_code_unique():
     for _ in range(100):
-        code = f"LABFLOW-{secrets.token_hex(3).upper()}"
+        code = f"SCIENTRAL-{secrets.token_hex(3).upper()}"
         nested = db.session.begin_nested()
         try:
             test_etab = Etablissement(nom="__TEST__", code_invitation=code)
@@ -194,7 +194,7 @@ class LogoGraphique(Flowable):
                 return
             except Exception:
                 pass
-        # Fallback : logo LabFlow vectoriel
+        # Fallback : logo Scientral vectoriel
         self.canv.setFillColor(colors.HexColor('#1F3B73'))
         self.canv.rect(0, 0, 8, 15, fill=1, stroke=0)
         self.canv.rect(12, 0, 8, 25, fill=1, stroke=0)
@@ -234,7 +234,7 @@ def get_logo_etablissement_path(etablissement_id):
     return None
 
 def ajouter_logo_excel(ws):
-    """Ajoute le logo LabFlow dans le fichier Excel si disponible."""
+    """Ajoute le logo Scientral dans le fichier Excel si disponible."""
     logo_path = os.path.join(current_app.root_path, 'static', 'logo.png')
     if os.path.exists(logo_path):
         try:
@@ -252,8 +252,8 @@ def generer_budget_pdf_pro(data_export, metadata):
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm, title=f"Budget {metadata['etablissement']}")
     elements = []
     styles = getSampleStyleSheet()
-    LABFLOW_BLUE = colors.HexColor('#1F3B73')
-    style_titre = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=LABFLOW_BLUE, alignment=TA_CENTER)
+    SCIENTRAL_BLUE = colors.HexColor('#1F3B73')
+    style_titre = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=SCIENTRAL_BLUE, alignment=TA_CENTER)
     style_normal = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=10)
     style_cell = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9)
     logo_path = metadata.get('logo_path')
@@ -273,7 +273,7 @@ def generer_budget_pdf_pro(data_export, metadata):
         table_data.append([Paragraph(item['date'], style_cell), Paragraph(escape(item['fournisseur']), style_cell), Paragraph(escape(item['contenu']), style_cell), Paragraph(f"{item['montant']:.2f} €", style_cell)])
     table_data.append(['', '', 'TOTAL', f"{metadata['total']:.2f} €"])
     t = Table(table_data, colWidths=[2.5*cm, 5*cm, 8*cm, 3*cm])
-    t.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), LABFLOW_BLUE), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white), ('ALIGN', (0, 0), (-1, -1), 'CENTER'), ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('GRID', (0, 0), (-1, -1), 0.5, colors.grey), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.whitesmoke])]))
+    t.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), SCIENTRAL_BLUE), ('TEXTCOLOR', (0, 0), (-1, 0), colors.white), ('ALIGN', (0, 0), (-1, -1), 'CENTER'), ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('GRID', (0, 0), (-1, -1), 0.5, colors.grey), ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'), ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.whitesmoke])]))
     elements.append(t)
     doc.build(elements)
     buffer.seek(0)

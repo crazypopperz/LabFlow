@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Assistant d'Importation - LabFlow{% endblock %}
+{% block title %}Assistant d'Importation - Scientral{% endblock %}
 
 {% block content %}
 <div class="main-container">
@@ -15,7 +15,7 @@
             <span class="fw-bold">Assistant d'Importation</span>
         </h2>
         <a href="{{ url_for('admin_import.telecharger_modele_excel') }}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-file-earmark-arrow-down me-2"></i>Télécharger le modèle LabFlow
+            <i class="bi bi-file-earmark-arrow-down me-2"></i>Télécharger le modèle Scientral
         </a>
     </div>
 
@@ -42,7 +42,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-1"><i class="bi bi-cloud-upload me-2 text-primary"></i>Déposez votre fichier Excel</h5>
-                <p class="text-muted small mb-4">Votre fichier existant OU le modèle LabFlow téléchargé ci-dessus. La première ligne doit contenir les en-têtes de colonnes.</p>
+                <p class="text-muted small mb-4">Votre fichier existant OU le modèle Scientral téléchargé ci-dessus. La première ligne doit contenir les en-têtes de colonnes.</p>
 
                 <div class="file-drop-zone" id="drop-zone">
                     <i class="bi bi-file-earmark-excel drop-icon fs-1 text-success"></i>
@@ -67,8 +67,8 @@
     <div id="etape-2" class="d-none">
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
-                <h5 class="fw-bold mb-1"><i class="bi bi-diagram-3 me-2 text-primary"></i>Associez vos colonnes aux champs LabFlow</h5>
-                <p class="text-muted small mb-4">LabFlow a détecté vos colonnes automatiquement. Vérifiez et ajustez si nécessaire.</p>
+                <h5 class="fw-bold mb-1"><i class="bi bi-diagram-3 me-2 text-primary"></i>Associez vos colonnes aux champs Scientral</h5>
+                <p class="text-muted small mb-4">Scientral a détecté vos colonnes automatiquement. Vérifiez et ajustez si nécessaire.</p>
 
                 <!-- Aperçu du fichier -->
                 <div class="mb-4">
@@ -152,7 +152,7 @@
                             <ul class="mb-0 mt-1 small">
                                 <li>Les lignes <span class="badge bg-success">✓ OK</span> seront importées dans votre inventaire.</li>
                                 <li>Les lignes <span class="badge bg-danger">✗ Erreur</span> ne seront <strong>pas importées</strong>. Pour les récupérer, corrigez votre fichier Excel et relancez l'import.</li>
-                                <li>Les lignes <span class="badge bg-warning text-dark">⚠ Ignoré</span> existent déjà dans LabFlow — elles ne seront pas dupliquées.</li>
+                                <li>Les lignes <span class="badge bg-warning text-dark">⚠ Ignoré</span> existent déjà dans Scientral — elles ne seront pas dupliquées.</li>
                             </ul>
                         </div>
                     </div>
@@ -216,7 +216,7 @@
 // ASSISTANT IMPORT — LOGIQUE 3 ETAPES
 // ================================================================
 
-const CHAMPS_LABFLOW = [
+const CHAMPS_SCIENTRAL = [
     { key: 'nom',             label: 'Nom',                  requis: true,  desc: 'Nom ou désignation de l\'objet' },
     { key: 'quantite',        label: 'Quantité / Stock',     requis: true,  desc: 'Nombre d\'unités ou niveau actuel' },
     { key: 'seuil',           label: 'Seuil d\'alerte',      requis: false, desc: 'Quantité minimale avant alerte' },
@@ -325,7 +325,7 @@ function afficherEtape2(data) {
     // Champs mapping
     const container = document.getElementById('mapping-fields');
     container.innerHTML = '';
-    CHAMPS_LABFLOW.forEach(champ => {
+    CHAMPS_SCIENTRAL.forEach(champ => {
         const suggestedIdx = data.mapping_suggere[champ.key];
         const options = ['<option value="">— Ignorer ce champ —</option>']
             .concat(data.headers.map((h, i) =>

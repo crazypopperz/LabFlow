@@ -290,7 +290,7 @@
 
 /* 1. Bouton Bleu Premium (Modifier) */
 .btn-premium-blue {
-    background: linear-gradient(135deg, #1F3B73 0%, #163a6e 100%); /* Bleu LabFlow */
+    background: linear-gradient(135deg, #1F3B73 0%, #163a6e 100%); /* Bleu Scientral */
     color: white !important;
     border: none;
     font-weight: 600;

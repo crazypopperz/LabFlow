@@ -237,12 +237,12 @@ def send_reset_email(user_email, token):
         reset_url = url_for('auth.reset_password', token=token, _external=True)
         sg = sendgrid.SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
         message = SGMail(
-            from_email='help.labflow@gmail.com',
+            from_email='help.scientral@gmail.com',
             to_emails=user_email,
-            subject='Réinitialisation de votre mot de passe LabFlow',
+            subject='Réinitialisation de votre mot de passe Scientral',
             plain_text_content=f"""Bonjour,
 
-Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LabFlow.
+Une demande de réinitialisation de mot de passe a été effectuée pour votre compte Scientral.
 
 Pour définir un nouveau mot de passe, cliquez sur le lien suivant (valable 1 heure) :
 {reset_url}
@@ -250,7 +250,7 @@ Pour définir un nouveau mot de passe, cliquez sur le lien suivant (valable 1 he
 Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
 
 Cordialement,
-L'équipe LabFlow
+L'équipe Scientral
 """
         )
         sg.send(message)

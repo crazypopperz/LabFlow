@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Packs de matériel prédéfinis pour l'onboarding LabFlow.
+Packs de matériel prédéfinis pour l'onboarding Scientral.
 4 packs disponibles :
 - Pack SVT Collège
 - Pack SVT Lycée

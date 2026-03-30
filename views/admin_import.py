@@ -223,7 +223,7 @@ MAX_IMPORT_ROWS = 500
 
 
 def detect_mapping(headers):
-    """Détecte automatiquement le mapping colonnes -> champs LabFlow"""
+    """Détecte automatiquement le mapping colonnes -> champs Scientral"""
     mapping = {}
     for field, keywords in MAPPING_KEYWORDS.items():
         for i, header in enumerate(headers):
@@ -675,7 +675,7 @@ def exporter_rapports():
         logo_url = params.get('logo_url')
         logo_path = os.path.join(current_app.root_path, 'static', logo_url.lstrip('/static/')) if logo_url else None
         metadata = {
-            'etablissement': session.get('nom_etablissement', 'LabFlow'),
+            'etablissement': session.get('nom_etablissement', 'Scientral'),
             'periode': f"Du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}",
             'total': len(data_export),
             'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),

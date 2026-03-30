@@ -49,7 +49,7 @@ def configure_logging(app):
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
         app.logger.setLevel(logging.INFO)
-        app.logger.info('LabFlow startup')
+        app.logger.info('Scientral startup')
 
 def create_app():
     app = Flask(__name__)

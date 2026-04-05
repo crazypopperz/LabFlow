@@ -595,8 +595,13 @@ async function loadAvailabilities() {
 
     try {
         const res = await fetch(`/api/disponibilites?date=${date}&heure_debut=${start}&heure_fin=${end}`, { signal: availabilityController.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const response = validateAPIResponse(await res.json(), ['data']);
+        const json = await res.json();
+        if (!res.ok || json.success === false) {
+            const msg = json.error || `Erreur ${res.status}`;
+            availableItemsContainer.innerHTML = `<div class="alert alert-warning m-3"><i class="bi bi-clock-history me-2"></i>${escapeHtml(msg)}</div>`;
+            return;
+        }
+        const response = validateAPIResponse(json, ["data"]);
         renderAvailableItems(response.data);
     } catch (err) {
         if (err.name !== 'AbortError') {

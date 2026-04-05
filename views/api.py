@@ -272,6 +272,8 @@ def api_disponibilites():
 
     except ValueError as e:
         return jsonify({"success": False, "error": str(e), "code": "INVALID_PARAMS"}), 400
+    except StockServiceError as e:
+        return jsonify({"success": False, "error": str(e), "code": "STOCK_ERROR"}), 400
     except Exception as e:
         current_app.logger.error(f"Erreur API Disponibilités: {e}", exc_info=True)
         return jsonify({"success": False, "error": "Erreur serveur"}), 500

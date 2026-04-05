@@ -61,7 +61,7 @@
 .tour-title {
     font-size: 1.25rem;
     font-weight: 800;
-    color: #1F3B73; /* Bleu LabFlow */
+    color: #1F3B73; /* Bleu Scientral */
     margin-bottom: 12px;
     letter-spacing: -0.5px;
 }
@@ -116,7 +116,7 @@
 }
 
 a[href*='/panier'].tour-highlight {
-    background-color: #1F3B73 !important; /* Bleu LabFlow */
+    background-color: #1F3B73 !important; /* Bleu Scientral */
     border-radius: 50% !important; /* Rond */
     box-shadow: 0 0 0 4px #0d6efd, 0 0 30px rgba(0,0,0,0.5) !important;
 }

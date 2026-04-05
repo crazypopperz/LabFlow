@@ -1,0 +1,109 @@
+═══════════════════════════════════════════════════════
+   AIDE-MÉMOIRE GIT BASH — SciencEnStock & Al Is Sweet
+═══════════════════════════════════════════════════════
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ DÉMARRER UNE SESSION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+go_ses        → Travailler sur SciencEnStock
+               (Docker, venv, .env, branche renommage-app, check)
+
+go_ap         → Travailler sur Al Is Sweet
+               (Docker, venv, .env, branche main, check)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ VÉRIFIER SON CONTEXTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+check_project → Affiche dossier, branche, remote, appli, render
+
+status_ses    → Log des 5 derniers commits + état du repo (SciencEnStock)
+status_ap     → Log des 5 derniers commits + état du repo (Al Is Sweet)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ SAUVEGARDER SON TRAVAIL (commits)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+git status                        → Voir les fichiers modifiés
+git diff nom_du_fichier           → Voir les modifications d'un fichier
+git add .                         → Préparer tous les fichiers modifiés
+git add nom_du_fichier            → Préparer un fichier précis
+git commit -m "description"       → Sauvegarder avec un message
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ DÉPLOYER EN PRODUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+deploy_ses    → Déploie SciencEnStock vers production
+               (vérifie le contexte + demande confirmation)
+
+deploy_ap     → Déploie Al Is Sweet vers main
+               (vérifie le contexte + demande confirmation)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GÉRER LES BRANCHES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+git branch -a                     → Voir toutes les branches (local + GitHub)
+git checkout nom-branche          → Changer de branche
+git checkout -b nouvelle-branche  → Créer une nouvelle branche
+git branch -d nom-branche         → Supprimer une branche locale (si fusionnée)
+git branch -D nom-branche         → Supprimer une branche locale (forcer)
+git push origin --delete nom      → Supprimer une branche sur GitHub
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ METTRE DU TRAVAIL DE CÔTÉ (stash)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+git stash                         → Mettre les modifs de côté temporairement
+git stash pop                     → Récupérer les modifs mises de côté
+git stash list                    → Voir ce qui est en attente
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GÉRER DOCKER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+docker ps                         → Voir les containers qui tournent
+docker ps -a                      → Voir tous les containers (même arrêtés)
+docker start nom-container        → Démarrer un container
+docker stop nom-container         → Arrêter un container
+
+Containers SciencEnStock : labflow-db-1
+Containers Al Is Sweet   : alsweet_app, alsweet_db
+
+Note : go_ses et go_ap gèrent Docker automatiquement.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODIFIER LA CONFIG (.bash_profile)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+notepad ~/.bash_profile           → Ouvrir la config pour la modifier
+source ~/.bash_profile            → Recharger la config après modification
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ INFOS PROJETS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SciencEnStock
+  Dossier    : E:\Xav-Projets\labflow
+  Branche    : renommage-app → pousse vers production
+  GitHub     : https://github.com/crazypopperz/LabFlow.git
+  Render     : labflow-app
+
+Al Is Sweet
+  Dossier    : E:\Alisson-Projets\al_is_sweet
+  Branche    : main
+  GitHub     : https://github.com/Alissweet/al-is-sweet.git
+  Render     : al-is-sweet-recipes
+
+═══════════════════════════════════════════════════════

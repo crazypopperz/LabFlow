@@ -2580,7 +2580,7 @@ def exporter_rapports():
             filtre_info = ", ".join(selected_actions)
 
         metadata = {
-            'etablissement': session.get('nom_etablissement', 'LabFlow'),
+            'etablissement': session.get('nom_etablissement', 'Scientral'),
             'periode': f"Du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}",
             'total': len(data_export),
             'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),

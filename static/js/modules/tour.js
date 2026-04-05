@@ -6,7 +6,7 @@
 const steps = [
     {
         element: null,
-        title: "Bienvenue sur LabFlow ! 👋",
+        title: "Bienvenue sur Scientral ! 👋",
         content: "Prenons une minute pour découvrir votre nouvel outil de gestion de laboratoire. C'est parti !"
     },
     {

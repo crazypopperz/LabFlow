@@ -112,7 +112,7 @@ def index():
         dashboard_data['stats']['top_materiels'] = [{'nom': r.nom, 'total': int(r.total)} for r in top_materiels]
 
 
-    admin_user = db.session.execute(db.select(Utilisateur).filter_by(role='admin', etablissement_id=etablissement_id)).scalar_one_or_none()
+    admin_user = db.session.execute(db.select(Utilisateur).filter_by(role='admin', etablissement_id=etablissement_id)).scalars().first()
     dashboard_data['admin_contact'] = admin_user.email if admin_user and admin_user.email else (admin_user.nom_utilisateur if admin_user else "Non défini")
     
     vingt_quatre_heures_avant = datetime.now() - timedelta(hours=24)
@@ -186,7 +186,7 @@ def index():
             cloture=False,
             etablissement_id=etablissement_id
         )
-    ).scalar_one_or_none()
+    ).scalars().first()
 
     solde_actuel = None
     if budget_actuel:
@@ -948,7 +948,7 @@ def voir_objet(objet_id):
         db.select(Objet)
         .options(joinedload(Objet.armoire), joinedload(Objet.categorie))
         .filter_by(id=objet_id, etablissement_id=etablissement_id)
-    ).scalar_one_or_none()
+    ).scalars().first()
 
     if not objet:
         flash("Objet non trouvé ou accès non autorisé.", "error")

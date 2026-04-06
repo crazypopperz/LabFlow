@@ -271,15 +271,15 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-warning">
             <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Passation de Pouvoir</h5>
+                <h5 class="modal-title"><i class="bi bi-shield-fill-check me-2"></i>Promouvoir Administrateur</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="" method="post" id="promoteForm">
                 <div class="modal-body">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <p>Vous allez nommer <strong id="promote-username"></strong> Administrateur.</p>
-                    <div class="alert alert-danger">
-                        <strong>Attention :</strong> Vous perdrez vos droits d'administrateur.
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>Cet utilisateur obtiendra les droits d'administrateur. Vous conserverez les vôtres. Maximum 3 administrateurs par établissement.
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Votre mot de passe pour confirmer :</label>

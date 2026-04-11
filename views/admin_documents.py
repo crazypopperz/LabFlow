@@ -6,6 +6,7 @@ import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import os
@@ -14,7 +15,7 @@ from markupsafe import Markup
 from extensions import limiter, cache
 from db import db, DocumentReglementaire, InventaireArchive, Parametre, Objet, Armoire, Categorie
 from utils import admin_required, log_action, calculate_license_key, get_etablissement_params
-from services.document_service import DocumentService, DocumentServiceError
+from services.document_service import DocumentService, DocumentServiceError, FileSystemError
 from collections import defaultdict
 from functools import wraps
 
@@ -103,21 +104,25 @@ def generer_inventaire_annuel():
         # 3. Enregistrement en Base (Transaction)
         archive = InventaireArchive(
             etablissement_id=etablissement_id,
-            titre=result['titre'],
-            fichier_url=result['relative_path'],
+            fichier_url=result['filename'],
+            fichier_pdf=result['buffer'].getvalue(),
             nb_objets=result['nb_objets']
         )
         db.session.add(archive)
         db.session.commit()
         
         # Optionnel : Rafraîchir l'objet pour être sûr d'avoir l'ID (si besoin plus tard)
-        # db.session.refresh(archive) 
-        
-        # 4. Feedback avec Lien
-        lien = url_for('static', filename=result['relative_path'])
-        msg = Markup(f"Inventaire généré avec succès. <a href='{lien}' target='_blank' class='alert-link'>Voir le PDF</a>")
-        flash(msg, "success")
-
+        db.session.commit()
+        # Envoi direct en telechargement
+        from flask import send_file
+        from io import BytesIO
+        pdf_data = result['buffer'].getvalue()
+        return send_file(
+            BytesIO(pdf_data),
+            as_attachment=True,
+            download_name=result["filename"],
+            mimetype="application/pdf"
+        )
     except DocumentServiceError as e:
         # Erreur métier (Liste vide, trop d'objets...)
         flash(str(e), "warning")
@@ -245,6 +250,26 @@ def activer_licence():
 
 
 # ============================================================
+@admin_documents_bp.route("/documents/telecharger_archive/<int:archive_id>")
+@admin_required
+def telecharger_archive(archive_id):
+    from flask import send_file
+    from io import BytesIO
+    etablissement_id = session.get('etablissement_id')
+    archive = db.session.get(InventaireArchive, archive_id)
+    if not archive or archive.etablissement_id != etablissement_id:
+        flash("Archive introuvable.", "error")
+        return redirect(url_for('admin_documents.gestion_documents'))
+    if not archive.fichier_pdf:
+        flash("Fichier PDF non disponible.", "error")
+        return redirect(url_for('admin_documents.gestion_documents'))
+    return send_file(
+        BytesIO(archive.fichier_pdf),
+        as_attachment=True,
+        download_name=archive.fichier_url,
+        mimetype='application/pdf'
+    )
+
 @admin_documents_bp.route("/documents/supprimer_archive/<int:archive_id>", methods=['POST'])
 @admin_required
 def supprimer_archive(archive_id):

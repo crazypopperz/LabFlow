@@ -67,9 +67,9 @@
                             </div>
                             
                             <div class="d-flex gap-2">
-                                <a href="{{ url_for('static', filename=arch.fichier_url) }}" target="_blank" class="btn btn-sm btn-outline-dark">
-                                    <i class="bi bi-file-earmark-pdf"></i> PDF
-                                </a>
+                                <a href="{{ url_for('admin_documents.telecharger_archive', archive_id=arch.id) }}" target="_blank" class="btn btn-sm btn-outline-dark">
+									<i class="bi bi-file-earmark-pdf"></i> PDF
+								</a>
                                 <!-- Bouton suppression (si tu as ajouté la route suppression) -->
                                 <!-- Formulaire modifié -->
 								<form action="{{ url_for('admin_documents.supprimer_archive', archive_id=arch.id) }}" method="post" class="form-delete-archive">

@@ -2,6 +2,7 @@ import os
 import logging
 import uuid
 import re
+import io
 from datetime import date, datetime
 from typing import List, Dict, Any, TypedDict, TYPE_CHECKING
 from werkzeug.utils import secure_filename
@@ -11,7 +12,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Flowable
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Flowable, KeepTogether
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from html import escape
 
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# --- CONFIGURATION TYPÉE (Point 3) ---
+# --- CONFIGURATION TYPÉE ---
 class DocumentConfig(TypedDict, total=False):
     color_primary: colors.Color
     color_secondary: colors.Color
@@ -28,7 +29,7 @@ class DocumentConfig(TypedDict, total=False):
     color_border: colors.Color
     max_items: int
     margins: float
-    col_widths: List[float] # Point 4
+    col_widths: List[float]
 
 DEFAULT_CONFIG: DocumentConfig = {
     'color_primary': colors.HexColor('#1F3B73'),
@@ -37,7 +38,7 @@ DEFAULT_CONFIG: DocumentConfig = {
     'color_border': colors.HexColor('#E0E0E0'),
     'max_items': 2000,
     'margins': 1.0 * cm,
-    'col_widths': [9.0*cm, 6.0*cm, 6.0*cm, 3.0*cm, 3.0*cm] # Externalisé
+    'col_widths':[9.0*cm, 6.0*cm, 6.0*cm, 3.0*cm, 3.0*cm]
 }
 
 class DocumentServiceError(Exception):
@@ -46,6 +47,7 @@ class DocumentServiceError(Exception):
 
 class FileSystemError(DocumentServiceError):
     """Erreur I/O (Disque plein, permissions)."""
+    """Erreur métier générique."""
     pass
 
 class LogoGraphique(Flowable):
@@ -78,19 +80,18 @@ class LogoGraphique(Flowable):
 class DocumentService:
     def __init__(self, upload_root: str, config: DocumentConfig = None):
         """
-        :param upload_root: Chemin racine absolu pour les uploads (ex: .../static/uploads)
+        :param upload_root: Chemin racine absolu pour les uploads
         """
-        # Point 2 : Validation du chemin absolu
+        # RESTAURÉ : Validation du chemin absolu
         if not os.path.isabs(upload_root):
             raise ValueError(f"upload_root doit être absolu. Reçu: {upload_root}")
             
         self.config = {**DEFAULT_CONFIG, **(config or {})}
         self.upload_root = upload_root
-        self.archive_folder = os.path.join(upload_root, 'archives')
         self._init_styles()
 
     def _init_styles(self):
-        """Cache des styles (Point Performance)."""
+        """Cache des styles."""
         styles = getSampleStyleSheet()
         c_prim = self.config['color_primary']
         
@@ -113,7 +114,6 @@ class DocumentService:
                              doc_title: str = "INVENTAIRE RÉGLEMENTAIRE", 
                              filename_prefix: str = "Inventaire") -> Dict[str, Any]:
         
-        # Point 6 : Validation ID
         if not isinstance(etablissement_id, int) or etablissement_id <= 0:
             raise ValueError(f"etablissement_id invalide : {etablissement_id}")
 
@@ -124,17 +124,14 @@ class DocumentService:
             raise DocumentServiceError(f"Trop d'objets ({len(objets)}). Limite : {self.config['max_items']}.")
 
         try:
-            # Point 7 : TOCTOU mitigation
-            os.makedirs(self.archive_folder, exist_ok=True)
-            
-            # Utilisation du préfixe personnalisé
             filename = self._generate_filename(etablissement_id, etablissement_name, prefix=filename_prefix)
-            full_path = os.path.join(self.archive_folder, filename)
 
-            # Configuration Doc
+            # CRÉATION DU BUFFER EN RAM
+            buffer = io.BytesIO()
+
             margin = self.config['margins']
             doc = SimpleDocTemplate(
-                full_path,
+                buffer,
                 pagesize=landscape(A4),
                 rightMargin=margin, leftMargin=margin,
                 topMargin=margin, bottomMargin=margin,
@@ -143,13 +140,12 @@ class DocumentService:
                 creator="Scientral System"
             )
 
-            elements = []
+            elements =[]
 
-            # En-tête
             logo_path = self.config.get('logo_path')
             logo = LogoGraphique(width=60, height=60, primary_color=self.config['color_primary'], logo_path=logo_path)
-            titre_bloc = [
-                Paragraph(doc_title, self.style_titre), # Titre personnalisé
+            titre_bloc =[
+                Paragraph(doc_title, self.style_titre),
                 Paragraph(f"Arrêté au {date.today().strftime('%d/%m/%Y')} - {escape(etablissement_name)}", self.style_sous_titre)
             ]
             header_table = Table([[logo, titre_bloc]], colWidths=[1.5*cm, 20*cm])
@@ -157,8 +153,7 @@ class DocumentService:
             elements.append(header_table)
             elements.append(Spacer(1, 0.8*cm))
 
-            # Données
-            headers = [
+            headers =[
                 Paragraph('Désignation', self.style_header),
                 Paragraph('Catégorie', self.style_header),
                 Paragraph('Emplacement', self.style_header),
@@ -190,44 +185,36 @@ class DocumentService:
                     cmr_display
                 ])
 
-            # Tableau
             t = Table(table_data, colWidths=self.config['col_widths'], repeatRows=1)
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), self.config['color_primary']),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('TOPPADDING', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, self.config['color_secondary']]),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1),[colors.white, self.config['color_secondary']]),
                 ('GRID', (0, 0), (-1, -1), 0.5, self.config['color_border']),
                 ('LINEBELOW', (0, 0), (-1, 0), 2, self.config['color_primary']),
             ]))
             elements.append(t)
 
-            # Pied de page
-            elements.append(Spacer(1, 1*cm))
             stats_text = f"<b>Total références :</b> {len(objets)}  |  <b>Dont produits CMR :</b> {total_cmr}"
-            elements.append(Paragraph(stats_text, self.style_stats))
+            stats_para = Paragraph(stats_text, self.style_stats)
+            elements[-1] = KeepTogether([elements[-1], Spacer(1, 0.5*cm), stats_para])
 
-            # Écriture Disque
             try:
                 doc.build(elements)
             except Exception as e:
                 raise DocumentServiceError(f"Erreur ReportLab lors de la génération: {e}") from e
             
-            static_folder = os.path.dirname(self.upload_root)
-            relative_path = os.path.relpath(full_path, static_folder)
-            relative_path = relative_path.replace(os.sep, '/')
+            buffer.seek(0)
 
             return {
                 "filename": filename,
-                "relative_path": relative_path,
+                "buffer": buffer,
                 "nb_objets": len(objets),
                 "titre": f"{filename_prefix} {date.today().year} (v.{datetime.now().strftime('%H%M')})"
             }
 
-        except (OSError, IOError) as e:
-            logger.error(f"Erreur I/O PDF: {e}", exc_info=True)
-            raise FileSystemError(f"Erreur d'écriture disque: {e.strerror}") from e
         except Exception as e:
             logger.error(f"Erreur inattendue PDF: {e}", exc_info=True)
             raise DocumentServiceError(f"Erreur technique inattendue: {type(e).__name__}") from e

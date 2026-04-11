@@ -436,6 +436,7 @@ class InventaireArchive(db.Model):
     titre = db.Column(db.String(150))
     date_archive = db.Column(db.DateTime, default=datetime.now)
     fichier_url = db.Column(db.String(255), nullable=False)
+    fichier_pdf = db.Column(db.LargeBinary, nullable=True)
     nb_objets = db.Column(db.Integer)
 
 # ============================================================

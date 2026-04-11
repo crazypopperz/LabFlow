@@ -255,13 +255,11 @@ def telecharger_modele_excel():
     ws.add_data_validation(dv_cmr)
     dv_cmr.add("C2:C1000")
     if armoires:
-        dv_armoires = DataValidation(type="list", formula1=f"=Data_Listes!$A$1:$A${len(armoires)}", allow_blank=True)
-        ws.add_data_validation(dv_armoires)
-        dv_armoires.add("F2:F1000")
+        ws.add_data_validation(dv)
+        dv.add("F2:F1000")
     if categories:
-        dv_categories = DataValidation(type="list", formula1=f"=Data_Listes!$B$1:$B${len(categories)}", allow_blank=True)
-        ws.add_data_validation(dv_categories)
-        dv_categories.add("G2:G1000")
+        ws.add_data_validation(dv)
+        dv.add("G2:G1000")
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)

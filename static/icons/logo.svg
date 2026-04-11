@@ -1,15 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#8B3FFF;stop-opacity:1" />
-      <stop offset="50%" style="stop-color:#5B8FFF;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7B5EF6"/>
+      <stop offset="50%" stop-color="#6B8EF8"/>
+      <stop offset="100%" stop-color="#38C8F0"/>
     </linearGradient>
   </defs>
-  
-  <!-- Fond arrondi avec dégradé -->
-  <rect x="20" y="20" width="472" height="472" rx="110" ry="110" fill="url(#gradient)"/>
-  
-  <!-- Texte LF -->
-  <text x="256" y="340" font-family="Arial, sans-serif" font-size="280" font-weight="900" fill="white" text-anchor="middle" letter-spacing="10">LF</text>
+
+  <rect x="40" y="40" width="320" height="320" rx="64" fill="url(#bgGrad)"/>
+
+  <text x="185" y="232" 
+        font-family="Arial Black, Arial, sans-serif" 
+        font-size="130" 
+        font-weight="900" 
+        fill="white" 
+        text-anchor="middle"
+        dominant-baseline="auto">Sc</text>
+
+  <text x="258" y="158" 
+        font-family="Arial, sans-serif" 
+        font-size="42" 
+        font-weight="700" 
+        fill="white" 
+        text-anchor="start">al</text>
 </svg>

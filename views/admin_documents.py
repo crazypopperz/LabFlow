@@ -1,4 +1,3 @@
-import secrets
 # ============================================================
 # FICHIER : views/admin_documents.py
 # Documents réglementaires, archives, licence, planning
@@ -9,7 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+import secrets
 import os
+import re
 
 from markupsafe import Markup
 from extensions import limiter, cache
@@ -53,7 +54,9 @@ def upload_document():
             flash(f"Format non autorisé. Formats acceptés : {', '.join(EXTENSIONS_AUTORISEES_DOCS)}", "error")
             return redirect(url_for('admin_documents.gestion_documents'))
         
-        filename = secure_filename(f"{etablissement_id}_{int(datetime.now().timestamp())}_{f.filename}")
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'pdf'
+        nom_propre = re.sub(r'[^\w\s-]', '', nom).strip().replace(' ', '_')
+        filename = secure_filename(f"{nom_propre}_{etablissement_id}_{int(datetime.now().timestamp())}.{ext}")
         fichier_bytes = f.read()  # lecture en mémoire, plus d'écriture disque
 
         doc = DocumentReglementaire(
@@ -69,6 +72,26 @@ def upload_document():
         
     return redirect(url_for('admin_documents.gestion_documents'))
 
+@admin_documents_bp.route("/documents/supprimer_doc/<int:doc_id>", methods=['POST'])
+@admin_required
+def supprimer_doc(doc_id):
+    etablissement_id = session['etablissement_id']
+    doc = db.session.get(DocumentReglementaire, doc_id)
+    
+    if not doc or doc.etablissement_id != etablissement_id:
+        flash("Document introuvable ou accès interdit.", "error")
+        return redirect(url_for('admin_documents.gestion_documents'))
+        
+    try:
+        db.session.delete(doc)
+        db.session.commit()
+        flash("Document supprimé avec succès.", "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur suppression document: {e}", exc_info=True)
+        flash("Erreur technique lors de la suppression.", "error")
+        
+    return redirect(url_for('admin_documents.gestion_documents'))
 
 @admin_documents_bp.route("/documents/generer_inventaire", methods=['POST'])
 @admin_required

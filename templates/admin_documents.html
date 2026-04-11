@@ -45,9 +45,17 @@
                                 <strong>{{ doc.nom }}</strong>
                                 <div class="small text-muted">{{ doc.date_upload.strftime('%d/%m/%Y') }}</div>
                             </div>
-                            <a href="{{ url_for('admin_documents.telecharger_doc', doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-								<i class="bi bi-eye"></i>
-							</a>
+                            <div class="d-flex gap-2">
+								<a href="{{ url_for('admin_documents.telecharger_doc', doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+									<i class="bi bi-eye"></i>
+								</a>
+								<form action="{{ url_for('admin_documents.supprimer_doc', doc_id=doc.id) }}" method="post" class="form-delete-doc">
+									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+									<button type="button" class="btn btn-sm btn-outline-danger btn-trigger-delete-doc" title="Supprimer">
+										<i class="bi bi-trash"></i>
+									</button>
+								</form>
+							</div>
                         </li>
                         {% else %}
                         <li class="list-group-item text-muted text-center">Aucun document.</li>
@@ -117,6 +125,27 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="deleteDocModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer le document</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer ce document ?</p>
+                <p class="text-muted small mt-2 mb-0">Cette action est irréversible. Le fichier sera définitivement effacé.</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteDocBtn">
+                    Confirmer la suppression
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -151,6 +180,26 @@
                 formToSubmit.submit();
             }
         });
+		
+		// Modale suppression DUERP
+		let formToSubmitDoc = null;
+		const deleteDocModal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
+		const confirmDocBtn = document.getElementById('confirmDeleteDocBtn');
+
+		document.querySelectorAll('.btn-trigger-delete-doc').forEach(btn => {
+			btn.addEventListener('click', function() {
+				formToSubmitDoc = this.closest('form');
+				deleteDocModal.show();
+			});
+		});
+
+		confirmDocBtn.addEventListener('click', function() {
+			if (formToSubmitDoc) {
+				this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
+				this.disabled = true;
+				formToSubmitDoc.submit();
+			}
+		});
     });
 </script>
 {% endblock %}

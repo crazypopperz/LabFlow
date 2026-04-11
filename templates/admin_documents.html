@@ -7,9 +7,12 @@
         <h2><i class="bi bi-file-earmark-lock me-2"></i>Documents & Conformité</h2>
         
         <!-- LE BOUTON QUI DÉCLENCHE TON NOUVEAU SERVICE -->
-        <a href="{{ url_for('admin_documents.generer_inventaire_annuel') }}" class="btn btn-primary">
-            <i class="bi bi-camera-fill me-2"></i>Figer l'Inventaire (Snapshot)
-        </a>
+        <form action="{{ url_for('admin_documents.generer_inventaire_annuel') }}" method="post">
+			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+			<button type="submit" class="btn btn-primary">
+				<i class="bi bi-camera-fill me-2"></i>Figer l'Inventaire (Snapshot)
+			</button>
+		</form>
     </div>
 
     <div class="row">
@@ -42,7 +45,9 @@
                                 <strong>{{ doc.nom }}</strong>
                                 <div class="small text-muted">{{ doc.date_upload.strftime('%d/%m/%Y') }}</div>
                             </div>
-                            <a href="{{ url_for('static', filename=doc.fichier_url) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                            <a href="{{ url_for('admin_documents.telecharger_doc', doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+								<i class="bi bi-eye"></i>
+							</a>
                         </li>
                         {% else %}
                         <li class="list-group-item text-muted text-center">Aucun document.</li>
@@ -116,27 +121,33 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+
+        // Téléchargement automatique si on vient de générer une archive
+        {% if new_archive_id %}
+		const link = document.createElement('a');
+		link.href = "{{ url_for('admin_documents.telecharger_archive', archive_id=new_archive_id) }}";
+		link.download = "";  // force le téléchargement sans navigation
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		{% endif %}
+
+        // ... reste de ton JS existant (modale suppression)
         let formToSubmit = null;
         const deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
         const confirmBtn = document.getElementById('confirmDeleteBtn');
 
-        // 1. Quand on clique sur une poubelle
         document.querySelectorAll('.btn-trigger-delete').forEach(btn => {
             btn.addEventListener('click', function() {
-                // On repère le formulaire associé au bouton cliqué
                 formToSubmit = this.closest('form');
-                // On ouvre la belle modale
                 deleteModal.show();
             });
         });
 
-        // 2. Quand on confirme dans la modale
         confirmBtn.addEventListener('click', function() {
             if (formToSubmit) {
-                // On change le texte du bouton pour montrer que ça charge
                 this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
                 this.disabled = true;
-                // On soumet le formulaire
                 formToSubmit.submit();
             }
         });

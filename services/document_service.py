@@ -191,18 +191,29 @@ class DocumentService:
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('TOPPADDING', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1),[colors.white, self.config['color_secondary']]),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, self.config['color_secondary']]),
                 ('GRID', (0, 0), (-1, -1), 0.5, self.config['color_border']),
                 ('LINEBELOW', (0, 0), (-1, 0), 2, self.config['color_primary']),
             ]))
             elements.append(t)
 
-            stats_text = f"<b>Total références :</b> {len(objets)}  |  <b>Dont produits CMR :</b> {total_cmr}"
-            stats_para = Paragraph(stats_text, self.style_stats)
-            elements[-1] = KeepTogether([elements[-1], Spacer(1, 0.5*cm), stats_para])
+            stats_text = f"Total références : {len(objets)}   |   Dont produits CMR : {total_cmr}"
+            c_prim = self.config['color_primary']
+
+            def add_stats_footer(canvas, doc):
+                canvas.saveState()
+                canvas.setFont('Helvetica-Bold', 10)
+                canvas.setFillColor(c_prim)
+                page_width = landscape(A4)[0]
+                canvas.drawRightString(
+                    page_width - margin,
+                    margin * 0.4,
+                    stats_text
+                )
+                canvas.restoreState()
 
             try:
-                doc.build(elements)
+                doc.build(elements, onFirstPage=add_stats_footer, onLaterPages=add_stats_footer)
             except Exception as e:
                 raise DocumentServiceError(f"Erreur ReportLab lors de la génération: {e}") from e
             

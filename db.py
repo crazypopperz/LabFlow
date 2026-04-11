@@ -424,6 +424,7 @@ class DocumentReglementaire(db.Model):
     nom = db.Column(db.String(150), nullable=False)
     type_doc = db.Column(db.String(50))
     fichier_url = db.Column(db.String(255), nullable=False)
+    fichier_pdf = db.Column(db.LargeBinary, nullable=True)
     date_upload = db.Column(db.DateTime, default=datetime.now)
 
 class InventaireArchive(db.Model):

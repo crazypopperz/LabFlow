@@ -25,19 +25,21 @@ admin_documents_bp = Blueprint('admin_documents', __name__, url_prefix='/admin')
 @admin_required
 def gestion_documents():
     etablissement_id = session['etablissement_id']
-    # Récupération des documents triés par date
     docs = db.session.execute(db.select(DocumentReglementaire).filter_by(etablissement_id=etablissement_id).order_by(DocumentReglementaire.date_upload.desc())).scalars().all()
-    # Récupération des archives d'inventaire
     archives = db.session.execute(db.select(InventaireArchive).filter_by(etablissement_id=etablissement_id).order_by(InventaireArchive.date_archive.desc())).scalars().all()
     
+    # Récupère l'id de la nouvelle archive si on vient d'en générer une
+    new_archive_id = request.args.get('new_archive_id', type=int)
+    
     breadcrumbs=[{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}, {'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Documents et Conformité', 'url': None}]
-    return render_template("admin_documents.html", docs=docs, archives=archives, breadcrumbs=breadcrumbs)
+    return render_template("admin_documents.html", docs=docs, archives=archives, breadcrumbs=breadcrumbs, new_archive_id=new_archive_id)
 
 @admin_documents_bp.route("/documents/upload", methods=['POST'])
 @admin_required
 def upload_document():
     etablissement_id = session['etablissement_id']
-    if 'fichier' not in request.files: return redirect(url_for('admin_documents.gestion_documents'))
+    if 'fichier' not in request.files:
+        return redirect(url_for('admin_documents.gestion_documents'))
     
     f = request.files['fichier']
     nom = request.form.get('nom')
@@ -46,23 +48,20 @@ def upload_document():
     EXTENSIONS_AUTORISEES_DOCS = {'pdf', 'png', 'jpg', 'jpeg'}
 
     if f and nom:
-        # Validation de l'extension
         ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
         if ext not in EXTENSIONS_AUTORISEES_DOCS:
             flash(f"Format non autorisé. Formats acceptés : {', '.join(EXTENSIONS_AUTORISEES_DOCS)}", "error")
             return redirect(url_for('admin_documents.gestion_documents'))
         
-        # Sécurisation du nom de fichier
         filename = secure_filename(f"{etablissement_id}_{int(datetime.now().timestamp())}_{f.filename}")
-        upload_path = os.path.join(current_app.root_path, 'static', 'uploads', 'docs')
-        os.makedirs(upload_path, exist_ok=True)
-        f.save(os.path.join(upload_path, filename))
-        
+        fichier_bytes = f.read()  # lecture en mémoire, plus d'écriture disque
+
         doc = DocumentReglementaire(
-            etablissement_id=etablissement_id, 
-            nom=nom, 
-            type_doc=type_doc, 
-            fichier_url=f"uploads/docs/{filename}"
+            etablissement_id=etablissement_id,
+            nom=nom,
+            type_doc=type_doc,
+            fichier_url=filename,        # juste le nom, pour le download_name
+            fichier_pdf=fichier_bytes    # contenu stocké en base
         )
         db.session.add(doc)
         db.session.commit()
@@ -71,27 +70,21 @@ def upload_document():
     return redirect(url_for('admin_documents.gestion_documents'))
 
 
-@admin_documents_bp.route("/documents/generer_inventaire")
+@admin_documents_bp.route("/documents/generer_inventaire", methods=['POST'])
 @admin_required
 def generer_inventaire_annuel():
     etablissement_id = session['etablissement_id']
     nom_etablissement = session.get('nom_etablissement', 'Mon Etablissement')
     
     try:
-        # 1. Récupération optimisée (Eager Loading)
         stmt = (
             db.select(Objet)
-            .options(
-                joinedload(Objet.categorie), 
-                joinedload(Objet.armoire)
-            )
+            .options(joinedload(Objet.categorie), joinedload(Objet.armoire))
             .filter_by(etablissement_id=etablissement_id)
             .order_by(Objet.nom)
         )
         objets = db.session.execute(stmt).scalars().all()
         
-        # 2. Appel du Service
-        # On injecte le chemin racine des uploads (static/uploads)
         upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
         doc_service = DocumentService(upload_root)
         
@@ -101,52 +94,55 @@ def generer_inventaire_annuel():
             objets=objets
         )
         
-        # 3. Enregistrement en Base (Transaction)
         archive = InventaireArchive(
             etablissement_id=etablissement_id,
             fichier_url=result['filename'],
             fichier_pdf=result['buffer'].getvalue(),
-            nb_objets=result['nb_objets']
+            nb_objets=result['nb_objets'],
+            titre=result['titre']  # ← ajouter cette ligne
         )
         db.session.add(archive)
         db.session.commit()
-        
-        # Optionnel : Rafraîchir l'objet pour être sûr d'avoir l'ID (si besoin plus tard)
-        db.session.commit()
-        # Envoi direct en telechargement
-        from flask import send_file
-        from io import BytesIO
-        pdf_data = result['buffer'].getvalue()
-        return send_file(
-            BytesIO(pdf_data),
-            as_attachment=True,
-            download_name=result["filename"],
-            mimetype="application/pdf"
-        )
+
+        # On redirige vers la page, avec l'id de la nouvelle archive en paramètre
+        flash("Inventaire généré avec succès.", "success")
+        return redirect(url_for('admin_documents.gestion_documents', new_archive_id=archive.id))
+
     except DocumentServiceError as e:
-        # Erreur métier (Liste vide, trop d'objets...)
         flash(str(e), "warning")
-        
     except FileSystemError as e:
-        # Erreur disque
         current_app.logger.critical(f"Erreur Disque: {e}")
         flash("Erreur système : Impossible d'écrire le fichier.", "error")
-
     except SQLAlchemyError as e:
-        # Erreur base de données
         db.session.rollback()
         current_app.logger.error(f"Erreur DB lors de l'archivage: {e}")
         flash("Erreur lors de l'enregistrement en base de données.", "error")
-        
     except Exception as e:
-        # Filet de sécurité global
-        db.session.rollback() # Sécurité supplémentaire
+        db.session.rollback()
         current_app.logger.error(f"Erreur critique génération inventaire: {e}", exc_info=True)
         flash("Une erreur technique inattendue est survenue.", "error")
         
     return redirect(url_for('admin_documents.gestion_documents'))
 
-
+@admin_documents_bp.route("/documents/telecharger_doc/<int:doc_id>")
+@admin_required
+def telecharger_doc(doc_id):
+    from flask import send_file
+    from io import BytesIO
+    etablissement_id = session.get('etablissement_id')
+    doc = db.session.get(DocumentReglementaire, doc_id)
+    if not doc or doc.etablissement_id != etablissement_id:
+        flash("Document introuvable.", "error")
+        return redirect(url_for('admin_documents.gestion_documents'))
+    if not doc.fichier_pdf:
+        flash("Fichier non disponible.", "error")
+        return redirect(url_for('admin_documents.gestion_documents'))
+    return send_file(
+        BytesIO(doc.fichier_pdf),
+        as_attachment=True,
+        download_name=doc.fichier_url,
+        mimetype='application/pdf'
+    )
 
 # ============================================================
 # LICENCE (Rate Limit Custom)

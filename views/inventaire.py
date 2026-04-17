@@ -4,7 +4,7 @@
 import math
 import os
 from urllib.parse import urlparse
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, send_file, session, jsonify, current_app)
 from werkzeug.utils import secure_filename
@@ -797,7 +797,7 @@ def modifier_objet(id_objet):
                 objet_id=objet.id,
                 utilisateur_id=user_id,
                 action="Modification",
-                details=msg,
+                details=f"[{objet.nom}] {msg}",
                 etablissement_id=etablissement_id,
                 timestamp=datetime.now()
             )
@@ -1204,7 +1204,7 @@ def exporter_inventaire():
     format_type = request.args.get('format')
     armoire_id = request.args.get('armoire_id', type=int)
     categorie_id = request.args.get('categorie_id', type=int)
-    filter_type = request.args.get('filter')
+    cmr = request.args.get('cmr')
     
     if format_type not in ['excel', 'pdf']:
         flash("Format non supporté.", "error")
@@ -1216,29 +1216,39 @@ def exporter_inventaire():
             joinedload(Objet.armoire)
         ).filter_by(etablissement_id=etablissement_id)
 
-        titre_doc = f"Inventaire - {session.get('nom_etablissement', 'Global')}"
+        from views.admin import sanitize_filename_report
+        etab_safe = sanitize_filename_report(session.get('nom_etablissement', 'Etablissement'))
+        today = date.today().strftime('%Y%m%d')
+
+        titre_doc = "INVENTAIRE RÉGLEMENTAIRE"
         filename_prefix = "Inventaire"
-        
-        if filter_type == 'cmr':
+        filename_excel = f"Inventaire_{etab_safe}_{today}.xlsx"
+
+        if cmr == 'true':
             query = query.filter(Objet.is_cmr == True)
-            titre_doc = "Inventaire - Produits CMR"
-            filename_prefix = "CMR"
+            titre_doc = "INVENTAIRE — PRODUITS CMR"
+            filename_prefix = "Inventaire-CMR"
+            filename_excel = f"Inventaire-CMR_{etab_safe}_{today}.xlsx"
             
         elif armoire_id:
             armoire = db.session.get(Armoire, armoire_id)
             if not armoire or armoire.etablissement_id != etablissement_id:
                 return redirect(url_for('inventaire.index'))
             query = query.filter(Objet.armoire_id == armoire_id)
-            titre_doc = f"Inventaire - {armoire.nom}"
-            filename_prefix = f"Armoire_{armoire.nom}"
+            arm_safe = sanitize_filename_report(armoire.nom)
+            titre_doc = f"INVENTAIRE — {armoire.nom.upper()}"
+            filename_prefix = f"Inventaire-{arm_safe}"
+            filename_excel = f"Inventaire-{arm_safe}_{etab_safe}_{today}.xlsx"
         
         elif categorie_id:
             categorie = db.session.get(Categorie, categorie_id)
             if not categorie or categorie.etablissement_id != etablissement_id:
                 return redirect(url_for('inventaire.index'))
             query = query.filter(Objet.categorie_id == categorie_id)
-            titre_doc = f"Inventaire - {categorie.nom}"
-            filename_prefix = f"Categorie_{categorie.nom}"
+            cat_safe = sanitize_filename_report(categorie.nom)
+            titre_doc = f"INVENTAIRE — {categorie.nom.upper()}"
+            filename_prefix = f"Inventaire-{cat_safe}"
+            filename_excel = f"Inventaire-{cat_safe}_{etab_safe}_{today}.xlsx"
 
         objets = db.session.execute(query.order_by(Objet.nom)).scalars().all()
         
@@ -1248,22 +1258,47 @@ def exporter_inventaire():
 
         params = get_etablissement_params(etablissement_id)
         logo_url = params.get('logo_url')
-        logo_path = os.path.join(current_app.root_path, logo_url.lstrip('/')) if logo_url else None
-        upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
-        doc_service = DocumentService(upload_root, config={'logo_path': logo_path})
-        result = doc_service.generate_inventory_pdf(
-            etablissement_name=session.get('nom_etablissement'),
-            etablissement_id=etablissement_id,
-            objets=objets,
-            doc_title=titre_doc.upper(),
-            filename_prefix=filename_prefix
-        )
-        
-        return send_file(
-            os.path.join(current_app.root_path, 'static', result['relative_path']),
-            as_attachment=True,
-            download_name=result['filename']
-        )
+        logo_path = os.path.join(current_app.root_path, 'static', logo_url) if logo_url else None
+
+        filename_pdf = f"{filename_prefix}_{etab_safe}_{today}.pdf"
+
+        if format_type == 'pdf':
+            upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
+            doc_service = DocumentService(upload_root, config={'logo_path': logo_path})
+            result = doc_service.generate_inventory_pdf(
+                etablissement_name=session.get('nom_etablissement'),
+                etablissement_id=etablissement_id,
+                objets=objets,
+                doc_title=titre_doc.upper(),
+                filename_prefix=filename_prefix
+            )
+            return send_file(
+                result['buffer'],
+                as_attachment=True,
+                download_name=filename_pdf,
+                mimetype='application/pdf'
+            )
+
+        else:  # excel
+            from views.admin import generer_inventaire_excel
+            data_export = []
+            for o in objets:
+                data_export.append({
+                    'nom': o.nom,
+                    'categorie': o.categorie.nom if o.categorie else '-',
+                    'armoire': o.armoire.nom if o.armoire else '-',
+                    'quantite': o.quantite_physique,
+                    'seuil': o.seuil,
+                    'peremption': o.date_peremption.strftime('%d/%m/%Y') if o.date_peremption else '-'
+                })
+            metadata = {
+                'etablissement': session.get('nom_etablissement', 'Scientral'),
+                'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
+                'total': len(data_export),
+                'logo_path': logo_path,
+                'filename': filename_excel
+            }
+            return generer_inventaire_excel(data_export, metadata)
 
     except Exception as e:
         current_app.logger.error(f"Erreur export contextuel: {e}", exc_info=True)

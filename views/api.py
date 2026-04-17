@@ -545,7 +545,7 @@ def deplacer_objets():
                 objet_id=obj.id,
                 utilisateur_id=user_id,
                 action="Modification",
-                details=f"Déplacement de masse : {ancienne_armoire_nom} ➝ {target_armoire.nom}",
+                details=f"[{obj.nom}] Déplacement : {ancienne_armoire_nom} ➝ {target_armoire.nom}",
                 etablissement_id=etablissement_id,
                 timestamp=timestamp_bulk
             ))

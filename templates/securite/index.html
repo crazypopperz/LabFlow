@@ -90,6 +90,12 @@
                                     <a href="{{ url_for('securite.voir_equipement', id=eq.id) }}" class="btn btn-sm btn-outline-primary" title="Gérer la maintenance">
                                         <i class="bi bi-gear-fill me-1"></i> Gérer
                                     </a>
+                                    <button class="btn btn-sm btn-outline-danger btn-supprimer-eq"
+                                            data-id="{{ eq.id }}"
+                                            data-nom="{{ eq.nom }}"
+                                            title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 {% else %}
                                     <button class="btn btn-sm btn-outline-warning text-dark" 
                                             onclick="openSignalementModal({{ eq.id }}, '{{ eq.nom|replace("'", "\\'") }}')">
@@ -170,6 +176,25 @@
     </div>
 </div>
 
+<!-- MODALE SUPPRESSION ÉQUIPEMENT -->
+<div class="modal fade" id="deleteEquipementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer l'équipement</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer <strong id="delete-eq-nom"></strong> ?</p>
+                <p class="text-muted small mt-2 mb-0">Cette action est irréversible. Tout l'historique et les règles de maintenance seront supprimés.</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteEqBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -220,6 +245,34 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+	// Suppression équipement
+    let deleteEqId = null;
+    const deleteEqModal = new bootstrap.Modal(document.getElementById('deleteEquipementModal'));
+    
+    document.querySelectorAll('.btn-supprimer-eq').forEach(btn => {
+        btn.addEventListener('click', function() {
+            deleteEqId = this.dataset.id;
+            document.getElementById('delete-eq-nom').textContent = this.dataset.nom;
+            deleteEqModal.show();
+        });
+    });
+
+    document.getElementById('confirmDeleteEqBtn').addEventListener('click', function() {
+        if (!deleteEqId) return;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
+        this.disabled = true;
+        const url = "{{ url_for('securite.supprimer_equipement', id=0) }}".replace('/0/', `/${deleteEqId}/`);
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) window.location.reload();
+            else alert("Erreur : " + res.error);
+        });
+    });
+	
 });
 
 function openSignalementModal(id, nom) {

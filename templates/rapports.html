@@ -230,29 +230,23 @@
 <script>
     // Script pour pré-remplir les dates et gérer l'affichage des filtres
     document.addEventListener('DOMContentLoaded', function() {
-        const dateDebut = document.getElementById('date_debut');
-        const dateFin = document.getElementById('date_fin');
-        
-        // Pré-remplissage dates (Mois en cours) si vide
-        if (!dateDebut.value) {
-            const now = new Date();
-            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            
-            const formatDate = (date) => {
-                const d = new Date(date);
-                let month = '' + (d.getMonth() + 1);
-                let day = '' + d.getDate();
-                const year = d.getFullYear();
-                if (month.length < 2) month = '0' + month;
-                if (day.length < 2) day = '0' + day;
-                return [year, month, day].join('-');
-            };
+		// Pré-remplissage des dates d'export sur les 30 derniers jours
+		const now = new Date();
+		const thirtyDaysAgo = new Date(now);
+		thirtyDaysAgo.setDate(now.getDate() - 30);
 
-            dateDebut.value = formatDate(firstDay);
-            dateFin.value = formatDate(lastDay);
-        }
-    });
+		const formatDate = (date) => {
+			let month = '' + (date.getMonth() + 1);
+			let day = '' + date.getDate();
+			const year = date.getFullYear();
+			if (month.length < 2) month = '0' + month;
+			if (day.length < 2) day = '0' + day;
+			return [year, month, day].join('-');
+		};
+
+		document.getElementById('date_debut').value = formatDate(thirtyDaysAgo);
+		document.getElementById('date_fin').value = formatDate(now);
+	});
 
     function toggleActionFilters(show) {
         const filterBox = document.getElementById('action-filters');

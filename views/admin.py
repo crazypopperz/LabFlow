@@ -233,19 +233,20 @@ def get_logo_etablissement_path(etablissement_id):
         pass
     return None
 
-def ajouter_logo_excel(ws):
-    """Ajoute le logo Scientral dans le fichier Excel si disponible."""
-    logo_path = os.path.join(current_app.root_path, 'static', 'logo.png')
-    if os.path.exists(logo_path):
-        try:
-            img = OpenPyXLImage(logo_path)
-            img.width = 50
-            img.height = 50
-            ws.add_image(img, 'A1')
-            return True
-        except Exception:
-            return False
-    return False
+def ajouter_logo_excel(ws, logo_path=None):
+    """Ajoute le logo établissement dans le fichier Excel si disponible."""
+    if not logo_path:
+        return False
+    if not os.path.exists(logo_path):
+        return False
+    try:
+        img = OpenPyXLImage(logo_path)
+        img.width = 90
+        img.height = 90
+        ws.add_image(img, 'A1')
+        return True
+    except Exception:
+        return False
 
 def generer_budget_pdf_pro(data_export, metadata):
     buffer = BytesIO()
@@ -296,20 +297,25 @@ def generer_budget_excel_pro(data_export, metadata):
     font_data = Font(name='Segoe UI', size=10)
     border_thin = Border(left=Side(style='thin', color='D9D9D9'), right=Side(style='thin', color='D9D9D9'), bottom=Side(style='thin', color='D9D9D9'))
 
+    ajouter_logo_excel(ws, logo_path=metadata.get('logo_path'))
+    ws.row_dimensions[1].height = 70
+    ws.column_dimensions['A'].width = 16
+
     ws.merge_cells('B1:E1')
     ws['B1'] = f"Rapport Budgétaire - {metadata['etablissement']}"
     ws['B1'].font = font_titre
     ws['B1'].alignment = align_left
-    ws.row_dimensions[1].height = 40
-    
-    ajouter_logo_excel(ws)
 
-    ws.merge_cells('A2:D2')
-    ws['A2'] = f"Période : {metadata['date_debut']} au {metadata['date_fin']}"
-    ws['A2'].alignment = align_left
-    ws.merge_cells('A3:D3')
-    ws['A3'] = f"Généré le {metadata['date_generation']} | {metadata['nombre_depenses']} écritures"
-    ws['A3'].alignment = align_left
+    ws.merge_cells('B2:E2')
+    ws['B2'] = f"Période : {metadata['date_debut']} au {metadata['date_fin']}"
+    ws['B2'].alignment = align_left
+    ws['B2'].font = Font(name='Segoe UI', size=10, color="444444")
+    ws.row_dimensions[2].height = 20
+
+    ws.merge_cells('B3:E3')
+    ws['B3'] = f"Généré le {metadata['date_generation']} | {metadata['nombre_depenses']} écritures"
+    ws['B3'].alignment = align_left
+    ws['B3'].font = Font(name='Segoe UI', size=10, color="444444")
     ws.row_dimensions[3].height = 20
 
     headers = ['Date', 'Fournisseur', 'Libellé', 'Montant']
@@ -366,7 +372,7 @@ def generer_rapport_pdf(data, metadata):
     titre_style = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1F3B73'), alignment=TA_LEFT)
     sous_titre_style = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray, alignment=TA_LEFT)
     titre_bloc = [Paragraph(f"RAPPORT D'ACTIVITÉ", titre_style), Paragraph(f"{escape(metadata['etablissement'])}", sous_titre_style)]
-    header_table = Table([[logo, titre_bloc]], colWidths=[1.5*cm, 20*cm])
+    header_table = Table([[logo, titre_bloc]], colWidths=[3.0*cm, 18.5*cm])
     header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (0,0), (-1,-1), 0)]))
     elements.append(header_table)
     elements.append(Spacer(1, 0.5*cm))
@@ -379,10 +385,18 @@ def generer_rapport_pdf(data, metadata):
     elements.append(Spacer(1, 0.8*cm))
     header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_CENTER)
     cell_style = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9, textColor=colors.black)
+    cell_style_center = ParagraphStyle('CellCenter', parent=styles['Normal'], fontSize=9, textColor=colors.black, alignment=TA_CENTER)
     headers = [Paragraph('Date', header_style), Paragraph('Heure', header_style), Paragraph('Utilisateur', header_style), Paragraph('Action', header_style), Paragraph('Objet', header_style), Paragraph('Détails', header_style)]
     table_data = [headers]
     for row in data:
-        table_data.append([Paragraph(row['date'], cell_style), Paragraph(row['heure'], cell_style), Paragraph(escape(row['utilisateur']), cell_style), Paragraph(escape(row['action']), cell_style), Paragraph(escape(row['objet']), cell_style), Paragraph(escape(row['details']) if row['details'] else '-', cell_style)])
+        table_data.append([
+            Paragraph(row['date'], cell_style_center),
+            Paragraph(row['heure'], cell_style_center),
+            Paragraph(escape(row['utilisateur']), cell_style_center),
+            Paragraph(escape(row['action']), cell_style_center),
+            Paragraph(escape(row['objet']), cell_style),
+            Paragraph(escape(row['details']) if row['details'] else '-', cell_style)
+        ])
     col_widths = [2.5*cm, 1.5*cm, 4.0*cm, 3.0*cm, 6.5*cm, 10.0*cm]
     t = Table(table_data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F3B73')), ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'), ('TOPPADDING', (0, 0), (-1, 0), 10), ('BOTTOMPADDING', (0, 0), (-1, 0), 10), ('VALIGN', (0, 1), (-1, -1), 'TOP'), ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F4F6F9')]), ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E0E0E0')), ('LINEBELOW', (0, 0), (-1, 0), 2, colors.HexColor('#1F3B73'))]))
@@ -407,51 +421,78 @@ def generer_rapport_excel(data, metadata):
     align_top = Alignment(vertical="top", wrap_text=True)
     border_thin = Border(left=Side(style='thin', color='D9D9D9'), right=Side(style='thin', color='D9D9D9'), bottom=Side(style='thin', color='D9D9D9'))
 
+    # Ligne 1 : Logo
+    ajouter_logo_excel(ws, logo_path=metadata.get('logo_path'))
+    ws.row_dimensions[1].height = 70
+
+    # Ligne 1 : Titre à côté du logo
     ws.merge_cells('B1:F1')
     ws['B1'] = f"RAPPORT D'ACTIVITÉ - {metadata['etablissement']}"
     ws['B1'].font = font_titre
     ws['B1'].alignment = Alignment(horizontal="left", vertical="center")
-    ws.row_dimensions[1].height = 45
-    
-    ajouter_logo_excel(ws)
-    
-    ws.merge_cells('A2:F4')
-    ws['A2'] = f"Période : {metadata['periode']}\nGénéré le : {metadata['date_generation']}\nTotal : {metadata['total']} enregistrements"
-    ws['A2'].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+    # Ligne 2 : Période
+    ws.merge_cells('D2:F2')
+    ws['D2'] = f"Période : {metadata['periode']}"
+    ws['D2'].alignment = Alignment(horizontal="right", vertical="center")
+    ws['D2'].font = Font(name='Segoe UI', size=10, color="444444")
+    ws.row_dimensions[2].height = 20
+
+    # Ligne 3 : Généré le
+    ws.merge_cells('D3:F3')
+    ws['D3'] = f"Généré le : {metadata['date_generation']}"
+    ws['D3'].alignment = Alignment(horizontal="right", vertical="center")
+    ws['D3'].font = Font(name='Segoe UI', size=10, color="444444")
+    ws.row_dimensions[3].height = 20
+
+    # Ligne 4 : Total
+    ws.merge_cells('D4:F4')
+    ws['D4'] = f"Total : {metadata['total']} enregistrements"
+    ws['D4'].alignment = Alignment(horizontal="right", vertical="center")
+    ws['D4'].font = Font(name='Segoe UI', size=10, color="444444", bold=True)
+    ws.row_dimensions[4].height = 20
+
+    # Ligne 5 : Espace
+    ws.row_dimensions[5].height = 12
     
     headers = ["Date", "Heure", "Utilisateur", "Action", "Objet", "Détails"]
-    ws.append([])
-    ws.append(headers)
-    
     for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=6, column=col_num)
+        cell = ws.cell(row=6, column=col_num, value=header)
         cell.fill = fill_header
         cell.font = font_header
         cell.alignment = align_center
-    
     ws.row_dimensions[6].height = 30
-    
+
+    current_row = 7
     for row in data:
-        ws.append([
-            row['date'], row['heure'], 
-            sanitize_for_excel_report(row['utilisateur']), 
-            sanitize_for_excel_report(row['action']), 
-            sanitize_for_excel_report(row['objet']), 
-            sanitize_for_excel_report(row['details'])
-        ])
+        c1 = ws.cell(row=current_row, column=1, value=row['date'])
+        c1.alignment = Alignment(horizontal="center", vertical="center")
+        c2 = ws.cell(row=current_row, column=2, value=row['heure'])
+        c2.alignment = Alignment(horizontal="center", vertical="center")
+        c3 = ws.cell(row=current_row, column=3, value=sanitize_for_excel_report(row['utilisateur']))
+        c3.alignment = Alignment(horizontal="center", vertical="center")
+        c4 = ws.cell(row=current_row, column=4, value=sanitize_for_excel_report(row['action']))
+        c4.alignment = Alignment(horizontal="center", vertical="center")
+        ws.cell(row=current_row, column=5, value=sanitize_for_excel_report(row['objet']))
+        ws.cell(row=current_row, column=6, value=sanitize_for_excel_report(row['details']))
+        current_row += 1
     
-    ws.column_dimensions['A'].width = 12
+    ws.column_dimensions['A'].width = 16
     ws.column_dimensions['B'].width = 10
     ws.column_dimensions['C'].width = 20
     ws.column_dimensions['D'].width = 15
     ws.column_dimensions['E'].width = 30
     ws.column_dimensions['F'].width = 50
     
+    CENTER_COLS = {1, 2, 3, 4}  # Date, Heure, Utilisateur, Action
     for row in ws.iter_rows(min_row=7, max_row=ws.max_row):
         for cell in row:
             cell.font = font_data
-            cell.alignment = align_top
             cell.border = border_thin
+            if cell.column in CENTER_COLS:
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+            else:
+                cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
 
     buffer = BytesIO()
     wb.save(buffer)
@@ -498,14 +539,19 @@ def generer_inventaire_excel(data, metadata):
         bottom=Side(style='thin', color=COLOR_BORDER)
     )
 
-    # --- 2. EN-TÊTE (TEXTE SEULEMENT) ---
+    # --- 2. EN-TÊTE ---
     
-    # Ligne 1 : TITRE PRINCIPAL
-    ws.merge_cells('A1:F1')
-    ws['A1'] = f"ÉTAT DE L'INVENTAIRE - {metadata['etablissement']}"
-    ws['A1'].font = font_titre
-    ws['A1'].alignment = align_left
-    ws.row_dimensions[1].height = 35
+    # Logo établissement (A1 si disponible)
+    logo_path = metadata.get('logo_path')
+    has_logo = ajouter_logo_excel(ws, logo_path=logo_path)
+    ws.row_dimensions[1].height = 90 if has_logo else 35
+    
+    # Ligne 1 : TITRE PRINCIPAL (B1 si logo, sinon A1)
+    titre_col = 'B1' if has_logo else 'A1'
+    ws.merge_cells(f'{titre_col}:F1')
+    ws[titre_col] = f"ÉTAT DE L'INVENTAIRE - {metadata['etablissement']}"
+    ws[titre_col].font = font_titre
+    ws[titre_col].alignment = align_left
     
     # Ligne 2 : SOUS-TITRE (Date | Total)
     ws.merge_cells('A2:F2')
@@ -584,7 +630,7 @@ def generer_inventaire_excel(data, metadata):
     wb.save(buffer)
     buffer.seek(0)
     
-    filename = f"Inventaire_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.xlsx"
+    filename = metadata.get('filename') or f"Inventaire_{sanitize_filename_report(metadata['etablissement'])}_{date.today().strftime('%Y%m%d')}.xlsx"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
@@ -842,6 +888,11 @@ def sauvegarder_theme():
         logo_file = request.files.get('logo_file')
         if logo_file and logo_file.filename:
             ext = logo_file.filename.rsplit('.', 1)[-1].lower()
+            logo_file = request.files.get('logo_file')
+            current_app.logger.info(f"Logo file: {logo_file}, filename: {logo_file.filename if logo_file else 'None'}")
+            if logo_file and logo_file.filename:
+                ext = logo_file.filename.rsplit('.', 1)[-1].lower()
+                current_app.logger.info(f"Extension détectée: {ext}")
             if ext in ['png', 'jpg', 'jpeg', 'svg', 'webp']:
                 filename = f"logo_{etablissement_id}.{ext}"
                 upload_path = os.path.join(
@@ -873,8 +924,8 @@ def sauvegarder_theme():
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Erreur sauvegarde thème: {e}")
-        flash("Erreur lors de la sauvegarde.", "error")
+        current_app.logger.error(f"Erreur sauvegarde thème: {e}", exc_info=True)
+        flash(f"Erreur : {str(e)}", "error")
 
     return redirect(url_for('admin.personnalisation_page'))
 

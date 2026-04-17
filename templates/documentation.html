@@ -89,6 +89,14 @@
                         </div>
                     </div>
                 </section>
+				<!-- Screenshot Dashboard -->
+                    <div class="mt-4 text-center">
+                        <img src="{{ url_for('static', filename='images/doc/dashboard.png') }}" 
+                             class="img-fluid rounded shadow-sm border doc-screenshot" 
+                             alt="Tableau de bord Scientral"
+                             style="max-width: 100%;">
+                        <p class="text-muted small mt-2">Vue du Tableau de Bord</p>
+                    </div>
 
                 <hr class="my-5">
 
@@ -148,6 +156,14 @@
                         </div>
                     </div>
                 </section>
+				<!-- Screenshot Inventaire -->
+                    <div class="mt-4 text-center">
+                        <img src="{{ url_for('static', filename='images/doc/inventaire.png') }}" 
+                             class="img-fluid rounded shadow-sm border doc-screenshot" 
+                             alt="Liste de l'inventaire"
+                             style="max-width: 100%;">
+                        <p class="text-muted small mt-2">Vue de l'inventaire complet</p>
+                    </div>
 
                 <hr class="my-5">
 
@@ -181,6 +197,40 @@
                         </div>
                     </div>
                 </section>
+				<!-- Screenshots Réservations -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-6 text-center">
+                            <img src="{{ url_for('static', filename='images/doc/calendrier_mois.png') }}" 
+                                 class="img-fluid rounded shadow-sm border doc-screenshot" 
+                                 alt="Calendrier mensuel">
+                            <p class="text-muted small mt-2">Vue mensuelle</p>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <img src="{{ url_for('static', filename='images/doc/calendrier_jour.png') }}" 
+                                 class="img-fluid rounded shadow-sm border doc-screenshot" 
+                                 alt="Calendrier journalier">
+                            <p class="text-muted small mt-2">Vue journalière</p>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <img src="{{ url_for('static', filename='images/doc/modale_reservation.png') }}" 
+                                 class="img-fluid rounded shadow-sm border doc-screenshot" 
+                                 alt="Modale de réservation">
+                            <p class="text-muted small mt-2">Modale de réservation</p>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <img src="{{ url_for('static', filename='images/doc/panier.png') }}" 
+                                 class="img-fluid rounded shadow-sm border doc-screenshot" 
+                                 alt="Panier de réservation">
+                            <p class="text-muted small mt-2">Panier de réservation</p>
+                        </div>
+                        <div class="col-md-12 text-center">
+                            <img src="{{ url_for('static', filename='images/doc/recurrence.png') }}" 
+                                 class="img-fluid rounded shadow-sm border doc-screenshot" 
+                                 alt="Réservation récurrente"
+                                 style="max-width: 50%;">
+                            <p class="text-muted small mt-2">Réservation récurrente</p>
+                        </div>
+                    </div>
 
                 <hr class="my-5">
 
@@ -199,6 +249,27 @@
                         </p>
                     </div>
                 </section>
+				<!-- Screenshots Réservations -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-6 text-center">
+                            <img src="{{ url_for('static', filename='images/doc/securite-01.png') }}" 
+                                 class="img-fluid rounded shadow-sm border doc-screenshot" 
+                                 alt="Calendrier mensuel">
+                            <p class="text-muted small mt-2">Page Sécurité</p>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <img src="{{ url_for('static', filename='images/doc/securite-02.png') }}" 
+                                 class="img-fluid rounded shadow-sm border doc-screenshot" 
+                                 alt="Calendrier journalier">
+                            <p class="text-muted small mt-2">Ajouter un nouvel équipement</p>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <img src="{{ url_for('static', filename='images/doc/securite-03.png') }}" 
+                                 class="img-fluid rounded shadow-sm border doc-screenshot" 
+                                 alt="Modale de réservation">
+                            <p class="text-muted small mt-2">Gérer l'équipement de sécurité</p>
+                        </div>
+                    </div>
 
                 <hr class="my-5">
 
@@ -226,6 +297,14 @@
                         </div>
                     </div>
                 </section>
+				<!-- Screenshot Budget -->
+                    <div class="mt-4 text-center">
+                        <img src="{{ url_for('static', filename='images/doc/budget.png') }}" 
+                             class="img-fluid rounded shadow-sm border doc-screenshot" 
+                             alt="Section gestion budgétaire"
+                             style="max-width: 100%;">
+                        <p class="text-muted small mt-2">Gestion budgétaire et exports</p>
+                    </div>
 
                 <hr class="my-5">
 
@@ -276,6 +355,14 @@
                         </div>
                     </div>
                 </section>
+				<!-- Screenshot Admin -->
+                    <div class="mt-4 text-center">
+                        <img src="{{ url_for('static', filename='images/doc/admin.png') }}" 
+                             class="img-fluid rounded shadow-sm border doc-screenshot" 
+                             alt="Panneau d'administration"
+                             style="max-width: 100%;">
+                        <p class="text-muted small mt-2">Panneau d'administration</p>
+                    </div>
                 {% endif %}
 
                 <hr class="my-5">
@@ -370,6 +457,20 @@
         .col-lg-9 { width: 100% !important; }
         .main-container { padding: 0 !important; }
         .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+    }
+
+/* Zoom image au survol */
+    .doc-screenshot {
+        cursor: zoom-in;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        display: block;
+        margin: 0 auto;
+    }
+    .doc-screenshot:hover {
+        transform: scale(1.8);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+        position: relative;
+        z-index: 1000;
     }
 </style>
 {% endblock %}

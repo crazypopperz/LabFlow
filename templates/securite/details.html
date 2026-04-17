@@ -93,7 +93,11 @@
                     <div class="mb-2 opacity-75 text-uppercase small fw-bold">Prochaine échéance</div>
                     {% set next_plan = equipement.plans_maintenance|sort(attribute='date_prochaine_action')|first %}
                     {% if next_plan %}
-                        <h3 class="fw-bold mb-0">{{ next_plan.date_prochaine_action.strftime('%d %b') }}</h3>
+                        <!-- ASTUCE PRO : Tableau de traduction 100% Jinja -->
+                        {% set mois_fr =['', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'] %}
+                        <h3 class="fw-bold mb-0">
+                            {{ next_plan.date_prochaine_action.day }} {{ mois_fr[next_plan.date_prochaine_action.month] }}
+                        </h3>
                         <div class="small opacity-75">{{ next_plan.titre }}</div>
                     {% else %}
                         <h3 class="fw-bold mb-0">-</h3>
@@ -162,6 +166,12 @@
                                             {% if session.user_role == 'admin' %}
                                             <button class="btn btn-sm btn-outline-success" onclick="openLogModal({{ plan.id }})" title="Valider cette maintenance">
                                                 <i class="bi bi-check-lg"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger btn-supprimer-plan"
+                                                    data-id="{{ plan.id }}"
+                                                    data-titre="{{ plan.titre }}"
+                                                    title="Supprimer cette règle">
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                             {% endif %}
                                         </div>
@@ -358,10 +368,51 @@
     </div>
 </div>
 
+<!-- MODALE SUPPRESSION ÉQUIPEMENT (depuis details) -->
+<div class="modal fade" id="deleteEquipementFromDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer l'équipement</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer <strong>{{ equipement.nom }}</strong> ?</p>
+                <p class="text-muted small mt-2 mb-0">Cette action est irréversible. Tout l'historique et les règles de maintenance seront supprimés.</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteEqFromDetailsBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE SUPPRESSION PLAN -->
+<div class="modal fade" id="deletePlanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer la règle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer <strong id="delete-plan-titre"></strong> ?</p>
+                <p class="text-muted small mt-2 mb-0">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeletePlanBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 
 <script>
-// Fonction pour ouvrir la modale d'intervention (avec pré-sélection optionnelle)
+// ==========================================
+// FONCTIONS GLOBALES (Accessibles depuis le HTML)
+// ==========================================
 function openLogModal(planId = null) {
     const modalEl = document.getElementById('addLogModal');
     const selectEl = document.getElementById('selectPlanId');
@@ -375,7 +426,6 @@ function openLogModal(planId = null) {
     }
 }
 
-// Fonction générique pour soumettre les formulaires en AJAX
 function submitForm(event, url) {
     event.preventDefault();
     const form = event.target;
@@ -413,9 +463,89 @@ function submitForm(event, url) {
 }
 
 function confirmDelete() {
-    if(confirm("Voulez-vous vraiment supprimer cet équipement et tout son historique ?")) {
-        alert("Fonction de suppression à venir.");
-    }
+    const modal = new bootstrap.Modal(document.getElementById('deleteEquipementFromDetailsModal'));
+    modal.show();
 }
+
+// ==========================================
+// ÉCOUTEURS D'ÉVÉNEMENTS (Attendent le chargement complet de la page)
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- GESTION SUPPRESSION : RÈGLE DE MAINTENANCE ---
+    let deletePlanId = null;
+    const planModalEl = document.getElementById('deletePlanModal');
+    
+    if (planModalEl) {
+        const deletePlanModal = new bootstrap.Modal(planModalEl);
+
+        // 1. On attache le clic sur toutes les poubelles
+        document.querySelectorAll('.btn-supprimer-plan').forEach(btn => {
+            btn.addEventListener('click', function() {
+                deletePlanId = this.dataset.id;
+                document.getElementById('delete-plan-titre').textContent = this.dataset.titre;
+                deletePlanModal.show();
+            });
+        });
+
+        // 2. On attache le clic sur le bouton de confirmation de la modale
+        document.getElementById('confirmDeletePlanBtn').addEventListener('click', function() {
+            if (!deletePlanId) return;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
+            this.disabled = true;
+            
+            // Ton astuce Jinja (très propre)
+            const urlPlan = "{{ url_for('securite.supprimer_plan', plan_id=0) }}".replace('/0/', `/${deletePlanId}/`);
+            
+            fetch(urlPlan, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) window.location.reload();
+                else {
+                    alert("Erreur : " + res.error);
+                    this.innerHTML = 'Confirmer';
+                    this.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert("Erreur réseau.");
+                this.innerHTML = 'Confirmer';
+                this.disabled = false;
+            });
+        });
+    }
+
+    // --- GESTION SUPPRESSION : ÉQUIPEMENT COMPLET ---
+    const confirmEqBtn = document.getElementById('confirmDeleteEqFromDetailsBtn');
+    if (confirmEqBtn) {
+        confirmEqBtn.addEventListener('click', function() {
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
+            this.disabled = true;
+            
+            fetch("{{ url_for('securite.supprimer_equipement', id=equipement.id) }}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    window.location.href = "{{ url_for('securite.index') }}";
+                } else {
+                    alert("Erreur : " + res.error);
+                    this.innerHTML = 'Confirmer';
+                    this.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert("Erreur de communication avec le serveur.");
+                this.innerHTML = 'Confirmer';
+                this.disabled = false;
+            });
+        });
+    }
+});
 </script>
 {% endblock %}

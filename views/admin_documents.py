@@ -109,7 +109,11 @@ def generer_inventaire_annuel():
         objets = db.session.execute(stmt).scalars().all()
         
         upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
-        doc_service = DocumentService(upload_root)
+        params = get_etablissement_params(etablissement_id)
+        logo_url = params.get('logo_url')
+        logo_path = os.path.join(current_app.root_path, 'static', logo_url) if logo_url else None
+        current_app.logger.warning(f'[DEBUG LOGO] logo_url={logo_url!r} logo_path={logo_path!r} exists={os.path.exists(logo_path) if logo_path else False}')
+        doc_service = DocumentService(upload_root, config={'logo_path': logo_path})
         
         result = doc_service.generate_inventory_pdf(
             etablissement_name=nom_etablissement,

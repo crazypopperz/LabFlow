@@ -114,38 +114,90 @@
     {% include '_modale_fournisseur_edit.html' %}
 
 {% endif %}
-
+<!-- Modale Suppression Fournisseur (Annuaire) -->
+<div class="modal fade" id="deleteFournisseurModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer le fournisseur</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer <strong id="delete-fournisseur-nom"></strong> ?</p>
+                <p class="text-muted small mt-2 mb-0">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteFournisseurBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <!-- Script pour pré-remplir la modale d'édition -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const editModal = document.getElementById('edit-fournisseur-modal');
-            if (editModal) {
-                editModal.addEventListener('show.bs.modal', function(event) {
-                    const button = event.relatedTarget;
-                    if (!button) return;
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // ==========================================
+        // 1. GESTION DE L'ÉDITION (Script existant)
+        // ==========================================
+        const editModal = document.getElementById('edit-fournisseur-modal');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                if (!button) return;
 
-                    const id = button.dataset.id;
-                    const nom = button.dataset.nom;
-                    const site = button.dataset.siteWeb;
-                    const logo = button.dataset.logo;
+                const id = button.dataset.id;
+                const nom = button.dataset.nom;
+                const site = button.dataset.siteWeb;
+                const logo = button.dataset.logo;
 
-                    const form = document.getElementById('edit-fournisseur-form');
-                    form.action = `/admin/fournisseurs/modifier/${id}`;
-                    
-                    document.getElementById('edit_nom').value = nom;
-                    document.getElementById('edit_site_web').value = site;
-                    
-                    const urlInput = document.getElementById('edit_logo_url_input');
-                    if (logo && logo.startsWith('http')) {
-                        urlInput.value = logo;
-                    } else {
-                        urlInput.value = '';
-                    }
+                const form = document.getElementById('edit-fournisseur-form');
+                form.action = `/admin/fournisseurs/modifier/${id}`;
+                
+                document.getElementById('edit_nom').value = nom;
+                document.getElementById('edit_site_web').value = site;
+                
+                const urlInput = document.getElementById('edit_logo_url_input');
+                if (logo && logo.startsWith('http')) {
+                    urlInput.value = logo;
+                } else {
+                    urlInput.value = '';
+                }
+            });
+        }
+
+        // ==========================================
+        // 2. GESTION DE LA SUPPRESSION (Nouveau script)
+        // ==========================================
+        const deleteModalEl = document.getElementById('deleteFournisseurModal');
+        if (deleteModalEl) {
+            const deleteModal = new bootstrap.Modal(deleteModalEl);
+            let formToSubmit = null;
+
+            // On écoute le clic sur les boutons "Supprimer"
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    formToSubmit = this.closest('form');
+                    // On injecte le nom du fournisseur dans la modale
+                    document.getElementById('delete-fournisseur-nom').textContent = formToSubmit.dataset.itemName;
+                    deleteModal.show();
                 });
-            }
-        });
-    </script>
+            });
+
+            // On écoute le clic sur "Confirmer" dans la modale
+            document.getElementById('confirmDeleteFournisseurBtn').addEventListener('click', function() {
+                if (formToSubmit) {
+                    // UX : On montre que ça charge
+                    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
+                    this.disabled = true;
+                    // On soumet le formulaire
+                    formToSubmit.submit();
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

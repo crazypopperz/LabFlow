@@ -24,6 +24,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from extensions import limiter, cache
 from db import db, Objet, Armoire, Categorie, Utilisateur, Historique, Etablissement, Reservation, InventaireArchive, Fournisseur, Budget, Echeance, KitObjet, Suggestion, Depense, Kit
 from utils import admin_required, log_action, allowed_file, get_etablissement_params, invalidate_alertes_cache
+from views.admin import generer_rapport_excel, generer_rapport_pdf
 
 admin_import_bp = Blueprint('admin_import', __name__, url_prefix='/admin')
 
@@ -96,6 +97,7 @@ def telecharger_db():
         return redirect(url_for('admin_import.gestion_sauvegardes'))
 
 MAX_JSON_SIZE = 10 * 1024 * 1024  # 10 Mo
+
 @admin_import_bp.route("/importer_db", methods=["POST"])
 @admin_required
 def importer_db():
@@ -479,6 +481,22 @@ def confirmer_import():
         invalidate_alertes_cache(etablissement_id)
         cache.delete(f'armoires_{etablissement_id}')
         cache.delete(f'categories_{etablissement_id}')
+        
+        # Log individuel par objet pour apparaître dans les rapports
+        for obj in objets_a_creer:
+            obj_en_base = db.session.execute(
+                db.select(Objet).filter_by(nom=obj['nom'], etablissement_id=etablissement_id)
+            ).scalar_one_or_none()
+            if obj_en_base:
+                db.session.add(Historique(
+                    objet_id=obj_en_base.id,
+                    utilisateur_id=session.get('user_id'),
+                    action='Création',
+                    details=f"Import en masse (Qté: {obj['quantite']})",
+                    etablissement_id=etablissement_id
+                ))
+        db.session.commit()
+        
         log_action('import_excel', f'{created} objets importés via assistant')
         return jsonify({'success': True, 'created': created})
 
@@ -509,7 +527,7 @@ def rapports():
     stmt = (
         db.select(Historique, Utilisateur.nom_utilisateur, Objet.nom.label('objet_nom'))
         .outerjoin(Utilisateur, Historique.utilisateur_id == Utilisateur.id)
-        .outerjoin(Objet, Historique.objet_id == Objet.id)
+        .outerjoin(Objet, (Historique.objet_id == Objet.id) & (Objet.etablissement_id == etablissement_id))
         .filter(Historique.etablissement_id == etablissement_id)
         .order_by(Historique.timestamp.desc())
     )
@@ -553,10 +571,25 @@ def rapports():
             user_name = h.utilisateur.nom_utilisateur if h.utilisateur else "Utilisateur supprimé"
             
             # Récupération manuelle du nom de l'objet (si nécessaire)
-            obj_name = "Objet supprimé"
+            # Récupération manuelle du nom de l'objet (si nécessaire)
+            obj_name = None
             if h.objet_id:
                 obj = db.session.get(Objet, h.objet_id)
-                if obj: obj_name = obj.nom
+                if obj:
+                    obj_name = obj.nom
+            if not obj_name and h.details:
+                import re
+                # Format suppression : "Suppression définitive de : Nom"
+                match = re.search(r'de\s*:\s*(.+?)(?:,|$)', h.details)
+                if match:
+                    obj_name = f"({match.group(1).strip()} - supprimé)"
+                else:
+                    # Format modification : "[Nom] details..."
+                    match2 = re.search(r'^\[(.+?)\]', h.details)
+                    if match2:
+                        obj_name = f"({match2.group(1).strip()} - supprimé)"
+                    else:
+                        obj_name = "(objet supprimé)"
         else:
             # Cas : Tuple (Historique, nom_user, nom_objet)
             h, user_name, obj_name = item
@@ -571,7 +604,7 @@ def rapports():
         logs.append({
             'date': h.timestamp,
             'user': user_name or "Utilisateur supprimé",
-            'objet': obj_name or "Objet supprimé",
+            'objet': obj_name or "(objet supprimé)",
             'action': h.action,
             'details': h.details,
             'type_badge': type_badge
@@ -659,12 +692,22 @@ def exporter_rapports():
         # 4. Préparation Données
         data_export = []
         for h, user_name, obj_name in resultats:
+            # Extraction du nom depuis details si objet supprimé
+            nom_objet = obj_name
+            if not nom_objet and h.details:
+                import re
+                match = re.search(r'(?:de\s*:\s*)(.+?)(?:,|$)', h.details)
+                if match:
+                    nom_objet = f"({match.group(1).strip()} - supprimé)"
+                else:
+                    nom_objet = "(objet supprimé)"
+
             data_export.append({
                 'date': h.timestamp.strftime('%d/%m/%Y'),
                 'heure': h.timestamp.strftime('%H:%M'),
                 'utilisateur': user_name or "Inconnu",
                 'action': h.action,
-                'objet': obj_name or "-",
+                'objet': nom_objet or "-",
                 'details': h.details or ""
             })
 

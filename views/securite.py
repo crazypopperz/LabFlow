@@ -184,3 +184,42 @@ def traiter_signalement(log_id, action):
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@securite_bp.route('/api/equipement/<int:id>/supprimer', methods=['POST'])
+@admin_required
+def supprimer_equipement(id):
+    equipement = db.session.get(EquipementSecurite, id)
+    if not equipement or equipement.etablissement_id != session['etablissement_id']:
+        return jsonify({'success': False, 'error': "Accès refusé"}), 403
+    try:
+        # Suppression explicite des enfants avant le parent
+        for log in equipement.historique:
+            db.session.delete(log)
+        for plan in equipement.plans_maintenance:
+            db.session.delete(plan)
+        db.session.flush()  # Applique les suppressions enfants avant le parent
+        db.session.delete(equipement)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur suppression équipement: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@securite_bp.route('/api/plan/<int:plan_id>/supprimer', methods=['POST'])
+@admin_required
+def supprimer_plan(plan_id):
+    plan = db.session.get(MaintenancePlan, plan_id)
+    if not plan:
+        return jsonify({'success': False, 'error': "Introuvable"}), 404
+    equipement = db.session.get(EquipementSecurite, plan.equipement_id)
+    if not equipement or equipement.etablissement_id != session['etablissement_id']:
+        return jsonify({'success': False, 'error': "Accès refusé"}), 403
+    try:
+        db.session.delete(plan)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur suppression plan: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500

@@ -12,15 +12,14 @@
         <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-2">
             <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
                  style="width: 40px; height: 40px; background: linear-gradient(135deg, #0ba360 0%, #3cba92 100%);">
-                <!-- Début du SVG -->
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" fill="currentColor">
                     <path d="M280-160q-50 0-85-35t-35-85H60l18-80h113q17-19 40-29.5t49-10.5q26 0 49 10.5t40 29.5h167l84-360H182l4-17q6-28 27.5-45.5T264-800h456l-37 160h117l120 160-40 200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H400q0 50-35 85t-85 35Z"/>
                 </svg>
-                <!-- Fin du SVG -->
             </div>
             Gestion des Fournisseurs
         </h2>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#fournisseurModal" onclick="resetModal()">
+        <!-- On cible maintenant la modale d'ajout premium -->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFournisseurModal">
             <i class="bi bi-plus-lg me-2"></i> Ajouter un fournisseur
         </button>
     </div>
@@ -44,7 +43,11 @@
                                 <td>
                                     <div class="fournisseur-logo-wrapper">
                                         {% if item.Fournisseur.logo %}
+                                            {% if item.Fournisseur.logo.startswith('http') %}
                                             <img src="{{ item.Fournisseur.logo }}" alt="{{ item.Fournisseur.nom }}" class="fournisseur-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                                            {% else %}
+                                            <img src="{{ url_for('static', filename='images/fournisseurs/' + item.Fournisseur.logo) }}" alt="{{ item.Fournisseur.nom }}" class="fournisseur-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                                            {% endif %}
                                             <i class="bi bi-image fournisseur-logo-placeholder" style="display: none;"></i>
                                         {% else %}
                                             <i class="bi bi-image fournisseur-logo-placeholder"></i>
@@ -64,23 +67,29 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
-									<button class="btn btn-sm btn-outline-primary btn-icon-only me-1" 
-											title="Modifier"
-											onclick="openEditModal({{ item.Fournisseur.id }}, '{{ item.Fournisseur.nom|replace("'", "\\'") }}', '{{ item.Fournisseur.site_web or '' }}', '{{ item.Fournisseur.logo or '' }}')">
-										<i class="bi bi-pencil-fill"></i>
-									</button>
-									
-									<!-- Supprimer -->
-									<button type="button" 
-											class="btn btn-sm btn-outline-danger btn-icon-only" 
-											title="Supprimer"
-											{% if item.depenses_count > 0 %}disabled{% endif %}
-											data-bs-toggle="modal" 
-											data-bs-target="#deleteFournisseurModal"
-											onclick="preparerSuppression('{{ url_for('admin_budget.supprimer_fournisseur', id=item.Fournisseur.id) }}')">
-										<i class="bi bi-trash-fill"></i>
-									</button>
-								</td>
+                                    <!-- BOUTON MODIFIER MIS À JOUR (Utilise les data-attributes comme sur l'autre page) -->
+                                    <button class="btn btn-sm btn-outline-primary btn-icon-only me-1" 
+                                            title="Modifier"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#edit-fournisseur-modal"
+                                            data-id="{{ item.Fournisseur.id }}"
+                                            data-nom="{{ item.Fournisseur.nom }}"
+                                            data-site-web="{{ item.Fournisseur.site_web or '' }}"
+                                            data-logo="{{ item.Fournisseur.logo or '' }}">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                    
+                                    <!-- Supprimer -->
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger btn-icon-only" 
+                                            title="Supprimer"
+                                            {% if item.depenses_count > 0 %}disabled{% endif %}
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteFournisseurModal"
+                                            onclick="preparerSuppression('{{ url_for('admin_budget.supprimer_fournisseur', id=item.Fournisseur.id) }}')">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </td>
                             </tr>
                         {% endfor %}
                     {% else %}
@@ -97,50 +106,13 @@
     </div>
 </div>
 
-<!-- Modale Ajout/Modification -->
-<div class="modal fade" id="fournisseurModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="modalTitle"><i class="bi bi-shop me-2"></i>Nouveau Fournisseur</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="fournisseurForm" action="{{ url_for('admin_budget.ajouter_fournisseur') }}" method="post">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Nom du fournisseur *</label>
-                        <input type="text" class="form-control" name="nom" id="inputNom" required placeholder="Ex: Jeulin, Pierron...">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Site Web</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-globe"></i></span>
-                            <input type="url" class="form-control" name="site_web" id="inputSite" placeholder="https://...">
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">URL du Logo</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-image"></i></span>
-                            <input type="url" class="form-control" name="logo_url" id="inputLogo" placeholder="https://...">
-                        </div>
-                        <div class="form-text">Lien direct vers l'image du logo.</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<!-- ========================================== -->
+<!-- INCLUSION DES MODALES PREMIUM              -->
+<!-- ========================================== -->
+{% include '_modale_fournisseur_add.html' %}
+{% include '_modale_fournisseur_edit.html' %}
 
-<!-- Modale Suppression Spécifique -->
+<!-- Modale Suppression Spécifique (On la garde car elle gère la sécurité des dépenses) -->
 <div class="modal fade" id="deleteFournisseurModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -157,8 +129,6 @@
             </div>
             <div class="modal-footer bg-light border-0">
                 <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
-                
-                <!-- Formulaire avec ID spécifique -->
                 <form id="formSuppressionFournisseur" method="post" action="">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger fw-bold px-4">Confirmer</button>
@@ -172,37 +142,40 @@
 
 {% block scripts %}
 <script>
-    // Réinitialiser la modale pour l'ajout
-    function resetModal() {
-        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-shop me-2"></i>Nouveau Fournisseur';
-        document.getElementById('fournisseurForm').action = "{{ url_for('admin_budget.ajouter_fournisseur') }}";
-        document.getElementById('inputNom').value = '';
-        document.getElementById('inputSite').value = '';
-        document.getElementById('inputLogo').value = '';
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        // Script pour pré-remplir la modale d'édition premium
+        const editModal = document.getElementById('edit-fournisseur-modal');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                if (!button) return;
 
-    // Remplir la modale pour l'édition
-    function openEditModal(id, nom, site, logo) {
-        const modal = new bootstrap.Modal(document.getElementById('fournisseurModal'));
-        modal.show();
+                const id = button.dataset.id;
+                const nom = button.dataset.nom;
+                const site = button.dataset.siteWeb;
+                const logo = button.dataset.logo;
 
-        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier le fournisseur';
-        document.getElementById('fournisseurForm').action = "/admin/fournisseurs/modifier/" + id;
-        document.getElementById('inputNom').value = nom;
-        document.getElementById('inputSite').value = site;
-        document.getElementById('inputLogo').value = logo;
-    }
+                const form = document.getElementById('edit-fournisseur-form');
+                form.action = `/admin/fournisseurs/modifier/${id}`;
+                
+                document.getElementById('edit_nom').value = nom;
+                document.getElementById('edit_site_web').value = site;
+                
+                const urlInput = document.getElementById('edit_logo_url_input');
+                if (logo && logo.startsWith('http')) {
+                    urlInput.value = logo;
+                } else {
+                    urlInput.value = '';
+                }
+            });
+        }
+    });
 
     // --- FONCTION DE SUPPRESSION DIRECTE ---
-    // Appelée directement par le onclick du bouton
     function preparerSuppression(url) {
-        // On cible le formulaire par son ID unique
         const form = document.getElementById('formSuppressionFournisseur');
         if (form) {
             form.action = url;
-            console.log("URL de suppression définie sur : " + url); // Pour débugger si besoin
-        } else {
-            console.error("Erreur : Formulaire de suppression introuvable !");
         }
     }
 </script>

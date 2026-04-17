@@ -108,7 +108,7 @@ class DocumentService:
         safe_name = secure_filename(safe_name)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M')
         unique_id = uuid.uuid4().hex[:8]
-        return f"{prefix}_{etablissement_id}_{safe_name}_{timestamp}_{unique_id}.pdf"
+        return f"{prefix}_{safe_name}_{timestamp}.pdf"
 
     def generate_inventory_pdf(self, etablissement_name: str, etablissement_id: int, objets: List['Objet'], 
                              doc_title: str = "INVENTAIRE RÉGLEMENTAIRE", 
@@ -148,7 +148,7 @@ class DocumentService:
                 Paragraph(doc_title, self.style_titre),
                 Paragraph(f"Arrêté au {date.today().strftime('%d/%m/%Y')} - {escape(etablissement_name)}", self.style_sous_titre)
             ]
-            header_table = Table([[logo, titre_bloc]], colWidths=[1.5*cm, 20*cm])
+            header_table = Table([[logo, titre_bloc]], colWidths=[3.5*cm, 18*cm])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
             elements.append(header_table)
             elements.append(Spacer(1, 0.8*cm))

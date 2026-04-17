@@ -157,6 +157,15 @@ class PanierService:
                 kit = kits_map.get(item.id_item)
                 if kit: nom = kit.nom
 
+            # Parse recurrence_data si present
+            rec = None
+            if item.recurrence_data:
+                try:
+                    import json as _json
+                    rec = _json.loads(item.recurrence_data)
+                except Exception:
+                    rec = None
+
             items_data.append({
                 'id': item.id,
                 'type': item.type,
@@ -167,7 +176,8 @@ class PanierService:
                 'date': item.date_reservation.isoformat(),
                 'date_reservation': item.date_reservation.isoformat(),
                 'heure_debut': item.heure_debut,
-                'heure_fin': item.heure_fin
+                'heure_fin': item.heure_fin,
+                'recurrence': rec
             })
             
             # Signature unique du créneau

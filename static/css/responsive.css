@@ -964,3 +964,28 @@
         display: none !important;
     }
 }
+
+/* ==================================================================
+   GESTION DES SALLES
+   =============================================================== */
+/* ── Responsive mobile ────────────────────────────────────── */
+@media (max-width: 768px) {
+    .salles-kpi-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .salles-kpi-grid .salles-kpi:last-child {
+        grid-column: 1 / -1;
+    }
+    .salles-header-sub {
+        padding-left: 0;
+    }
+    .salles-avatar {
+        display: none; /* simplifie l'affichage sur mobile */
+    }
+}
+ 
+@media (max-width: 480px) {
+    .salles-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}

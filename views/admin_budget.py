@@ -9,13 +9,16 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime, date, timedelta
 from io import BytesIO
 import os
+import filetype
+from werkzeug.utils import secure_filename
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from extensions import limiter
 from db import db, Budget, Depense, Fournisseur, Echeance, Historique
-from utils import admin_required, log_action, allowed_file, validate_url, get_etablissement_params 
+from utils import admin_required, log_action, allowed_file, validate_url, get_etablissement_params
+from views.admin import generer_budget_excel_pro, generer_budget_pdf_pro, MAX_FILE_SIZE
 
 admin_budget_bp = Blueprint('admin_budget', __name__, url_prefix='/admin')
 
@@ -250,7 +253,7 @@ def ajouter_depense():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erreur ajout dépense: {e}", exc_info=True)
-        flash("Erreur technique lors de l'ajout.", "error")
+        flash(f"Erreur : {type(e).__name__} - {e}", "error")
     
     return redirect(url_for('admin_budget.budget'))
 
@@ -439,7 +442,7 @@ def exporter_budget():
         
         params = get_etablissement_params(etablissement_id)
         logo_url = params.get('logo_url')
-        logo_path = os.path.join(current_app.root_path, logo_url.lstrip('/')) if logo_url else None
+        logo_path = os.path.join(current_app.root_path, 'static', logo_url.lstrip('/static/')) if logo_url else None
         metadata = {
             'etablissement': session.get('nom_etablissement', 'Mon Établissement'),
             'date_debut': date_debut.strftime('%d/%m/%Y'),
@@ -541,7 +544,7 @@ def ajouter_fournisseur():
         current_app.logger.error("Erreur ajout fournisseur", exc_info=True)
         flash("Erreur technique lors de l'ajout.", "error")
 
-    return redirect(url_for('main.voir_fournisseurs'))
+    return redirect(url_for('admin_budget.gestion_fournisseurs'))
 
 @admin_budget_bp.route("/fournisseurs/modifier/<int:id>", methods=["POST"])
 @admin_required
@@ -601,7 +604,11 @@ def modifier_fournisseur(id):
         current_app.logger.error("Erreur modif fournisseur", exc_info=True)
         flash("Erreur technique.", "error")
 
-    return redirect(url_for('main.voir_fournisseurs'))
+    # Redirige vers la page d'origine (annuaire ou gestion admin)
+    referrer = request.referrer or ''
+    if url_for('main.voir_fournisseurs') in referrer and '/admin/' not in referrer:
+        return redirect(url_for('main.voir_fournisseurs'))
+    return redirect(url_for('admin_budget.gestion_fournisseurs'))
 
 @admin_budget_bp.route("/fournisseurs/supprimer/<int:id>", methods=['POST'])
 @admin_required

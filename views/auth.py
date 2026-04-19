@@ -45,7 +45,7 @@ def login():
 def register():
     if request.method == 'POST':
         username = request.form.get('username')
-        email = request.form.get('email')
+        username = request.form.get('username', '').strip()
         password = request.form.get('password')
         code_invitation = request.form.get('code_invitation', '').strip().upper()
         
@@ -69,7 +69,7 @@ def register():
             flash(f"Le nom d'utilisateur '{username}' est déjà pris. Veuillez en choisir un autre.", "error")
             return render_template('register.html')
             
-        existing_email = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
+            db.select(Utilisateur).filter_by(nom_utilisateur=username)
         if existing_email:
             flash("Cet email est déjà utilisé.", "error")
             return render_template('register.html')
@@ -106,7 +106,7 @@ def setup():
     if request.method == 'POST':
         nom_etablissement = request.form.get('nom_etablissement')
         username = request.form.get('username')
-        email = request.form.get('email')
+        username = request.form.get('username', '').strip()
         password = request.form.get('password')
         
         if not validate_email(email):
@@ -124,7 +124,7 @@ def setup():
             flash(f"Le nom d'utilisateur '{username}' est déjà pris. Essayez '{username}_lycee' ou '{username}_admin'.", "error")
             return render_template('setup.html')
 
-        email_exist = db.session.execute(db.select(Utilisateur).filter_by(email=email)).scalar_one_or_none()
+            db.select(Utilisateur).filter_by(nom_utilisateur=username)
         if email_exist:
             flash("Cet email est déjà utilisé.", "error")
             return render_template('setup.html')
@@ -280,28 +280,27 @@ L'équipe Scientral
 def forgot_password():
     """Page de demande de réinitialisation."""
     if request.method == 'POST':
-        email = request.form.get('email', '').strip()
-        print(f"🔍 DEBUG: Tentative de reset pour l'email : '{email}'")
+        username = request.form.get('username', '').strip()
         
-        if not email:
-            flash("Veuillez saisir votre adresse email.", "error")
+        if not username:
+            flash("Veuillez saisir votre nom d'utilisateur.", "error")
             return render_template('forgot_password.html')
         
         user = db.session.execute(
-            db.select(Utilisateur).filter_by(email=email)
+            db.select(Utilisateur).filter_by(nom_utilisateur=username)
         ).scalar_one_or_none()
         
         if user:
             print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}")
             serializer = get_serializer()
-            token = serializer.dumps(email, salt='password-reset-salt')
+            token = serializer.dumps(user.email, salt='password-reset-salt')
             
-            if send_reset_email(email, token):
+            if send_reset_email(user.email, token):
                 flash("Un email de réinitialisation a été envoyé. Pensez à vérifier vos spams.", "success")
             else:
                 flash("Erreur technique lors de l'envoi.", "error")
         else:
-            print(f"⚠️ DEBUG: Aucun utilisateur trouvé pour '{email}'")
+            print(f"⚠️ DEBUG: Aucun utilisateur trouvé pour '{username}'")
             flash("Un email de réinitialisation a été envoyé si ce compte existe.", "info")
         
         return redirect(url_for('auth.login'))
@@ -334,7 +333,7 @@ def reset_password(token):
             return render_template('reset_password.html', token=token)
         
         user = db.session.execute(
-            db.select(Utilisateur).filter_by(email=email)
+            db.select(Utilisateur).filter_by(nom_utilisateur=username)
         ).scalar_one_or_none()
         
         if user:

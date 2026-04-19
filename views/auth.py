@@ -213,22 +213,6 @@ def get_serializer():
     """Retourne le serializer pour les tokens."""
     return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
 
-def send_async_email(app, msg):
-    """Envoie l'email dans un thread séparé."""
-    print("🧵 THREAD DÉMARRÉ !!!")
-    with app.app_context():
-        try:
-            mail = app.extensions.get('mail')
-            print(f"📧 Envoi vers: {msg.recipients}")
-            mail.send(msg)
-            print("✅ Email envoyé en arrière-plan")
-        except Exception as e:
-            print(f"❌ Erreur mail async: {e}")
-            import traceback
-            traceback.print_exc()
-            app.logger.error(f"Erreur envoi mail: {e}")
-    print("🧵 THREAD TERMINÉ")
-
 def send_reset_email(user_email, token):
     """Envoie l'email avec le lien de réinitialisation (asynchrone)."""
     try:
@@ -257,15 +241,8 @@ Cordialement,
 L'équipe Scientral
 """
         
-        # Envoi asynchrone
-        app = current_app._get_current_object()
-        print("🚀 AVANT création du thread")
-        thread = Thread(target=send_async_email, args=(app, msg))
-        print("🚀 Thread créé, lancement...")
-        thread.start()
-        print("🚀 Thread.start() appelé")
-        
-        print(f"📧 Email mis en file d'attente pour {user_email}")
+        mail.send(msg)
+        current_app.logger.info(f"Email reset envoyé à {user_email}")
         return True
         
     except Exception as e:

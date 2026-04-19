@@ -239,14 +239,14 @@ def send_reset_email(user_email, token):
             current_app.logger.error("Flask-Mail n'est pas initialisé.")
             return False
 
-        msg = Message("Réinitialisation de votre mot de passe LabFlow",
+        msg = Message("Réinitialisation de votre mot de passe Scientral",
                       recipients=[user_email])
         
         reset_url = url_for('auth.reset_password', token=token, _external=True)
         
         msg.body = f"""Bonjour,
 
-Une demande de réinitialisation de mot de passe a été effectuée pour votre compte LabFlow.
+Une demande de réinitialisation de mot de passe a été effectuée pour votre compte Scientral.
 
 Pour définir un nouveau mot de passe, cliquez sur le lien suivant (valable 1 heure) :
 {reset_url}
@@ -254,7 +254,7 @@ Pour définir un nouveau mot de passe, cliquez sur le lien suivant (valable 1 he
 Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.
 
 Cordialement,
-L'équipe LabFlow
+L'équipe Scientral
 """
         
         # Envoi asynchrone

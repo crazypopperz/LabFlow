@@ -297,7 +297,7 @@ def forgot_password():
             token = serializer.dumps(email, salt='password-reset-salt')
             
             if send_reset_email(email, token):
-                flash("Un email de réinitialisation a été envoyé.", "success")
+                flash("Un email de réinitialisation a été envoyé. Pensez à vérifier vos spams.", "success")
             else:
                 flash("Erreur technique lors de l'envoi.", "error")
         else:

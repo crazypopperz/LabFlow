@@ -252,6 +252,17 @@ L'équipe Scientral
         current_app.logger.error(f"Erreur: {e}")
         return False
 
+@auth_bp.route('/test-mail')
+def test_mail():
+    from flask import jsonify
+    try:
+        mail = current_app.extensions.get('mail')
+        server = current_app.config.get('MAIL_SERVER')
+        pwd = current_app.config.get('MAIL_PASSWORD')
+        return jsonify({'server': server, 'key_set': bool(pwd), 'key_start': str(pwd)[:10] if pwd else None})
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def forgot_password():

@@ -267,6 +267,7 @@ def forgot_password():
             db.select(Utilisateur).filter(db.func.lower(Utilisateur.nom_utilisateur) == username.lower())
         ).scalar_one_or_none()
         
+        flash(f'DEBUG user={user}', 'info')
         if user:
             print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}")
             serializer = get_serializer()

@@ -257,9 +257,11 @@ def test_mail():
     from flask import jsonify
     try:
         mail = current_app.extensions.get('mail')
-        server = current_app.config.get('MAIL_SERVER')
-        pwd = current_app.config.get('MAIL_PASSWORD')
-        return jsonify({'server': server, 'key_set': bool(pwd), 'key_start': str(pwd)[:10] if pwd else None})
+        from flask_mail import Message
+        msg = Message('Test Scientral', recipients=['xdebaudry@gmail.com'])
+        msg.body = 'Test envoi depuis Render'
+        mail.send(msg)
+        return jsonify({'status': 'OK - mail envoyé'})
     except Exception as e:
         return jsonify({'error': str(e)})
 

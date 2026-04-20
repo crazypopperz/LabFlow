@@ -252,19 +252,6 @@ L'équipe Scientral
         current_app.logger.error(f"Erreur: {e}")
         return False
 
-@auth_bp.route('/test-mail')
-def test_mail():
-    from flask import jsonify
-    try:
-        mail = current_app.extensions.get('mail')
-        from flask_mail import Message
-        msg = Message('Test Scientral', recipients=['xdebaudry@gmail.com'])
-        msg.body = 'Test envoi depuis Render'
-        mail.send(msg)
-        return jsonify({'status': 'OK - mail envoyé'})
-    except Exception as e:
-        return jsonify({'error': str(e)})
-
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def forgot_password():
@@ -277,7 +264,7 @@ def forgot_password():
             return render_template('forgot_password.html')
         
         user = db.session.execute(
-            db.select(Utilisateur).filter_by(nom_utilisateur=username)
+            db.select(Utilisateur).filter(db.func.lower(Utilisateur.nom_utilisateur) == username.lower())
         ).scalar_one_or_none()
         
         if user:

@@ -18,7 +18,7 @@ from extensions import limiter, cache, mail
 from flask_migrate import Migrate
 
 # Imports locaux
-from db import db, Parametre, Armoire, Categorie, init_app as init_db_app
+from db import db, Parametre, Armoire, Categorie, Salle, init_app as init_db_app
 from utils import get_alerte_info, is_setup_needed, annee_scolaire_format, get_etablissement_params
 
 # Imports des Blueprints
@@ -209,7 +209,7 @@ def create_app():
     @app.context_processor
     def inject_global_data():
         context = {
-            'all_armoires': [], 'all_categories': [], 'alertes_total': 0,
+            'all_armoires': [], 'all_categories': [], 'all_salles': [], 'alertes_total': 0,
             'licence': {'statut': 'FREE', 'is_pro': False, 'instance_id': 'N/A'},
             'nom_etablissement': None
         }
@@ -224,6 +224,10 @@ def create_app():
             
             context['all_categories'] = db.session.execute(
                 db.select(Categorie).filter_by(etablissement_id=etablissement_id).order_by(Categorie.nom)
+            ).scalars().all()
+
+            context['all_salles'] = db.session.execute(
+                db.select(Salle).filter_by(etablissement_id=etablissement_id).order_by(Salle.nom)
             ).scalars().all()
             
             alert_info = get_alerte_info()

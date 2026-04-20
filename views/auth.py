@@ -267,9 +267,7 @@ def forgot_password():
             db.select(Utilisateur).filter(db.func.lower(Utilisateur.nom_utilisateur) == username.lower())
         ).scalar_one_or_none()
         
-        flash(f'DEBUG user={user}', 'info')
         if user:
-            print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}")
             serializer = get_serializer()
             token = serializer.dumps(user.nom_utilisateur, salt='password-reset-salt')
             
@@ -279,7 +277,6 @@ def forgot_password():
             except Exception as e:
                 flash(f"ERREUR: {str(e)}", "error")
         else:
-            print(f"⚠️ DEBUG: Aucun utilisateur trouvé pour '{username}'")
             flash("Un email de réinitialisation a été envoyé si ce compte existe.", "info")
         
         return redirect(url_for('auth.login'))

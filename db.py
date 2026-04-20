@@ -169,6 +169,37 @@ class PanierItem(db.Model):
         db.Index('idx_panier_items_panier', 'id_panier'),
     )
 
+class Salle(db.Model):
+    __tablename__ = 'salles'
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    capacite = db.Column(db.Integer, nullable=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+
+    reservations = db.relationship('Reservation', backref='salle', lazy=True)
+
+    __table_args__ = (
+        db.Index('idx_salles_etablissement', 'etablissement_id'),
+    )
+
+class ReservationRecurrence(db.Model):
+    __tablename__ = 'reservation_recurrences'
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
+    type_recurrence = db.Column(db.String(20), nullable=False)
+    date_debut = db.Column(db.Date, nullable=False)
+    date_fin = db.Column(db.Date, nullable=True)
+    nb_occurrences = db.Column(db.Integer, nullable=True)
+    heure_debut = db.Column(db.String(5), nullable=False)
+    heure_fin = db.Column(db.String(5), nullable=False)
+    salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+
+    reservations = db.relationship('Reservation', backref='recurrence', lazy=True, foreign_keys='Reservation.recurrence_id')
+
 class Reservation(db.Model):
     __tablename__ = 'reservations'
     id = db.Column(db.Integer, primary_key=True)

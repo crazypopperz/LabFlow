@@ -30,6 +30,15 @@
                             </div>
                         </div>
                         <hr>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Salle <span class="text-muted fw-normal small">(optionnel)</span></label>
+                            <select class="form-select" id="bookingSalle">
+                                <option value="">— Aucune salle sélectionnée —</option>
+                                {% for salle in all_salles %}
+                                <option value="{{ salle.id }}">{{ salle.nom }}{% if salle.capacite %} ({{ salle.capacite }} élèves){% endif %}{% if salle.description %} — {{ salle.description }}{% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <div id="availableItems">
                             <div class="text-center py-4">
                                 <div class="spinner-border text-primary" role="status"></div>

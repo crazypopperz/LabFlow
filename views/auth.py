@@ -271,7 +271,7 @@ def forgot_password():
         if user:
             print(f"👤 DEBUG: Utilisateur trouvé ! ID: {user.id}, Nom: {user.nom_utilisateur}")
             serializer = get_serializer()
-            token = serializer.dumps(user.email, salt='password-reset-salt')
+            token = serializer.dumps(user.nom_utilisateur, salt='password-reset-salt')
             
             try:
                 send_reset_email(user.email, token)
@@ -286,13 +286,13 @@ def forgot_password():
     
     return render_template('forgot_password.html')
 
-@auth_bp.route('/reset-password/<token>', methods=['GET', 'POST'])
+@auth_bp.route('/reset-password/<path:token>', methods=['GET', 'POST'])
 @limiter.limit("5 per minute")
 def reset_password(token):
     """Page de réinitialisation avec token."""
     try:
         serializer = get_serializer()
-        email = serializer.loads(token, salt='password-reset-salt', max_age=3600)
+        username = serializer.loads(token, salt='password-reset-salt', max_age=3600)
     except Exception as e:
         current_app.logger.error(f"Token invalide: {e}")
         flash("Le lien est invalide ou a expiré.", "error")

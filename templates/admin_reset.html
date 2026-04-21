@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+{% block title %}Reset établissement — Scientral{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
+                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                <i class="bi bi-arrow-counterclockwise fs-3"></i>
+            </div>
+            <div>
+                <h1 class="h3 mb-0 fw-bold text-dark">Reset de l'établissement</h1>
+                <p class="text-muted mb-0">Supprimez sélectivement les données de votre établissement</p>
+            </div>
+        </div>
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <!-- Alerte danger -->
+    <div class="alert alert-danger border-0 shadow-sm mb-4">
+        <div class="d-flex gap-3">
+            <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
+            <div>
+                <strong>Action irréversible</strong>
+                <p class="mb-0 small mt-1">Les données supprimées ne pourront pas être récupérées. Effectuez une <a href="{{ url_for('admin_import.gestion_sauvegardes') }}" class="alert-link">sauvegarde</a> avant de continuer.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Colonne gauche : sélection -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0">Sélectionnez les données à supprimer</h5>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="btn-tout-selectionner">
+                                Tout sélectionner
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-tout-deselectionner">
+                                Tout déselectionner
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3" id="reset-options">
+
+                        <!-- Réservations -->
+                        <div class="col-12">
+                            <label class="reset-option-card" data-element="reservations">
+                                <input type="checkbox" class="reset-checkbox" value="reservations">
+                                <div class="reset-option-content">
+                                    <div class="reset-option-icon bg-warning-subtle">
+                                        <i class="bi bi-calendar-x text-warning fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Réservations</div>
+                                        <div class="small text-muted">Toutes les réservations et récurrences</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Inventaire -->
+                        <div class="col-12">
+                            <label class="reset-option-card" data-element="inventaire">
+                                <input type="checkbox" class="reset-checkbox" value="inventaire">
+                                <div class="reset-option-content">
+                                    <div class="reset-option-icon bg-primary-subtle">
+                                        <i class="bi bi-box-seam text-primary fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Inventaire</div>
+                                        <div class="small text-muted">Tous les objets et produits chimiques</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Kits -->
+                        <div class="col-12">
+                            <label class="reset-option-card" data-element="kits">
+                                <input type="checkbox" class="reset-checkbox" value="kits">
+                                <div class="reset-option-content">
+                                    <div class="reset-option-icon bg-info-subtle">
+                                        <i class="bi bi-collection text-info fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Kits</div>
+                                        <div class="small text-muted">Tous les kits de matériel prédéfinis</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Armoires -->
+                        <div class="col-md-6">
+                            <label class="reset-option-card" data-element="armoires">
+                                <input type="checkbox" class="reset-checkbox" value="armoires">
+                                <div class="reset-option-content">
+                                    <div class="reset-option-icon bg-secondary-subtle">
+                                        <i class="bi bi-archive text-secondary fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Armoires</div>
+                                        <div class="small text-muted">Tous les espaces de rangement</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Catégories -->
+                        <div class="col-md-6">
+                            <label class="reset-option-card" data-element="categories">
+                                <input type="checkbox" class="reset-checkbox" value="categories">
+                                <div class="reset-option-content">
+                                    <div class="reset-option-icon bg-success-subtle">
+                                        <i class="bi bi-tags text-success fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Catégories</div>
+                                        <div class="small text-muted">Toutes les catégories de matériel</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Salles -->
+                        <div class="col-md-6">
+                            <label class="reset-option-card" data-element="salles">
+                                <input type="checkbox" class="reset-checkbox" value="salles">
+                                <div class="reset-option-content">
+                                    <div class="reset-option-icon bg-purple-subtle" style="background:#f3e8ff;">
+                                        <i class="bi bi-building fs-4" style="color:#8b5cf6;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Salles</div>
+                                        <div class="small text-muted">Toutes les salles de destination</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Fournisseurs -->
+                        <div class="col-md-6">
+                            <label class="reset-option-card" data-element="fournisseurs">
+                                <input type="checkbox" class="reset-checkbox" value="fournisseurs">
+                                <div class="reset-option-content">
+                                    <div class="reset-option-icon bg-orange-subtle" style="background:#fff7ed;">
+                                        <i class="bi bi-truck fs-4" style="color:#f97316;"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Fournisseurs</div>
+                                        <div class="small text-muted">Tous les fournisseurs</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Budget -->
+                        <div class="col-12">
+                            <label class="reset-option-card" data-element="budget">
+                                <input type="checkbox" class="reset-checkbox" value="budget">
+                                <div class="reset-option-content">
+                                    <div class="reset-option-icon bg-danger-subtle">
+                                        <i class="bi bi-wallet2 text-danger fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">Budget et dépenses</div>
+                                        <div class="small text-muted">Budget annuel et toutes les dépenses enregistrées</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite : confirmation -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm position-sticky" style="top: 2rem;">
+                <div class="card-header bg-white border-bottom p-4">
+                    <h5 class="fw-bold mb-0">Confirmation</h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Résumé sélection -->
+                    <div id="resume-selection" class="mb-4">
+                        <p class="text-muted small">Aucun élément sélectionné.</p>
+                    </div>
+
+                    <!-- Saisie confirmation -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-uppercase text-muted">
+                            Tapez le nom de votre établissement pour confirmer
+                        </label>
+                        <div class="alert alert-secondary border-0 small py-2 mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>{{ etablissement.nom }}</strong>
+                        </div>
+                        <input type="text" id="confirmation-input" class="form-control"
+                               placeholder="Nom de l'établissement...">
+                        <div class="invalid-feedback">Le nom saisi ne correspond pas.</div>
+                    </div>
+
+                    <!-- Bouton reset -->
+                    <button type="button" class="btn btn-danger w-100 fw-bold" id="btn-reset" disabled>
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Lancer le reset
+                    </button>
+
+                    <p class="text-muted small text-center mt-3 mb-0">
+                        <i class="bi bi-shield-lock me-1"></i>
+                        Action réservée aux administrateurs
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale résultat -->
+<div class="modal fade" id="modalResetResultat" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white" id="resetResultatHeader">
+                <h5 class="modal-title" id="resetResultatTitre"></h5>
+            </div>
+            <div class="modal-body p-4" id="resetResultatBody"></div>
+            <div class="modal-footer bg-light">
+                <a href="{{ url_for('admin.admin') }}" class="btn btn-primary">
+                    <i class="bi bi-house me-2"></i>Retour au dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.reset-option-card {
+    display: block;
+    cursor: pointer;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    transition: all 0.2s;
+    user-select: none;
+}
+.reset-option-card:hover { border-color: #cbd5e1; background: #f8fafc; }
+.reset-option-card.selected { border-color: #ef4444; background: #fff5f5; }
+.reset-option-card input[type="checkbox"] { display: none; }
+.reset-option-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.reset-option-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+</style>
+
+<script>
+const nomEtablissement = {{ etablissement.nom | tojson }};
+let selectionElements = [];
+
+// Sélection des cartes
+document.querySelectorAll('.reset-option-card').forEach(card => {
+    card.addEventListener('click', () => {
+        const cb = card.querySelector('.reset-checkbox');
+        cb.checked = !cb.checked;
+        card.classList.toggle('selected', cb.checked);
+        mettreAJourSelection();
+    });
+});
+
+document.getElementById('btn-tout-selectionner').addEventListener('click', () => {
+    document.querySelectorAll('.reset-option-card').forEach(card => {
+        card.querySelector('.reset-checkbox').checked = true;
+        card.classList.add('selected');
+    });
+    mettreAJourSelection();
+});
+
+document.getElementById('btn-tout-deselectionner').addEventListener('click', () => {
+    document.querySelectorAll('.reset-option-card').forEach(card => {
+        card.querySelector('.reset-checkbox').checked = false;
+        card.classList.remove('selected');
+    });
+    mettreAJourSelection();
+});
+
+function mettreAJourSelection() {
+    selectionElements = Array.from(document.querySelectorAll('.reset-checkbox:checked')).map(cb => cb.value);
+    const resume = document.getElementById('resume-selection');
+    if (selectionElements.length === 0) {
+        resume.innerHTML = '<p class="text-muted small">Aucun élément sélectionné.</p>';
+    } else {
+        const labels = {
+            reservations: '📅 Réservations',
+            inventaire: '📦 Inventaire',
+            kits: '🧰 Kits',
+            armoires: '🗄️ Armoires',
+            categories: '🏷️ Catégories',
+            salles: '🏫 Salles',
+            fournisseurs: '🚚 Fournisseurs',
+            budget: '💰 Budget et dépenses'
+        };
+        resume.innerHTML = `
+            <p class="small fw-bold text-danger mb-2">${selectionElements.length} élément(s) à supprimer :</p>
+            <ul class="list-unstyled mb-0">
+                ${selectionElements.map(e => `<li class="small text-muted"><i class="bi bi-x-circle-fill text-danger me-2"></i>${labels[e] || e}</li>`).join('')}
+            </ul>`;
+    }
+    validerBouton();
+}
+
+// Validation confirmation
+document.getElementById('confirmation-input').addEventListener('input', validerBouton);
+
+function validerBouton() {
+    const input = document.getElementById('confirmation-input').value;
+    const btn = document.getElementById('btn-reset');
+    btn.disabled = !(selectionElements.length > 0 && input === nomEtablissement);
+}
+
+// Reset
+document.getElementById('btn-reset').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-reset');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Reset en cours...';
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const res = await fetch('/admin/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({
+                elements: selectionElements,
+                confirmation: document.getElementById('confirmation-input').value
+            })
+        });
+        const data = await res.json();
+
+        const header = document.getElementById('resetResultatHeader');
+        const titre = document.getElementById('resetResultatTitre');
+        const body = document.getElementById('resetResultatBody');
+
+        if (data.success) {
+            header.className = 'modal-header bg-success text-white';
+            titre.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Reset effectué avec succès';
+            const lignes = Object.entries(data.stats).map(([k, v]) => {
+                const labels = { reservations: 'Réservations', inventaire: 'Objets', kits: 'Kits', armoires: 'Armoires', categories: 'Catégories', salles: 'Salles', fournisseurs: 'Fournisseurs', budget: 'Budgets' };
+                return `<li class="small text-muted"><i class="bi bi-check text-success me-2"></i>${labels[k] || k} : <strong>${v} supprimé(s)</strong></li>`;
+            }).join('');
+            body.innerHTML = `<ul class="list-unstyled mb-0">${lignes}</ul>`;
+        } else {
+            header.className = 'modal-header bg-danger text-white';
+            titre.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Erreur';
+            body.innerHTML = `<p class="text-danger mb-0">${data.error}</p>`;
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalResetResultat')).show();
+    } catch (err) {
+        alert('Erreur technique.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-counterclockwise me-2"></i>Lancer le reset';
+    }
+});
+</script>
+{% endblock %}

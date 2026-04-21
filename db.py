@@ -169,6 +169,34 @@ class PanierItem(db.Model):
         db.Index('idx_panier_items_panier', 'id_panier'),
     )
 
+class DocumentReglementaire(db.Model):
+    __tablename__ = 'documents_reglementaires'
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    nom = db.Column(db.String(150), nullable=False)
+    type_doc = db.Column(db.String(50))
+    fichier_url = db.Column(db.String(255), nullable=False)
+    date_upload = db.Column(db.DateTime, default=datetime.now)
+
+class InventaireArchive(db.Model):
+    __tablename__ = 'inventaires_archives'
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    titre = db.Column(db.String(150))
+    date_archive = db.Column(db.DateTime, default=datetime.now)
+    fichier_url = db.Column(db.String(255), nullable=False)
+    nb_objets = db.Column(db.Integer)
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(20), default='warning')
+    lu = db.Column(db.Boolean, default=False)
+    date_creation = db.Column(db.DateTime, default=datetime.now)
+
 class Salle(db.Model):
     __tablename__ = 'salles'
     id = db.Column(db.Integer, primary_key=True)

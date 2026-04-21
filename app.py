@@ -211,7 +211,7 @@ def create_app():
     @app.context_processor
     def inject_global_data():
         context = {
-            'all_armoires': [], 'all_categories': [], 'all_salles': [], 'alertes_total': 0,
+            'all_armoires': [], 'all_categories': [], 'all_salles': [], 'get_etablissement_params': get_etablissement_params, 'alertes_total': 0,
             'licence': {'statut': 'FREE', 'is_pro': False, 'instance_id': 'N/A'},
             'nom_etablissement': None
         }

@@ -189,11 +189,31 @@ def _rollback_file(path):
 # ============================================================
 
 class LogoGraphique(Flowable):
-    def __init__(self, width=40, height=40):
+    def __init__(self, width=40, height=40, etablissement_id=None):
         Flowable.__init__(self)
         self.width = width
         self.height = height
+        self.logo_path = None
+        if etablissement_id:
+            try:
+                from utils import get_etablissement_params
+                params = get_etablissement_params(etablissement_id)
+                logo_url = params.get('logo_url')
+                if logo_url:
+                    path = os.path.join(current_app.root_path, 'static', logo_url)
+                    if os.path.exists(path):
+                        self.logo_path = path
+            except Exception:
+                pass
     def draw(self):
+        if self.logo_path:
+            try:
+                from reportlab.lib.utils import ImageReader
+                img = ImageReader(self.logo_path)
+                self.canv.drawImage(img, 0, 0, width=self.width, height=self.height, preserveAspectRatio=True, mask='auto')
+                return
+            except Exception:
+                pass
         self.canv.setFillColor(colors.HexColor('#1F3B73'))
         self.canv.rect(0, 0, 8, 15, fill=1, stroke=0)
         self.canv.rect(12, 0, 8, 25, fill=1, stroke=0)
@@ -203,9 +223,16 @@ class LogoGraphique(Flowable):
         self.canv.setLineWidth(2)
         self.canv.line(-5, 5, 35, 40)
 
-def ajouter_logo_excel(ws):
-    """Ajoute le logo Scientral dans le fichier Excel si disponible."""
-    logo_path = os.path.join(current_app.root_path, 'static', 'logo.png')
+def ajouter_logo_excel(ws, etablissement_id=None):
+    """Ajoute le logo de l etablissement dans le fichier Excel si disponible."""
+    logo_path = None
+    if etablissement_id:
+        params = get_etablissement_params(etablissement_id)
+        logo_url = params.get('logo_url')
+        if logo_url:
+            logo_path = os.path.join(current_app.root_path, 'static', logo_url)
+    if not logo_path or not os.path.exists(logo_path):
+        logo_path = os.path.join(current_app.root_path, 'static', 'logo.png')
     if os.path.exists(logo_path):
         try:
             img = OpenPyXLImage(logo_path)
@@ -264,7 +291,7 @@ def generer_budget_excel_pro(data_export, metadata):
     ws['B1'].alignment = align_left
     ws.row_dimensions[1].height = 40
     
-    ajouter_logo_excel(ws)
+    ajouter_logo_excel(ws, metadata.get('etablissement_id'))
 
     ws.merge_cells('A2:D2')
     ws['A2'] = f"Période : {metadata['date_debut']} au {metadata['date_fin']}"
@@ -323,7 +350,7 @@ def generer_rapport_pdf(data, metadata):
     doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), rightMargin=1.0*cm, leftMargin=1.0*cm, topMargin=1.0*cm, bottomMargin=1.0*cm, title=f"Rapport - {metadata['etablissement']}")
     elements = []
     styles = getSampleStyleSheet()
-    logo = LogoGraphique(width=40, height=40)
+    logo = LogoGraphique(width=40, height=40, etablissement_id=metadata.get('etablissement_id'))
     titre_style = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1F3B73'), alignment=TA_LEFT)
     sous_titre_style = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray, alignment=TA_LEFT)
     titre_bloc = [Paragraph(f"RAPPORT D'ACTIVITÉ", titre_style), Paragraph(f"{escape(metadata['etablissement'])}", sous_titre_style)]
@@ -374,7 +401,7 @@ def generer_rapport_excel(data, metadata):
     ws['B1'].alignment = Alignment(horizontal="left", vertical="center")
     ws.row_dimensions[1].height = 45
     
-    ajouter_logo_excel(ws)
+    ajouter_logo_excel(ws, metadata.get('etablissement_id'))
     
     ws.merge_cells('A2:F4')
     ws['A2'] = f"Période : {metadata['periode']}\nGénéré le : {metadata['date_generation']}\nTotal : {metadata['total']} enregistrements"
@@ -425,7 +452,7 @@ def generer_inventaire_pdf(data, metadata):
     doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), rightMargin=1.0*cm, leftMargin=1.0*cm, topMargin=1.0*cm, bottomMargin=1.0*cm, title=f"Inventaire - {metadata['etablissement']}")
     elements = []
     styles = getSampleStyleSheet()
-    logo = LogoGraphique(width=40, height=40)
+    logo = LogoGraphique(width=40, height=40, etablissement_id=metadata.get('etablissement_id'))
     titre_style = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1F3B73'), alignment=TA_LEFT)
     sous_titre_style = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray, alignment=TA_LEFT)
     titre_bloc = [Paragraph(f"ÉTAT DE L'INVENTAIRE", titre_style), Paragraph(f"{escape(metadata['etablissement'])}", sous_titre_style)]
@@ -2232,6 +2259,7 @@ def exporter_budget():
         
         metadata = {
             'etablissement': session.get('nom_etablissement', 'Mon Établissement'),
+            'etablissement_id': session.get('etablissement_id'),
             'date_debut': date_debut.strftime('%d/%m/%Y'),
             'date_fin': date_fin.strftime('%d/%m/%Y'),
             'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
@@ -3020,6 +3048,7 @@ def exporter_rapports():
 
         metadata = {
             'etablissement': session.get('nom_etablissement', 'Scientral'),
+            'etablissement_id': session.get('etablissement_id'),
             'periode': f"Du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}",
             'total': len(data_export),
             'date_generation': datetime.now().strftime('%d/%m/%Y à %H:%M'),
@@ -3181,13 +3210,33 @@ def sanitize_for_excel_report(text):
 # ============================================================
 
 class LogoGraphique(Flowable):
-    """Dessine un petit graphique vectoriel (Logo) directement en PDF."""
-    def __init__(self, width=40, height=40):
+    """Dessine un petit graphique vectoriel ou logo etablissement en PDF."""
+    def __init__(self, width=40, height=40, etablissement_id=None):
         Flowable.__init__(self)
         self.width = width
         self.height = height
+        self.logo_path = None
+        if etablissement_id:
+            try:
+                from utils import get_etablissement_params
+                params = get_etablissement_params(etablissement_id)
+                logo_url = params.get('logo_url')
+                if logo_url:
+                    path = os.path.join(current_app.root_path, 'static', logo_url)
+                    if os.path.exists(path):
+                        self.logo_path = path
+            except Exception:
+                pass
 
     def draw(self):
+        if self.logo_path:
+            try:
+                from reportlab.lib.utils import ImageReader
+                img = ImageReader(self.logo_path)
+                self.canv.drawImage(img, 0, 0, width=self.width, height=self.height, preserveAspectRatio=True, mask="auto")
+                return
+            except Exception:
+                pass
         # Couleurs
         bleu_fonce = colors.HexColor('#1F3B73')
         bleu_clair = colors.HexColor('#4facfe')
@@ -3219,7 +3268,7 @@ def generer_rapport_pdf(data, metadata):
     
     # --- EN-TÊTE AVEC LOGO ---
     # On crée un tableau invisible pour mettre le Logo à gauche et le Titre au centre
-    logo = LogoGraphique(width=40, height=40)
+    logo = LogoGraphique(width=40, height=40, etablissement_id=metadata.get('etablissement_id'))
     
     titre_style = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1F3B73'), alignment=TA_LEFT)
     sous_titre_style = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray, alignment=TA_LEFT)
@@ -3425,7 +3474,7 @@ def generer_inventaire_pdf(data, metadata):
     styles = getSampleStyleSheet()
     
     # --- EN-TÊTE (Réutilisation du style Rapport) ---
-    logo = LogoGraphique(width=40, height=40) # Utilise la classe existante
+    logo = LogoGraphique(width=40, height=40, etablissement_id=metadata.get('etablissement_id')) # Utilise la classe existante
     
     titre_style = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#1F3B73'), alignment=TA_LEFT)
     sous_titre_style = ParagraphStyle('SousTitre', parent=styles['Normal'], fontSize=12, textColor=colors.gray, alignment=TA_LEFT)

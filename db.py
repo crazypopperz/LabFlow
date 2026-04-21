@@ -206,7 +206,6 @@ class Salle(db.Model):
     etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
     date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
 
-    reservations = db.relationship('Reservation', backref='salle', lazy=True)
 
     __table_args__ = (
         db.Index('idx_salles_etablissement', 'etablissement_id'),

@@ -225,7 +225,6 @@ class ReservationRecurrence(db.Model):
     salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
     date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
 
-    reservations = db.relationship('Reservation', backref='recurrence', lazy=True, foreign_keys='Reservation.recurrence_id')
 
 class Reservation(db.Model):
     __tablename__ = 'reservations'

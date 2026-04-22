@@ -1229,8 +1229,10 @@ def sauvegarder_theme():
                         resource_type='image'
                     )
                     logo_url = result['secure_url']
+                    flash(f'DEBUG: etab_id={etablissement_id} logo_url={logo_url}', 'info')
                     _save_param('logo_url', logo_url)
                     db.session.commit()
+                    flash(f'DEBUG: commit OK', 'info')
                     _invalidate_cache()
                     flash('Logo mis a jour avec succes.', 'success')
                 except Exception as e:

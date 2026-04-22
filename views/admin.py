@@ -1170,36 +1170,50 @@ def personnalisation_page():
     params = get_etablissement_params(session.get('etablissement_id'))
     return render_template("admin_personnalisation.html", breadcrumbs=breadcrumbs, params=params)
 
-
 @admin_bp.route("/theme", methods=["POST"])
 @admin_required
 def sauvegarder_theme():
     etablissement_id = session.get('etablissement_id')
-    try:
-        # Couleur principale
-        couleur = request.form.get('couleur_principale', '').strip()
-        if couleur and couleur.startswith('#') and len(couleur) in [4, 7]:
-            for cle, valeur in [
-                ('couleur_principale', couleur),
-                ('couleur_secondaire', couleur)
-            ]:
-                param = db.session.execute(
-                    db.select(Parametre).filter_by(
-                        etablissement_id=etablissement_id, cle=cle
-                    )
-                ).scalar_one_or_none()
-                if param:
-                    param.valeur = valeur
-                else:
-                    db.session.add(Parametre(
-                        etablissement_id=etablissement_id,
-                        cle=cle, valeur=valeur
-                    ))
-        # Upload logo vers Cloudinary
+    action = request.form.get('action', '')
+
+    def _save_param(cle, valeur):
+        param = db.session.execute(
+            db.select(Parametre).filter_by(etablissement_id=etablissement_id, cle=cle)
+        ).scalar_one_or_none()
+        if param:
+            param.valeur = valeur
+        else:
+            db.session.add(Parametre(etablissement_id=etablissement_id, cle=cle, valeur=valeur))
+
+    def _invalidate_cache():
+        from extensions import cache
+        cache.delete_memoized(get_etablissement_params, etablissement_id)
+
+    if action == 'couleur':
+        try:
+            couleur = request.form.get('couleur_principale', '').strip()
+            if couleur and couleur.startswith('#') and len(couleur) in [4, 7]:
+                _save_param('couleur_principale', couleur)
+                _save_param('couleur_secondaire', couleur)
+                db.session.commit()
+                _invalidate_cache()
+                flash('Couleur mise a jour avec succes.', 'success')
+            else:
+                flash('Couleur invalide.', 'error')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Erreur couleur: {e}')
+            flash('Erreur lors de la sauvegarde de la couleur.', 'error')
+
+    elif action == 'logo':
         logo_file = request.files.get('logo_file')
-        if logo_file and logo_file.filename:
+        if not logo_file or not logo_file.filename:
+            flash('Aucun fichier selectionne.', 'error')
+        else:
             ext = logo_file.filename.rsplit('.', 1)[-1].lower()
-            if ext in ['png', 'jpg', 'jpeg', 'svg', 'webp']:
+            if ext not in ['png', 'jpg', 'jpeg', 'svg', 'webp']:
+                flash('Format non supporte. Utilisez PNG, JPG, SVG ou WebP.', 'error')
+            else:
                 try:
                     import cloudinary
                     import cloudinary.uploader
@@ -1215,34 +1229,16 @@ def sauvegarder_theme():
                         resource_type='image'
                     )
                     logo_url = result['secure_url']
-                    flash(f'DEBUG Cloudinary OK: {logo_url}', 'info')
-                    param = db.session.execute(
-                        db.select(Parametre).filter_by(
-                            etablissement_id=etablissement_id, cle='logo_url'
-                        )
-                    ).scalar_one_or_none()
-                    if param:
-                        param.valeur = logo_url
-                    else:
-                        db.session.add(Parametre(
-                            etablissement_id=etablissement_id,
-                            cle='logo_url', valeur=logo_url
-                        ))
+                    _save_param('logo_url', logo_url)
+                    db.session.commit()
+                    _invalidate_cache()
+                    flash('Logo mis a jour avec succes.', 'success')
                 except Exception as e:
+                    db.session.rollback()
                     current_app.logger.error(f'Erreur Cloudinary: {e}', exc_info=True)
-                    flash(f"Erreur lors de l'upload du logo: {str(e)}", 'error')
-
-        db.session.commit()
-        # Invalider le cache theme
-        from extensions import cache
-        from utils import get_etablissement_params
-        cache.delete_memoized(get_etablissement_params, etablissement_id)
-        flash("Thème mis à jour avec succès.", "success")
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Erreur sauvegarde thème: {e}")
-        flash("Erreur lors de la sauvegarde.", "error")
+                    flash(f'Erreur upload logo: {str(e)}', 'error')
+    else:
+        flash('Action inconnue.', 'error')
 
     return redirect(url_for('admin.personnalisation_page'))
 

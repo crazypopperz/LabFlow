@@ -97,7 +97,7 @@
                     <!-- Logo actuel -->
                     {% if params.get('logo_url') %}
                     <div class="text-center p-3 bg-light rounded-3 mb-3">
-                        <img src="/static/{{ params.get('logo_url') }}"
+                        <img src="{% if params.get('logo_url').startswith('http') %}{{ params.get('logo_url') }}{% else %}/static/{{ params.get('logo_url') }}{% endif %}"
                              height="80" class="rounded shadow-sm"
                              alt="Logo actuel">
                         <p class="text-muted small mt-2 mb-0">Logo actuel</p>

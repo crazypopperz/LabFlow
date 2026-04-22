@@ -1228,12 +1228,8 @@ def sauvegarder_theme():
                             cle='logo_url', valeur=logo_url
                         ))
                 except Exception as e:
-                    current_app.logger.error(f'Erreur Cloudinary: {e}')
-                    flash("Erreur lors de l'upload du logo.", 'error')
-                    db.session.add(Parametre(
-                        etablissement_id=etablissement_id,
-                        cle='logo_url', valeur=logo_url
-                    ))
+                    current_app.logger.error(f'Erreur Cloudinary: {e}', exc_info=True)
+                    flash(f"Erreur lors de l'upload du logo: {str(e)}", 'error')
 
         db.session.commit()
         # Invalider le cache theme

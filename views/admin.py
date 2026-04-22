@@ -194,22 +194,31 @@ class LogoGraphique(Flowable):
         self.width = width
         self.height = height
         self.logo_path = None
+        self.logo_data = None
         if etablissement_id:
             try:
                 from utils import get_etablissement_params
+                from io import BytesIO
+                import requests as req
                 params = get_etablissement_params(etablissement_id)
                 logo_url = params.get('logo_url')
                 if logo_url:
-                    path = os.path.join(current_app.root_path, 'static', logo_url)
-                    if os.path.exists(path):
-                        self.logo_path = path
+                    if logo_url.startswith('http'):
+                        r = req.get(logo_url, timeout=5)
+                        if r.status_code == 200:
+                            self.logo_data = BytesIO(r.content)
+                    else:
+                        path = os.path.join(current_app.root_path, 'static', logo_url)
+                        if os.path.exists(path):
+                            self.logo_path = path
             except Exception:
                 pass
     def draw(self):
-        if self.logo_path:
+        if self.logo_data or self.logo_path:
             try:
                 from reportlab.lib.utils import ImageReader
-                img = ImageReader(self.logo_path)
+                source = self.logo_data if self.logo_data else self.logo_path
+                img = ImageReader(source)
                 self.canv.drawImage(img, 0, 0, width=self.width, height=self.height, preserveAspectRatio=True, mask='auto')
                 return
             except Exception:
@@ -225,17 +234,33 @@ class LogoGraphique(Flowable):
 
 def ajouter_logo_excel(ws, etablissement_id=None):
     """Ajoute le logo de l etablissement dans le fichier Excel si disponible."""
-    logo_path = None
+    from io import BytesIO
+    import requests as req
+    logo_data = None
     if etablissement_id:
-        params = get_etablissement_params(etablissement_id)
-        logo_url = params.get('logo_url')
-        if logo_url:
-            logo_path = os.path.join(current_app.root_path, 'static', logo_url)
-    if not logo_path or not os.path.exists(logo_path):
-        logo_path = os.path.join(current_app.root_path, 'static', 'logo.png')
-    if os.path.exists(logo_path):
         try:
-            img = OpenPyXLImage(logo_path)
+            params = get_etablissement_params(etablissement_id)
+            logo_url = params.get('logo_url')
+            if logo_url:
+                if logo_url.startswith('http'):
+                    r = req.get(logo_url, timeout=5)
+                    if r.status_code == 200:
+                        logo_data = BytesIO(r.content)
+                else:
+                    logo_path = os.path.join(current_app.root_path, 'static', logo_url)
+                    if os.path.exists(logo_path):
+                        with open(logo_path, 'rb') as f:
+                            logo_data = BytesIO(f.read())
+        except Exception:
+            pass
+    if not logo_data:
+        logo_path = os.path.join(current_app.root_path, 'static', 'logo.png')
+        if os.path.exists(logo_path):
+            with open(logo_path, 'rb') as f:
+                logo_data = BytesIO(f.read())
+    if logo_data:
+        try:
+            img = OpenPyXLImage(logo_data)
             img.width = 50
             img.height = 50
             ws.add_image(img, 'A1')
@@ -1170,28 +1195,41 @@ def sauvegarder_theme():
                         etablissement_id=etablissement_id,
                         cle=cle, valeur=valeur
                     ))
-
-        # Upload logo
+        # Upload logo vers Cloudinary
         logo_file = request.files.get('logo_file')
         if logo_file and logo_file.filename:
             ext = logo_file.filename.rsplit('.', 1)[-1].lower()
             if ext in ['png', 'jpg', 'jpeg', 'svg', 'webp']:
-                filename = f"logo_{etablissement_id}.{ext}"
-                upload_path = os.path.join(
-                    current_app.root_path, 'static', 'uploads', filename
-                )
-                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
-                logo_file.save(upload_path)
-                logo_url = f"uploads/{filename}"
-
-                param = db.session.execute(
-                    db.select(Parametre).filter_by(
-                        etablissement_id=etablissement_id, cle='logo_url'
+                try:
+                    import cloudinary
+                    import cloudinary.uploader
+                    cloudinary.config(
+                        cloud_name=current_app.config.get('CLOUDINARY_CLOUD_NAME'),
+                        api_key=current_app.config.get('CLOUDINARY_API_KEY'),
+                        api_secret=current_app.config.get('CLOUDINARY_API_SECRET')
                     )
-                ).scalar_one_or_none()
-                if param:
-                    param.valeur = logo_url
-                else:
+                    result = cloudinary.uploader.upload(
+                        logo_file,
+                        public_id=f'scientral/logos/logo_{etablissement_id}',
+                        overwrite=True,
+                        resource_type='image'
+                    )
+                    logo_url = result['secure_url']
+                    param = db.session.execute(
+                        db.select(Parametre).filter_by(
+                            etablissement_id=etablissement_id, cle='logo_url'
+                        )
+                    ).scalar_one_or_none()
+                    if param:
+                        param.valeur = logo_url
+                    else:
+                        db.session.add(Parametre(
+                            etablissement_id=etablissement_id,
+                            cle='logo_url', valeur=logo_url
+                        ))
+                except Exception as e:
+                    current_app.logger.error(f'Erreur Cloudinary: {e}')
+                    flash("Erreur lors de l'upload du logo.", 'error')
                     db.session.add(Parametre(
                         etablissement_id=etablissement_id,
                         cle='logo_url', valeur=logo_url
@@ -3216,15 +3254,23 @@ class LogoGraphique(Flowable):
         self.width = width
         self.height = height
         self.logo_path = None
+        self.logo_data = None
         if etablissement_id:
             try:
                 from utils import get_etablissement_params
+                from io import BytesIO
+                import requests as req
                 params = get_etablissement_params(etablissement_id)
                 logo_url = params.get('logo_url')
                 if logo_url:
-                    path = os.path.join(current_app.root_path, 'static', logo_url)
-                    if os.path.exists(path):
-                        self.logo_path = path
+                    if logo_url.startswith('http'):
+                        r = req.get(logo_url, timeout=5)
+                        if r.status_code == 200:
+                            self.logo_data = BytesIO(r.content)
+                    else:
+                        path = os.path.join(current_app.root_path, 'static', logo_url)
+                        if os.path.exists(path):
+                            self.logo_path = path
             except Exception:
                 pass
 

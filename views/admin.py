@@ -1215,6 +1215,7 @@ def sauvegarder_theme():
                         resource_type='image'
                     )
                     logo_url = result['secure_url']
+                    flash(f'DEBUG Cloudinary OK: {logo_url}', 'info')
                     param = db.session.execute(
                         db.select(Parametre).filter_by(
                             etablissement_id=etablissement_id, cle='logo_url'

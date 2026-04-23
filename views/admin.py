@@ -282,16 +282,31 @@ def generer_budget_pdf_pro(data_export, metadata):
     style_titre = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=SCIENTRAL_BLUE, alignment=TA_CENTER)
     style_normal = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=10)
     style_cell = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9)
-    # Logo etablissement
+    # Logo etablissement - téléchargé avant doc.build()
+    logo_image_data = None
     etablissement_id = metadata.get('etablissement_id')
-    logo_url_direct = None
     if etablissement_id:
-        from db import Parametre as _P
-        _p = db.session.execute(db.select(_P).filter_by(etablissement_id=etablissement_id, cle='logo_url')).scalar_one_or_none()
-        logo_url_direct = _p.valeur if _p else None
-    logo = LogoGraphique(width=60, height=60, logo_url_override=logo_url_direct)
-    elements.append(logo)
-    elements.append(Spacer(1, 0.3*cm))
+        try:
+            from db import Parametre as _P
+            import requests as _req
+            _p = db.session.execute(db.select(_P).filter_by(etablissement_id=etablissement_id, cle='logo_url')).scalar_one_or_none()
+            if _p and _p.valeur:
+                if _p.valeur.startswith('http'):
+                    r = _req.get(_p.valeur, timeout=5)
+                    if r.status_code == 200:
+                        logo_image_data = BytesIO(r.content)
+                else:
+                    logo_path = os.path.join(current_app.root_path, 'static', _p.valeur)
+                    if os.path.exists(logo_path):
+                        with open(logo_path, 'rb') as f:
+                            logo_image_data = BytesIO(f.read())
+        except Exception:
+            pass
+    if logo_image_data:
+        from reportlab.platypus import Image as RLImage
+        logo_img = RLImage(logo_image_data, width=60, height=60)
+        elements.append(logo_img)
+        elements.append(Spacer(1, 0.3*cm))
     elements.append(Paragraph(metadata['etablissement'], style_titre))
     elements.append(Spacer(1, 0.3*cm))
     elements.append(Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal))

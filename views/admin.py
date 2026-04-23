@@ -200,8 +200,8 @@ class LogoGraphique(Flowable):
             import requests as req
             logo_url = logo_url_override
             if not logo_url and etablissement_id:
-                from db import Parametre as _P, db as _db
-                _p = _db.session.execute(_db.select(_P).filter_by(etablissement_id=etablissement_id, cle='logo_url')).scalar_one_or_none()
+                _P = Parametre
+                _p = db.session.execute(db.select(_P).filter_by(etablissement_id=etablissement_id, cle='logo_url')).scalar_one_or_none()
                 logo_url = _p.valeur if _p else None
             if logo_url:
                 if logo_url.startswith('http'):

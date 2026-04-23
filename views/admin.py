@@ -1230,16 +1230,18 @@ def sauvegarder_theme():
                     )
                     logo_url = result['secure_url']
                     flash(f'DEBUG: etab_id={etablissement_id} logo_url={logo_url}', 'info')
-                    db.session.execute(db.text(
-                        "UPDATE parametres SET valeur = :val WHERE cle = 'logo_url' AND etablissement_id = :eid"
-                    ), {'val': logo_url, 'eid': etablissement_id})
-                    if db.session.execute(db.text(
-                        "SELECT COUNT(*) FROM parametres WHERE cle = 'logo_url' AND etablissement_id = :eid"
-                    ), {'eid': etablissement_id}).scalar() == 0:
-                        db.session.execute(db.text(
-                            "INSERT INTO parametres (cle, valeur, etablissement_id) VALUES ('logo_url', :val, :eid)"
-                        ), {'val': logo_url, 'eid': etablissement_id})
-                    db.session.commit()
+                    import os
+                    import psycopg2
+                    conn = psycopg2.connect(os.environ.get('DATABASE_URL'))
+                    conn.autocommit = True
+                    cur = conn.cursor()
+                    cur.execute("SELECT COUNT(*) FROM parametres WHERE cle = 'logo_url' AND etablissement_id = %s", (etablissement_id,))
+                    if cur.fetchone()[0] > 0:
+                        cur.execute("UPDATE parametres SET valeur = %s WHERE cle = 'logo_url' AND etablissement_id = %s", (logo_url, etablissement_id))
+                    else:
+                        cur.execute("INSERT INTO parametres (cle, valeur, etablissement_id) VALUES ('logo_url', %s, %s)", (logo_url, etablissement_id))
+                    cur.close()
+                    conn.close()
                     flash(f'DEBUG: commit OK', 'info')
                     _invalidate_cache()
                     flash('Logo mis a jour avec succes.', 'success')

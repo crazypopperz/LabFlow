@@ -213,7 +213,9 @@ class LogoGraphique(Flowable):
                     if os.path.exists(path):
                         self.logo_path = path
         except Exception as e:
-            pass
+            import traceback
+            print(f"LOGO ERROR: {e}")
+            traceback.print_exc()
     def draw(self):
         if self.logo_data or self.logo_path:
             try:

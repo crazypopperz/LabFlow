@@ -239,8 +239,9 @@ def ajouter_logo_excel(ws, etablissement_id=None):
     logo_data = None
     if etablissement_id:
         try:
-            params = get_etablissement_params(etablissement_id)
-            logo_url = params.get('logo_url')
+            from db import Parametre as _Parametre
+            _p = db.session.execute(db.select(_Parametre).filter_by(etablissement_id=etablissement_id, cle='logo_url')).scalar_one_or_none()
+            logo_url = _p.valeur if _p else None
             if logo_url:
                 if logo_url.startswith('http'):
                     r = req.get(logo_url, timeout=5)
@@ -278,7 +279,12 @@ def generer_budget_pdf_pro(data_export, metadata):
     style_titre = ParagraphStyle('Titre', parent=styles['Heading1'], fontSize=22, textColor=SCIENTRAL_BLUE, alignment=TA_CENTER)
     style_normal = ParagraphStyle('Normal', parent=styles['Normal'], fontSize=10)
     style_cell = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9)
-    elements.append(Paragraph(metadata['etablissement'], style_titre))
+    # Logo etablissement
+    etablissement_id = metadata.get('etablissement_id')
+    logo = LogoGraphique(width=50, height=50, etablissement_id=etablissement_id)
+    header_table = Table([[logo, Paragraph(metadata['etablissement'], style_titre)]], colWidths=[2*cm, 15*cm])
+    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (0,0), (-1,-1), 0)]))
+    elements.append(header_table)
     elements.append(Spacer(1, 0.5*cm))
     elements.append(Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
     elements.append(Spacer(1, 0.5*cm))

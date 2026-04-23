@@ -1232,7 +1232,10 @@ def sauvegarder_theme():
                     flash(f'DEBUG: etab_id={etablissement_id} logo_url={logo_url}', 'info')
                     import os
                     import psycopg2
-                    conn = psycopg2.connect(os.environ.get('DATABASE_URL'))
+                    db_url = os.environ.get('DATABASE_URL', '')
+                    if '?' in db_url:
+                        db_url += '&sslmode=require'
+                    conn = psycopg2.connect(db_url, sslmode='require')
                     conn.autocommit = True
                     cur = conn.cursor()
                     cur.execute("SELECT COUNT(*) FROM parametres WHERE cle = 'logo_url' AND etablissement_id = %s", (etablissement_id,))

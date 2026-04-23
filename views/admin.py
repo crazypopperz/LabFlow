@@ -302,22 +302,32 @@ def generer_budget_pdf_pro(data_export, metadata):
                             logo_image_data = BytesIO(f.read())
         except Exception:
             pass
-    from reportlab.platypus import Image as RLImage
+    from reportlab.platypus import Image as RLImage, HRFlowable
+    style_etab = ParagraphStyle('Etab', parent=styles['Normal'], fontSize=16, textColor=SCIENTRAL_BLUE, fontName='Helvetica-Bold')
+    style_sous = ParagraphStyle('Sous', parent=styles['Normal'], fontSize=9, textColor=colors.grey)
     if logo_image_data:
-        logo_img = RLImage(logo_image_data, width=60, height=60)
-        titre_bloc = [Paragraph(metadata['etablissement'], style_titre),
-                      Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal)]
+        logo_img = RLImage(logo_image_data, width=55, height=55)
+        titre_bloc = [
+            Paragraph(metadata['etablissement'], style_etab),
+            Spacer(1, 0.15*cm),
+            Paragraph(f"Rapport budgétaire", style_sous),
+            Paragraph(f"Période : {metadata['date_debut']} au {metadata['date_fin']}", style_sous),
+            Paragraph(f"Généré le {metadata['date_generation']}", style_sous),
+        ]
         header_table = Table([[logo_img, titre_bloc]], colWidths=[2.5*cm, 14*cm])
         header_table.setStyle(TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+            ('LEFTPADDING', (0,0), (0,-1), 0),
+            ('LEFTPADDING', (1,0), (1,-1), 10),
         ]))
         elements.append(header_table)
     else:
         elements.append(Paragraph(metadata['etablissement'], style_titre))
-        elements.append(Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
-    elements.append(Spacer(1, 0.5*cm))
+        elements.append(Spacer(1, 0.2*cm))
+        elements.append(Paragraph(f"Période : {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
+    elements.append(Spacer(1, 0.4*cm))
+    elements.append(HRFlowable(width='100%', thickness=2, color=SCIENTRAL_BLUE))
+    elements.append(Spacer(1, 0.4*cm))
     elements.append(Spacer(1, 0.5*cm))
     table_data = [['Date', 'Fournisseur', 'Libellé', 'Montant']]
     for item in data_export:

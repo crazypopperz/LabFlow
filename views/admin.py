@@ -1167,7 +1167,13 @@ def personnalisation_page():
         {'text': 'Administration', 'url': url_for('admin.admin')},
         {'text': 'Personnalisation', 'url': None}
     ]
-    params = get_etablissement_params(session.get('etablissement_id'))
+    etablissement_id = session.get('etablissement_id')
+    # Bypass cache pour toujours avoir les donnees fraiches
+    from db import Parametre
+    params_list = db.session.execute(
+        db.select(Parametre).filter_by(etablissement_id=etablissement_id)
+    ).scalars().all()
+    params = {p.cle: p.valeur for p in params_list}
     return render_template("admin_personnalisation.html", breadcrumbs=breadcrumbs, params=params)
 
 @admin_bp.route("/theme", methods=["POST"])

@@ -289,11 +289,11 @@ def generer_budget_pdf_pro(data_export, metadata):
         from db import Parametre as _P
         _p = db.session.execute(db.select(_P).filter_by(etablissement_id=etablissement_id, cle='logo_url')).scalar_one_or_none()
         logo_url_direct = _p.valeur if _p else None
-    logo = LogoGraphique(width=50, height=50, logo_url_override=logo_url_direct)
-    header_table = Table([[logo, Paragraph(metadata['etablissement'], style_titre)]], colWidths=[2*cm, 15*cm])
-    header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (0,0), (-1,-1), 0)]))
-    elements.append(header_table)
-    elements.append(Spacer(1, 0.5*cm))
+    logo = LogoGraphique(width=60, height=60, logo_url_override=logo_url_direct)
+    elements.append(logo)
+    elements.append(Spacer(1, 0.3*cm))
+    elements.append(Paragraph(metadata['etablissement'], style_titre))
+    elements.append(Spacer(1, 0.3*cm))
     elements.append(Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
     elements.append(Spacer(1, 0.5*cm))
     table_data = [['Date', 'Fournisseur', 'Libellé', 'Montant']]

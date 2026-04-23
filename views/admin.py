@@ -1230,7 +1230,15 @@ def sauvegarder_theme():
                     )
                     logo_url = result['secure_url']
                     flash(f'DEBUG: etab_id={etablissement_id} logo_url={logo_url}', 'info')
-                    _save_param('logo_url', logo_url)
+                    db.session.execute(db.text(
+                        "UPDATE parametres SET valeur = :val WHERE cle = 'logo_url' AND etablissement_id = :eid"
+                    ), {'val': logo_url, 'eid': etablissement_id})
+                    if db.session.execute(db.text(
+                        "SELECT COUNT(*) FROM parametres WHERE cle = 'logo_url' AND etablissement_id = :eid"
+                    ), {'eid': etablissement_id}).scalar() == 0:
+                        db.session.execute(db.text(
+                            "INSERT INTO parametres (cle, valeur, etablissement_id) VALUES ('logo_url', :val, :eid)"
+                        ), {'val': logo_url, 'eid': etablissement_id})
                     db.session.commit()
                     flash(f'DEBUG: commit OK', 'info')
                     _invalidate_cache()

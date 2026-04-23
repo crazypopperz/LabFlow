@@ -189,30 +189,31 @@ def _rollback_file(path):
 # ============================================================
 
 class LogoGraphique(Flowable):
-    def __init__(self, width=40, height=40, etablissement_id=None):
+    def __init__(self, width=40, height=40, etablissement_id=None, logo_url_override=None):
         Flowable.__init__(self)
         self.width = width
         self.height = height
         self.logo_path = None
         self.logo_data = None
-        if etablissement_id:
-            try:
-                from utils import get_etablissement_params
-                from io import BytesIO
-                import requests as req
-                params = get_etablissement_params(etablissement_id)
-                logo_url = params.get('logo_url')
-                if logo_url:
-                    if logo_url.startswith('http'):
-                        r = req.get(logo_url, timeout=5)
-                        if r.status_code == 200:
-                            self.logo_data = BytesIO(r.content)
-                    else:
-                        path = os.path.join(current_app.root_path, 'static', logo_url)
-                        if os.path.exists(path):
-                            self.logo_path = path
-            except Exception:
-                pass
+        try:
+            from io import BytesIO
+            import requests as req
+            logo_url = logo_url_override
+            if not logo_url and etablissement_id:
+                from db import Parametre as _P, db as _db
+                _p = _db.session.execute(_db.select(_P).filter_by(etablissement_id=etablissement_id, cle='logo_url')).scalar_one_or_none()
+                logo_url = _p.valeur if _p else None
+            if logo_url:
+                if logo_url.startswith('http'):
+                    r = req.get(logo_url, timeout=5)
+                    if r.status_code == 200:
+                        self.logo_data = BytesIO(r.content)
+                else:
+                    path = os.path.join(current_app.root_path, 'static', logo_url)
+                    if os.path.exists(path):
+                        self.logo_path = path
+        except Exception as e:
+            pass
     def draw(self):
         if self.logo_data or self.logo_path:
             try:
@@ -281,7 +282,12 @@ def generer_budget_pdf_pro(data_export, metadata):
     style_cell = ParagraphStyle('Cell', parent=styles['Normal'], fontSize=9)
     # Logo etablissement
     etablissement_id = metadata.get('etablissement_id')
-    logo = LogoGraphique(width=50, height=50, etablissement_id=etablissement_id)
+    logo_url_direct = None
+    if etablissement_id:
+        from db import Parametre as _P
+        _p = db.session.execute(db.select(_P).filter_by(etablissement_id=etablissement_id, cle='logo_url')).scalar_one_or_none()
+        logo_url_direct = _p.valeur if _p else None
+    logo = LogoGraphique(width=50, height=50, logo_url_override=logo_url_direct)
     header_table = Table([[logo, Paragraph(metadata['etablissement'], style_titre)]], colWidths=[2*cm, 15*cm])
     header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (0,0), (-1,-1), 0)]))
     elements.append(header_table)

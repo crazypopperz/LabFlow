@@ -302,14 +302,22 @@ def generer_budget_pdf_pro(data_export, metadata):
                             logo_image_data = BytesIO(f.read())
         except Exception:
             pass
+    from reportlab.platypus import Image as RLImage
     if logo_image_data:
-        from reportlab.platypus import Image as RLImage
         logo_img = RLImage(logo_image_data, width=60, height=60)
-        elements.append(logo_img)
-        elements.append(Spacer(1, 0.3*cm))
-    elements.append(Paragraph(metadata['etablissement'], style_titre))
-    elements.append(Spacer(1, 0.3*cm))
-    elements.append(Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
+        titre_bloc = [Paragraph(metadata['etablissement'], style_titre),
+                      Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal)]
+        header_table = Table([[logo_img, titre_bloc]], colWidths=[2.5*cm, 14*cm])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ]))
+        elements.append(header_table)
+    else:
+        elements.append(Paragraph(metadata['etablissement'], style_titre))
+        elements.append(Paragraph(f"Rapport du {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
+    elements.append(Spacer(1, 0.5*cm))
     elements.append(Spacer(1, 0.5*cm))
     table_data = [['Date', 'Fournisseur', 'Libellé', 'Montant']]
     for item in data_export:

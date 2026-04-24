@@ -36,6 +36,16 @@ class Utilisateur(UserMixin, db.Model):
     email = db.Column(db.String(150))
     mot_de_passe = db.Column(db.String(255), nullable=False) # Hash bcrypt/scrypt
     role = db.Column(db.String(50), default='utilisateur')
+    
+    # --- NOUVEAU : GESTION DES NIVEAUX ET VALIDATION ---
+    # Niveau d'enseignement déclaré/validé
+    niveau_enseignement = db.Column(db.String(50), default='lycee') # 'college', 'lycee', 'pro', 'superieur'
+    
+    # Statut du compte : 'en_attente', 'actif', 'desactive'
+    # On met 'actif' par défaut pour ne pas bloquer tes utilisateurs actuels
+    statut_compte = db.Column(db.String(20), default='actif') 
+    # ---------------------------------------------------
+
     etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
 
 # ============================================================
@@ -62,11 +72,29 @@ class Objet(db.Model):
     __tablename__ = 'objets'
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100), nullable=False)
-    quantite_physique = db.Column(db.Integer, default=0)
-    seuil = db.Column(db.Integer, default=0)
+    
+    # --- DISTINCTION MATÉRIEL / PRODUIT ---
+    type_objet = db.Column(db.String(20), default='materiel') # 'materiel' ou 'produit'
+    
+    # Pour les produits chimiques
+    unite = db.Column(db.String(10), default='unite') # 'mL', 'L', 'g', 'kg'
+    capacite_initiale = db.Column(db.Float, default=0.0) # Quantité Totale Initiale
+    niveau_actuel = db.Column(db.Float, default=0.0) # Quantité Restante
+    
+    # --- NOUVEAU : SEUIL EN POURCENTAGE ---
+    seuil_pourcentage = db.Column(db.Integer, default=10) # Alerte si % restant <= ce nombre
+    # -------------------------------------
+
+    # Restriction d'accès
+    niveau_requis = db.Column(db.String(50), default='tous')
+
+    quantite_physique = db.Column(db.Integer, default=0) # Sera forcé à 1 pour les produits
+    seuil = db.Column(db.Integer, default=0) # Seuil en unités (pour le matériel)
+    
     date_peremption = db.Column(db.Date, nullable=True)
     image_url = db.Column(db.String(255), nullable=True)
     fds_url = db.Column(db.String(255), nullable=True)
+    is_cmr = db.Column(db.Boolean, default=False)
     
     # FK
     armoire_id = db.Column(db.Integer, db.ForeignKey('armoires.id'))
@@ -78,12 +106,19 @@ class Objet(db.Model):
     categorie = db.relationship('Categorie', back_populates='objets')
     
     # Champs de gestion
-    en_commande = db.Column(db.Integer, default=0) 
-    traite = db.Column(db.Integer, default=0)
+    en_commande = db.Column(db.Boolean, default=False) 
+    traite = db.Column(db.Boolean, default=False)
 
     __table_args__ = (
         db.Index('idx_objets_etablissement_categorie', 'etablissement_id', 'categorie_id'),
     )
+    
+    # Propriété calculée pour le pourcentage restant
+    @property
+    def pourcentage_restant(self):
+        if self.type_objet == 'produit' and self.capacite_initiale > 0:
+            return round((self.niveau_actuel / self.capacite_initiale) * 100)
+        return 0
 
 class Kit(db.Model):
     __tablename__ = 'kits'
@@ -159,6 +194,8 @@ class PanierItem(db.Model):
     date_reservation = db.Column(db.Date, nullable=False)
     heure_debut = db.Column(db.String(5), nullable=False)
     heure_fin = db.Column(db.String(5), nullable=False)
+    salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
+    recurrence_data = db.Column(db.Text, nullable=True)
     
     date_ajout = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
 
@@ -168,63 +205,6 @@ class PanierItem(db.Model):
         db.CheckConstraint('quantite > 0', name='check_panier_qte_positive'),
         db.Index('idx_panier_items_panier', 'id_panier'),
     )
-
-class DocumentReglementaire(db.Model):
-    __tablename__ = 'documents_reglementaires'
-    id = db.Column(db.Integer, primary_key=True)
-    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
-    nom = db.Column(db.String(150), nullable=False)
-    type_doc = db.Column(db.String(50))
-    fichier_url = db.Column(db.String(255), nullable=False)
-    date_upload = db.Column(db.DateTime, default=datetime.now)
-
-class InventaireArchive(db.Model):
-    __tablename__ = 'inventaires_archives'
-    id = db.Column(db.Integer, primary_key=True)
-    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
-    titre = db.Column(db.String(150))
-    date_archive = db.Column(db.DateTime, default=datetime.now)
-    fichier_url = db.Column(db.String(255), nullable=False)
-    nb_objets = db.Column(db.Integer)
-
-class Notification(db.Model):
-    __tablename__ = 'notifications'
-    id = db.Column(db.Integer, primary_key=True)
-    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
-    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
-    message = db.Column(db.Text, nullable=False)
-    type = db.Column(db.String(20), default='warning')
-    lu = db.Column(db.Boolean, default=False)
-    date_creation = db.Column(db.DateTime, default=datetime.now)
-
-class Salle(db.Model):
-    __tablename__ = 'salles'
-    id = db.Column(db.Integer, primary_key=True)
-    nom = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(255), nullable=True)
-    capacite = db.Column(db.Integer, nullable=True)
-    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
-    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
-
-
-    __table_args__ = (
-        db.Index('idx_salles_etablissement', 'etablissement_id'),
-    )
-
-class ReservationRecurrence(db.Model):
-    __tablename__ = 'reservation_recurrences'
-    id = db.Column(db.Integer, primary_key=True)
-    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
-    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
-    type_recurrence = db.Column(db.String(20), nullable=False)
-    date_debut = db.Column(db.Date, nullable=False)
-    date_fin = db.Column(db.Date, nullable=True)
-    nb_occurrences = db.Column(db.Integer, nullable=True)
-    heure_debut = db.Column(db.String(5), nullable=False)
-    heure_fin = db.Column(db.String(5), nullable=False)
-    salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
-    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
-
 
 class Reservation(db.Model):
     __tablename__ = 'reservations'
@@ -244,6 +224,8 @@ class Reservation(db.Model):
     
     # Groupement et Statut
     groupe_id = db.Column(db.String(36), nullable=False, index=True)
+    salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
+    recurrence_id = db.Column(db.Integer, db.ForeignKey('reservation_recurrences.id'), nullable=True)
     statut = db.Column(db.String(20), default='confirmée') # en_attente, confirmée, annulée
     
     # Traçabilité
@@ -293,7 +275,9 @@ class AuditLog(db.Model):
     )
 
 class Historique(db.Model):
-    """DEPRECATED: Utilisez AuditLog pour les nouveaux enregistrements."""
+    """Journal d'activité principal : modifications objets, réservations, suppressions.
+    Note: AuditLog existe en parallèle pour les actions système (connexions, exports).
+    """
     __tablename__ = 'historique'
     id = db.Column(db.Integer, primary_key=True)
     objet_id = db.Column(db.Integer, nullable=True)
@@ -351,7 +335,7 @@ class Echeance(db.Model):
     intitule = db.Column(db.String(100), nullable=False)
     date_echeance = db.Column(db.Date, nullable=False)
     details = db.Column(db.Text)
-    traite = db.Column(db.Integer, default=0)
+    traite = db.Column(db.Boolean, default=False)
     etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
 
 class Suggestion(db.Model):
@@ -423,3 +407,90 @@ class MaintenanceLog(db.Model):
     
     # Gestion documentaire (GED)
     fichier_rapport = db.Column(db.String(255)) # Chemin vers le PDF stocké
+
+
+
+# ============================================================
+# 7. CONFORMITÉ & DOCUMENTS
+# ============================================================
+
+class DocumentReglementaire(db.Model):
+    """GED : Stockage des DUERP, FDS globales, Attestations..."""
+    __tablename__ = 'documents_reglementaires'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    
+    nom = db.Column(db.String(150), nullable=False)
+    type_doc = db.Column(db.String(50))
+    fichier_url = db.Column(db.String(255), nullable=False)
+    fichier_pdf = db.Column(db.LargeBinary, nullable=True)
+    date_upload = db.Column(db.DateTime, default=datetime.now)
+
+class InventaireArchive(db.Model):
+    """Snapshot : Inventaire figé à une date T"""
+    __tablename__ = 'inventaires_archives'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    
+    titre = db.Column(db.String(150))
+    date_archive = db.Column(db.DateTime, default=datetime.now)
+    fichier_url = db.Column(db.String(255), nullable=False)
+    fichier_pdf = db.Column(db.LargeBinary, nullable=True)
+    nb_objets = db.Column(db.Integer)
+
+# ============================================================
+# 8. SYSTÈME DE NOTIFICATIONS
+# ============================================================
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(20), default='warning') # info, warning, danger, success
+    lu = db.Column(db.Boolean, default=False)
+    date_creation = db.Column(db.DateTime, default=datetime.now)
+
+# ============================================================
+# 9. SALLES
+# ============================================================
+class Salle(db.Model):
+    __tablename__ = 'salles'
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    capacite = db.Column(db.Integer, nullable=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+
+    reservations = db.relationship('Reservation', backref='salle', lazy=True)
+
+    __table_args__ = (
+        db.Index('idx_salles_etablissement', 'etablissement_id'),
+    )
+
+# ============================================================
+# 10. RÉCURRENCE DES RÉSERVATIONS
+# ============================================================
+class ReservationRecurrence(db.Model):
+    __tablename__ = 'reservation_recurrences'
+    id = db.Column(db.Integer, primary_key=True)
+    etablissement_id = db.Column(db.Integer, db.ForeignKey('etablissements.id'), nullable=False)
+    utilisateur_id = db.Column(db.Integer, db.ForeignKey('utilisateurs.id'), nullable=False)
+    # Type : 'hebdo', 'quotidien_ouvre', 'bi_hebdo', 'mensuel'
+    type_recurrence = db.Column(db.String(20), nullable=False)
+    # Limites
+    date_debut = db.Column(db.Date, nullable=False)
+    date_fin = db.Column(db.Date, nullable=True)
+    nb_occurrences = db.Column(db.Integer, nullable=True)
+    # Créneau
+    heure_debut = db.Column(db.String(5), nullable=False)  # HH:MM
+    heure_fin = db.Column(db.String(5), nullable=False)
+    salle_id = db.Column(db.Integer, db.ForeignKey('salles.id'), nullable=True)
+    date_creation = db.Column(db.DateTime(timezone=True), server_default=func.current_timestamp())
+
+    reservations = db.relationship('Reservation', backref='recurrence', lazy=True,
+                                   foreign_keys='Reservation.recurrence_id')

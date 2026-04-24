@@ -309,9 +309,11 @@ def generer_budget_pdf_pro(data_export, metadata):
         logo_img = RLImage(logo_image_data, width=55, height=55)
         titre_bloc = [
             Paragraph(metadata['etablissement'], style_etab),
-            Spacer(1, 0.2*cm),
+            Spacer(1, 0.5*cm),
             Paragraph(f"<i>Rapport budgétaire</i>", style_sous),
+            Spacer(1, 0.1*cm),
             Paragraph(f"<i>Période : {metadata['date_debut']} au {metadata['date_fin']}</i>", style_sous),
+            Spacer(1, 0.1*cm),
             Paragraph(f"<i>Généré le {metadata['date_generation']}</i>", style_sous),
         ]
         header_table = Table([[logo_img, titre_bloc]], colWidths=[2.5*cm, 14*cm])
@@ -326,7 +328,7 @@ def generer_budget_pdf_pro(data_export, metadata):
         elements.append(Spacer(1, 0.2*cm))
         elements.append(Paragraph(f"<i>Période : {metadata['date_debut']} au {metadata['date_fin']}</i>", style_sous))
     elements.append(Spacer(1, 0.4*cm))
-    elements.append(HRFlowable(width='100%', thickness=1, color=SCIENTRAL_BLUE))
+    elements.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#aabbcc')))
     elements.append(Spacer(1, 0.4*cm))
     elements.append(Spacer(1, 0.5*cm))
     table_data = [['Date', 'Fournisseur', 'Libellé', 'Montant']]

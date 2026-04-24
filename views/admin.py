@@ -1760,7 +1760,11 @@ def gestion_kits():
         .group_by(Kit.id)
         .order_by(Kit.nom)
     ).mappings().all()
-    breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Kits'}]
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Kits', 'url': None}
+    ]
     return render_template("admin_kits.html", kits=kits_data, breadcrumbs=breadcrumbs)
 
 @admin_bp.route("/kits/ajouter", methods=["POST"])

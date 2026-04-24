@@ -420,7 +420,7 @@ def documentation():
 # Pas de @login_required ici, les mentions légales doivent être publiques
 def legal():
     breadcrumbs = [
-        {'text': 'Accueil', 'url': url_for('inventaire.index')},
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
         {'text': 'Mentions Légales', 'url': None}
     ]
     return render_template("legal.html", breadcrumbs=breadcrumbs)

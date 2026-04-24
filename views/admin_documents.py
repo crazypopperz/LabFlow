@@ -28,7 +28,11 @@ def gestion_documents():
     # Récupération des archives d'inventaire
     archives = db.session.execute(db.select(InventaireArchive).filter_by(etablissement_id=etablissement_id).order_by(InventaireArchive.date_archive.desc())).scalars().all()
     
-    breadcrumbs = [{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Documents & Conformité'}]
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Documents & Conformité', 'url': None}
+    ]
     return render_template("admin_documents.html", docs=docs, archives=archives, breadcrumbs=breadcrumbs)
 
 @admin_documents_bp.route("/documents/upload", methods=['POST'])

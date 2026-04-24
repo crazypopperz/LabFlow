@@ -3,22 +3,56 @@
 {% block content %}
 <div class="main-container">
     {% include '_breadcrumb.html' %}
-
-    <!-- En-tête -->
-    <div class="management-header">
-        <h2 class="page-title h3 mb-0 d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
-                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #20c997 0%, #0dcaf0 100%);">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
+ 
+    <!-- En-tête bleu marine -->
+    <div class="salles-hero mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="salles-hero-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32" height="32" fill="currentColor">
                     <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
                 </svg>
             </div>
-            <span class="fw-bold text-dark">Gestion des Salles</span>
-        </h2>
+            <div>
+                <h2 class="salles-hero-title mb-0">Gestion des Salles</h2>
+            </div>
+        </div>
+        <p class="salles-hero-subtitle mb-0">Ajoutez, modifiez et organisez les salles de votre établissement</p>
     </div>
-
-    <div class="row g-4 mt-2">
-
+ 
+    <!-- Cartes de statistiques -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="salle-stat-card">
+                <div class="salle-stat-bar" style="background: var(--couleur-principale);"></div>
+                <div class="salle-stat-label">SALLES ENREGISTRÉES</div>
+                <div class="salle-stat-value">{{ nb_salles }}</div>
+                <div class="salle-stat-sub">dans l'établissement</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="salle-stat-card">
+                <div class="salle-stat-bar" style="background: #0dcaf0;"></div>
+                <div class="salle-stat-label">CAPACITÉ TOTALE</div>
+                <div class="salle-stat-value">
+                    {% if capacite_totale %}{{ capacite_totale }}{% else %}<span style="font-size:1.5rem;">—</span>{% endif %}
+                </div>
+                <div class="salle-stat-sub">élèves simultanés</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="salle-stat-card">
+                <div class="salle-stat-bar" style="background: #20c997;"></div>
+                <div class="salle-stat-label">CAPACITÉ MOYENNE</div>
+                <div class="salle-stat-value">
+                    {% if capacite_moyenne %}{{ capacite_moyenne }}{% else %}<span style="font-size:1.5rem;">—</span>{% endif %}
+                </div>
+                <div class="salle-stat-sub">élèves par salle</div>
+            </div>
+        </div>
+    </div>
+ 
+    <div class="row g-4">
+ 
         <!-- Formulaire ajout -->
         <div class="col-12 col-lg-4">
             <div class="content-card h-100">
@@ -30,28 +64,28 @@
                 </h5>
                 <form action="{{ url_for('admin.ajouter_salle') }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
+ 
                     <div class="mb-3">
                         <label class="filter-label d-block mb-1">Nom de la salle *</label>
                         <input type="text" name="nom" class="form-control"
                                placeholder="Ex: Salle 101, Labo Chimie..."
                                maxlength="100" required>
                     </div>
-
+ 
                     <div class="mb-3">
                         <label class="filter-label d-block mb-1">Description</label>
                         <input type="text" name="description" class="form-control"
                                placeholder="Ex: Bâtiment A, 1er étage"
                                maxlength="255">
                     </div>
-
+ 
                     <div class="mb-4">
                         <label class="filter-label d-block mb-1">Capacité (élèves)</label>
                         <input type="number" name="capacite" class="form-control"
                                placeholder="Ex: 30" min="1" max="999">
                     </div>
-
-                    <button type="submit" class="btn btn-primary w-100">
+ 
+                    <button type="submit" class="btn btn-salles-primary w-100">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" fill="currentColor" class="me-1">
                             <path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>
                         </svg>
@@ -60,7 +94,7 @@
                 </form>
             </div>
         </div>
-
+ 
         <!-- Liste des salles -->
         <div class="col-12 col-lg-8">
             <div class="content-card">
@@ -71,7 +105,7 @@
                     Salles enregistrées
                     <span class="badge bg-primary rounded-pill ms-1">{{ salles|length }}</span>
                 </h5>
-
+ 
                 {% if salles %}
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -122,8 +156,8 @@
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="48" height="48" fill="#dee2e6" class="mb-3">
                         <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Z"/>
                     </svg>
-                    <p class="mb-0">Aucune salle enregistrée.</p>
-                    <small>Ajoutez votre première salle avec le formulaire.</small>
+                    <p class="mb-1 fw-semibold">Aucune salle enregistrée.</p>
+                    <small>Ajoutez votre première salle avec le formulaire ci-contre.</small>
                 </div>
                 {% endif %}
             </div>

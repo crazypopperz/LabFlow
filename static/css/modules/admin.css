@@ -562,3 +562,92 @@
     .user-email { justify-content: center; }
     .user-actions { margin-left: 0; width: 100%; justify-content: center; margin-top: 10px; }
 }
+
+/* ============================================================================================
+/* PAGE ADMIN salles
+/* ========================================================================================= */
+/* ── Hero header ─────────────────────────────────────── */
+.salles-hero {
+    background: linear-gradient(135deg, #1a2f5e 0%, #1e3a8a 60%, #1d4ed8 100%);
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: white;
+    box-shadow: 0 4px 16px rgba(26, 47, 94, 0.25);
+}
+.salles-hero-icon {
+    width: 56px; height: 56px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.salles-hero-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+.salles-hero-subtitle {
+    color: rgba(255,255,255,0.75);
+    font-size: 0.95rem;
+}
+ 
+/* ── Stat cards ──────────────────────────────────────── */
+.salle-stat-card {
+    background: var(--fond-element, #fff);
+    border: 1px solid var(--couleur-bordure, #e9ecef);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem 1rem;
+    box-shadow: var(--ombre-legere, 0 1px 4px rgba(0,0,0,0.06));
+    position: relative;
+    overflow: hidden;
+}
+.salle-stat-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    border-radius: 10px 10px 0 0;
+}
+.salle-stat-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: var(--texte-discret, #6c757d);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    margin-top: 0.25rem;
+}
+.salle-stat-value {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--texte-principal, #1a2f5e);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+.salle-stat-sub {
+    font-size: 0.82rem;
+    color: var(--texte-discret, #6c757d);
+}
+ 
+/* ── Bouton ajout ────────────────────────────────────── */
+.btn-salles-primary {
+    background: linear-gradient(135deg, #1a2f5e 0%, #1e3a8a 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+.btn-salles-primary:hover {
+    color: white;
+    opacity: 0.9;
+    transform: translateY(-1px);
+}

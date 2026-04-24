@@ -238,7 +238,7 @@ def alertes():
             Objet.etablissement_id == etablissement_id,
             Objet.date_peremption != None,
             func.date(Objet.date_peremption) < date_limite,
-            Objet.traite == 0
+            Objet.traite == False
         ).order_by(Objet.date_peremption.asc()).all()
     
     # 4. Suggestions

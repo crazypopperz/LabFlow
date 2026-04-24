@@ -303,16 +303,16 @@ def generer_budget_pdf_pro(data_export, metadata):
         except Exception:
             pass
     from reportlab.platypus import Image as RLImage, HRFlowable
-    style_etab = ParagraphStyle('Etab', parent=styles['Normal'], fontSize=16, textColor=SCIENTRAL_BLUE, fontName='Helvetica-Bold')
-    style_sous = ParagraphStyle('Sous', parent=styles['Normal'], fontSize=9, textColor=colors.grey)
+    style_etab = ParagraphStyle('Etab', parent=styles['Normal'], fontSize=18, textColor=SCIENTRAL_BLUE, fontName='Helvetica-Bold', alignment=2)
+    style_sous = ParagraphStyle('Sous', parent=styles['Normal'], fontSize=8, textColor=colors.grey, fontName='Helvetica-Oblique', alignment=2)
     if logo_image_data:
         logo_img = RLImage(logo_image_data, width=55, height=55)
         titre_bloc = [
             Paragraph(metadata['etablissement'], style_etab),
-            Spacer(1, 0.15*cm),
-            Paragraph(f"Rapport budgétaire", style_sous),
-            Paragraph(f"Période : {metadata['date_debut']} au {metadata['date_fin']}", style_sous),
-            Paragraph(f"Généré le {metadata['date_generation']}", style_sous),
+            Spacer(1, 0.2*cm),
+            Paragraph(f"<i>Rapport budgétaire</i>", style_sous),
+            Paragraph(f"<i>Période : {metadata['date_debut']} au {metadata['date_fin']}</i>", style_sous),
+            Paragraph(f"<i>Généré le {metadata['date_generation']}</i>", style_sous),
         ]
         header_table = Table([[logo_img, titre_bloc]], colWidths=[2.5*cm, 14*cm])
         header_table.setStyle(TableStyle([
@@ -322,11 +322,11 @@ def generer_budget_pdf_pro(data_export, metadata):
         ]))
         elements.append(header_table)
     else:
-        elements.append(Paragraph(metadata['etablissement'], style_titre))
+        elements.append(Paragraph(metadata['etablissement'], style_etab))
         elements.append(Spacer(1, 0.2*cm))
-        elements.append(Paragraph(f"Période : {metadata['date_debut']} au {metadata['date_fin']}", style_normal))
+        elements.append(Paragraph(f"<i>Période : {metadata['date_debut']} au {metadata['date_fin']}</i>", style_sous))
     elements.append(Spacer(1, 0.4*cm))
-    elements.append(HRFlowable(width='100%', thickness=2, color=SCIENTRAL_BLUE))
+    elements.append(HRFlowable(width='100%', thickness=1, color=SCIENTRAL_BLUE))
     elements.append(Spacer(1, 0.4*cm))
     elements.append(Spacer(1, 0.5*cm))
     table_data = [['Date', 'Fournisseur', 'Libellé', 'Montant']]

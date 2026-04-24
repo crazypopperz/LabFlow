@@ -1206,7 +1206,7 @@ def importer_pack(pack_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erreur import pack: {e}", exc_info=True)
-        return jsonify({"success": False, "error": "Erreur technique lors de l'import"}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @admin_bp.route("/personnalisation", methods=["GET"])
 @admin_required

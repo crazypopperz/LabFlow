@@ -109,7 +109,7 @@ def index():
         db.select(Echeance)
         .filter(
             Echeance.etablissement_id == etablissement_id,
-            Echeance.traite == 0,
+            Echeance.traite == False,
             Echeance.date_echeance >= date_aujourdhui,
             Echeance.date_echeance <= date_limite
         )
@@ -867,7 +867,7 @@ def maj_traite(objet_id):
         return jsonify(success=False, error="Objet non trouvé ou accès non autorisé."), 404
 
     try:
-        objet.traite = 1 if data.get("traite") else 0
+        objet.traite = True if data.get("traite") else False
         db.session.commit()
         return jsonify(success=True)
     except Exception as e:
@@ -886,7 +886,7 @@ def maj_commande(objet_id):
         return jsonify(success=False, error="Objet non trouvé ou accès non autorisé."), 404
 
     try:
-        objet.en_commande = 1 if data.get("en_commande") else 0
+        objet.en_commande = True if data.get("en_commande") else False
         db.session.commit()
         return jsonify(success=True)
     except Exception as e:

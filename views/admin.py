@@ -1511,7 +1511,14 @@ def gestion_salles():
         {'text': 'Administration', 'url': url_for('admin.admin')},
         {'text': 'Salles', 'url': None}
     ]
-    return render_template("admin_salles.html", salles=salles, breadcrumbs=breadcrumbs)
+    nb_salles = len(salles)
+    capacite_totale = sum(s.capacite for s in salles if s.capacite)
+    capacite_moyenne = round(capacite_totale / nb_salles) if nb_salles else 0
+
+    return render_template("admin_salles.html", salles=salles, breadcrumbs=breadcrumbs,
+                           nb_salles=nb_salles,
+                           capacite_totale=capacite_totale,
+                           capacite_moyenne=capacite_moyenne)
 
 @admin_bp.route("/salles/ajouter", methods=["POST"])
 @admin_required

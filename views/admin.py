@@ -1560,7 +1560,11 @@ def gestion_utilisateurs():
         .limit(100)
     ).scalars().all()
 
-    breadcrumbs = [{'text': 'Administration', 'url': url_for('admin.admin')}, {'text': 'Utilisateurs'}]
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Utilisateurs', 'url': None}
+    ]
     return render_template("admin_utilisateurs.html", utilisateurs=utilisateurs, breadcrumbs=breadcrumbs, now=datetime.now)
 
 @admin_bp.route("/utilisateurs/ajouter", methods=["POST"])
@@ -1884,9 +1888,10 @@ def modifier_kit(kit_id):
     ).scalars().all()
 
     breadcrumbs = [
-        {'text': 'Admin', 'url': url_for('admin.admin')}, 
-        {'text': 'Kits', 'url': url_for('admin.gestion_kits')}, 
-        {'text': kit.nom}
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Kits', 'url': url_for('admin.gestion_kits')},
+        {'text': kit.nom, 'url': None}
     ]
     
     return render_template("admin_kit_modifier.html", 
@@ -1940,7 +1945,11 @@ def supprimer_kit(kit_id):
 def gestion_echeances():
     etablissement_id = session['etablissement_id']
     echeances = db.session.execute(db.select(Echeance).filter_by(etablissement_id=etablissement_id).order_by(Echeance.date_echeance.asc())).scalars().all()
-    breadcrumbs = [{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Échéances'}]
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Échéances', 'url': None}
+    ]
     return render_template("admin_echeances.html", echeances=echeances, breadcrumbs=breadcrumbs, date_actuelle=date.today())
 
 @admin_bp.route("/echeances/ajouter", methods=['POST'])
@@ -2053,7 +2062,11 @@ def budget():
     if budgets_archives and budgets_archives[0].annee >= annee_scolaire_actuelle: annee_proposee = budgets_archives[0].annee + 1
     fournisseurs = db.session.execute(db.select(Fournisseur).filter_by(etablissement_id=etablissement_id).order_by(Fournisseur.nom)).scalars().all()
     
-    return render_template("budget.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Budget'}], 
+    return render_template("budget.html", breadcrumbs=[
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Budget', 'url': None}
+    ], 
                            budget_affiche=budget_affiche, budget_actuel_pour_modales=budget_actuel_pour_modales,
                            annee_proposee_pour_creation=annee_proposee, depenses=depenses, total_depenses=total_depenses,
                            solde=solde, fournisseurs=fournisseurs, budgets_archives=budgets_archives,
@@ -2391,7 +2404,11 @@ def gestion_fournisseurs():
         .filter(Fournisseur.etablissement_id == etablissement_id)
         .group_by(Fournisseur.id).order_by(Fournisseur.nom)
     ).all()
-    return render_template("admin_fournisseurs.html", fournisseurs=fournisseurs, breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Fournisseurs'}])
+    return render_template("admin_fournisseurs.html", fournisseurs=fournisseurs, breadcrumbs=[
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Fournisseurs', 'url': None}
+    ])
 
 @admin_bp.route("/fournisseurs/ajouter", methods=["POST"])
 @admin_required
@@ -2553,7 +2570,11 @@ def gestion_sauvegardes():
     if params.get('licence_statut') != 'PRO':
         flash("Réservé à la version PRO.", "warning")
         return redirect(url_for('admin.admin'))
-    return render_template("admin_backup.html", now=datetime.now(), breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Sauvegardes'}])
+    return render_template("admin_backup.html", now=datetime.now(), breadcrumbs=[
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Sauvegardes', 'url': None}
+    ])
 
 @admin_bp.route("/telecharger_db")
 @admin_required
@@ -2721,7 +2742,11 @@ def importer_page():
     etablissement_id = session['etablissement_id']
     armoires = db.session.execute(db.select(Armoire).filter_by(etablissement_id=etablissement_id)).scalars().all()
     categories = db.session.execute(db.select(Categorie).filter_by(etablissement_id=etablissement_id)).scalars().all()
-    return render_template("admin_import.html", breadcrumbs=[{'text': 'Admin', 'url': url_for('admin.admin')}, {'text': 'Import'}], armoires=armoires, categories=categories, now=datetime.now())
+    return render_template("admin_import.html", breadcrumbs=[
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Import', 'url': None}
+    ], armoires=armoires, categories=categories, now=datetime.now())
 
 @admin_bp.route("/telecharger_modele")
 @admin_required
@@ -3049,8 +3074,9 @@ def rapports():
         })
 
     breadcrumbs = [
-        {'text': 'Admin', 'url': url_for('admin.admin')}, 
-        {'text': 'Historique Complet'}
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Historique Complet', 'url': None}
     ]
 
     return render_template("rapports.html", 

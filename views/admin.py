@@ -1506,7 +1506,12 @@ def gestion_salles():
         .filter_by(etablissement_id=etablissement_id)
         .order_by(Salle.nom)
     ).scalars().all()
-    return render_template("admin_salles.html", salles=salles)
+    breadcrumbs = [
+        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+        {'text': 'Administration', 'url': url_for('admin.admin')},
+        {'text': 'Salles', 'url': None}
+    ]
+    return render_template("admin_salles.html", salles=salles, breadcrumbs=breadcrumbs)
 
 @admin_bp.route("/salles/ajouter", methods=["POST"])
 @admin_required

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, jsonify, current_app, session, redirect, url_for
-from utils import login_required, admin_required
+from utils import login_required, admin_required, build_breadcrumbs
 from services.security_service import SecurityService
 from db import db, EquipementSecurite, MaintenancePlan, MaintenanceLog, Utilisateur # <--- Ajout Utilisateur
 
@@ -13,11 +13,7 @@ def index():
     if not session.get('etablissement_id'):
         return redirect(url_for('main.index'))
     equipements = security_service.get_all_equipements(session['etablissement_id'])
-    breadcrumbs = [
-        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
-        {'text': 'Administration', 'url': url_for('admin.admin')},
-        {'text': 'Sécurité & Maintenance', 'url': None}
-    ]
+    breadcrumbs = build_breadcrumbs('Sécurité & Maintenance')
     return render_template('securite/index.html', equipements=equipements, breadcrumbs=breadcrumbs)
 
 @securite_bp.route('/equipement/<int:id>')
@@ -27,11 +23,10 @@ def voir_equipement(id):
     if not equipement or equipement.etablissement_id != session['etablissement_id']:
         return redirect(url_for('securite.index'))
 
-    breadcrumbs = [
-        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
-        {'text': 'Sécurité', 'url': url_for('securite.index')},
-        {'text': equipement.nom, 'url': None}
-    ]
+    breadcrumbs = build_breadcrumbs(
+        equipement.nom,
+        extra_crumbs=[{'text': 'Sécurité & Maintenance', 'url': url_for('securite.index')}]
+    )
     return render_template('securite/details.html', equipement=equipement, breadcrumbs=breadcrumbs, now=datetime.now())
 
 # --- API ACTIONS ---

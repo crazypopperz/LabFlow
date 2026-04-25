@@ -274,3 +274,16 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf', 'json', 'csv', 'xlsx'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# ===============================================
+#  BREADCRUMBS DYNAMIQUES (dual-access)
+# ===============================================
+def build_breadcrumbs(page_text, extra_crumbs=None):
+    from flask import request, url_for
+    crumbs = [{'text': 'Tableau de Bord', 'url': url_for('inventaire.index')}]
+    if request.args.get('from') == 'admin':
+        crumbs.append({'text': 'Administration', 'url': url_for('admin.admin')})
+    if extra_crumbs:
+        crumbs.extend(extra_crumbs)
+    crumbs.append({'text': page_text, 'url': None})
+    return crumbs

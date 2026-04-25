@@ -12,7 +12,7 @@ import os
 from markupsafe import Markup
 from extensions import limiter
 from db import db, DocumentReglementaire, InventaireArchive, Parametre, Objet, Armoire, Categorie
-from utils import admin_required, log_action, calculate_license_key, get_etablissement_params
+from utils import admin_required, login_required, log_action, calculate_license_key, get_etablissement_params, build_breadcrumbs
 from services.document_service import DocumentService, DocumentServiceError
 from collections import defaultdict
 from functools import wraps
@@ -20,20 +20,15 @@ from functools import wraps
 admin_documents_bp = Blueprint('admin_documents', __name__, url_prefix='/admin')
 
 @admin_documents_bp.route("/documents")
-@admin_required
+@login_required
 def gestion_documents():
     etablissement_id = session['etablissement_id']
-    # Récupération des documents triés par date
     docs = db.session.execute(db.select(DocumentReglementaire).filter_by(etablissement_id=etablissement_id).order_by(DocumentReglementaire.date_upload.desc())).scalars().all()
-    # Récupération des archives d'inventaire
     archives = db.session.execute(db.select(InventaireArchive).filter_by(etablissement_id=etablissement_id).order_by(InventaireArchive.date_archive.desc())).scalars().all()
-    
-    breadcrumbs = [
-        {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
-        {'text': 'Administration', 'url': url_for('admin.admin')},
-        {'text': 'Documents & Conformité', 'url': None}
-    ]
-    return render_template("admin_documents.html", docs=docs, archives=archives, breadcrumbs=breadcrumbs)
+    is_admin = session.get('user_role') == 'admin'
+    breadcrumbs = build_breadcrumbs('Documents & Conformité')
+    return render_template("admin_documents.html", docs=docs, archives=archives,
+                           breadcrumbs=breadcrumbs, is_admin=is_admin)
 
 @admin_documents_bp.route("/documents/upload", methods=['POST'])
 @admin_required

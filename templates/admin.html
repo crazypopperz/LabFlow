@@ -125,7 +125,7 @@
                 <h3 class="card-title">Conformité & Documents</h3>
                 <p class="card-description">Gérez les documents réglementaires (DUERP, FDS) et archivez vos inventaires annuels.</p>
                 <div class="card-footer">
-                    <a href="{{ url_for('admin_documents.gestion_documents') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('admin_documents.gestion_documents') }}?from=admin" class="btn-card btn-primary">
                         Gérer
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
@@ -206,7 +206,7 @@
                 {% endif %}
 
                 <div class="card-footer">
-                    <a href="{{ url_for('securite.index') }}" class="btn-card btn-primary">
+                    <a href="{{ url_for('securite.index') }}?from=admin" class="btn-card btn-primary">
                         Gérer
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
                             <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>

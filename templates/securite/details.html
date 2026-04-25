@@ -93,7 +93,7 @@
                     <div class="mb-2 opacity-75 text-uppercase small fw-bold">Prochaine échéance</div>
                     {% set next_plan = equipement.plans_maintenance|sort(attribute='date_prochaine_action')|first %}
                     {% if next_plan %}
-                        <h3 class="fw-bold mb-0">{{ next_plan.date_prochaine_action | strftime_fr('%d %B') }}</h3>
+                        <h3 class="fw-bold mb-0">{{ next_plan.date_prochaine_action | strftime_fr('%d %B %Y') }}</h3>
                         <div class="small opacity-75">{{ next_plan.titre }}</div>
                     {% else %}
                         <h3 class="fw-bold mb-0">-</h3>

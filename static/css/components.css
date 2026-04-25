@@ -570,3 +570,12 @@ tr.row-done td strong { font-weight: normal; }
     box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3); /* Ombre portée */
     z-index: 3;
 }
+
+/* =================================================================
+   BOUTONS DE SÉLECTION MINUTES ET HEURES PAGE PLANNING
+   ================================================================= */
+input[type="time"]::-webkit-calendar-picker-indicator {
+    display: block;
+    opacity: 1;
+    cursor: pointer;
+}

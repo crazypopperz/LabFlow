@@ -101,15 +101,32 @@
                 <p class="card-description">Définissez l amplitude horaire des réservations possibles.</p>
                 <form action="{{ url_for('admin_documents.config_planning') }}" method="post" class="mt-3">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    {% set params = get_etablissement_params(etablissement.id) %}
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-bold text-muted">Début</label>
-                            <input type="time" class="form-control" name="heure_debut" value="{{ params.get('planning_debut', '08:00') }}" required>
+                            <div class="d-flex gap-1 align-items-center">
+								<select name="heure_debut" class="form-select form-select-sm">
+									{% for h in range(6, 22) %}
+									{% set hh = '%02d'|format(h) %}
+									<option value="{{ hh }}:00" {% if params.get('planning_debut', '08:00') == hh+':00' %}selected{% endif %}>{{ hh }}h00</option>
+									<option value="{{ hh }}:15" {% if params.get('planning_debut', '08:00') == hh+':15' %}selected{% endif %}>{{ hh }}h15</option>
+									<option value="{{ hh }}:30" {% if params.get('planning_debut', '08:00') == hh+':30' %}selected{% endif %}>{{ hh }}h30</option>
+									<option value="{{ hh }}:45" {% if params.get('planning_debut', '08:00') == hh+':45' %}selected{% endif %}>{{ hh }}h45</option>
+									{% endfor %}
+								</select>
+							</div>
                         </div>
                         <div class="col-6">
                             <label class="form-label small fw-bold text-muted">Fin</label>
-                            <input type="time" class="form-control" name="heure_fin" value="{{ params.get('planning_fin', '18:00') }}" required>
+                            <div class="d-flex gap-1 align-items-center">
+								<select name="heure_fin" class="form-select form-select-sm">
+									{% for h in range(6, 22) %}
+									{% set hh = '%02d'|format(h) %}
+									<option value="{{ hh }}:00" {% if params.get('planning_fin', '18:00') == hh+':00' %}selected{% endif %}>{{ hh }}h00</option>
+									<option value="{{ hh }}:30" {% if params.get('planning_fin', '18:00') == hh+':30' %}selected{% endif %}>{{ hh }}h30</option>
+									{% endfor %}
+								</select>
+							</div>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">Enregistrer</button>

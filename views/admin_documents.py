@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 import os
 
 from markupsafe import Markup
-from extensions import limiter
+from extensions import limiter, cache
 from db import db, DocumentReglementaire, InventaireArchive, Parametre, Objet, Armoire, Categorie
 from utils import admin_required, login_required, log_action, calculate_license_key, get_etablissement_params, build_breadcrumbs
 from services.document_service import DocumentService, DocumentServiceError
@@ -373,4 +373,5 @@ def config_planning():
         db.session.rollback()
         current_app.logger.error(f"❌ Erreur critique lors de la configuration du planning : {e}", exc_info=True)
         flash("Une erreur technique est survenue lors de la sauvegarde.", "error")
+    return redirect(url_for('admin.admin'))
         

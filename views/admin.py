@@ -757,11 +757,12 @@ def admin():
         securite_stats = None
     # -----------------------------------
 
-    return render_template("admin.html", 
-                           now=datetime.now(), 
-                           licence=licence_info, 
+    return render_template("admin.html",
+                           now=datetime.now(),
+                           licence=licence_info,
                            etablissement=etablissement,
-                           securite_stats=securite_stats)
+                           securite_stats=securite_stats,
+                           params=params)
 
 # ============================================================
 # GESTION ARMOIRES / CATÉGORIES
@@ -1242,7 +1243,7 @@ def sauvegarder_theme():
 
     def _invalidate_cache():
         from extensions import cache
-        cache.delete_memoized(get_etablissement_params, etablissement_id)
+        cache.clear()
 
     if action == 'couleur':
         try:

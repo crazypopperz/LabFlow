@@ -126,7 +126,6 @@ def get_etablissement_params(etablissement_id):
         params = db.session.execute(
             db.select(Parametre)
             .filter_by(etablissement_id=etablissement_id)
-            .where(Parametre.cle.in_(['licence_statut', 'instance_id']))
         ).scalars().all()
         
         return {p.cle: p.valeur for p in params}

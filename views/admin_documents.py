@@ -67,6 +67,37 @@ def upload_document():
         
     return redirect(url_for('admin.gestion_documents'))
 
+@admin_documents_bp.route("/documents/telecharger/<int:doc_id>")
+@login_required
+def telecharger_doc(doc_id):
+    etablissement_id = session['etablissement_id']
+    doc = db.session.get(DocumentReglementaire, doc_id)
+    if not doc or doc.etablissement_id != etablissement_id:
+        flash("Document introuvable ou accès interdit.", "error")
+        return redirect(url_for('admin_documents.gestion_documents'))
+    return redirect(url_for('static', filename=doc.fichier_url))
+
+@admin_documents_bp.route("/documents/supprimer/<int:doc_id>", methods=['POST'])
+@admin_required
+def supprimer_doc(doc_id):
+    etablissement_id = session['etablissement_id']
+    doc = db.session.get(DocumentReglementaire, doc_id)
+    if not doc or doc.etablissement_id != etablissement_id:
+        flash("Document introuvable ou accès interdit.", "error")
+        return redirect(url_for('admin_documents.gestion_documents'))
+    try:
+        full_path = os.path.join(current_app.root_path, 'static', doc.fichier_url)
+        if os.path.exists(full_path):
+            os.remove(full_path)
+        db.session.delete(doc)
+        db.session.commit()
+        flash("Document supprimé avec succès.", "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Erreur suppression document: {e}", exc_info=True)
+        flash("Erreur technique lors de la suppression.", "error")
+    return redirect(url_for('admin_documents.gestion_documents'))
+
 
 @admin_documents_bp.route("/documents/generer_inventaire")
 @admin_required

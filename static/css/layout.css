@@ -335,14 +335,19 @@
     color: var(--texte-inverse);
 }
 .auth-section .btn-outline-light {
+    --bs-btn-color: rgba(255,255,255,0.85);
+    --bs-btn-border-color: rgba(255,255,255,0.35);
+    --bs-btn-hover-color: white;
+    --bs-btn-hover-bg: rgba(255,255,255,0.15);
+    --bs-btn-hover-border-color: rgba(255,255,255,0.7);
+    --bs-btn-active-color: white;
+    --bs-btn-active-bg: rgba(255,255,255,0.2);
+    --bs-btn-active-border-color: rgba(255,255,255,0.8);
     border-radius: 50px;
     font-weight: 600;
     font-size: 0.78rem;
     padding: 0.3rem 0.9rem;
-    border: 1px solid rgba(255,255,255,0.35);
-    color: rgba(255,255,255,0.85);
     letter-spacing: 0.02em;
-    transition: all 0.2s ease;
 }
 .auth-section .btn-outline-light:hover {
     background: rgba(255,255,255,0.15);

@@ -116,9 +116,8 @@
 						<div class="date-input-wrapper">
 							<div class="date-input-group">
 								<span class="date-prefix">Du</span>
-								<input type="date" id="date_debut_export" class="date-input" 
-									   value="2024-09-01" 
-									   aria-label="Date de début">
+								<input type="date" id="date_debut_export" class="date-input"
+										aria-label="Date de début">
 							</div>
 							
 							<div class="date-separator">
@@ -127,9 +126,8 @@
 							
 							<div class="date-input-group">
 								<span class="date-prefix">Au</span>
-								<input type="date" id="date_fin_export" class="date-input" 
-									   value="2026-01-07" 
-									   aria-label="Date de fin">
+								<input type="date" id="date_fin_export" class="date-input"
+										aria-label="Date de fin">
 							</div>
 						</div>
 					</div>
@@ -503,6 +501,18 @@
         // et l'utilisateur restera sur la page actuelle.
         window.location.href = url;
     }
+	// Dates par défaut : début année scolaire → aujourd'hui
+	const today = new Date();
+	const month = today.getMonth(); // 0=jan, 8=sept
+	const year = today.getFullYear();
+
+	// Année scolaire commence le 01/09
+	const anneeDebut = month >= 8 ? year : year - 1;
+	const dateDebut = `${anneeDebut}-09-01`;
+	const dateFin = today.toISOString().split('T')[0];
+
+	document.getElementById('date_debut_export').value = dateDebut;
+	document.getElementById('date_fin_export').value = dateFin;
 </script>
 
 <!-- MODALE DE CONFIRMATION CLÔTURE -->

@@ -126,6 +126,14 @@ def create_app():
     app.config['CLOUDINARY_CLOUD_NAME'] = os.environ.get('CLOUDINARY_CLOUD_NAME')
     app.config['CLOUDINARY_API_KEY'] = os.environ.get('CLOUDINARY_API_KEY')
     app.config['CLOUDINARY_API_SECRET'] = os.environ.get('CLOUDINARY_API_SECRET')
+    # Initialisation SDK Cloudinary
+    import cloudinary
+    cloudinary.config(
+        cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+        api_key=os.environ.get('CLOUDINARY_API_KEY'),
+        api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+        secure=True
+    )
     app.config['MAIL_DEFAULT_SENDER'] = 'help.scientral@gmail.com'
     mail.init_app(app)
     configure_logging(app)

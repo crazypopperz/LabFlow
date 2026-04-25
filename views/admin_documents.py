@@ -5,6 +5,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from datetime import datetime
 from werkzeug.utils import secure_filename
 import os
@@ -16,6 +17,9 @@ from utils import admin_required, login_required, log_action, calculate_license_
 from services.document_service import DocumentService, DocumentServiceError
 from collections import defaultdict
 from functools import wraps
+
+import cloudinary
+import cloudinary.uploader
 
 admin_documents_bp = Blueprint('admin_documents', __name__, url_prefix='/admin')
 
@@ -34,7 +38,7 @@ def gestion_documents():
 @admin_required
 def upload_document():
     etablissement_id = session['etablissement_id']
-    if 'fichier' not in request.files: return redirect(url_for('admin.gestion_documents'))
+    if 'fichier' not in request.files: return redirect(url_for('admin_documents.gestion_documents'))
     
     f = request.files['fichier']
     nom = request.form.get('nom')
@@ -47,25 +51,26 @@ def upload_document():
         ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
         if ext not in EXTENSIONS_AUTORISEES_DOCS:
             flash(f"Format non autorisé. Formats acceptés : {', '.join(EXTENSIONS_AUTORISEES_DOCS)}", "error")
-            return redirect(url_for('admin.gestion_documents'))
+            return redirect(url_for('admin_documents.gestion_documents'))
         
         # Sécurisation du nom de fichier
-        filename = secure_filename(f"{etablissement_id}_{int(datetime.now().timestamp())}_{f.filename}")
-        upload_path = os.path.join(current_app.root_path, 'static', 'uploads', 'docs')
-        os.makedirs(upload_path, exist_ok=True)
-        f.save(os.path.join(upload_path, filename))
-        
+        result = cloudinary.uploader.upload(
+            f,
+            folder=f"scientral/{etablissement_id}/docs",
+            resource_type="raw",
+            access_mode="public",
+            public_id=f"{int(datetime.now().timestamp())}_{secure_filename(f.filename)}"
+        )
         doc = DocumentReglementaire(
-            etablissement_id=etablissement_id, 
-            nom=nom, 
-            type_doc=type_doc, 
-            fichier_url=f"uploads/docs/{filename}"
+            etablissement_id=etablissement_id,
+            nom=nom,
+            type_doc=type_doc,
+            fichier_url=result['secure_url']
         )
         db.session.add(doc)
         db.session.commit()
         flash("Document ajouté avec succès.", "success")
-        
-    return redirect(url_for('admin.gestion_documents'))
+    return redirect(url_for('admin_documents.gestion_documents'))
 
 @admin_documents_bp.route("/documents/telecharger/<int:doc_id>")
 @login_required
@@ -75,7 +80,17 @@ def telecharger_doc(doc_id):
     if not doc or doc.etablissement_id != etablissement_id:
         flash("Document introuvable ou accès interdit.", "error")
         return redirect(url_for('admin_documents.gestion_documents'))
-    return redirect(url_for('static', filename=doc.fichier_url))
+    return redirect(doc.fichier_url)
+
+@admin_documents_bp.route("/documents/telecharger_archive/<int:archive_id>")
+@login_required
+def telecharger_archive(archive_id):
+    etablissement_id = session['etablissement_id']
+    archive = db.session.get(InventaireArchive, archive_id)
+    if not archive or archive.etablissement_id != etablissement_id:
+        flash("Archive introuvable ou accès interdit.", "error")
+        return redirect(url_for('admin_documents.gestion_documents'))
+    return redirect(archive.fichier_url)
 
 @admin_documents_bp.route("/documents/supprimer/<int:doc_id>", methods=['POST'])
 @admin_required
@@ -86,9 +101,8 @@ def supprimer_doc(doc_id):
         flash("Document introuvable ou accès interdit.", "error")
         return redirect(url_for('admin_documents.gestion_documents'))
     try:
-        full_path = os.path.join(current_app.root_path, 'static', doc.fichier_url)
-        if os.path.exists(full_path):
-            os.remove(full_path)
+        public_id = f"scientral/{etablissement_id}/docs/" + doc.fichier_url.split('/')[-1].rsplit('.', 1)[0]
+        cloudinary.uploader.destroy(public_id, resource_type="raw")
         db.session.delete(doc)
         db.session.commit()
         flash("Document supprimé avec succès.", "success")
@@ -99,76 +113,76 @@ def supprimer_doc(doc_id):
     return redirect(url_for('admin_documents.gestion_documents'))
 
 
-@admin_documents_bp.route("/documents/generer_inventaire")
+@admin_documents_bp.route("/documents/generer_inventaire", methods=['POST'])
 @admin_required
 def generer_inventaire_annuel():
     etablissement_id = session['etablissement_id']
     nom_etablissement = session.get('nom_etablissement', 'Mon Etablissement')
-    
     try:
         # 1. Récupération optimisée (Eager Loading)
         stmt = (
             db.select(Objet)
             .options(
-                joinedload(Objet.categorie), 
+                joinedload(Objet.categorie),
                 joinedload(Objet.armoire)
             )
             .filter_by(etablissement_id=etablissement_id)
             .order_by(Objet.nom)
         )
         objets = db.session.execute(stmt).scalars().all()
-        
-        # 2. Appel du Service
-        # On injecte le chemin racine des uploads (static/uploads)
+
+        # 2. Appel du Service — génération PDF sur disque temporairement
         upload_root = os.path.join(current_app.root_path, 'static', 'uploads')
         doc_service = DocumentService(upload_root)
-        
         result = doc_service.generate_inventory_pdf(
             etablissement_name=nom_etablissement,
             etablissement_id=etablissement_id,
             objets=objets
         )
-        
-        # 3. Enregistrement en Base (Transaction)
+
+        # 3. Upload sur Cloudinary
+        full_path = os.path.join(current_app.root_path, 'static', result['relative_path'])
+        with open(full_path, 'rb') as pdf_file:
+            cloud_result = cloudinary.uploader.upload(
+                pdf_file,
+                folder=f"scientral/{etablissement_id}/archives",
+                resource_type="raw",
+                public_id=f"{result['titre'].replace(' ', '_')}",
+                access_mode="public"
+            )
+        cloudinary_url = cloud_result['secure_url']
+
+        # Nettoyage du fichier temporaire local
+        if os.path.exists(full_path):
+            os.remove(full_path)
+
+        # 4. Enregistrement en Base
         archive = InventaireArchive(
             etablissement_id=etablissement_id,
             titre=result['titre'],
-            fichier_url=result['relative_path'],
+            fichier_url=cloudinary_url,
             nb_objets=result['nb_objets']
         )
         db.session.add(archive)
         db.session.commit()
-        
-        # Optionnel : Rafraîchir l'objet pour être sûr d'avoir l'ID (si besoin plus tard)
-        # db.session.refresh(archive) 
-        
-        # 4. Feedback avec Lien
-        lien = url_for('static', filename=result['relative_path'])
-        msg = Markup(f"Inventaire généré avec succès. <a href='{lien}' target='_blank' class='alert-link'>Voir le PDF</a>")
-        flash(msg, "success")
+
+        flash("Inventaire généré avec succès.", "success")
 
     except DocumentServiceError as e:
-        # Erreur métier (Liste vide, trop d'objets...)
         flash(str(e), "warning")
-        
-    except FileSystemError as e:
-        # Erreur disque
+    except OSError as e:
         current_app.logger.critical(f"Erreur Disque: {e}")
         flash("Erreur système : Impossible d'écrire le fichier.", "error")
-
     except SQLAlchemyError as e:
-        # Erreur base de données
         db.session.rollback()
         current_app.logger.error(f"Erreur DB lors de l'archivage: {e}")
         flash("Erreur lors de l'enregistrement en base de données.", "error")
-        
     except Exception as e:
-        # Filet de sécurité global
-        db.session.rollback() # Sécurité supplémentaire
+        db.session.rollback()
         current_app.logger.error(f"Erreur critique génération inventaire: {e}", exc_info=True)
         flash("Une erreur technique inattendue est survenue.", "error")
-        
-    return redirect(url_for('admin.gestion_documents'))
+
+    return redirect(url_for('admin_documents.gestion_documents'))
 
 
 
@@ -279,15 +293,16 @@ def supprimer_archive(archive_id):
     # Vérification de sécurité (IDOR)
     if not archive or archive.etablissement_id != etablissement_id:
         flash("Archive introuvable ou accès interdit.", "error")
-        return redirect(url_for('admin.gestion_documents'))
+        return redirect(url_for('admin_documents.gestion_documents'))
         
     try:
         # 1. Suppression du fichier physique sur le disque
         # On reconstruit le chemin absolu : root/static/uploads/...
-        full_path = os.path.join(current_app.root_path, 'static', archive.fichier_url)
-        
-        if os.path.exists(full_path):
-            os.remove(full_path)
+        try:
+            public_id = f"scientral/{etablissement_id}/archives/" + archive.fichier_url.split('/')[-1].rsplit('.', 1)[0]
+            cloudinary.uploader.destroy(public_id, resource_type="raw")
+        except Exception as ce:
+            current_app.logger.warning(f"Impossible de supprimer sur Cloudinary: {ce}")
             
         # 2. Suppression de l'entrée en base de données
         db.session.delete(archive)
@@ -300,7 +315,7 @@ def supprimer_archive(archive_id):
         current_app.logger.error(f"Erreur suppression archive: {e}", exc_info=True)
         flash("Erreur technique lors de la suppression.", "error")
         
-    return redirect(url_for('admin.gestion_documents'))
+    return redirect(url_for('admin_documents.gestion_documents'))
 
 #================================================================
 # ROUTE CONFIGURATION PLANNING RESERVATION PAR ADMIN

@@ -1,0 +1,1846 @@
+diff --git a/templates/_modals.html b/templates/_modals.html
+index 45f9af6..5342a7f 100644
+--- a/templates/_modals.html
++++ b/templates/_modals.html
+@@ -30,6 +30,15 @@
+                             </div>
+                         </div>
+                         <hr>
++                        <div class="mb-3">
++                            <label class="form-label fw-bold">Salle <span class="text-muted fw-normal small">(optionnel)</span></label>
++                            <select class="form-select" id="bookingSalle">
++                                <option value="">— Aucune salle sélectionnée —</option>
++                                {% for salle in all_salles %}
++                                <option value="{{ salle.id }}">{{ salle.nom }}{% if salle.capacite %} ({{ salle.capacite }} élèves){% endif %}{% if salle.description %} — {{ salle.description }}{% endif %}</option>
++                                {% endfor %}
++                            </select>
++                        </div>
+                         <div id="availableItems">
+                             <div class="text-center py-4">
+                                 <div class="spinner-border text-primary" role="status"></div>
+diff --git a/templates/admin.html b/templates/admin.html
+index 06cb9d9..f2ad9f2 100644
+--- a/templates/admin.html
++++ b/templates/admin.html
+@@ -92,6 +92,65 @@
+         </div>
+ 
+         <div class="admin-grid">
++            <!-- Carte Horaires & Planning -->
++            <div class="admin-card">
++                <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #6f42c1 0%, #a8edea 100%);">
++                    <i class="bi bi-clock-history text-white fs-2"></i>
++                </div>
++                <h3 class="card-title">Horaires & Planning</h3>
++                <p class="card-description">Définissez l amplitude horaire des réservations possibles.</p>
++                <form action="{{ url_for('admin_documents.config_planning') }}" method="post" class="mt-3">
++                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++                    {% set params = get_etablissement_params(etablissement.id) %}
++                    <div class="row g-2 mb-3">
++                        <div class="col-6">
++                            <label class="form-label small fw-bold text-muted">Début</label>
++                            <input type="time" class="form-control" name="heure_debut" value="{{ params.get('planning_debut', '08:00') }}" required>
++                        </div>
++                        <div class="col-6">
++                            <label class="form-label small fw-bold text-muted">Fin</label>
++                            <input type="time" class="form-control" name="heure_fin" value="{{ params.get('planning_fin', '18:00') }}" required>
++                        </div>
++                    </div>
++                    <button type="submit" class="btn btn-primary w-100">Enregistrer</button>
++                </form>
++            </div>
++            <div class="admin-card">
++                <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
++                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="white" viewBox="0 0 16 16">
++                        <path d="M10 7v1.076c.54.166 1 .597 1 1.224v2.4c0 .816-.781 1.3-1.5 1.3h-3c-.719 0-1.5-.484-1.5-1.3V9.3c0-.627.46-1.058 1-1.224V7a2 2 0 1 1 4 0zM7 7v1h2V7a1 1 0 0 0-2 0z"/>
++                        <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
++                    </svg>
++                </div>
++                <h3 class="card-title">Conformité & Documents</h3>
++                <p class="card-description">Gérez les documents réglementaires (DUERP, FDS) et archivez vos inventaires annuels.</p>
++                <div class="card-footer">
++                    <a href="{{ url_for('admin_documents.gestion_documents') }}" class="btn-card btn-primary">
++                        Gérer
++                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
++                            <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
++                        </svg>
++                    </a>
++                </div>
++            </div>
++            <!-- Carte Gestion des salles -->
++            <div class="admin-card">
++                <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #20c997 0%, #0dcaf0 100%);">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32" height="32" fill="white">
++                        <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
++                    </svg>
++                </div>
++                <h3 class="card-title">Gestion des Salles</h3>
++                <p class="card-description">Définissez les salles de votre établissement pour associer le matériel réservé à un lieu précis.</p>
++                <div class="card-footer">
++                    <a href="{{ url_for('admin.gestion_salles') }}" class="btn-card btn-primary">
++                        Gérer les salles
++                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18px">
++                            <path d="M647-440H160v-80h487L423-744l57-56 320 320-320 320-57-56 224-224Z"/>
++                        </svg>
++                    </a>
++                </div>
++            </div>
+             <!-- Carte Utilisateurs -->
+             <div class="admin-card">
+                 <div class="card-icon-wrapper card-icon-blue">
+@@ -378,6 +437,50 @@
+                     </a>
+                 </div>
+             </div>
++            <!-- Carte Packs de Matériel -->
++            <div class="admin-card">
++                <div class="card-icon-wrapper card-icon-indigo">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px">
++                        <path d="M440-183v-274L200-596v274l240 139Zm80 0 240-139v-274L520-457v274Zm-40-343 237-137-237-137-237 137 237 137ZM160-252q-19-11-29.5-29T120-321v-318q0-22 10.5-40t29.5-29l280-161q19-11 40-11t40 11l280 161q19 11 29.5 29t10.5 40v318q0 22-10.5 40T800-252L520-91q-19 11-40 11t-40-11L160-252Z"/>
++                    </svg>
++                </div>
++                <h3 class="card-title">Packs de Matériel</h3>
++                <p class="card-description">Importez un inventaire prédéfini pour démarrer rapidement.</p>
++                <div class="card-footer">
++                    <a href="{{ url_for('admin.packs_onboarding') }}" class="btn-card btn-primary">
++                        Découvrir les packs
++                    </a>
++                </div>
++            </div>
++            <div class="admin-card">
++                <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px" fill="white">
++                        <path d="M440-122q-121-15-200.5-105.5T160-440q0-66 26-126t72-108l57 57q-38 37-56.5 87T240-440q0 97 63 166.5T440-186v64Zm80 0v-64q97-13 160-82.5T743-440q0-100-70-170t-170-70h-13l44 44-56 56-140-140 140-140 56 56-44 44h13q134 0 227 93t93 227q0 121-79.5 211.5T520-122Z"/>
++                    </svg>
++                </div>
++                <h3 class="card-title">Reset Établissement</h3>
++                <p class="card-description">Supprimez sélectivement les données de votre établissement.</p>
++                <div class="card-footer">
++                    <a href="{{ url_for('admin.reset_etablissement_page') }}" class="btn-card btn-primary">
++                        Accéder au reset
++                    </a>
++                </div>
++            </div>
++            <div class="admin-card">
++                <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32" fill="white">
++                        <path d="M8 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3m4 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M5 6.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m.5 6.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/>
++                        <path d="M16 8c0 3.15-1.866 2.585-3.567 2.07C11.42 9.763 10.465 9.473 10 10c-.603.683-.475 1.819-.351 2.92C9.826 14.495 9.996 16 8 16a8 8 0 1 1 8-8m-8 7c.611 0 .654-.171.655-.176.078-.146.154-.807.132-1.807-.04-1.82.67-3.43 1.965-4.032C13.987 8.429 15 8.196 15 8a7 7 0 1 0-7 7"/>
++                    </svg>
++                </div>
++                <h3 class="card-title">Personnalisation & Thème</h3>
++                <p class="card-description">Personnalisez les couleurs et le logo de votre établissement.</p>
++                <div class="card-footer">
++                    <a href="{{ url_for('admin.personnalisation_page') }}" class="btn-card btn-primary">
++                        Personnaliser
++                    </a>
++                </div>
++            </div>
+         </div>
+     </div>
+ </div>
+diff --git a/templates/admin_documents.html b/templates/admin_documents.html
+new file mode 100644
+index 0000000..2b49438
+--- /dev/null
++++ b/templates/admin_documents.html
+@@ -0,0 +1,205 @@
++{% extends "base.html" %}
++
++{% block content %}
++<div class="container mt-4">
++{% include '_breadcrumb.html' %}
++    <div class="d-flex justify-content-between align-items-center mb-4">
++        <h2><i class="bi bi-file-earmark-lock me-2"></i>Documents & Conformité</h2>
++        
++        <!-- LE BOUTON QUI DÉCLENCHE TON NOUVEAU SERVICE -->
++        <form action="{{ url_for('admin_documents.generer_inventaire_annuel') }}" method="post">
++			<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++			<button type="submit" class="btn btn-primary">
++				<i class="bi bi-camera-fill me-2"></i>Figer l'Inventaire (Snapshot)
++			</button>
++		</form>
++    </div>
++
++    <div class="row">
++        <!-- COLONNE GAUCHE : GED (Uploads) -->
++        <div class="col-md-6">
++            <div class="card shadow-sm">
++                <div class="card-header bg-light fw-bold">Documents Réglementaires</div>
++                <div class="card-body">
++                    <form action="{{ url_for('admin_documents.upload_document') }}" method="post" enctype="multipart/form-data" class="mb-4">
++                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++                        <div class="input-group mb-2">
++                            <input type="text" name="nom" class="form-control" placeholder="Nom (ex: DUERP 2025)" required>
++                            <select name="type_doc" class="form-select" style="max-width: 120px;">
++                                <option value="duerp">DUERP</option>
++                                <option value="dechets">Déchets</option>
++                                <option value="autre">Autre</option>
++                            </select>
++                        </div>
++                        <div class="input-group">
++                            <input type="file" name="fichier" class="form-control" required accept=".pdf">
++                            <button type="submit" class="btn btn-success">Uploader</button>
++                        </div>
++                    </form>
++
++                    <ul class="list-group">
++                        {% for doc in docs %}
++                        <li class="list-group-item d-flex justify-content-between align-items-center">
++                            <div>
++                                <i class="bi bi-file-pdf text-danger me-2"></i>
++                                <strong>{{ doc.nom }}</strong>
++                                <div class="small text-muted">{{ doc.date_upload.strftime('%d/%m/%Y') }}</div>
++                            </div>
++                            <div class="d-flex gap-2">
++								<a href="{{ url_for('admin_documents.telecharger_doc', doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline-primary">
++									<i class="bi bi-eye"></i>
++								</a>
++								<form action="{{ url_for('admin_documents.supprimer_doc', doc_id=doc.id) }}" method="post" class="form-delete-doc">
++									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++									<button type="button" class="btn btn-sm btn-outline-danger btn-trigger-delete-doc" title="Supprimer">
++										<i class="bi bi-trash"></i>
++									</button>
++								</form>
++							</div>
++                        </li>
++                        {% else %}
++                        <li class="list-group-item text-muted text-center">Aucun document.</li>
++                        {% endfor %}
++                    </ul>
++                </div>
++            </div>
++        </div>
++
++        <!-- COLONNE DROITE : ARCHIVES (Résultat de ton service) -->
++        <div class="col-md-6">
++            <div class="card shadow-sm">
++                <div class="card-header bg-light fw-bold">Archives d'Inventaire</div>
++                <div class="card-body">
++                    <ul class="list-group">
++                        {% for arch in archives %}
++                        <li class="list-group-item d-flex justify-content-between align-items-center">
++                            <div>
++                                <i class="bi bi-archive-fill text-warning me-2"></i>
++                                <strong>{{ arch.titre }}</strong>
++                                <div class="small text-muted">{{ arch.date_archive.strftime('%d/%m/%Y %H:%M') }} - {{ arch.nb_objets }} objets</div>
++                            </div>
++                            
++                            <div class="d-flex gap-2">
++                                <a href="{{ url_for('admin_documents.telecharger_archive', archive_id=arch.id) }}" target="_blank" class="btn btn-sm btn-outline-dark">
++									<i class="bi bi-file-earmark-pdf"></i> PDF
++								</a>
++                                <!-- Bouton suppression (si tu as ajouté la route suppression) -->
++                                <!-- Formulaire modifié -->
++								<form action="{{ url_for('admin_documents.supprimer_archive', archive_id=arch.id) }}" method="post" class="form-delete-archive">
++									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++									<!-- Type button pour ne pas soumettre tout de suite -->
++									<button type="button" class="btn btn-sm btn-outline-danger btn-trigger-delete" title="Supprimer">
++										<i class="bi bi-trash"></i>
++									</button>
++								</form>
++                            </div>
++                        </li>
++                        {% else %}
++                        <li class="list-group-item text-muted text-center">Aucune archive générée.</li>
++                        {% endfor %}
++                    </ul>
++                </div>
++            </div>
++        </div>
++    </div>
++</div>
++
++<!-- MODALE DE SUPPRESSION (Design Pro) -->
++<div class="modal fade" id="deleteArchiveModal" tabindex="-1" aria-hidden="true">
++    <div class="modal-dialog modal-dialog-centered">
++        <div class="modal-content border-0 shadow-lg">
++            <div class="modal-header bg-danger text-white">
++                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer l'archive</h5>
++                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
++            </div>
++            <div class="modal-body p-4">
++                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer ce document ?</p>
++                <p class="text-muted small mt-2 mb-0">Cette action est irréversible. Le fichier PDF sera effacé du serveur.</p>
++            </div>
++            <div class="modal-footer bg-light border-0">
++                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
++                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteBtn">
++                    Confirmer la suppression
++                </button>
++            </div>
++        </div>
++    </div>
++</div>
++
++<div class="modal fade" id="deleteDocModal" tabindex="-1" aria-hidden="true">
++    <div class="modal-dialog modal-dialog-centered">
++        <div class="modal-content border-0 shadow-lg">
++            <div class="modal-header bg-danger text-white">
++                <h5 class="modal-title fw-bold"><i class="bi bi-trash3-fill me-2"></i>Supprimer le document</h5>
++                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
++            </div>
++            <div class="modal-body p-4">
++                <p class="mb-0 fs-5">Voulez-vous vraiment supprimer ce document ?</p>
++                <p class="text-muted small mt-2 mb-0">Cette action est irréversible. Le fichier sera définitivement effacé.</p>
++            </div>
++            <div class="modal-footer bg-light border-0">
++                <button type="button" class="btn btn-light fw-bold text-muted" data-bs-dismiss="modal">Annuler</button>
++                <button type="button" class="btn btn-danger px-4 fw-bold" id="confirmDeleteDocBtn">
++                    Confirmer la suppression
++                </button>
++            </div>
++        </div>
++    </div>
++</div>
++{% endblock %}
++{% block scripts %}
++<script>
++    document.addEventListener('DOMContentLoaded', function() {
++
++        // Téléchargement automatique si on vient de générer une archive
++        {% if new_archive_id %}
++		const link = document.createElement('a');
++		link.href = "{{ url_for('admin_documents.telecharger_archive', archive_id=new_archive_id) }}";
++		link.download = "";  // force le téléchargement sans navigation
++		document.body.appendChild(link);
++		link.click();
++		document.body.removeChild(link);
++		{% endif %}
++
++        // ... reste de ton JS existant (modale suppression)
++        let formToSubmit = null;
++        const deleteModal = new bootstrap.Modal(document.getElementById('deleteArchiveModal'));
++        const confirmBtn = document.getElementById('confirmDeleteBtn');
++
++        document.querySelectorAll('.btn-trigger-delete').forEach(btn => {
++            btn.addEventListener('click', function() {
++                formToSubmit = this.closest('form');
++                deleteModal.show();
++            });
++        });
++
++        confirmBtn.addEventListener('click', function() {
++            if (formToSubmit) {
++                this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
++                this.disabled = true;
++                formToSubmit.submit();
++            }
++        });
++		
++		// Modale suppression DUERP
++		let formToSubmitDoc = null;
++		const deleteDocModal = new bootstrap.Modal(document.getElementById('deleteDocModal'));
++		const confirmDocBtn = document.getElementById('confirmDeleteDocBtn');
++
++		document.querySelectorAll('.btn-trigger-delete-doc').forEach(btn => {
++			btn.addEventListener('click', function() {
++				formToSubmitDoc = this.closest('form');
++				deleteDocModal.show();
++			});
++		});
++
++		confirmDocBtn.addEventListener('click', function() {
++			if (formToSubmitDoc) {
++				this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Suppression...';
++				this.disabled = true;
++				formToSubmitDoc.submit();
++			}
++		});
++    });
++</script>
++{% endblock %}
+\ No newline at end of file
+diff --git a/templates/admin_packs.html b/templates/admin_packs.html
+new file mode 100644
+index 0000000..2345894
+--- /dev/null
++++ b/templates/admin_packs.html
+@@ -0,0 +1,293 @@
++{% extends "base.html" %}
++{% block title %}Packs de matériel — Scientral{% endblock %}
++
++{% block content %}
++<div class="main-container">
++    {% include '_breadcrumb.html' %}
++
++    <!-- En-tête -->
++    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
++        <div class="d-flex align-items-center gap-3">
++            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
++                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);">
++                <i class="bi bi-box-seam-fill fs-3"></i>
++            </div>
++            <div>
++                <h1 class="h3 mb-0 fw-bold text-dark">Packs de matériel</h1>
++                <p class="text-muted mb-0">Importez un inventaire prédéfini pour démarrer rapidement</p>
++            </div>
++        </div>
++        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary">
++            <i class="bi bi-arrow-left me-2"></i>Retour
++        </a>
++    </div>
++
++    <!-- Alerte info -->
++    <div class="alert alert-info border-0 shadow-sm mb-4">
++        <div class="d-flex gap-3">
++            <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
++            <div>
++                <strong>Comment ça fonctionne ?</strong>
++                <ul class="mb-0 mt-1 small">
++                    <li>Chaque pack crée automatiquement les <strong>armoires</strong>, <strong>catégories</strong> et <strong>objets</strong> correspondants.</li>
++                    <li>Les éléments déjà existants dans votre inventaire sont <strong>ignorés</strong> (pas de doublons).</li>
++                    <li>Vous pouvez importer plusieurs packs et modifier ensuite chaque élément.</li>
++                    <li>Les <strong>quantités</strong> sont calculées pour une classe de 30 élèves.</li>
++                    <li>Les produits <span class="badge bg-danger">CMR</span> sont identifiés avec leur fiche de sécurité INRS.</li>
++                </ul>
++            </div>
++        </div>
++    </div>
++
++    <!-- Cartes des packs -->
++    <div class="row g-4">
++        {% for pack in packs %}
++        <div class="col-lg-4">
++            <div class="card border-0 shadow-sm h-100 pack-card" data-pack-id="{{ pack.id }}">
++                <!-- En-tête coloré -->
++                <div class="card-header border-0 text-white p-4 d-flex align-items-center gap-3" style="background: linear-gradient(135deg, {{ pack.color }}dd, {{ pack.color }}99); border-radius: 12px 12px 0 0 !important; min-height: 110px;">
++                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
++                         style="width:52px;height:52px;background:rgba(255,255,255,0.2);">
++                        {% if pack.discipline == 'Physique-Chimie' %}
++                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px" fill="white">
++                            <path d="M480-80q-82 0-142-58.5T278-280q0-48 19-89t52-71l131-131v-189h-40v-80h200v80h-40v189l131 131q33 30 52 71t19 89q0 83-60 141.5T480-80Zm0-80q50 0 85-35t35-85q0-29-11-54t-31-43L440-499v-221h80v221L398-377q-20 18-31 43t-11 54q0 50 35 85t89 35Z"/>
++                        </svg>
++                        {% else %}
++                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px" fill="white">
++                            <path d="M440-80v-167q-42 27-86.5 47T260-180q-63 0-118.5-28.5T40-280q37-34 79.5-59.5T211-375q-68-55-100-136T79-680q72 1 139 23t122 65v-8q0-91 40.5-171T480-920q58 69 99 149t41 171q0 2-.5 4t-.5 4q56-43 123-64.5T881-680q0 88-32.5 169T748-375q49 10 91.5 35.5T919-280q-46 43-101 71.5T700-180q-50 0-94.5-20T520-247v167h-80Zm-56-296q-11-38-28.5-72.5T310-510q-28-28-62.5-45.5T175-584q11 38 28.5 72.5T249-449q27 28 62 45.5t73 27.5ZM260-260q21 0 41-5.5t39-14.5q-19-8-39-14t-41-6q-21 0-41 6t-40 14q19 9 39.5 14.5T260-260Zm220-152q26-44 43-90.5t17-97.5q0-51-17-97.5T480-787q-26 43-43 89.5T420-600q0 51 17 98t43 90Zm96 36q38-10 72.5-27.5T710-449q28-28 45.5-62.5T784-584q-38 11-72.5 28.5T649-510q-28 27-45.5 61.5T576-376Zm124 116q21 0 41-5.5t39-14.5q-19-8-39-14t-41-6q-21 0-41 6t-40 14q19 9 39.5 14.5T700-260ZM384-376Zm-44 96Zm140-132Zm96 36Zm43 96Z"/>
++                        </svg>
++                        {% endif %}
++                    </div>
++                    <div>
++                        <h5 class="fw-bold mb-1">{{ pack.nom }}</h5>
++                        <div class="d-flex gap-2">
++                            <span class="badge bg-white text-dark">{{ pack.niveau }}</span>
++                            <span class="badge bg-white text-dark">{{ pack.discipline }}</span>
++                        </div>
++                    </div>
++                </div>
++
++                <div class="card-body p-4">
++                    <p class="text-muted small mb-3">{{ pack.description }}</p>
++
++                    <!-- Statistiques -->
++                    <div class="row g-2 mb-3">
++                        <div class="col-4 text-center">
++                            <div class="p-2 bg-light rounded">
++                                <div class="fw-bold text-primary">{{ pack.armoires | length }}</div>
++                                <div class="small text-muted">Armoires</div>
++                            </div>
++                        </div>
++                        <div class="col-4 text-center">
++                            <div class="p-2 bg-light rounded">
++                                <div class="fw-bold text-success">{{ pack.categories | length }}</div>
++                                <div class="small text-muted">Catégories</div>
++                            </div>
++                        </div>
++                        <div class="col-4 text-center">
++                            <div class="p-2 bg-light rounded">
++                                <div class="fw-bold text-warning">{{ pack.objets | length }}</div>
++                                <div class="small text-muted">Objets</div>
++                            </div>
++                        </div>
++                    </div>
++
++                    <!-- Détail objets/produits/CMR -->
++                    <div class="d-flex gap-2 flex-wrap mb-3">
++                        <span class="badge bg-primary-subtle text-primary">
++                            <i class="bi bi-box me-1"></i>
++                            {{ pack.objets | selectattr('type_objet', 'eq', 'objet') | list | length }} objets
++                        </span>
++                        <span class="badge bg-warning-subtle text-warning">
++                            <i class="bi bi-droplet me-1"></i>
++                            {{ pack.objets | selectattr('type_objet', 'eq', 'produit') | list | length }} produits
++                        </span>
++                        <span class="badge bg-danger-subtle text-danger">
++                            <i class="bi bi-exclamation-triangle me-1"></i>
++                            {{ pack.objets | selectattr('is_cmr') | list | length }} CMR
++                        </span>
++                    </div>
++
++                    <!-- Armoires -->
++                    <div class="mb-3">
++                        <div class="small fw-bold text-muted mb-1">Armoires et Catégories créées</div>
++                        {% for arm in pack.armoires %}
++                        <div class="small text-muted">
++                            <i class="bi bi-archive me-1 text-primary"></i>
++                            <strong>{{ arm.nom }}</strong> — {{ arm.description }}
++                        </div>
++                        {% endfor %}
++                    </div>
++
++                    <!-- Bouton détail -->
++                    <button class="btn btn-sm btn-outline-secondary w-100 mb-2"
++                            type="button"
++                            data-bs-toggle="collapse"
++                            data-bs-target="#detail-{{ pack.id }}">
++                        <i class="bi bi-list-ul me-1"></i>Voir le détail du matériel
++                    </button>
++
++                    <!-- Détail collapsible -->
++                    <div class="collapse" id="detail-{{ pack.id }}">
++                        <div class="border rounded p-2 bg-light" style="max-height: 250px; overflow-y: auto;">
++                            {% set ns = namespace(cat_courante='') %}
++                            {% for obj in pack.objets %}
++                                {% if obj.categorie != ns.cat_courante %}
++                                    {% set ns.cat_courante = obj.categorie %}
++                                    <div class="small fw-bold text-muted mt-2 mb-1">{{ obj.categorie | upper }}</div>
++                                {% endif %}
++                                <div class="small d-flex align-items-center gap-1 py-1 border-bottom">
++                                    {% if obj.type_objet == 'produit' %}
++                                        <i class="bi bi-droplet-fill text-warning" style="font-size:0.7rem;"></i>
++                                    {% else %}
++                                        <i class="bi bi-box text-primary" style="font-size:0.7rem;"></i>
++                                    {% endif %}
++                                    <span class="flex-grow-1">{{ obj.nom }}</span>
++                                    <span class="text-muted">{{ obj.quantite_physique }} {{ obj.unite }}</span>
++                                    {% if obj.is_cmr %}
++                                        <span class="badge bg-danger" style="font-size:0.6rem;">CMR</span>
++                                    {% endif %}
++                                </div>
++                            {% endfor %}
++                        </div>
++                    </div>
++                </div>
++
++                <div class="card-footer border-0 bg-transparent p-4 pt-0">
++                    <button class="btn w-100 text-white fw-bold btn-importer-pack"
++                            style="background: {{ pack.color }};"
++                            data-pack-id="{{ pack.id }}"
++                            data-pack-nom="{{ pack.nom }}">
++                        <i class="bi bi-download me-2"></i>Importer ce pack
++                    </button>
++                </div>
++            </div>
++        </div>
++        {% endfor %}
++    </div>
++
++</div>
++
++<!-- Modale de confirmation -->
++<div class="modal fade" id="modalConfirmPack" tabindex="-1" aria-hidden="true">
++    <div class="modal-dialog modal-dialog-centered">
++        <div class="modal-content border-0 shadow-lg">
++            <div class="modal-header bg-primary text-white">
++                <h5 class="modal-title">
++                    <i class="bi bi-box-seam-fill me-2"></i>Confirmer l'import
++                </h5>
++                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
++            </div>
++            <div class="modal-body p-4">
++                <p>Vous allez importer le pack <strong id="nomPackConfirm"></strong>.</p>
++                <p class="text-muted small mb-0">Les armoires, catégories et objets seront créés dans votre inventaire. Les éléments déjà existants seront ignorés.</p>
++            </div>
++            <div class="modal-footer bg-light">
++                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
++                <button type="button" class="btn btn-primary" id="btnConfirmerImport">
++                    <i class="bi bi-download me-2"></i>Confirmer l'import
++                </button>
++            </div>
++        </div>
++    </div>
++</div>
++
++<!-- Modale résultat -->
++<div class="modal fade" id="modalResultatPack" tabindex="-1" aria-hidden="true">
++    <div class="modal-dialog modal-dialog-centered">
++        <div class="modal-content border-0 shadow-lg">
++            <div class="modal-header text-white" id="resultatHeader">
++                <h5 class="modal-title" id="resultatTitre"></h5>
++                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
++            </div>
++            <div class="modal-body p-4" id="resultatBody"></div>
++            <div class="modal-footer bg-light">
++                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
++                <a href="{{ url_for('inventaire.index') }}" class="btn btn-primary">
++                    <i class="bi bi-box-seam me-2"></i>Voir l'inventaire
++                </a>
++            </div>
++        </div>
++    </div>
++</div>
++{% endblock %}
++
++{% block scripts %}
++<script>
++let packIdEnCours = null;
++const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmPack'));
++const modalResultat = new bootstrap.Modal(document.getElementById('modalResultatPack'));
++
++document.querySelectorAll('.btn-importer-pack').forEach(btn => {
++    btn.addEventListener('click', () => {
++        packIdEnCours = btn.dataset.packId;
++        document.getElementById('nomPackConfirm').textContent = btn.dataset.packNom;
++        modalConfirm.show();
++    });
++});
++
++document.getElementById('btnConfirmerImport').addEventListener('click', async () => {
++    if (!packIdEnCours) return;
++    const btn = document.getElementById('btnConfirmerImport');
++    btn.disabled = true;
++    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Import en cours...';
++
++    modalConfirm.hide();
++
++    try {
++        const res = await fetch(`/admin/packs/importer/${packIdEnCours}`, {
++            method: 'POST',
++            headers: {
++                'Content-Type': 'application/json',
++                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
++            }
++        });
++        const data = await res.json();
++
++        const header = document.getElementById('resultatHeader');
++        const titre = document.getElementById('resultatTitre');
++        const body = document.getElementById('resultatBody');
++
++        if (data.success) {
++            header.className = 'modal-header bg-success text-white';
++            titre.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Import réussi !';
++            body.innerHTML = `
++                <p class="mb-3">${data.message}</p>
++                <div class="row g-2 text-center">
++                    <div class="col-4">
++                        <div class="p-2 bg-light rounded">
++                            <div class="fw-bold text-primary fs-4">${data.stats.armoires}</div>
++                            <div class="small text-muted">Armoires</div>
++                        </div>
++                    </div>
++                    <div class="col-4">
++                        <div class="p-2 bg-light rounded">
++                            <div class="fw-bold text-success fs-4">${data.stats.categories}</div>
++                            <div class="small text-muted">Catégories</div>
++                        </div>
++                    </div>
++                    <div class="col-4">
++                        <div class="p-2 bg-light rounded">
++                            <div class="fw-bold text-warning fs-4">${data.stats.objets}</div>
++                            <div class="small text-muted">Objets</div>
++                        </div>
++                    </div>
++                </div>
++                ${data.stats.ignores > 0 ? `<p class="text-muted small mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>${data.stats.ignores} éléments ignorés car déjà existants.</p>` : ''}
++            `;
++        } else {
++            header.className = 'modal-header bg-danger text-white';
++            titre.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Erreur';
++            body.innerHTML = `<p class="text-danger mb-0">${data.error}</p>`;
++        }
++        modalResultat.show();
++    } catch (err) {
++        alert('Erreur technique lors de l\'import.');
++    } finally {
++        btn.disabled = false;
++        btn.innerHTML = '<i class="bi bi-download me-2"></i>Confirmer l\'import';
++        packIdEnCours = null;
++    }
++});
++</script>
++{% endblock %}
+\ No newline at end of file
+diff --git a/templates/admin_personnalisation.html b/templates/admin_personnalisation.html
+new file mode 100644
+index 0000000..3999cb5
+--- /dev/null
++++ b/templates/admin_personnalisation.html
+@@ -0,0 +1,166 @@
++{% extends "base.html" %}
++{% block title %}Personnalisation — Scientral{% endblock %}
++
++{% block content %}
++<div class="main-container">
++    {% include '_breadcrumb.html' %}
++
++    <!-- En-tête -->
++    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
++        <div class="d-flex align-items-center gap-3">
++            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
++                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
++                <i class="bi bi-palette-fill fs-3"></i>
++            </div>
++            <div>
++                <h1 class="h3 mb-0 fw-bold text-dark">Personnalisation & Thème</h1>
++                <p class="text-muted mb-0">Adaptez l'apparence de Scientral à votre établissement</p>
++            </div>
++        </div>
++        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary">
++            <i class="bi bi-arrow-left me-2"></i>Retour
++        </a>
++    </div>
++
++    <div class="row g-4 justify-content-center">
++
++        <!-- Couleur principale -->
++        <div class="col-lg-6">
++            <div class="card border-0 shadow-sm h-100">
++                <div class="card-body p-4">
++                    <div class="d-flex align-items-center gap-3 mb-4">
++                        <div class="rounded-3 d-flex align-items-center justify-content-center"
++                             style="width:48px;height:48px;background:linear-gradient(135deg,#667eea,#764ba2);">
++                            <i class="bi bi-droplet-fill text-white fs-5"></i>
++                        </div>
++                        <div>
++                            <h5 class="fw-bold mb-0">Couleur principale</h5>
++                            <p class="text-muted small mb-0">Appliquée au header, boutons et accents</p>
++                        </div>
++                    </div>
++
++                    <form action="{{ url_for('admin.sauvegarder_theme') }}" method="POST">
++                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++                        <input type="hidden" name="action" value="couleur">
++
++                        <div class="d-flex align-items-center gap-3 mb-4">
++                            <input type="color" name="couleur_principale" id="couleur_principale"
++                                   class="form-control form-control-color shadow-sm"
++                                   value="{{ params.get('couleur_principale', '#1f3b73') }}"
++                                   style="width:64px;height:56px;padding:4px;border-radius:12px;cursor:pointer;">
++                            <div>
++                                <div class="fw-bold" id="couleur-preview-label">{{ params.get('couleur_principale', '#1f3b73') }}</div>
++                                <div class="text-muted small">Cliquez sur le sélecteur pour changer</div>
++                            </div>
++                        </div>
++
++                        <!-- Aperçu -->
++                        <div class="p-3 rounded-3 mb-4" id="apercu-couleur"
++                             style="background: {{ params.get('couleur_principale', '#1f3b73') }};">
++                            <div class="d-flex align-items-center gap-2 text-white">
++                                <i class="bi bi-eye me-1"></i>
++                                <span class="fw-bold small">Aperçu de la couleur dans l'interface</span>
++                            </div>
++                        </div>
++
++						<button type="submit" class="btn btn-primary w-100 mb-2">
++							<i class="bi bi-check-circle me-2"></i>Appliquer la couleur
++						</button>
++                    </form>
++					<form action="{{ url_for('admin.sauvegarder_theme') }}" method="POST">
++						<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++						<input type="hidden" name="action" value="couleur">
++						<input type="hidden" name="couleur_principale" value="#1f3b73">
++						<button type="submit" class="btn btn-outline-secondary w-100">
++							<i class="bi bi-arrow-counterclockwise me-2"></i>Réinitialiser la couleur par défaut
++						</button>
++					</form>
++                </div>
++            </div>
++        </div>
++
++        <!-- Logo -->
++        <div class="col-lg-6">
++            <div class="card border-0 shadow-sm h-100">
++                <div class="card-body p-4">
++                    <div class="d-flex align-items-center gap-3 mb-4">
++                        <div class="rounded-3 d-flex align-items-center justify-content-center"
++                             style="width:48px;height:48px;background:linear-gradient(135deg,#f59e0b,#ef4444);">
++                            <i class="bi bi-image-fill text-white fs-5"></i>
++                        </div>
++                        <div>
++                            <h5 class="fw-bold mb-0">Logo établissement</h5>
++                            <p class="text-muted small mb-0">Affiché sur les exports PDF et impressions</p>
++                        </div>
++                    </div>
++
++                    <!-- Logo actuel -->
++                    {% if params.get('logo_url') %}
++                    <div class="text-center p-3 bg-light rounded-3 mb-3">
++                        <img src="{% if params.get('logo_url').startswith('http') %}{{ params.get('logo_url') }}{% else %}/static/{{ params.get('logo_url') }}{% endif %}"
++                             height="80" class="rounded shadow-sm"
++                             alt="Logo actuel">
++                        <p class="text-muted small mt-2 mb-0">Logo actuel</p>
++                    </div>
++                    {% else %}
++                    <div class="text-center p-4 bg-light rounded-3 mb-3 border border-dashed">
++                        <i class="bi bi-image text-muted fs-1"></i>
++                        <p class="text-muted small mt-2 mb-0">Aucun logo défini</p>
++                    </div>
++                    {% endif %}
++
++                    <!-- Upload -->
++                    <form action="{{ url_for('admin.sauvegarder_theme') }}" method="POST" enctype="multipart/form-data" class="mb-3">
++                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++                        <input type="hidden" name="action" value="logo">
++                        <div class="mb-3">
++                            <label class="form-label small fw-bold text-muted text-uppercase">Nouveau logo</label>
++                            <input type="file" name="logo_file" class="form-control form-control-sm"
++                                   accept=".png,.jpg,.jpeg,.svg,.webp">
++                            <div class="form-text">PNG, JPG, SVG ou WebP — max 2 Mo</div>
++                        </div>
++                        <button type="submit" class="btn btn-primary w-100">
++                            <i class="bi bi-upload me-2"></i>Téléverser le logo
++                        </button>
++                    </form>
++
++                    <!-- Supprimer logo -->
++                    {% if params.get('logo_url') %}
++                    <button type="button" class="btn btn-outline-danger w-100"
++                            data-bs-toggle="modal" data-bs-target="#supprimerLogoModal">
++                        <i class="bi bi-trash me-2"></i>Supprimer le logo actuel
++                    </button>
++                    {% endif %}
++                </div>
++            </div>
++        </div>
++
++    </div>
++</div>
++
++{% include '_modals.html' %}
++{% endblock %}
++
++{% block scripts %}
++<script>
++// Aperçu couleur en temps réel
++const input = document.getElementById('couleur_principale');
++const apercu = document.getElementById('apercu-couleur');
++const label = document.getElementById('couleur-preview-label');
++
++if (input) {
++    input.addEventListener('input', () => {
++        if (apercu) apercu.style.background = input.value;
++        if (label) label.textContent = input.value;
++    });
++}
++
++// Bouton reset aperçu
++document.querySelector('input[name="couleur_principale"][type="hidden"]')?.closest('form')
++    ?.querySelector('button')?.addEventListener('click', () => {
++        if (apercu) apercu.style.background = '#1f3b73';
++        if (label) label.textContent = '#1f3b73';
++        if (input) input.value = '#1f3b73';
++    });
++</script>
++{% endblock %}
+\ No newline at end of file
+diff --git a/templates/admin_reset.html b/templates/admin_reset.html
+new file mode 100644
+index 0000000..9ef0f19
+--- /dev/null
++++ b/templates/admin_reset.html
+@@ -0,0 +1,386 @@
++{% extends "base.html" %}
++{% block title %}Reset établissement — Scientral{% endblock %}
++
++{% block content %}
++<div class="main-container">
++    {% include '_breadcrumb.html' %}
++
++    <!-- En-tête -->
++    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
++        <div class="d-flex align-items-center gap-3">
++            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
++                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
++                <i class="bi bi-arrow-counterclockwise fs-3"></i>
++            </div>
++            <div>
++                <h1 class="h3 mb-0 fw-bold text-dark">Reset de l'établissement</h1>
++                <p class="text-muted mb-0">Supprimez sélectivement les données de votre établissement</p>
++            </div>
++        </div>
++        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary">
++            <i class="bi bi-arrow-left me-2"></i>Retour
++        </a>
++    </div>
++
++    <!-- Alerte danger -->
++    <div class="alert alert-danger border-0 shadow-sm mb-4">
++        <div class="d-flex gap-3">
++            <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
++            <div>
++                <strong>Action irréversible</strong>
++                <p class="mb-0 small mt-1">Les données supprimées ne pourront pas être récupérées. Effectuez une <a href="{{ url_for('admin.gestion_sauvegardes') }}" class="alert-link">sauvegarde</a> avant de continuer.</p>
++            </div>
++        </div>
++    </div>
++
++    <div class="row g-4">
++        <!-- Colonne gauche : sélection -->
++        <div class="col-lg-7">
++            <div class="card border-0 shadow-sm">
++                <div class="card-header bg-white border-bottom p-4">
++                    <div class="d-flex justify-content-between align-items-center">
++                        <h5 class="fw-bold mb-0">Sélectionnez les données à supprimer</h5>
++                        <div class="d-flex gap-2">
++                            <button type="button" class="btn btn-sm btn-outline-danger" id="btn-tout-selectionner">
++                                Tout sélectionner
++                            </button>
++                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-tout-deselectionner">
++                                Tout déselectionner
++                            </button>
++                        </div>
++                    </div>
++                </div>
++                <div class="card-body p-4">
++                    <div class="row g-3" id="reset-options">
++
++                        <!-- Réservations -->
++                        <div class="col-12">
++                            <label class="reset-option-card" data-element="reservations">
++                                <input type="checkbox" class="reset-checkbox" value="reservations">
++                                <div class="reset-option-content">
++                                    <div class="reset-option-icon bg-warning-subtle">
++                                        <i class="bi bi-calendar-x text-warning fs-4"></i>
++                                    </div>
++                                    <div>
++                                        <div class="fw-bold">Réservations</div>
++                                        <div class="small text-muted">Toutes les réservations et récurrences</div>
++                                    </div>
++                                </div>
++                            </label>
++                        </div>
++
++                        <!-- Inventaire -->
++                        <div class="col-12">
++                            <label class="reset-option-card" data-element="inventaire">
++                                <input type="checkbox" class="reset-checkbox" value="inventaire">
++                                <div class="reset-option-content">
++                                    <div class="reset-option-icon bg-primary-subtle">
++                                        <i class="bi bi-box-seam text-primary fs-4"></i>
++                                    </div>
++                                    <div>
++                                        <div class="fw-bold">Inventaire</div>
++                                        <div class="small text-muted">Tous les objets et produits chimiques</div>
++                                    </div>
++                                </div>
++                            </label>
++                        </div>
++
++                        <!-- Kits -->
++                        <div class="col-12">
++                            <label class="reset-option-card" data-element="kits">
++                                <input type="checkbox" class="reset-checkbox" value="kits">
++                                <div class="reset-option-content">
++                                    <div class="reset-option-icon bg-info-subtle">
++                                        <i class="bi bi-collection text-info fs-4"></i>
++                                    </div>
++                                    <div>
++                                        <div class="fw-bold">Kits</div>
++                                        <div class="small text-muted">Tous les kits de matériel prédéfinis</div>
++                                    </div>
++                                </div>
++                            </label>
++                        </div>
++
++                        <!-- Armoires -->
++                        <div class="col-md-6">
++                            <label class="reset-option-card" data-element="armoires">
++                                <input type="checkbox" class="reset-checkbox" value="armoires">
++                                <div class="reset-option-content">
++                                    <div class="reset-option-icon bg-secondary-subtle">
++                                        <i class="bi bi-archive text-secondary fs-4"></i>
++                                    </div>
++                                    <div>
++                                        <div class="fw-bold">Armoires</div>
++                                        <div class="small text-muted">Tous les espaces de rangement</div>
++                                    </div>
++                                </div>
++                            </label>
++                        </div>
++
++                        <!-- Catégories -->
++                        <div class="col-md-6">
++                            <label class="reset-option-card" data-element="categories">
++                                <input type="checkbox" class="reset-checkbox" value="categories">
++                                <div class="reset-option-content">
++                                    <div class="reset-option-icon bg-success-subtle">
++                                        <i class="bi bi-tags text-success fs-4"></i>
++                                    </div>
++                                    <div>
++                                        <div class="fw-bold">Catégories</div>
++                                        <div class="small text-muted">Toutes les catégories de matériel</div>
++                                    </div>
++                                </div>
++                            </label>
++                        </div>
++
++                        <!-- Salles -->
++                        <div class="col-md-6">
++                            <label class="reset-option-card" data-element="salles">
++                                <input type="checkbox" class="reset-checkbox" value="salles">
++                                <div class="reset-option-content">
++                                    <div class="reset-option-icon bg-purple-subtle" style="background:#f3e8ff;">
++                                        <i class="bi bi-building fs-4" style="color:#8b5cf6;"></i>
++                                    </div>
++                                    <div>
++                                        <div class="fw-bold">Salles</div>
++                                        <div class="small text-muted">Toutes les salles de destination</div>
++                                    </div>
++                                </div>
++                            </label>
++                        </div>
++
++                        <!-- Fournisseurs -->
++                        <div class="col-md-6">
++                            <label class="reset-option-card" data-element="fournisseurs">
++                                <input type="checkbox" class="reset-checkbox" value="fournisseurs">
++                                <div class="reset-option-content">
++                                    <div class="reset-option-icon bg-orange-subtle" style="background:#fff7ed;">
++                                        <i class="bi bi-truck fs-4" style="color:#f97316;"></i>
++                                    </div>
++                                    <div>
++                                        <div class="fw-bold">Fournisseurs</div>
++                                        <div class="small text-muted">Tous les fournisseurs</div>
++                                    </div>
++                                </div>
++                            </label>
++                        </div>
++
++                        <!-- Budget -->
++                        <div class="col-12">
++                            <label class="reset-option-card" data-element="budget">
++                                <input type="checkbox" class="reset-checkbox" value="budget">
++                                <div class="reset-option-content">
++                                    <div class="reset-option-icon bg-danger-subtle">
++                                        <i class="bi bi-wallet2 text-danger fs-4"></i>
++                                    </div>
++                                    <div>
++                                        <div class="fw-bold">Budget et dépenses</div>
++                                        <div class="small text-muted">Budget annuel et toutes les dépenses enregistrées</div>
++                                    </div>
++                                </div>
++                            </label>
++                        </div>
++
++                    </div>
++                </div>
++            </div>
++        </div>
++
++        <!-- Colonne droite : confirmation -->
++        <div class="col-lg-5">
++            <div class="card border-0 shadow-sm position-sticky" style="top: 2rem;">
++                <div class="card-header bg-white border-bottom p-4">
++                    <h5 class="fw-bold mb-0">Confirmation</h5>
++                </div>
++                <div class="card-body p-4">
++                    <!-- Résumé sélection -->
++                    <div id="resume-selection" class="mb-4">
++                        <p class="text-muted small">Aucun élément sélectionné.</p>
++                    </div>
++
++                    <!-- Saisie confirmation -->
++                    <div class="mb-4">
++                        <label class="form-label fw-bold small text-uppercase text-muted">
++                            Tapez le nom de votre établissement pour confirmer
++                        </label>
++                        <div class="alert alert-secondary border-0 small py-2 mb-2">
++                            <i class="bi bi-info-circle me-1"></i>
++                            <strong>{{ etablissement.nom }}</strong>
++                        </div>
++                        <input type="text" id="confirmation-input" class="form-control"
++                               placeholder="Nom de l'établissement...">
++                        <div class="invalid-feedback">Le nom saisi ne correspond pas.</div>
++                    </div>
++
++                    <!-- Bouton reset -->
++                    <button type="button" class="btn btn-danger w-100 fw-bold" id="btn-reset" disabled>
++                        <i class="bi bi-arrow-counterclockwise me-2"></i>Lancer le reset
++                    </button>
++
++                    <p class="text-muted small text-center mt-3 mb-0">
++                        <i class="bi bi-shield-lock me-1"></i>
++                        Action réservée aux administrateurs
++                    </p>
++                </div>
++            </div>
++        </div>
++    </div>
++</div>
++
++<!-- Modale résultat -->
++<div class="modal fade" id="modalResetResultat" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
++    <div class="modal-dialog modal-dialog-centered">
++        <div class="modal-content border-0 shadow-lg">
++            <div class="modal-header bg-success text-white" id="resetResultatHeader">
++                <h5 class="modal-title" id="resetResultatTitre"></h5>
++            </div>
++            <div class="modal-body p-4" id="resetResultatBody"></div>
++            <div class="modal-footer bg-light">
++                <a href="{{ url_for('admin.admin') }}" class="btn btn-primary">
++                    <i class="bi bi-house me-2"></i>Retour au dashboard
++                </a>
++            </div>
++        </div>
++    </div>
++</div>
++{% endblock %}
++
++{% block scripts %}
++<style>
++.reset-option-card {
++    display: block;
++    cursor: pointer;
++    border: 2px solid #e2e8f0;
++    border-radius: 12px;
++    padding: 1rem;
++    transition: all 0.2s;
++    user-select: none;
++}
++.reset-option-card:hover { border-color: #cbd5e1; background: #f8fafc; }
++.reset-option-card.selected { border-color: #ef4444; background: #fff5f5; }
++.reset-option-card input[type="checkbox"] { display: none; }
++.reset-option-content {
++    display: flex;
++    align-items: center;
++    gap: 1rem;
++}
++.reset-option-icon {
++    width: 48px;
++    height: 48px;
++    border-radius: 12px;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    flex-shrink: 0;
++}
++</style>
++
++<script>
++const nomEtablissement = {{ etablissement.nom | tojson }};
++let selectionElements = [];
++
++// Sélection des cartes
++document.querySelectorAll('.reset-option-card').forEach(card => {
++    card.addEventListener('click', () => {
++        const cb = card.querySelector('.reset-checkbox');
++        cb.checked = !cb.checked;
++        card.classList.toggle('selected', cb.checked);
++        mettreAJourSelection();
++    });
++});
++
++document.getElementById('btn-tout-selectionner').addEventListener('click', () => {
++    document.querySelectorAll('.reset-option-card').forEach(card => {
++        card.querySelector('.reset-checkbox').checked = true;
++        card.classList.add('selected');
++    });
++    mettreAJourSelection();
++});
++
++document.getElementById('btn-tout-deselectionner').addEventListener('click', () => {
++    document.querySelectorAll('.reset-option-card').forEach(card => {
++        card.querySelector('.reset-checkbox').checked = false;
++        card.classList.remove('selected');
++    });
++    mettreAJourSelection();
++});
++
++function mettreAJourSelection() {
++    selectionElements = Array.from(document.querySelectorAll('.reset-checkbox:checked')).map(cb => cb.value);
++    const resume = document.getElementById('resume-selection');
++    if (selectionElements.length === 0) {
++        resume.innerHTML = '<p class="text-muted small">Aucun élément sélectionné.</p>';
++    } else {
++        const labels = {
++            reservations: '📅 Réservations',
++            inventaire: '📦 Inventaire',
++            kits: '🧰 Kits',
++            armoires: '🗄️ Armoires',
++            categories: '🏷️ Catégories',
++            salles: '🏫 Salles',
++            fournisseurs: '🚚 Fournisseurs',
++            budget: '💰 Budget et dépenses'
++        };
++        resume.innerHTML = `
++            <p class="small fw-bold text-danger mb-2">${selectionElements.length} élément(s) à supprimer :</p>
++            <ul class="list-unstyled mb-0">
++                ${selectionElements.map(e => `<li class="small text-muted"><i class="bi bi-x-circle-fill text-danger me-2"></i>${labels[e] || e}</li>`).join('')}
++            </ul>`;
++    }
++    validerBouton();
++}
++
++// Validation confirmation
++document.getElementById('confirmation-input').addEventListener('input', validerBouton);
++
++function validerBouton() {
++    const input = document.getElementById('confirmation-input').value;
++    const btn = document.getElementById('btn-reset');
++    btn.disabled = !(selectionElements.length > 0 && input === nomEtablissement);
++}
++
++// Reset
++document.getElementById('btn-reset').addEventListener('click', async () => {
++    const btn = document.getElementById('btn-reset');
++    btn.disabled = true;
++    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Reset en cours...';
++
++    try {
++        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
++        const res = await fetch('/admin/reset', {
++            method: 'POST',
++            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
++            body: JSON.stringify({
++                elements: selectionElements,
++                confirmation: document.getElementById('confirmation-input').value
++            })
++        });
++        const data = await res.json();
++
++        const header = document.getElementById('resetResultatHeader');
++        const titre = document.getElementById('resetResultatTitre');
++        const body = document.getElementById('resetResultatBody');
++
++        if (data.success) {
++            header.className = 'modal-header bg-success text-white';
++            titre.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Reset effectué avec succès';
++            const lignes = Object.entries(data.stats).map(([k, v]) => {
++                const labels = { reservations: 'Réservations', inventaire: 'Objets', kits: 'Kits', armoires: 'Armoires', categories: 'Catégories', salles: 'Salles', fournisseurs: 'Fournisseurs', budget: 'Budgets' };
++                return `<li class="small text-muted"><i class="bi bi-check text-success me-2"></i>${labels[k] || k} : <strong>${v} supprimé(s)</strong></li>`;
++            }).join('');
++            body.innerHTML = `<ul class="list-unstyled mb-0">${lignes}</ul>`;
++        } else {
++            header.className = 'modal-header bg-danger text-white';
++            titre.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Erreur';
++            body.innerHTML = `<p class="text-danger mb-0">${data.error}</p>`;
++        }
++        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalResetResultat')).show();
++    } catch (err) {
++        alert('Erreur technique.');
++    } finally {
++        btn.disabled = false;
++        btn.innerHTML = '<i class="bi bi-arrow-counterclockwise me-2"></i>Lancer le reset';
++    }
++});
++</script>
++{% endblock %}
+\ No newline at end of file
+diff --git a/templates/admin_salles.html b/templates/admin_salles.html
+new file mode 100644
+index 0000000..505e4d8
+--- /dev/null
++++ b/templates/admin_salles.html
+@@ -0,0 +1,167 @@
++{% extends "base.html" %}
++{% block title %}Gestion des Salles - LabFlow{% endblock %}
++{% block content %}
++<div class="main-container">
++    {% include '_breadcrumb.html' %}
++ 
++    <!-- En-tête bleu marine -->
++    <div class="salles-hero mb-4">
++        <div class="d-flex align-items-center gap-3">
++            <div class="salles-hero-icon">
++                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32" height="32" fill="currentColor">
++                    <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
++                </svg>
++            </div>
++            <div>
++                <h2 class="salles-hero-title mb-0">Gestion des Salles</h2>
++            </div>
++        </div>
++        <p class="salles-hero-subtitle mb-0">Ajoutez, modifiez et organisez les salles de votre établissement</p>
++    </div>
++ 
++    <!-- Cartes de statistiques -->
++    <div class="row g-3 mb-4">
++        <div class="col-12 col-md-4">
++            <div class="salle-stat-card">
++                <div class="salle-stat-bar" style="background: var(--couleur-principale);"></div>
++                <div class="salle-stat-label">SALLES ENREGISTRÉES</div>
++                <div class="salle-stat-value">{{ nb_salles }}</div>
++                <div class="salle-stat-sub">dans l'établissement</div>
++            </div>
++        </div>
++        <div class="col-12 col-md-4">
++            <div class="salle-stat-card">
++                <div class="salle-stat-bar" style="background: #0dcaf0;"></div>
++                <div class="salle-stat-label">CAPACITÉ TOTALE</div>
++                <div class="salle-stat-value">
++                    {% if capacite_totale %}{{ capacite_totale }}{% else %}<span style="font-size:1.5rem;">—</span>{% endif %}
++                </div>
++                <div class="salle-stat-sub">élèves simultanés</div>
++            </div>
++        </div>
++        <div class="col-12 col-md-4">
++            <div class="salle-stat-card">
++                <div class="salle-stat-bar" style="background: #20c997;"></div>
++                <div class="salle-stat-label">CAPACITÉ MOYENNE</div>
++                <div class="salle-stat-value">
++                    {% if capacite_moyenne %}{{ capacite_moyenne }}{% else %}<span style="font-size:1.5rem;">—</span>{% endif %}
++                </div>
++                <div class="salle-stat-sub">élèves par salle</div>
++            </div>
++        </div>
++    </div>
++ 
++    <div class="row g-4">
++ 
++        <!-- Formulaire ajout -->
++        <div class="col-12 col-lg-4">
++            <div class="content-card h-100">
++                <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="20" height="20" fill="#20c997">
++                        <path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>
++                    </svg>
++                    Ajouter une salle
++                </h5>
++                <form action="{{ url_for('admin.ajouter_salle') }}" method="POST">
++                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++ 
++                    <div class="mb-3">
++                        <label class="filter-label d-block mb-1">Nom de la salle *</label>
++                        <input type="text" name="nom" class="form-control"
++                               placeholder="Ex: Salle 101, Labo Chimie..."
++                               maxlength="100" required>
++                    </div>
++ 
++                    <div class="mb-3">
++                        <label class="filter-label d-block mb-1">Description</label>
++                        <input type="text" name="description" class="form-control"
++                               placeholder="Ex: Bâtiment A, 1er étage"
++                               maxlength="255">
++                    </div>
++ 
++                    <div class="mb-4">
++                        <label class="filter-label d-block mb-1">Capacité (élèves)</label>
++                        <input type="number" name="capacite" class="form-control"
++                               placeholder="Ex: 30" min="1" max="999">
++                    </div>
++ 
++                    <button type="submit" class="btn btn-salles-primary w-100">
++                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" fill="currentColor" class="me-1">
++                            <path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>
++                        </svg>
++                        Ajouter la salle
++                    </button>
++                </form>
++            </div>
++        </div>
++ 
++        <!-- Liste des salles -->
++        <div class="col-12 col-lg-8">
++            <div class="content-card">
++                <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="20" height="20" fill="#0dcaf0">
++                        <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
++                    </svg>
++                    Salles enregistrées
++                    <span class="badge bg-primary rounded-pill ms-1">{{ salles|length }}</span>
++                </h5>
++ 
++                {% if salles %}
++                <div class="table-responsive">
++                    <table class="table table-hover align-middle mb-0">
++                        <thead class="table-light">
++                            <tr>
++                                <th>Nom</th>
++                                <th>Description</th>
++                                <th class="text-center">Capacité</th>
++                                <th class="text-end">Actions</th>
++                            </tr>
++                        </thead>
++                        <tbody>
++                            {% for salle in salles %}
++                            <tr>
++                                <td class="fw-semibold">
++                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" height="16" fill="#6c757d" class="me-1">
++                                        <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Z"/>
++                                    </svg>
++                                    {{ salle.nom }}
++                                </td>
++                                <td class="text-muted small">{{ salle.description or '—' }}</td>
++                                <td class="text-center">
++                                    {% if salle.capacite %}
++                                        <span class="badge bg-light text-dark border">{{ salle.capacite }} élèves</span>
++                                    {% else %}
++                                        <span class="text-muted">—</span>
++                                    {% endif %}
++                                </td>
++                                <td class="text-end">
++                                    <form action="{{ url_for('admin.supprimer_salle', salle_id=salle.id) }}"
++                                          method="POST" class="d-inline"
++                                          onsubmit="return confirm('Supprimer la salle {{ salle.nom }} ? Les réservations associées perdront leur salle.')">
++                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++                                        <button type="submit" class="btn btn-sm btn-outline-danger">
++                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" fill="currentColor">
++                                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360Z"/>
++                                            </svg>
++                                        </button>
++                                    </form>
++                                </td>
++                            </tr>
++                            {% endfor %}
++                        </tbody>
++                    </table>
++                </div>
++                {% else %}
++                <div class="text-center py-5 text-muted">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="48" height="48" fill="#dee2e6" class="mb-3">
++                        <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Z"/>
++                    </svg>
++                    <p class="mb-1 fw-semibold">Aucune salle enregistrée.</p>
++                    <small>Ajoutez votre première salle avec le formulaire ci-contre.</small>
++                </div>
++                {% endif %}
++            </div>
++        </div>
++    </div>
++</div>
++{% endblock %}
+\ No newline at end of file
+diff --git a/templates/admin_salles_recovered.html b/templates/admin_salles_recovered.html
+new file mode 100644
+index 0000000..7082d93
+--- /dev/null
++++ b/templates/admin_salles_recovered.html
+@@ -0,0 +1,136 @@
++{% extends "base.html" %}
++{% block title %}Gestion des Salles - LabFlow{% endblock %}
++{% block content %}
++<div class="main-container">
++    {% include '_breadcrumb.html' %}
++
++    <!-- En-tête -->
++    <div class="management-header">
++        <h2 class="page-title h3 mb-0 d-flex align-items-center gap-3">
++            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
++                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #20c997 0%, #0dcaf0 100%);">
++                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
++                    <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
++                </svg>
++            </div>
++            <span class="fw-bold text-dark">Gestion des Salles</span>
++        </h2>
++        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary btn-sm">
++            ← Retour Admin
++        </a>
++    </div>
++
++    <div class="row g-4 mt-2">
++
++        <!-- Formulaire ajout -->
++        <div class="col-12 col-lg-4">
++            <div class="content-card h-100">
++                <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="20" height="20" fill="#20c997">
++                        <path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>
++                    </svg>
++                    Ajouter une salle
++                </h5>
++                <form action="{{ url_for('admin.ajouter_salle') }}" method="POST">
++                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++
++                    <div class="mb-3">
++                        <label class="filter-label d-block mb-1">Nom de la salle *</label>
++                        <input type="text" name="nom" class="form-control"
++                               placeholder="Ex: Salle 101, Labo Chimie..."
++                               maxlength="100" required>
++                    </div>
++
++                    <div class="mb-3">
++                        <label class="filter-label d-block mb-1">Description</label>
++                        <input type="text" name="description" class="form-control"
++                               placeholder="Ex: Bâtiment A, 1er étage"
++                               maxlength="255">
++                    </div>
++
++                    <div class="mb-4">
++                        <label class="filter-label d-block mb-1">Capacité (élèves)</label>
++                        <input type="number" name="capacite" class="form-control"
++                               placeholder="Ex: 30" min="1" max="999">
++                    </div>
++
++                    <button type="submit" class="btn btn-primary w-100">
++                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" fill="currentColor" class="me-1">
++                            <path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>
++                        </svg>
++                        Ajouter la salle
++                    </button>
++                </form>
++            </div>
++        </div>
++
++        <!-- Liste des salles -->
++        <div class="col-12 col-lg-8">
++            <div class="content-card">
++                <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="20" height="20" fill="#0dcaf0">
++                        <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
++                    </svg>
++                    Salles enregistrées
++                    <span class="badge bg-primary rounded-pill ms-1">{{ salles|length }}</span>
++                </h5>
++
++                {% if salles %}
++                <div class="table-responsive">
++                    <table class="table table-hover align-middle mb-0">
++                        <thead class="table-light">
++                            <tr>
++                                <th>Nom</th>
++                                <th>Description</th>
++                                <th class="text-center">Capacité</th>
++                                <th class="text-end">Actions</th>
++                            </tr>
++                        </thead>
++                        <tbody>
++                            {% for salle in salles %}
++                            <tr>
++                                <td class="fw-semibold">
++                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" height="16" fill="#6c757d" class="me-1">
++                                        <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Z"/>
++                                    </svg>
++                                    {{ salle.nom }}
++                                </td>
++                                <td class="text-muted small">{{ salle.description or '—' }}</td>
++                                <td class="text-center">
++                                    {% if salle.capacite %}
++                                        <span class="badge bg-light text-dark border">{{ salle.capacite }} élèves</span>
++                                    {% else %}
++                                        <span class="text-muted">—</span>
++                                    {% endif %}
++                                </td>
++                                <td class="text-end">
++                                    <form action="{{ url_for('admin.supprimer_salle', salle_id=salle.id) }}"
++                                          method="POST" class="d-inline"
++                                          onsubmit="return confirm('Supprimer la salle {{ salle.nom }} ? Les réservations associées perdront leur salle.')">
++                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++                                        <button type="submit" class="btn btn-sm btn-outline-danger">
++                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="16" fill="currentColor">
++                                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360Z"/>
++                                            </svg>
++                                        </button>
++                                    </form>
++                                </td>
++                            </tr>
++                            {% endfor %}
++                        </tbody>
++                    </table>
++                </div>
++                {% else %}
++                <div class="text-center py-5 text-muted">
++                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="48" height="48" fill="#dee2e6" class="mb-3">
++                        <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Z"/>
++                    </svg>
++                    <p class="mb-0">Aucune salle enregistrée.</p>
++                    <small>Ajoutez votre première salle avec le formulaire.</small>
++                </div>
++                {% endif %}
++            </div>
++        </div>
++    </div>
++</div>
++{% endblock %}
+\ No newline at end of file
+diff --git a/templates/budget.html b/templates/budget.html
+index 04c2e50..70f026c 100644
+--- a/templates/budget.html
++++ b/templates/budget.html
+@@ -213,7 +213,7 @@
+                                     <!-- ACTIONS (Admin seulement) -->
+                                     {% if session.user_role == 'admin' %}
+                                     <td class="text-end">
+-                                        {% if not budget_affiche.cloture %}
++                                        {% if budget_affiche and not budget_affiche.cloture %}
+                                         <div class="d-flex justify-content-end gap-1">
+                                             <button class="btn btn-sm btn-outline-primary btn-icon-only" 
+                                                     title="Modifier"
+@@ -518,7 +518,7 @@
+             </div>
+             
+             <div class="modal-body p-4">
+-                <p class="fw-bold text-dark mb-2">Êtes-vous sûr de vouloir clôturer l'année {{ budget_affiche.annee }}-{{ budget_affiche.annee + 1 }} ?</p>
++                <p class="fw-bold text-dark mb-2">Êtes-vous sûr de vouloir clôturer l'année {% if budget_affiche %}{{ budget_affiche.annee }}-{{ budget_affiche.annee + 1 }}{% endif %} ?</p>
+                 
+                 <div class="alert alert-warning d-flex align-items-start gap-2 mb-0">
+                     <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+diff --git a/templates/documentation.html b/templates/documentation.html
+index 22a9f48..c6d5d10 100644
+--- a/templates/documentation.html
++++ b/templates/documentation.html
+@@ -329,7 +329,7 @@
+                         <div class="card-body p-5 text-center">
+                             <h4 class="fw-bold mb-2">Besoin d'une assistance personnalisée ?</h4>
+                             <p class="opacity-75 mb-4">Notre équipe est là pour vous accompagner.</p>
+-                            <a href="mailto:contact.gmlcl@gmail.com" class="btn btn-light text-primary fw-bold px-5 rounded-pill shadow-sm">
++                            <a href="mailto:help.scientral@gmail.com" class="btn btn-light text-primary fw-bold px-5 rounded-pill shadow-sm">
+                                 <i class="bi bi-envelope-fill me-2"></i>Contacter le support
+                             </a>
+                         </div>
+diff --git a/templates/footer.html b/templates/footer.html
+index 5bc7ae1..ec26f75 100644
+--- a/templates/footer.html
++++ b/templates/footer.html
+@@ -6,16 +6,17 @@
+       <!-- Brand (Gauche) -->
+       <div class="footer-brand">
+         <svg class="footer-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="40" height="40">
+-          <defs>
+-            <linearGradient id="uniqueFooterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+-              <stop offset="0%" style="stop-color:#8B3FFF;stop-opacity:1" />
+-              <stop offset="50%" style="stop-color:#5B8FFF;stop-opacity:1" />
+-              <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
+-            </linearGradient>
+-          </defs>
+-          <rect x="20" y="20" width="472" height="472" rx="110" ry="110" fill="url(#uniqueFooterGradient)"/>
+-          <text x="256" y="340" font-family="Arial, sans-serif" font-size="280" font-weight="900" fill="white" text-anchor="middle" letter-spacing="10">LF</text>
+-        </svg>
++		  <defs>
++			<linearGradient id="uniqueFooterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
++			  <stop offset="0%" style="stop-color:#BB3FFF;stop-opacity:1" />
++			  <stop offset="50%" style="stop-color:#588FFF;stop-opacity:1" />
++			  <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
++			</linearGradient>
++		  </defs>
++		  <rect x="20" y="20" width="472" height="472" rx="110" ry="110" fill="url(#uniqueFooterGradient)"/>
++		  <text x="242" y="350" font-family="Arial, sans-serif" font-size="280" font-weight="900" fill="white" text-anchor="middle">Sc</text>
++		  <text x="398" y="190" font-family="Arial, sans-serif" font-size="72" font-weight="700" fill="white" text-anchor="start">al</text>
++		</svg>
+         <div class="footer-brand-text">
+           <span class="footer-brand-name">Scientral</span>
+           <span class="footer-brand-tagline">Gestion intelligente de matériel</span>
+@@ -31,7 +32,7 @@
+           <a href="{{ url_for('main.documentation') }}" title="Consulter le guide">
+               <i class="bi bi-book me-1"></i>Documentation
+           </a>
+-          <a href="mailto:contact.gmlcl@gmail.com">
++          <a href="mailto:help.scientral@gmail.com">
+               <i class="bi bi-envelope me-1"></i>Support Technique
+           </a>
+         </div>
+diff --git a/templates/forgot_password.html b/templates/forgot_password.html
+new file mode 100644
+index 0000000..9badb50
+--- /dev/null
++++ b/templates/forgot_password.html
+@@ -0,0 +1,49 @@
++<!DOCTYPE html>
++<html lang="fr">
++<head>
++    <meta charset="UTF-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1.0">
++    <title>Mot de passe oublié - Scientral</title>
++    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
++    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
++    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
++    <link rel="stylesheet" href="{{ url_for('static', filename='css/modules/auth.css') }}">
++</head>
++<body class="login-page-body">
++    <div class="login-form-container">
++        <div class="login-header">
++            <div class="login-icon-wrapper">
++                <i class="bi bi-lock fs-3 text-primary"></i>
++            </div>
++            <h2>Mot de passe oublié</h2>
++            <p class="text-muted small mt-2">Saisissez votre nom d'utilisateur.<br>Un lien de réinitialisation sera envoyé à l'adresse associée.</p>
++        </div>
++        {% with messages = get_flashed_messages(with_categories=true) %}
++            {% if messages %}
++                {% for category, message in messages %}
++                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm border-0 mb-4 py-2 small">
++                        {{ message }}
++                    </div>
++                {% endfor %}
++            {% endif %}
++        {% endwith %}
++        <form action="{{ url_for('auth.forgot_password') }}" method="post" class="login-form">
++            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++            <div class="input-group mb-4">
++                <span class="input-group-text">
++                    <i class="bi bi-person-fill"></i>
++                </span>
++                <input type="text" class="form-control" name="username" placeholder="Nom d'utilisateur" required autofocus>
++            </div>
++            <button type="submit" class="btn-login w-100">
++                <i class="bi bi-send me-2"></i>Envoyer le lien
++            </button>
++        </form>
++        <div class="text-center mt-3">
++            <a href="{{ url_for('auth.login') }}" class="text-muted small">
++                <i class="bi bi-arrow-left me-1"></i>Retour à la connexion
++            </a>
++        </div>
++    </div>
++</body>
++</html>
+\ No newline at end of file
+diff --git a/templates/header.html b/templates/header.html
+index 30f582c..8ad9419 100644
+--- a/templates/header.html
++++ b/templates/header.html
+@@ -2,16 +2,17 @@
+     <div class="header-container">
+         <div class="header-brand">
+ 			<a href="{{ url_for('inventaire.index') }}">
+-				<svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="50" height="50">
++				<svg class="brand-logo me-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="45" height="45">
+ 					<defs>
+-						<linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+-							<stop offset="0%" style="stop-color:#8B3FFF;stop-opacity:1" />
+-							<stop offset="50%" style="stop-color:#5B8FFF;stop-opacity:1" />
++						<linearGradient id="headerGradientDesktop" x1="0%" y1="0%" x2="100%" y2="100%">
++							<stop offset="0%" style="stop-color:#BB3FFF;stop-opacity:1" />
++							<stop offset="50%" style="stop-color:#588FFF;stop-opacity:1" />
+ 							<stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
+ 						</linearGradient>
+ 					</defs>
+-					<rect x="20" y="20" width="472" height="472" rx="110" ry="110" fill="url(#gradient)"/>
+-					<text x="256" y="370" font-family="Arial, sans-serif" font-size="280" font-weight="900" fill="white" text-anchor="middle" letter-spacing="10">LF</text>
++					<rect x="20" y="20" width="472" height="472" rx="110" ry="110" fill="url(#headerGradientDesktop)"/>
++					<text x="242" y="350" font-family="Arial, sans-serif" font-size="280" font-weight="900" fill="white" text-anchor="middle">Sc</text>
++					<text x="398" y="190" font-family="Arial, sans-serif" font-size="72" font-weight="700" fill="white" text-anchor="start">al</text>
+ 				</svg>
+ 				
+ 				<div class="brand-text">
+diff --git a/templates/legal.html b/templates/legal.html
+index b301469..183b35a 100644
+--- a/templates/legal.html
++++ b/templates/legal.html
+@@ -44,7 +44,7 @@
+                             <div class="ps-3 border-start border-4 border-primary mb-4">
+                                 <p class="mb-1"><strong>Nom du service :</strong> Scientral</p>
+                                 <p class="mb-1"><strong>Développeurs :</strong> Xavier De Baudry d'Asson & Yll Basha</p>
+-                                <p class="mb-1"><strong>Contact :</strong> <a href="mailto:contact.gmlcl@gmail.com">contact.gmlcl@gmail.com</a></p>
++                                <p class="mb-1"><strong>Contact :</strong> <a href="mailto:help.scientral@gmail.com">help.scientral@gmail.com</a></p>
+                                 <p class="mb-0"><strong>Hébergement :</strong> Serveurs académiques / Local</p>
+                             </div>
+                             
+diff --git a/templates/login.html b/templates/login.html
+index 7de36da..98e956c 100644
+--- a/templates/login.html
++++ b/templates/login.html
+@@ -54,6 +54,12 @@
+                 <input type="password" class="form-control" id="password" name="password" placeholder="Mot de passe" required>
+             </div>
+ 
++            <div class="text-end mb-3">
++                <a href="{{ url_for('auth.forgot_password') }}" class="text-muted small">
++                    <i class="bi bi-question-circle me-1"></i>Mot de passe oublié ?
++                </a>
++            </div>
++
+             <button type="submit" class="btn-login w-100">
+                 Se connecter
+             </button>
+diff --git a/templates/reset_password.html b/templates/reset_password.html
+new file mode 100644
+index 0000000..cd22c03
+--- /dev/null
++++ b/templates/reset_password.html
+@@ -0,0 +1,113 @@
++<!DOCTYPE html>
++<html lang="fr">
++<head>
++    <meta charset="UTF-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1.0">
++    <title>Nouveau mot de passe - Scientral</title>
++    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
++    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
++    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
++    <link rel="stylesheet" href="{{ url_for('static', filename='css/modules/auth.css') }}">
++</head>
++<body class="login-page-body">
++    <div class="login-form-container">
++        <div class="login-header">
++            <div class="login-icon-wrapper">
++                <i class="bi bi-key-fill fs-3 text-primary"></i>
++            </div>
++            <h2>Nouveau mot de passe</h2>
++        </div>
++        {% with messages = get_flashed_messages(with_categories=true) %}
++            {% if messages %}
++                {% for category, message in messages %}
++                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} shadow-sm border-0 mb-4 py-2 small">{{ message }}</div>
++                {% endfor %}
++            {% endif %}
++        {% endwith %}
++        <form method="POST" action="{{ url_for('auth.reset_password', token=token) }}" class="login-form" id="resetForm">
++            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
++            <div class="input-group mb-3">
++                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
++                <input type="password" name="password" id="password" class="form-control" placeholder="Nouveau mot de passe" required minlength="12" autofocus>
++            </div>
++            <div class="input-group mb-3">
++                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
++                <input type="password" name="confirm_password" id="password_confirm" class="form-control" placeholder="Confirmer le mot de passe" required>
++            </div>
++            <!-- Barre de force -->
++            <div class="progress mb-2" style="height: 4px;">
++                <div class="progress-bar" id="strengthBar" style="width:0%; transition: all 0.3s;"></div>
++            </div>
++            <!-- Indicateurs -->
++            <div class="password-requirements mb-4">
++                <div class="row g-1 text-center">
++                    <div class="col-4 requirement-item" id="req-length"><i class="bi bi-circle"></i> 12+ car.</div>
++                    <div class="col-4 requirement-item" id="req-uppercase"><i class="bi bi-circle"></i> Majuscule</div>
++                    <div class="col-4 requirement-item" id="req-lowercase"><i class="bi bi-circle"></i> Minuscule</div>
++                    <div class="col-4 requirement-item" id="req-number"><i class="bi bi-circle"></i> Chiffre</div>
++                    <div class="col-4 requirement-item" id="req-special"><i class="bi bi-circle"></i> Spécial</div>
++                    <div class="col-4 requirement-item" id="req-match"><i class="bi bi-circle"></i> Identiques</div>
++                </div>
++            </div>
++            <button type="submit" class="btn-login w-100" id="submitBtn">
++                <i class="bi bi-check-circle me-2"></i>Enregistrer le mot de passe
++            </button>
++        </form>
++        <div class="text-center mt-3">
++            <a href="{{ url_for('auth.login') }}" class="text-muted small">
++                <i class="bi bi-arrow-left me-1"></i>Retour à la connexion
++            </a>
++        </div>
++    </div>
++    <script>
++        document.addEventListener('DOMContentLoaded', function() {
++            const form = document.getElementById('resetForm');
++            const password = document.getElementById('password');
++            const passwordConfirm = document.getElementById('password_confirm');
++            const strengthBar = document.getElementById('strengthBar');
++            function checkPassword() {
++                const val = password.value;
++                const valConf = passwordConfirm.value;
++                let strength = 0;
++                const checks = {
++                    'req-length': val.length >= 12,
++                    'req-uppercase': /[A-Z]/.test(val),
++                    'req-lowercase': /[a-z]/.test(val),
++                    'req-number': /[0-9]/.test(val),
++                    'req-special': /[^A-Za-z0-9]/.test(val),
++                    'req-match': val.length > 0 && val === valConf
++                };
++                for (const [id, met] of Object.entries(checks)) {
++                    const el = document.getElementById(id);
++                    const icon = el.querySelector('i');
++                    if (met) {
++                        el.classList.add('met');
++                        icon.className = 'bi bi-check-circle-fill';
++                        if(id !== 'req-match') strength += 20;
++                    } else {
++                        el.classList.remove('met');
++                        icon.className = 'bi bi-circle';
++                    }
++                }
++                strengthBar.style.width = strength + '%';
++                if (strength <= 40) strengthBar.style.backgroundColor = '#ef4444';
++                else if (strength <= 80) strengthBar.style.backgroundColor = '#f59e0b';
++                else strengthBar.style.backgroundColor = '#10b981';
++            }
++            password.addEventListener('input', checkPassword);
++            passwordConfirm.addEventListener('input', checkPassword);
++            form.addEventListener('submit', function(e) {
++                if (!form.checkValidity() || password.value !== passwordConfirm.value) {
++                    e.preventDefault();
++                    e.stopPropagation();
++                    form.classList.add('was-validated');
++                } else {
++                    const btn = document.getElementById('submitBtn');
++                    btn.disabled = true;
++                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enregistrement...';
++                }
++            });
++        });
++    </script>
++</body>
++</html>
+\ No newline at end of file

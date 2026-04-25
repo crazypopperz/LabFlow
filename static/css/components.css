@@ -261,7 +261,7 @@
 }
 
 .objet-table td a:hover {
-    color: var(--couleur-principale); /* Devient bleu LabFlow */
+    color: var(--couleur-principale); /* Devient bleu Scientral */
     border-bottom-color: var(--couleur-principale); /* Soulignement fin et coloré */
 }
 
@@ -351,7 +351,7 @@
 }
 
 .actions-cell .btn-outline-primary:hover {
-    color: var(--couleur-principale); /* Bleu LabFlow */
+    color: var(--couleur-principale); /* Bleu Scientral */
     background-color: #e0e7ff; /* Fond bleu pâle */
     border-color: transparent;
     transform: translateY(-2px);
@@ -555,7 +555,7 @@ tr.row-done td strong { font-weight: normal; }
 /* État Survol (Hover) */
 .btn-export-select:hover {
     background-color: #f8f9fa;
-    color: var(--couleur-principale); /* Bleu LabFlow */
+    color: var(--couleur-principale); /* Bleu Scientral */
     border-color: #adb5bd;
     z-index: 2; /* Passe au-dessus des bordures voisines */
 }

@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}Packs de matériel — Scientral{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
+                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);">
+                <i class="bi bi-box-seam-fill fs-3"></i>
+            </div>
+            <div>
+                <h1 class="h3 mb-0 fw-bold text-dark">Packs de matériel</h1>
+                <p class="text-muted mb-0">Importez un inventaire prédéfini pour démarrer rapidement</p>
+            </div>
+        </div>
+        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <!-- Alerte info -->
+    <div class="alert alert-info border-0 shadow-sm mb-4">
+        <div class="d-flex gap-3">
+            <i class="bi bi-info-circle-fill fs-5 mt-1"></i>
+            <div>
+                <strong>Comment ça fonctionne ?</strong>
+                <ul class="mb-0 mt-1 small">
+                    <li>Chaque pack crée automatiquement les <strong>armoires</strong>, <strong>catégories</strong> et <strong>objets</strong> correspondants.</li>
+                    <li>Les éléments déjà existants dans votre inventaire sont <strong>ignorés</strong> (pas de doublons).</li>
+                    <li>Vous pouvez importer plusieurs packs et modifier ensuite chaque élément.</li>
+                    <li>Les <strong>quantités</strong> sont calculées pour une classe de 30 élèves.</li>
+                    <li>Les produits <span class="badge bg-danger">CMR</span> sont identifiés avec leur fiche de sécurité INRS.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cartes des packs -->
+    <div class="row g-4">
+        {% for pack in packs %}
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100 pack-card" data-pack-id="{{ pack.id }}">
+                <!-- En-tête coloré -->
+                <div class="card-header border-0 text-white p-4 d-flex align-items-center gap-3" style="background: linear-gradient(135deg, {{ pack.color }}dd, {{ pack.color }}99); border-radius: 12px 12px 0 0 !important; min-height: 110px;">
+                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:52px;height:52px;background:rgba(255,255,255,0.2);">
+                        {% if pack.discipline == 'Physique-Chimie' %}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px" fill="white">
+                            <path d="M480-80q-82 0-142-58.5T278-280q0-48 19-89t52-71l131-131v-189h-40v-80h200v80h-40v189l131 131q33 30 52 71t19 89q0 83-60 141.5T480-80Zm0-80q50 0 85-35t35-85q0-29-11-54t-31-43L440-499v-221h80v221L398-377q-20 18-31 43t-11 54q0 50 35 85t89 35Z"/>
+                        </svg>
+                        {% else %}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px" fill="white">
+                            <path d="M440-80v-167q-42 27-86.5 47T260-180q-63 0-118.5-28.5T40-280q37-34 79.5-59.5T211-375q-68-55-100-136T79-680q72 1 139 23t122 65v-8q0-91 40.5-171T480-920q58 69 99 149t41 171q0 2-.5 4t-.5 4q56-43 123-64.5T881-680q0 88-32.5 169T748-375q49 10 91.5 35.5T919-280q-46 43-101 71.5T700-180q-50 0-94.5-20T520-247v167h-80Zm-56-296q-11-38-28.5-72.5T310-510q-28-28-62.5-45.5T175-584q11 38 28.5 72.5T249-449q27 28 62 45.5t73 27.5ZM260-260q21 0 41-5.5t39-14.5q-19-8-39-14t-41-6q-21 0-41 6t-40 14q19 9 39.5 14.5T260-260Zm220-152q26-44 43-90.5t17-97.5q0-51-17-97.5T480-787q-26 43-43 89.5T420-600q0 51 17 98t43 90Zm96 36q38-10 72.5-27.5T710-449q28-28 45.5-62.5T784-584q-38 11-72.5 28.5T649-510q-28 27-45.5 61.5T576-376Zm124 116q21 0 41-5.5t39-14.5q-19-8-39-14t-41-6q-21 0-41 6t-40 14q19 9 39.5 14.5T700-260ZM384-376Zm-44 96Zm140-132Zm96 36Zm43 96Z"/>
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-1">{{ pack.nom }}</h5>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-white text-dark">{{ pack.niveau }}</span>
+                            <span class="badge bg-white text-dark">{{ pack.discipline }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    <p class="text-muted small mb-3">{{ pack.description }}</p>
+
+                    <!-- Statistiques -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-4 text-center">
+                            <div class="p-2 bg-light rounded">
+                                <div class="fw-bold text-primary">{{ pack.armoires | length }}</div>
+                                <div class="small text-muted">Armoires</div>
+                            </div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div class="p-2 bg-light rounded">
+                                <div class="fw-bold text-success">{{ pack.categories | length }}</div>
+                                <div class="small text-muted">Catégories</div>
+                            </div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div class="p-2 bg-light rounded">
+                                <div class="fw-bold text-warning">{{ pack.objets | length }}</div>
+                                <div class="small text-muted">Objets</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Détail objets/produits/CMR -->
+                    <div class="d-flex gap-2 flex-wrap mb-3">
+                        <span class="badge bg-primary-subtle text-primary">
+                            <i class="bi bi-box me-1"></i>
+                            {{ pack.objets | selectattr('type_objet', 'eq', 'objet') | list | length }} objets
+                        </span>
+                        <span class="badge bg-warning-subtle text-warning">
+                            <i class="bi bi-droplet me-1"></i>
+                            {{ pack.objets | selectattr('type_objet', 'eq', 'produit') | list | length }} produits
+                        </span>
+                        <span class="badge bg-danger-subtle text-danger">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            {{ pack.objets | selectattr('is_cmr') | list | length }} CMR
+                        </span>
+                    </div>
+
+                    <!-- Armoires -->
+                    <div class="mb-3">
+                        <div class="small fw-bold text-muted mb-1">Armoires et Catégories créées</div>
+                        {% for arm in pack.armoires %}
+                        <div class="small text-muted">
+                            <i class="bi bi-archive me-1 text-primary"></i>
+                            <strong>{{ arm.nom }}</strong> — {{ arm.description }}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Bouton détail -->
+                    <button class="btn btn-sm btn-outline-secondary w-100 mb-2"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#detail-{{ pack.id }}">
+                        <i class="bi bi-list-ul me-1"></i>Voir le détail du matériel
+                    </button>
+
+                    <!-- Détail collapsible -->
+                    <div class="collapse" id="detail-{{ pack.id }}">
+                        <div class="border rounded p-2 bg-light" style="max-height: 250px; overflow-y: auto;">
+                            {% set ns = namespace(cat_courante='') %}
+                            {% for obj in pack.objets %}
+                                {% if obj.categorie != ns.cat_courante %}
+                                    {% set ns.cat_courante = obj.categorie %}
+                                    <div class="small fw-bold text-muted mt-2 mb-1">{{ obj.categorie | upper }}</div>
+                                {% endif %}
+                                <div class="small d-flex align-items-center gap-1 py-1 border-bottom">
+                                    {% if obj.type_objet == 'produit' %}
+                                        <i class="bi bi-droplet-fill text-warning" style="font-size:0.7rem;"></i>
+                                    {% else %}
+                                        <i class="bi bi-box text-primary" style="font-size:0.7rem;"></i>
+                                    {% endif %}
+                                    <span class="flex-grow-1">{{ obj.nom }}</span>
+                                    <span class="text-muted">{{ obj.quantite_physique }} {{ obj.unite }}</span>
+                                    {% if obj.is_cmr %}
+                                        <span class="badge bg-danger" style="font-size:0.6rem;">CMR</span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer border-0 bg-transparent p-4 pt-0">
+                    <button class="btn w-100 text-white fw-bold btn-importer-pack"
+                            style="background: {{ pack.color }};"
+                            data-pack-id="{{ pack.id }}"
+                            data-pack-nom="{{ pack.nom }}">
+                        <i class="bi bi-download me-2"></i>Importer ce pack
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- Modale de confirmation -->
+<div class="modal fade" id="modalConfirmPack" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-box-seam-fill me-2"></i>Confirmer l'import
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p>Vous allez importer le pack <strong id="nomPackConfirm"></strong>.</p>
+                <p class="text-muted small mb-0">Les armoires, catégories et objets seront créés dans votre inventaire. Les éléments déjà existants seront ignorés.</p>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmerImport">
+                    <i class="bi bi-download me-2"></i>Confirmer l'import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale résultat -->
+<div class="modal fade" id="modalResultatPack" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header text-white" id="resultatHeader">
+                <h5 class="modal-title" id="resultatTitre"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="resultatBody"></div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <a href="{{ url_for('inventaire.index') }}" class="btn btn-primary">
+                    <i class="bi bi-box-seam me-2"></i>Voir l'inventaire
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let packIdEnCours = null;
+const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirmPack'));
+const modalResultat = new bootstrap.Modal(document.getElementById('modalResultatPack'));
+
+document.querySelectorAll('.btn-importer-pack').forEach(btn => {
+    btn.addEventListener('click', () => {
+        packIdEnCours = btn.dataset.packId;
+        document.getElementById('nomPackConfirm').textContent = btn.dataset.packNom;
+        modalConfirm.show();
+    });
+});
+
+document.getElementById('btnConfirmerImport').addEventListener('click', async () => {
+    if (!packIdEnCours) return;
+    const btn = document.getElementById('btnConfirmerImport');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Import en cours...';
+
+    modalConfirm.hide();
+
+    try {
+        const res = await fetch(`/admin/packs/importer/${packIdEnCours}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+            }
+        });
+        const data = await res.json();
+
+        const header = document.getElementById('resultatHeader');
+        const titre = document.getElementById('resultatTitre');
+        const body = document.getElementById('resultatBody');
+
+        if (data.success) {
+            header.className = 'modal-header bg-success text-white';
+            titre.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Import réussi !';
+            body.innerHTML = `
+                <p class="mb-3">${data.message}</p>
+                <div class="row g-2 text-center">
+                    <div class="col-4">
+                        <div class="p-2 bg-light rounded">
+                            <div class="fw-bold text-primary fs-4">${data.stats.armoires}</div>
+                            <div class="small text-muted">Armoires</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 bg-light rounded">
+                            <div class="fw-bold text-success fs-4">${data.stats.categories}</div>
+                            <div class="small text-muted">Catégories</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 bg-light rounded">
+                            <div class="fw-bold text-warning fs-4">${data.stats.objets}</div>
+                            <div class="small text-muted">Objets</div>
+                        </div>
+                    </div>
+                </div>
+                ${data.stats.ignores > 0 ? `<p class="text-muted small mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>${data.stats.ignores} éléments ignorés car déjà existants.</p>` : ''}
+            `;
+        } else {
+            header.className = 'modal-header bg-danger text-white';
+            titre.innerHTML = '<i class="bi bi-x-circle-fill me-2"></i>Erreur';
+            body.innerHTML = `<p class="text-danger mb-0">${data.error}</p>`;
+        }
+        modalResultat.show();
+    } catch (err) {
+        alert('Erreur technique lors de l\'import.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-download me-2"></i>Confirmer l\'import';
+        packIdEnCours = null;
+    }
+});
+</script>
+{% endblock %}

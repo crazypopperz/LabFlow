@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Fournisseurs - Scientral{% endblock %}
+
+{% block content %}
+
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-2">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 40px; height: 40px; background: linear-gradient(135deg, #0ba360 0%, #3cba92 100%);">
+                <!-- Début du SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" fill="currentColor">
+                    <path d="M280-160q-50 0-85-35t-35-85H60l18-80h113q17-19 40-29.5t49-10.5q26 0 49 10.5t40 29.5h167l84-360H182l4-17q6-28 27.5-45.5T264-800h456l-37 160h117l120 160-40 200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H400q0 50-35 85t-85 35Z"/>
+                </svg>
+                <!-- Fin du SVG -->
+            </div>
+            Gestion des Fournisseurs
+        </h2>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFournisseurModal">
+            <i class="bi bi-plus-lg me-2"></i> Ajouter un fournisseur
+        </button>
+    </div>
+
+    <!-- Tableau -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="table-responsive">
+            <table class="fournisseur-table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Logo</th>
+                        <th>Nom</th>
+                        <th>Site Web</th>
+                        <th class="text-end" style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if fournisseurs %}
+                        {% for item in fournisseurs %}
+                            <tr>
+                                <td>
+                                    <div class="fournisseur-logo-wrapper">
+                                        {% if item.Fournisseur.logo %}
+                                            <img src="{{ item.Fournisseur.logo }}" alt="{{ item.Fournisseur.nom }}" class="fournisseur-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                                            <i class="bi bi-image fournisseur-logo-placeholder" style="display: none;"></i>
+                                        {% else %}
+                                            <i class="bi bi-image fournisseur-logo-placeholder"></i>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong class="text-dark">{{ item.Fournisseur.nom }}</strong>
+                                </td>
+                                <td>
+                                    {% if item.Fournisseur.site_web %}
+                                        <a href="{{ item.Fournisseur.site_web }}" target="_blank" class="website-link">
+                                            <i class="bi bi-link-45deg"></i> Visiter le site
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <!-- Modifier -->
+                                    <button class="btn btn-sm btn-outline-primary btn-icon-only me-1"
+                                            title="Modifier"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#edit-fournisseur-modal"
+                                            data-id="{{ item.Fournisseur.id }}"
+                                            data-nom="{{ item.Fournisseur.nom }}"
+                                            data-site-web="{{ item.Fournisseur.site_web or '' }}"
+                                            data-logo="{{ item.Fournisseur.logo or '' }}">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">
+                                <i class="bi bi-shop display-4 d-block mb-3 opacity-25"></i>
+                                Aucun fournisseur enregistré.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% include '_modale_fournisseur_add.html' %}
+{% include '_modale_fournisseur_edit.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const editModal = document.getElementById('edit-fournisseur-modal');
+    if (editModal) {
+        editModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+            const form = document.getElementById('edit-fournisseur-form');
+            form.action = `/admin/fournisseurs/modifier/${button.dataset.id}`;
+            document.getElementById('edit_nom').value = button.dataset.nom;
+            document.getElementById('edit_site_web').value = button.dataset.siteWeb;
+            const urlInput = document.getElementById('edit_logo_url_input');
+            urlInput.value = (button.dataset.logo && button.dataset.logo.startsWith('http')) ? button.dataset.logo : '';
+        });
+    }
+});
+</script>
+{% endblock %}

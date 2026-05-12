@@ -93,13 +93,33 @@ function renderCartItems(items) {
         const dateObj = new Date(group.date);
         const dateFr = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
+        // Badge récurrence (depuis le premier item du groupe)
+        const recurrence = group.items[0]?.recurrence;
+        let recurrenceBadge = '';
+        if (recurrence) {
+            const labels = {
+                'hebdo': 'Chaque semaine',
+                'quotidien_ouvre': 'Chaque jour ouvré',
+                'bi_hebdo': 'Toutes les 2 semaines',
+                'mensuel': 'Chaque mois'
+            };
+            const limite = recurrence.date_fin 
+                ? `jusqu'au ${recurrence.date_fin}`
+                : `${recurrence.nb_occurrences} occurrences`;
+            recurrenceBadge = `
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-2">
+                    <i class="bi bi-arrow-repeat me-1"></i>${labels[recurrence.type] || recurrence.type} — ${limite}
+                </span>`;
+        }
+
         html += `
             <div class="card mb-3 border-0 shadow-sm overflow-hidden">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
-                    <div>
+                    <div class="d-flex align-items-center flex-wrap gap-2">
                         <strong class="text-primary text-capitalize"><i class="bi bi-calendar-event me-2"></i>${dateFr}</strong>
                         <span class="mx-2 text-muted">|</span>
                         <span class="fw-bold text-dark">${group.start} - ${group.end}</span>
+                        ${recurrenceBadge}
                     </div>
                 </div>
                 <div class="card-body p-0">

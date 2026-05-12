@@ -4,372 +4,1046 @@
 
 {% block content %}
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
+{% from "_page_header.html" import page_header %}
+{% call page_header(
+     title      = "Documentation",
+     subtitle   = "Guide complet d'utilisation de Scientral",
+     icon_class = "bi-book-fill",
+     icon_bg    = "#0d6efd",
+     breadcrumbs= breadcrumbs,
+) %}
+    <button onclick="window.print()" class="btn btn-outline-secondary d-none d-md-block">
+        <i class="bi bi-printer me-2"></i>Imprimer
+    </button>
+{% endcall %}
 
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
-        <div class="d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <i class="bi bi-book-half fs-3"></i>
+<div class="row g-5">
+
+    <!-- ═══════════════════════════════════════════
+         MENU LATÉRAL STICKY
+    ═══════════════════════════════════════════ -->
+    <div class="col-lg-3 d-none d-lg-block">
+        <nav class="doc-sidebar" id="doc-navbar">
+            <p class="doc-sidebar-label">GUIDE UTILISATEUR</p>
+            <nav class="nav flex-column">
+                <a class="doc-nav-link active" href="#section-intro">
+                    <i class="bi bi-house-fill"></i>Introduction
+                </a>
+                <a class="doc-nav-link" href="#section-inventaire">
+                    <i class="bi bi-box-seam-fill"></i>Inventaire
+                </a>
+                <a class="doc-nav-link" href="#section-reservation">
+                    <i class="bi bi-calendar-check-fill"></i>Réservations
+                </a>
+                <a class="doc-nav-link" href="#section-securite">
+                    <i class="bi bi-shield-check"></i>Sécurité
+                </a>
+                <a class="doc-nav-link" href="#section-budget">
+                    <i class="bi bi-wallet2"></i>Budget
+                </a>
+                <a class="doc-nav-link" href="#section-alertes">
+                    <i class="bi bi-bell-fill"></i>Alertes
+                </a>
+                <a class="doc-nav-link" href="#section-support">
+                    <i class="bi bi-life-preserver"></i>Support
+                </a>
+            </nav>
+
+            {% if session.user_role == 'admin' %}
+            <p class="doc-sidebar-label mt-4">ESPACE ADMINISTRATEUR</p>
+            <nav class="nav flex-column">
+                <a class="doc-nav-link" href="#section-admin">
+                    <i class="bi bi-gear-fill"></i>Administration
+                </a>
+                <a class="doc-nav-link" href="#section-tech">
+                    <i class="bi bi-code-slash"></i>Architecture
+                </a>
+            </nav>
+            {% endif %}
+
+            <!-- Carte contact rapide -->
+            <div class="doc-contact-card mt-4">
+                <p class="fw-bold mb-1 small">Besoin d'aide ?</p>
+                <p class="text-muted mb-2" style="font-size:0.75rem;">Notre équipe répond sous 24h.</p>
+                <a href="mailto:help.scientral@gmail.com" class="btn btn-sm btn-primary w-100">
+                    <i class="bi bi-envelope me-1"></i>Nous contacter
+                </a>
             </div>
-            <div>
-                <h1 class="h3 mb-0 fw-bold text-dark">Documentation Scientral</h1>
-                <p class="text-muted mb-0">Guide technique et fonctionnel complet</p>
-            </div>
-        </div>
-        <button onclick="window.print()" class="btn btn-outline-secondary d-none d-md-block">
-            <i class="bi bi-printer me-2"></i>Imprimer
-        </button>
+        </nav>
     </div>
 
-    <div class="row g-5">
-        <!-- MENU LATÉRAL (Sticky) -->
-        <div class="col-lg-3 d-none d-lg-block">
-            <nav id="doc-navbar" class="h-100 flex-column align-items-stretch pe-4 border-end position-sticky" style="top: 2rem;">
-                <nav class="nav nav-pills flex-column">
-                    <a class="nav-link active fw-bold mb-2" href="#section-intro">
-                        <i class="bi bi-info-circle me-2"></i>Introduction
-                    </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-tech">
-                        <i class="bi bi-code-slash me-2"></i>Architecture
-                    </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-inventaire">
-                        <i class="bi bi-box-seam me-2"></i>Inventaire
-                    </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-reservation">
-                        <i class="bi bi-calendar-check me-2"></i>Réservations
-                    </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-securite">
-                        <i class="bi bi-shield-check me-2"></i>Sécurité
-                    </a>
-                    <a class="nav-link fw-bold mb-2" href="#section-budget">
-                        <i class="bi bi-wallet2 me-2"></i>Budget
-                    </a>
-                    {% if session.user_role == 'admin' %}
-                    <a class="nav-link fw-bold mb-2" href="#section-admin">
-                        <i class="bi bi-gear-fill me-2"></i>Administration
-                    </a>
-                    {% endif %}
-                    <a class="nav-link fw-bold mb-2" href="#section-support">
-                        <i class="bi bi-life-preserver me-2"></i>Support & Dépannage
-                    </a>
-                </nav>
-            </nav>
-        </div>
+    <!-- ═══════════════════════════════════════════
+         CONTENU PRINCIPAL
+    ═══════════════════════════════════════════ -->
+    <div class="col-lg-9 doc-content">
+        <div data-bs-spy="scroll" data-bs-target="#doc-navbar" data-bs-smooth-scroll="true" tabindex="0">
 
-        <!-- CONTENU -->
-        <div class="col-lg-9">
-            <div data-bs-spy="scroll" data-bs-target="#doc-navbar" data-bs-smooth-scroll="true" tabindex="0">
-                
-                <!-- 1. INTRODUCTION -->
-                <section id="section-intro" class="mb-5">
-                    <h3 class="fw-bold text-dark mb-4">À propos de Scientral</h3>
-                    <p class="lead text-muted">
-                        Scientral est une solution SaaS de gestion de laboratoire scolaire (SVT/Physique-Chimie) conçue pour simplifier le quotidien des enseignants et des gestionnaires.
-                    </p>
-                    <div class="row g-3 mt-2">
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded bg-light h-100">
-                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Centralisation</h6>
-                                <p class="small mb-0">Tout votre matériel, vos produits et vos documents au même endroit.</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded bg-light h-100">
-                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Planification</h6>
-                                <p class="small mb-0">Un calendrier intuitif pour éviter les conflits de réservation.</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded bg-light h-100">
-                                <h6 class="fw-bold"><i class="bi bi-check-circle text-success me-2"></i>Sécurité</h6>
-                                <p class="small mb-0">Suivi rigoureux des maintenances et des produits dangereux.</p>
-                            </div>
-                        </div>
+
+            <!-- ─────────────────────────────────────
+                 1. INTRODUCTION
+            ───────────────────────────────────── -->
+            <section id="section-intro" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#0d6efd,#0dcaf0);">
+                        <i class="bi bi-house-fill"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Bienvenue sur Scientral</h2>
+                        <p class="doc-section-subtitle">Votre laboratoire scolaire, enfin organisé</p>
                     </div>
-                </section>
-
-                <hr class="my-5">
-
-                <!-- 2. ARCHITECTURE TECHNIQUE -->
-                <section id="section-tech" class="mb-5">
-                    <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-code-slash text-primary me-2"></i>Architecture Technique
-                    </h3>
-                    <p>Scientral est construit sur une stack technologique moderne et robuste, garantissant performance et sécurité.</p>
-                    
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-body">
-                            <h5 class="fw-bold mb-3">Le Cœur (Backend)</h5>
-                            <ul class="list-unstyled">
-                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>Python (Flask) :</strong> Le moteur de l'application. Léger, rapide et sécurisé.</li>
-                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>SQLAlchemy (ORM) :</strong> Gestion avancée de la base de données relationnelle.</li>
-                                <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>SQLite / PostgreSQL :</strong> Stockage des données (compatible cloud et local).</li>
-                            </ul>
-                        </div>
-                    </div>
-                </section>
-
-                <hr class="my-5">
-
-                <!-- 3. INVENTAIRE -->
-                <section id="section-inventaire" class="mb-5">
-                    <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-box-seam text-primary me-2"></i>Gestion de l'Inventaire
-                    </h3>
-                    
-                    <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden" id="accInventaire">
-                        <div class="accordion-item border-0 border-bottom">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv1">
-                                    Organisation (Armoires & Catégories)
-                                </button>
-                            </h2>
-                            <div id="inv1" class="accordion-collapse collapse show" data-bs-parent="#accInventaire">
-                                <div class="accordion-body text-muted">
-                                    L'inventaire est structuré par <strong>Armoires</strong> (localisation physique) et par <strong>Catégories</strong> (type de matériel). 
-                                    Vous pouvez créer autant d'armoires et de catégories que nécessaire via le menu "Gérer".
-                                </div>
-                            </div>
-                        </div>
-                        <div class="accordion-item border-0 border-bottom">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#inv2">
-                                    Fiches de Données de Sécurité (FDS)
-                                </button>
-                            </h2>
-                            <div id="inv2" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
-                                <div class="accordion-body text-muted">
-                                    Pour les produits chimiques, vous pouvez associer une FDS (PDF ou lien URL). 
-                                    Une icône <i class="bi bi-file-earmark-pdf text-danger"></i> apparaîtra dans la liste pour un accès rapide en cas d'urgence.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <hr class="my-5">
-
-                <!-- 4. RÉSERVATIONS -->
-                <section id="section-reservation" class="mb-5">
-                    <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-calendar-check text-success me-2"></i>Système de Réservation
-                    </h3>
-                    <p>Le module de réservation empêche les conflits de stock en temps réel.</p>
-                    
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm bg-light">
-                                <div class="card-body">
-                                    <h6 class="fw-bold">1. Le Panier</h6>
-                                    <p class="small text-muted mb-0">
-                                        Ajoutez des objets ou des kits à votre panier. Le système vérifie instantanément la disponibilité pour la date choisie.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm bg-light">
-                                <div class="card-body">
-                                    <h6 class="fw-bold">2. Le Calendrier</h6>
-                                    <p class="small text-muted mb-0">
-                                        Visualisez toutes les réservations sur une vue mensuelle ou journalière. Cliquez sur une réservation pour voir le détail ou la modifier.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <hr class="my-5">
-
-                <!-- 5. SÉCURITÉ -->
-                <section id="section-securite" class="mb-5">
-                    <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-shield-check text-danger me-2"></i>Sécurité & Maintenance
-                    </h3>
-                    <p>Ce module critique permet de suivre la conformité des équipements (Hottes, Extincteurs, Douches...).</p>
-
-                    <div class="alert alert-light border-start border-4 border-danger shadow-sm">
-                        <h6 class="fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Signalement d'incident</h6>
-                        <p class="small mb-0">
-                            Tout utilisateur peut signaler un dysfonctionnement via le bouton <strong>"Signaler"</strong>. 
-                            L'administrateur reçoit une alerte immédiate sur son tableau de bord et peut traiter la demande.
-                        </p>
-                    </div>
-                </section>
-
-                <hr class="my-5">
-
-                <!-- 6. BUDGET -->
-                <section id="section-budget" class="mb-5">
-                    <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-wallet2 text-info me-2"></i>Suivi Budgétaire
-                    </h3>
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                            <ul class="list-unstyled mb-0">
-                                <li class="mb-3">
-                                    <strong><i class="bi bi-check2 text-primary me-2"></i>Années Fiscales :</strong> 
-                                    Le budget est géré par année scolaire. Basculez d'une année à l'autre via le sélecteur.
-                                </li>
-                                <li class="mb-3">
-                                    <strong><i class="bi bi-check2 text-primary me-2"></i>Dépenses :</strong> 
-                                    Enregistrez vos commandes. Le solde restant est calculé en temps réel.
-                                </li>
-                                <li>
-                                    <strong><i class="bi bi-check2 text-primary me-2"></i>Clôture :</strong> 
-                                    En fin d'année, l'administrateur peut clôturer le budget pour figer les comptes (irréversible).
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </section>
-
-                <hr class="my-5">
-
-                <!-- 7. ADMINISTRATION -->
-                {% if session.user_role == 'admin' %}
-                <section id="section-admin" class="mb-5">
-                    <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-gear-fill text-secondary me-2"></i>Administration
-                    </h3>
-                    
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h5 class="fw-bold text-primary"><i class="bi bi-cloud-download me-2"></i>Sauvegardes</h5>
-                                    <p class="text-muted small">
-                                        Exportez toutes vos données (Inventaire, Historique, Paramètres) dans un fichier JSON sécurisé. 
-                                        <strong>C'est votre assurance vie :</strong> faites-le régulièrement.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-body">
-                                    <h5 class="fw-bold text-success"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Import Excel</h5>
-                                    <p class="text-muted small">
-                                        Ajoutez des centaines d'objets en une fois grâce au modèle Excel fourni. Idéal pour l'initialisation du laboratoire.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Focus Continuité -->
-                    <div class="card bg-light border-0 shadow-sm">
-                        <div class="card-body">
-                            <h5 class="fw-bold mb-3"><i class="bi bi-arrow-repeat me-2"></i>Continuité de Service (Changement de PC)</h5>
-                            <p class="small text-muted mb-2">
-                                Si vous devez changer d'ordinateur ou réinstaller l'application, suivez cette procédure pour ne rien perdre :
-                            </p>
-                            <ol class="small text-muted mb-0">
-                                <li>Sur l'ancien poste, allez dans <strong>Admin > Sauvegardes</strong> et cliquez sur "Télécharger la base".</li>
-                                <li>Installez Scientral sur le nouveau poste (créez un compte admin temporaire).</li>
-                                <li>Allez dans <strong>Admin > Sauvegardes</strong> et importez votre fichier JSON.</li>
-                                <li>Tout est restauré : vos données, vos comptes utilisateurs et votre <strong>Licence PRO</strong>.</li>
-                            </ol>
-                        </div>
-                    </div>
-                </section>
-                {% endif %}
-
-                <hr class="my-5">
-
-                <!-- 8. SUPPORT & DÉPANNAGE -->
-                <section id="section-support" class="mb-5">
-                    <h3 class="fw-bold text-dark mb-4">
-                        <i class="bi bi-life-preserver text-danger me-2"></i>Support & Dépannage
-                    </h3>
-
-                    <div class="accordion shadow-sm border-0 rounded-3 overflow-hidden mb-4" id="accSupport">
-                        
-                        <!-- Problème de Licence -->
-                        <div class="accordion-item border-0 border-bottom">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#sup1">
-                                    Ma licence PRO s'est désactivée, pourquoi ?
-                                </button>
-                            </h2>
-                            <div id="sup1" class="accordion-collapse collapse show" data-bs-parent="#accSupport">
-                                <div class="accordion-body text-muted">
-                                    La licence est liée à l'<strong>Identifiant unique de votre installation</strong> (Instance ID).
-                                    <br>Si vous changez d'ordinateur ou réinstallez l'application, cet identifiant change et la licence se désactive par sécurité.
-                                    <br><strong>Solution :</strong> Contactez le support en fournissant votre nouvel "Identifiant Instance" (visible dans la page À Propos) pour obtenir une nouvelle clé.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Bug Application -->
-                        <div class="accordion-item border-0">
-                            <h2 class="accordion-header">
-                                <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#sup2">
-                                    J'ai rencontré un bug ou une erreur
-                                </button>
-                            </h2>
-                            <div id="sup2" class="accordion-collapse collapse" data-bs-parent="#accSupport">
-                                <div class="accordion-body text-muted">
-                                    Si une page affiche une erreur ou ne fonctionne pas comme prévu :
-                                    <ol class="mb-0">
-                                        <li>Essayez de rafraîchir la page (F5).</li>
-                                        <li>Vérifiez que vous êtes bien connecté.</li>
-                                        <li>Si le problème persiste, contactez le support en décrivant l'action qui a provoqué l'erreur.</li>
-                                    </ol>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Carte Contact -->
-                    <div class="card border-0 bg-primary text-white shadow">
-                        <div class="card-body p-5 text-center">
-                            <h4 class="fw-bold mb-2">Besoin d'une assistance personnalisée ?</h4>
-                            <p class="opacity-75 mb-4">Notre équipe est là pour vous accompagner.</p>
-                            <a href="mailto:help.scientral@gmail.com" class="btn btn-light text-primary fw-bold px-5 rounded-pill shadow-sm">
-                                <i class="bi bi-envelope-fill me-2"></i>Contacter le support
-                            </a>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Footer Doc -->
-                <div class="text-center mt-5 pt-5 border-top text-muted">
-                    <p class="mb-1 fw-bold">Scientral v1.0</p>
-                    <small>Développé pour simplifier la gestion des laboratoires scolaires.</small>
                 </div>
 
+                <p class="doc-lead">
+                    Scientral est une application SaaS de gestion de laboratoire scolaire (SVT / Physique-Chimie) 
+                    conçue pour simplifier le quotidien des enseignants et des gestionnaires. Toutes vos données 
+                    sont centralisées, accessibles en un clic, et sécurisées dans le cloud.
+                </p>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="doc-feature-card">
+                            <div class="doc-feature-icon" style="background:#e0f2fe;color:#0369a1;">
+                                <i class="bi bi-boxes"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Centralisation</h6>
+                            <p class="small text-muted mb-0">Tout votre matériel, vos produits et vos documents au même endroit.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="doc-feature-card">
+                            <div class="doc-feature-icon" style="background:#dcfce7;color:#166534;">
+                                <i class="bi bi-calendar-check"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Planification</h6>
+                            <p class="small text-muted mb-0">Un calendrier intuitif pour éviter les conflits de réservation entre collègues.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="doc-feature-card">
+                            <div class="doc-feature-icon" style="background:#fee2e2;color:#991b1b;">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Sécurité</h6>
+                            <p class="small text-muted mb-0">Suivi rigoureux des maintenances réglementaires et des produits dangereux.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="doc-tip">
+                    <i class="bi bi-lightbulb-fill text-warning me-2"></i>
+                    <strong>Bon à savoir :</strong> Scientral fonctionne sur ordinateur, tablette et smartphone. 
+                    Aucune installation n'est requise — il suffit d'un navigateur web.
+                </div>
+            </section>
+
+
+            <!-- ─────────────────────────────────────
+                 2. INVENTAIRE
+            ───────────────────────────────────── -->
+            <section id="section-inventaire" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#0d6efd,#6366f1);">
+                        <i class="bi bi-box-seam-fill"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Gestion de l'Inventaire</h2>
+                        <p class="doc-section-subtitle">Organisez, suivez et gérez tout votre matériel</p>
+                    </div>
+                </div>
+
+                <p>L'inventaire est le cœur de Scientral. Il est structuré en deux niveaux : 
+                les <strong>Armoires</strong> (localisation physique) et les <strong>Catégories</strong> (type de matériel).</p>
+
+                <!-- Étapes clés -->
+                <div class="doc-steps mb-4">
+                    <div class="doc-step">
+                        <div class="doc-step-number">1</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Créez vos armoires et catégories</h6>
+                            <p class="small text-muted mb-0">Via le menu "Gérer les Armoires" et "Gérer les Catégories". 
+                            Vous pouvez en créer autant que nécessaire et y associer une photo.</p>
+                        </div>
+                    </div>
+                    <div class="doc-step">
+                        <div class="doc-step-number">2</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Ajoutez vos objets</h6>
+                            <p class="small text-muted mb-0">Depuis la page "Inventaire Complet", cliquez sur 
+                            <strong>+ Ajouter un matériel</strong>. Renseignez le nom, la quantité, le seuil d'alerte, 
+                            l'armoire et la catégorie.</p>
+                        </div>
+                    </div>
+                    <div class="doc-step">
+                        <div class="doc-step-number">3</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Suivez les stocks en temps réel</h6>
+                            <p class="small text-muted mb-0">Le tableau de bord affiche automatiquement les alertes 
+                            de stock bas et les produits à péremption proche.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion doc-accordion" id="accInventaire">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button fw-semibold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#inv1">
+                                <i class="bi bi-archive me-2 text-primary"></i>
+                                Organisation par Armoires & Catégories
+                            </button>
+                        </h2>
+                        <div id="inv1" class="accordion-collapse collapse show" data-bs-parent="#accInventaire">
+                            <div class="accordion-body">
+                                <p class="text-muted">L'inventaire est structuré par <strong>Armoires</strong> 
+                                (localisation physique) et par <strong>Catégories</strong> (type de matériel). 
+                                Vous pouvez créer autant d'armoires et de catégories que nécessaire via le menu "Gérer".</p>
+                                <p class="text-muted mb-0">Chaque armoire peut avoir une photo pour faciliter 
+                                l'identification visuelle. Cliquez sur une armoire pour voir tous les objets qu'elle contient.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#inv2">
+                                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                                Fiches de Données de Sécurité (FDS)
+                            </button>
+                        </h2>
+                        <div id="inv2" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
+                            <div class="accordion-body">
+                                <p class="text-muted">Pour les produits chimiques, vous pouvez associer une FDS 
+                                (PDF ou lien URL). Une icône 
+                                <i class="bi bi-file-earmark-pdf text-danger"></i> apparaîtra dans la liste 
+                                pour un accès rapide en cas d'urgence.</p>
+                                <p class="text-muted mb-0">Les FDS sont consultables directement depuis la fiche 
+                                de l'objet, sans avoir à chercher dans des dossiers papier.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#inv3">
+                                <i class="bi bi-box-seam me-2 text-primary"></i>
+                                Kits de Matériel
+                            </button>
+                        </h2>
+                        <div id="inv3" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
+                            <div class="accordion-body">
+                                <p class="text-muted">Les kits permettent de regrouper plusieurs objets sous 
+                                un même nom (ex: "Kit dissection CM2"). Lors d'une réservation, 
+                                réservez le kit en une seule action plutôt que chaque objet individuellement.</p>
+                                <p class="text-muted mb-0">Les kits sont créés et gérés par l'administrateur 
+                                depuis le panneau d'administration.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#inv4">
+                                <i class="bi bi-search me-2 text-primary"></i>
+                                Recherche et Filtres
+                            </button>
+                        </h2>
+                        <div id="inv4" class="accordion-collapse collapse" data-bs-parent="#accInventaire">
+                            <div class="accordion-body">
+                                <p class="text-muted">La barre de recherche globale (en haut de chaque page) 
+                                permet de trouver n'importe quel objet par son nom ou son code-barre.</p>
+                                <p class="text-muted mb-0">Sur la page Inventaire, des filtres supplémentaires 
+                                permettent de trier par armoire, catégorie ou état (stock bas, périmé...).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778446998/scientral/doc/inventaire_fiche.png" alt="Fiche détail d'un objet" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+            </section>
+
+
+            <!-- ─────────────────────────────────────
+                 3. RÉSERVATIONS
+            ───────────────────────────────────── -->
+            <section id="section-reservation" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#7c3aed,#a855f7);">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Système de Réservation</h2>
+                        <p class="doc-section-subtitle">Planifiez sans conflits, collaborez efficacement</p>
+                    </div>
+                </div>
+
+                <p>Le module de réservation empêche les conflits de stock en temps réel. 
+                Lorsque vous réservez un objet pour une date donnée, il est automatiquement 
+                indisponible pour vos collègues sur cette période.</p>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="doc-feature-card h-100">
+                            <div class="doc-feature-icon" style="background:#ede9fe;color:#6d28d9;">
+                                <i class="bi bi-cart-fill"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Le Panier</h6>
+                            <p class="small text-muted mb-0">Ajoutez des objets ou des kits à votre panier. 
+                            Le système vérifie instantanément la disponibilité pour la date choisie 
+                            et vous alerte en cas de conflit.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="doc-feature-card h-100">
+                            <div class="doc-feature-icon" style="background:#ede9fe;color:#6d28d9;">
+                                <i class="bi bi-calendar-month"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Le Calendrier</h6>
+                            <p class="small text-muted mb-0">Visualisez toutes les réservations sur une vue 
+                            mensuelle ou journalière. Cliquez sur un jour pour voir le détail 
+                            de toutes les réservations.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778446996/scientral/doc/calendrier_mois.png" alt="Calendrier de réservation" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+                <div class="doc-steps mb-4">
+                    <div class="doc-step">
+                        <div class="doc-step-number" style="background:#7c3aed;">1</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Depuis l'inventaire, cliquez sur "Réserver"</h6>
+                            <p class="small text-muted mb-0">Sur la fiche d'un objet, le bouton 
+                            "Ajouter au panier" vous permet de le réserver pour une date précise.</p>
+                        </div>
+                    </div>
+                    <div class="doc-step">
+                        <div class="doc-step-number" style="background:#7c3aed;">2</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Choisissez vos créneaux</h6>
+                            <p class="small text-muted mb-0">Définissez la date, l'heure de début et 
+                            de fin, et la salle si nécessaire. Le système vérifie la disponibilité 
+                            en temps réel.</p>
+                        </div>
+                    </div>
+                    <div class="doc-step">
+                        <div class="doc-step-number" style="background:#7c3aed;">3</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Validez votre réservation</h6>
+                            <p class="small text-muted mb-0">Une confirmation apparaît et votre 
+                            réservation est visible sur le calendrier partagé. 
+                            Vous la retrouverez aussi dans "Mes Réservations" sur le tableau de bord.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778446999/scientral/doc/panier.png" alt="Panier de réservation" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+                <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778447001/scientral/doc/vue_jour.png" alt="Vue du jour" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+                <div class="doc-tip">
+                    <i class="bi bi-info-circle-fill text-primary me-2"></i>
+                    <strong>Astuce :</strong> Utilisez les <strong>Kits</strong> pour réserver 
+                    en un clic tout le matériel nécessaire à un TP, plutôt que d'ajouter 
+                    chaque objet un par un.
+                </div>
+            </section>
+
+
+            <!-- ─────────────────────────────────────
+                 4. SÉCURITÉ & MAINTENANCE
+            ───────────────────────────────────── -->
+            <section id="section-securite" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#059669,#10b981);">
+                        <i class="bi bi-shield-check"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Sécurité & Maintenance</h2>
+                        <p class="doc-section-subtitle">Conformité réglementaire et suivi des équipements</p>
+                    </div>
+                </div>
+
+                <p>Ce module critique permet de suivre la conformité des équipements 
+                (Hottes, Extincteurs, Douches de sécurité, Trousses de secours...) 
+                et d'enregistrer les interventions de maintenance.</p>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="doc-feature-card text-center">
+                            <div class="doc-feature-icon mx-auto" style="background:#dcfce7;color:#166534;">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Suivi des contrôles</h6>
+                            <p class="small text-muted mb-0">Enregistrez chaque vérification 
+                            avec date, résultat et intervenant.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="doc-feature-card text-center">
+                            <div class="doc-feature-icon mx-auto" style="background:#fef9c3;color:#854d0e;">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Alertes automatiques</h6>
+                            <p class="small text-muted mb-0">Recevez une alerte dès qu'un 
+                            équipement approche de sa date de contrôle.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="doc-feature-card text-center">
+                            <div class="doc-feature-icon mx-auto" style="background:#fee2e2;color:#991b1b;">
+                                <i class="bi bi-flag-fill"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Signalement incident</h6>
+                            <p class="small text-muted mb-0">Tout utilisateur peut signaler 
+                            un dysfonctionnement en temps réel.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778447000/scientral/doc/securite_liste.png" alt="Liste des équipements de sécurité" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+                <div class="alert doc-alert-danger">
+                    <h6 class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Signalement d'incident</h6>
+                    <p class="small mb-0">
+                        Tout utilisateur peut signaler un dysfonctionnement via le bouton <strong>"Signaler"</strong> 
+                        sur la fiche d'un équipement. L'administrateur reçoit une alerte immédiate sur son 
+                        tableau de bord et peut traiter la demande depuis le panneau d'administration.
+                    </p>
+                </div>
+            </section>
+
+
+            <!-- ─────────────────────────────────────
+                 5. BUDGET
+            ───────────────────────────────────── -->
+            <section id="section-budget" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#0891b2,#06b6d4);">
+                        <i class="bi bi-wallet2"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Suivi Budgétaire</h2>
+                        <p class="doc-section-subtitle">Gérez les dépenses de votre laboratoire par année scolaire</p>
+                    </div>
+                </div>
+
+                <p>Le module budgétaire permet à l'administrateur de définir un budget annuel 
+                et d'enregistrer toutes les dépenses au fil de l'année scolaire.</p>
+
+                <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778446996/scientral/doc/budget_page.png" alt="Page de suivi budgétaire" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-0">
+                                <table class="table table-borderless mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Fonctionnalité</th>
+                                            <th>Description</th>
+                                            <th>Accès</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="ps-4"><i class="bi bi-calendar3 text-primary me-2"></i><strong>Années scolaires</strong></td>
+                                            <td class="text-muted small">Budget géré par année. Basculez via le sélecteur.</td>
+                                            <td><span class="badge bg-danger-subtle text-danger">Admin</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-4"><i class="bi bi-plus-circle text-success me-2"></i><strong>Dépenses</strong></td>
+                                            <td class="text-muted small">Enregistrez vos commandes. Solde mis à jour en temps réel.</td>
+                                            <td><span class="badge bg-danger-subtle text-danger">Admin</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-4"><i class="bi bi-eye text-info me-2"></i><strong>Consultation</strong></td>
+                                            <td class="text-muted small">Tous les utilisateurs peuvent consulter le budget.</td>
+                                            <td><span class="badge bg-success-subtle text-success">Tous</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-4"><i class="bi bi-download text-warning me-2"></i><strong>Export</strong></td>
+                                            <td class="text-muted small">Exportez les dépenses en CSV ou Excel.</td>
+                                            <td><span class="badge bg-success-subtle text-success">Tous</span></td>
+                                        </tr>
+                                        <tr class="border-top">
+                                            <td class="ps-4"><i class="bi bi-lock-fill text-danger me-2"></i><strong>Clôture</strong></td>
+                                            <td class="text-muted small">Fige les comptes en fin d'année. Action irréversible.</td>
+                                            <td><span class="badge bg-danger-subtle text-danger">Admin</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="doc-tip">
+                    <i class="bi bi-calendar-event-fill text-info me-2"></i>
+                    <strong>Clôture annuelle :</strong> En fin d'année scolaire, l'administrateur peut 
+                    clôturer le budget pour figer les comptes. Cette action est <strong>irréversible</strong> — 
+                    assurez-vous que toutes les dépenses sont bien enregistrées avant de procéder.
+                </div>
+            </section>
+
+
+            <!-- ─────────────────────────────────────
+                 6. ALERTES
+            ───────────────────────────────────── -->
+            <section id="section-alertes" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#d97706,#f59e0b);">
+                        <i class="bi bi-bell-fill"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Alertes & Suggestions</h2>
+                        <p class="doc-section-subtitle">Restez informé, anticipez les manques</p>
+                    </div>
+                </div>
+
+                <p>Scientral surveille en permanence vos stocks et vous alerte automatiquement 
+                dès qu'une action est nécessaire.</p>
+
+                <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778446994/scientral/doc/alertes_page.png" alt="Page des alertes et suggestions" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="doc-feature-card h-100">
+                            <div class="doc-feature-icon" style="background:#fef3c7;color:#92400e;">
+                                <i class="bi bi-exclamation-octagon-fill"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Stock bas</h6>
+                            <p class="small text-muted mb-0">Lorsque la quantité d'un objet passe 
+                            sous son seuil d'alerte, une notification apparaît sur l'icône 
+                            de cloche dans le header.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="doc-feature-card h-100">
+                            <div class="doc-feature-icon" style="background:#fee2e2;color:#991b1b;">
+                                <i class="bi bi-calendar-x-fill"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Péremption proche</h6>
+                            <p class="small text-muted mb-0">Les produits dont la date de 
+                            péremption approche (moins de 30 jours) sont signalés 
+                            en orange dans l'inventaire.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="doc-feature-card h-100">
+                            <div class="doc-feature-icon" style="background:#ede9fe;color:#6d28d9;">
+                                <i class="bi bi-cart-plus-fill"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Suggestions de réapprovisionnement</h6>
+                            <p class="small text-muted mb-0">Les utilisateurs peuvent suggérer 
+                            un réapprovisionnement depuis la fiche d'un objet. 
+                            L'admin traite les demandes depuis le tableau de bord.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="doc-feature-card h-100">
+                            <div class="doc-feature-icon" style="background:#dcfce7;color:#166534;">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <h6 class="fw-bold mb-1">Échéances réglementaires</h6>
+                            <p class="small text-muted mb-0">Les prochaines échéances 
+                            (vérifications, renouvellements...) sont affichées 
+                            sur le tableau de bord avec un compte à rebours.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ─────────────────────────────────────
+                 7. SUPPORT
+            ───────────────────────────────────── -->
+            <section id="section-support" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#dc2626,#ef4444);">
+                        <i class="bi bi-life-preserver"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Support & Dépannage</h2>
+                        <p class="doc-section-subtitle">Nous sommes là pour vous aider</p>
+                    </div>
+                </div>
+
+                <div class="accordion doc-accordion mb-4" id="accSupport">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button fw-semibold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#sup1">
+                                <i class="bi bi-star-fill text-warning me-2"></i>
+                                Ma licence PRO s'est désactivée, pourquoi ?
+                            </button>
+                        </h2>
+                        <div id="sup1" class="accordion-collapse collapse show" data-bs-parent="#accSupport">
+                            <div class="accordion-body text-muted">
+                                La licence est liée à l'<strong>Identifiant unique de votre installation</strong> 
+                                (Instance ID). Si vous changez d'ordinateur ou réinstallez l'application, 
+                                cet identifiant change et la licence se désactive par sécurité.
+                                <br><br>
+                                <strong>Solution :</strong> Contactez le support en fournissant votre nouvel 
+                                "Identifiant Instance" (visible dans la page <a href="{{ url_for('main.a_propos') }}#etat-systeme">À Propos</a>) 
+                                pour obtenir une nouvelle clé d'activation.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#sup2">
+                                <i class="bi bi-bug-fill text-danger me-2"></i>
+                                J'ai rencontré un bug ou une erreur
+                            </button>
+                        </h2>
+                        <div id="sup2" class="accordion-collapse collapse" data-bs-parent="#accSupport">
+                            <div class="accordion-body text-muted">
+                                Si une page affiche une erreur ou ne fonctionne pas comme prévu :
+                                <ol class="mb-0 mt-2">
+                                    <li>Essayez de rafraîchir la page (F5).</li>
+                                    <li>Vérifiez que vous êtes bien connecté.</li>
+                                    <li>Videz le cache de votre navigateur (Ctrl+Shift+Delete).</li>
+                                    <li>Si le problème persiste, contactez le support en décrivant 
+                                    précisément l'action qui a provoqué l'erreur.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#sup3">
+                                <i class="bi bi-person-x-fill text-warning me-2"></i>
+                                Je n'arrive pas à me connecter
+                            </button>
+                        </h2>
+                        <div id="sup3" class="accordion-collapse collapse" data-bs-parent="#accSupport">
+                            <div class="accordion-body text-muted">
+                                <ul class="mb-0">
+                                    <li>Vérifiez que vous utilisez la bonne adresse email.</li>
+                                    <li>Utilisez le lien <strong>"Mot de passe oublié"</strong> sur la page de connexion.</li>
+                                    <li>Si vous n'avez pas reçu l'email de réinitialisation, vérifiez vos spams.</li>
+                                    <li>Si votre compte a été désactivé, contactez votre administrateur.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#sup4">
+                                <i class="bi bi-phone-fill text-primary me-2"></i>
+                                L'application ne s'affiche pas bien sur mobile
+                            </button>
+                        </h2>
+                        <div id="sup4" class="accordion-collapse collapse" data-bs-parent="#accSupport">
+                            <div class="accordion-body text-muted">
+                                Scientral est conçu pour fonctionner sur tous les appareils. 
+                                Si l'affichage est incorrect :
+                                <ul class="mb-0 mt-2">
+                                    <li>Assurez-vous d'utiliser un navigateur récent (Chrome, Safari, Firefox).</li>
+                                    <li>Essayez de vider le cache de votre navigateur mobile.</li>
+                                    <li>Sur iPhone, ajoutez l'application à votre écran d'accueil pour 
+                                    une expérience optimale.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte contact -->
+                <div class="doc-contact-banner">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div style="width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="bi bi-headset" style="font-size:1.5rem;color:white;"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-white">Besoin d'une assistance personnalisée ?</h5>
+                            <p class="mb-0 text-white opacity-75 small">Notre équipe répond sous 24h.</p>
+                        </div>
+                    </div>
+                    <a href="mailto:help.scientral@gmail.com" class="btn btn-light fw-bold px-4">
+                        <i class="bi bi-envelope-fill me-2"></i>Contacter le support
+                    </a>
+                </div>
+            </section>
+
+
+            <!-- ─────────────────────────────────────
+                 8. ADMINISTRATION (ADMIN ONLY)
+            ───────────────────────────────────── -->
+            {% if session.user_role == 'admin' %}
+            <section id="section-admin" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#991b1b,#dc2626);">
+                        <i class="bi bi-gear-fill"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Administration</h2>
+                        <p class="doc-section-subtitle">Outils réservés aux administrateurs</p>
+                    </div>
+                </div>
+
+                <div class="doc-admin-badge mb-4">
+                    <i class="bi bi-shield-lock-fill me-2"></i>
+                    Cette section est réservée aux utilisateurs avec le rôle <strong>Administrateur</strong>.
+                </div>
+
+                <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778446992/scientral/doc/admin_dashboard.png" alt="Panneau d'administration" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+                <img src="https://res.cloudinary.com/dp0w3aqcq/image/upload/v1778446993/scientral/doc/admin_utilisateurs.png" alt="Gestion des utilisateurs" style="width:100%;border-radius:10px;border:1px solid #e2e8f0;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin:1rem 0;" loading="lazy">
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <h5 class="fw-bold text-primary mb-3">
+                                    <i class="bi bi-cloud-download me-2"></i>Sauvegardes
+                                </h5>
+                                <p class="text-muted small">
+                                    Exportez toutes vos données (Inventaire, Historique, Paramètres) 
+                                    dans un fichier JSON sécurisé. 
+                                    <strong>C'est votre assurance vie : faites-le régulièrement.</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <h5 class="fw-bold text-success mb-3">
+                                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>Import Excel
+                                </h5>
+                                <p class="text-muted small">
+                                    Ajoutez des centaines d'objets en une fois grâce au modèle Excel fourni. 
+                                    Idéal pour l'initialisation du laboratoire.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-light border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3">
+                            <i class="bi bi-arrow-repeat me-2"></i>Continuité de Service (Changement de PC)
+                        </h5>
+                        <p class="small text-muted mb-2">
+                            Si vous devez changer d'ordinateur ou réinstaller l'application, 
+                            suivez cette procédure pour ne rien perdre :
+                        </p>
+                        <ol class="small text-muted mb-0">
+                            <li>Sur l'ancien poste, allez dans <strong>Admin › Sauvegardes</strong> et cliquez sur "Télécharger la base".</li>
+                            <li>Installez Scientral sur le nouveau poste (créez un compte admin temporaire).</li>
+                            <li>Allez dans <strong>Admin › Sauvegardes</strong> et importez votre fichier JSON.</li>
+                            <li>Tout est restauré : vos données, vos comptes utilisateurs et votre <strong>Licence PRO</strong>.</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ─────────────────────────────────────
+                 9. ARCHITECTURE (ADMIN ONLY)
+            ───────────────────────────────────── -->
+            <section id="section-tech" class="doc-section">
+                <div class="doc-section-header">
+                    <span class="doc-section-icon" style="background:linear-gradient(135deg,#374151,#6b7280);">
+                        <i class="bi bi-code-slash"></i>
+                    </span>
+                    <div>
+                        <h2 class="doc-section-title">Architecture Technique</h2>
+                        <p class="doc-section-subtitle">Pour les curieux et les intégrateurs</p>
+                    </div>
+                </div>
+
+                <div class="doc-admin-badge mb-4">
+                    <i class="bi bi-shield-lock-fill me-2"></i>
+                    Cette section est destinée aux administrateurs techniques.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <h5 class="fw-bold mb-3">Backend</h5>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>Python / Flask :</strong> Moteur applicatif léger et sécurisé.</li>
+                                    <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>SQLAlchemy :</strong> ORM pour la gestion des données relationnelles.</li>
+                                    <li class="mb-2"><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>PostgreSQL :</strong> Base de données hébergée sur Neon (cloud).</li>
+                                    <li><i class="bi bi-caret-right-fill text-primary me-2"></i><strong>Flask-Mail :</strong> Envoi des emails de réinitialisation.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <h5 class="fw-bold mb-3">Infrastructure & Services</h5>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2"><i class="bi bi-caret-right-fill text-success me-2"></i><strong>Render :</strong> Hébergement de l'application (PaaS).</li>
+                                    <li class="mb-2"><i class="bi bi-caret-right-fill text-success me-2"></i><strong>Neon :</strong> Base de données PostgreSQL serverless.</li>
+                                    <li class="mb-2"><i class="bi bi-caret-right-fill text-success me-2"></i><strong>Cloudinary :</strong> Stockage et CDN des images et documents.</li>
+                                    <li><i class="bi bi-caret-right-fill text-success me-2"></i><strong>Bootstrap 5.3 :</strong> Framework CSS frontend.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+
+            <!-- Footer doc -->
+            <div class="doc-footer">
+                <p class="fw-bold mb-1">Scientral</p>
+                <small>Développé avec ❤️ pour simplifier la gestion des laboratoires scolaires.</small>
             </div>
+
         </div>
     </div>
 </div>
+</div>
 
 <style>
-    /* Style spécifique pour la navigation latérale */
-    #doc-navbar .nav-link {
-        color: #64748b;
-        border-radius: 8px;
-        padding: 10px 15px;
-        transition: all 0.2s;
-    }
-    #doc-navbar .nav-link:hover {
-        background-color: #f1f5f9;
-        color: #1e293b;
-    }
-    #doc-navbar .nav-link.active {
-        background-color: #e0e7ff;
-        color: #4f46e5;
-    }
-    
-    /* Impression propre */
-    @media print {
-        .col-lg-3, .btn, header, footer { display: none !important; }
-        .col-lg-9 { width: 100% !important; }
-        .main-container { padding: 0 !important; }
-        .card { border: 1px solid #ddd !important; box-shadow: none !important; }
-    }
+/* ═══════════════════════════════════════════
+   DOCUMENTATION — Styles spécifiques
+═══════════════════════════════════════════ */
+
+/* Sidebar */
+.doc-sidebar {
+    position: sticky;
+    top: 1.5rem;
+}
+
+.doc-sidebar-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    padding-left: 0.75rem;
+}
+
+.doc-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+    margin-bottom: 2px;
+}
+
+.doc-nav-link i { font-size: 0.85rem; width: 16px; }
+.doc-nav-link:hover { background: #f1f5f9; color: #1e293b; }
+.doc-nav-link.active { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+
+.doc-contact-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1rem;
+}
+
+/* Sections */
+.doc-section {
+    margin-bottom: 3rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.doc-section:last-child { border-bottom: none; }
+
+.doc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 1.5rem;
+}
+
+.doc-section-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.doc-section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.25;
+}
+
+.doc-section-subtitle {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 2px 0 0 0;
+}
+
+.doc-lead {
+    font-size: 1rem;
+    color: #475569;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+}
+
+/* Feature cards */
+.doc-feature-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1rem;
+    transition: box-shadow 0.2s;
+}
+
+.doc-feature-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+
+.doc-feature-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+}
+
+/* Steps */
+.doc-steps { display: flex; flex-direction: column; gap: 0; }
+
+.doc-step {
+    display: flex;
+    gap: 16px;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.doc-step:last-child { border-bottom: none; }
+
+.doc-step-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #1f3b73;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* Tip */
+.doc-tip {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 4px solid #0284c7;
+    border-radius: 8px;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    color: #0c4a6e;
+    margin-top: 1rem;
+}
+
+/* Alert danger */
+.doc-alert-danger {
+    background: #fff5f5;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #dc2626;
+    border-radius: 8px;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    color: #7f1d1d;
+}
+
+/* Accordion */
+.doc-accordion .accordion-item {
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    border-radius: 0 !important;
+}
+
+.doc-accordion .accordion-button {
+    font-size: 0.9rem;
+    background: transparent;
+    color: #1e293b;
+    padding: 1rem 1.25rem;
+    box-shadow: none;
+}
+
+.doc-accordion .accordion-button:not(.collapsed) {
+    color: #1d4ed8;
+    background: transparent;
+}
+
+.doc-accordion .accordion-button::after {
+    filter: none;
+}
+
+.doc-accordion .accordion-body {
+    padding: 0.5rem 1.25rem 1.25rem 1.25rem;
+    font-size: 0.875rem;
+}
+
+/* Admin badge */
+.doc-admin-badge {
+    display: inline-flex;
+    align-items: center;
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #9f1239;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Contact banner */
+.doc-contact-banner {
+    background: linear-gradient(135deg, #1f3b73 0%, #2d4f8f 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+/* Footer */
+.doc-footer {
+    text-align: center;
+    padding: 2rem 0;
+    color: #94a3b8;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 2rem;
+}
+
+/* Print */
+@media print {
+    .col-lg-3, .btn, header, footer, .doc-sidebar { display: none !important; }
+    .col-lg-9 { width: 100% !important; }
+    .main-container { padding: 0 !important; }
+    .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .doc-section-title { font-size: 1.1rem; }
+    .doc-contact-banner { padding: 1rem; }
+}
 </style>
+
 {% endblock %}

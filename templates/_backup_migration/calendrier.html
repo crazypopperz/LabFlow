@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Calendrier de Réservation{% endblock %}
+{% block content %}
+    <div class="main-container">
+        {% include '_breadcrumb.html' %}
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+			<h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+				<!-- Icône Calendrier (Orange) -->
+				<div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+					 style="width: 48px; height: 48px; background: linear-gradient(135deg, #fd7e14 0%, #fcc419 100%);">
+					<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" class="bi bi-calendar2-week-fill" viewBox="0 0 16 16">
+						<path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5m9.954 3H2.545c-.3 0-.545.224-.545.5v1c0 .276.244.5.545.5h10.91c.3 0 .545-.224.545-.5v-1c0-.276-.244-.5-.546-.5M8.5 7a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm3 0a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zM3 10.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5m3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/>
+					</svg>
+				</div>
+				<span class="fw-bold">Calendrier de Réservation</span>
+			</h2>
+			
+			<!-- (Si tu as des boutons d'action pour le calendrier, ils vont ici) -->
+		</div>
+			<div id="calendrier-container" class="content-card">
+				<div class="calendrier-header">
+					<button id="prev-month-btn" class="btn btn-primary btn-sm">&lt; Précédent</button>
+					<h3 id="current-month-year"></h3>
+					<button id="next-month-btn" class="btn btn-primary btn-sm">Suivant &gt;</button>
+				</div>
+				<div class="calendrier-grid"></div>
+			</div>
+		</div>
+    <div id="reservation-tooltip" class="tooltip"></div>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/modules/calendar-monthly.js') }}" type="module"></script>
+{% endblock %}

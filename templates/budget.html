@@ -5,32 +5,27 @@
 {% block content %}
 
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
+{% from "_page_header.html" import page_header %}
+{{ page_header(
+     title      = "Suivi Budgétaire",
+         subtitle   = "Consultez et gérez le budget de l'établissement",
+         icon_class = "bi-cash-stack",
+         icon_bg    = "#198754",
+         breadcrumbs= breadcrumbs,
+) }}
 
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-            <!-- Icône Euro (Harmonisée avec Dashboard) -->
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%);">
-                <!-- SVG Euro -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
-                    <path d="M600-120q-118 0-210-67T260-360H120v-80h122q-2-11-2-20v-40q0-9 2-20H120v-80h140q38-106 130-173t210-67q69 0 130.5 24T840-748l-70 70q-35-29-78.5-45.5T600-740q-75 0-136.5 38.5T370-600h230v80H344q-2 11-3 20t-1 20q0 11 1 20t3 20h256v80H370q32 63 93.5 101.5T600-220q48 0 92.5-16.5T770-282l70 70q-48 44-109.5 68T600-120Z"/>
-                </svg>
-            </div>
-            <span class="fw-bold">Suivi Budgétaire</span>
-        </h2>
-    </div>
 
     <div class="row g-4">
         <!-- COLONNE GAUCHE : Synthèse & Actions -->
         <div class="col-lg-4">
             <!-- Carte Synthèse -->
             <div class="budget-summary-card mb-4">
-                <h5 class="d-flex align-items-center gap-2 mb-3 text-dark fw-bold">
-                    <i class="bi bi-pie-chart-fill text-primary"></i>
-                    Synthèse {{ annee_selectionnee | annee_scolaire }}
-                </h5>
+                <div class="budget-card-header">
+                    <div class="budget-card-header-icon">
+                        <i class="bi bi-pie-chart-fill"></i>
+                    </div>
+                    <h5 class="budget-card-header-title">Synthèse {{ annee_selectionnee | annee_scolaire }}</h5>
+                </div>
                 
                 {% if budget_affiche %}
                     <ul class="budget-stat-list">
@@ -160,8 +155,13 @@
         <!-- COLONNE DROITE : Tableau Dépenses -->
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm rounded-3 overflow-hidden h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-dark fw-bold">Détail des Dépenses</h5>
+                <div class="card-header py-3 d-flex justify-content-between align-items-center budget-card-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="budget-card-header-icon">
+                            <i class="bi bi-list-ul"></i>
+                        </div>
+                        <h5 class="budget-card-header-title mb-0">Détail des Dépenses</h5>
+                    </div>
                     
                     <!-- Sélecteur d'année -->
                     {% if budgets_archives %}

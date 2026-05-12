@@ -6,21 +6,15 @@
 
 
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
+{% from "_page_header.html" import page_header %}
+{{ page_header(
+     title      = "Import de Données",
+     subtitle   = "Importez vos données depuis un fichier",
+     icon_class = "bi-file-earmark-arrow-up-fill",
+     icon_bg    = "#991b1b",
+     breadcrumbs= breadcrumbs,
+) }}
 
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-            <!-- Icône Import (Indigo) -->
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 -960 960 960">
-                    <path d="M240-160q-33 0-56.5-23.5T160-240v-480q0-33 23.5-56.5T240-800h360l160 160v400q0 33-23.5 56.5T720-160H240Zm0-80h480v-360H560v-120H240v480Z"/>
-                </svg>
-            </div>
-            <span class="fw-bold">Importation en Masse</span>
-        </h2>
-    </div>
 
     <div class="row g-4">
         

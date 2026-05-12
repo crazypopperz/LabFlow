@@ -84,3 +84,20 @@
         text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
     }
 .btn-dashboard:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(31, 59, 115, 0.3); color: white; }
+/* === DOCUMENTATION — Typo unifiée === */
+.doc-content,
+.doc-content p,
+.doc-content .lead,
+.doc-content h3,
+.doc-content h6,
+.doc-content li,
+.doc-content .accordion-body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.doc-content .lead {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #64748b;
+    line-height: 1.7;
+}

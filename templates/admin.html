@@ -3,81 +3,18 @@
 
 {% block content %}
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
-    
-    <!-- En-tête principal -->
-    <div class="admin-hero">
-        <div class="admin-hero-content">
-            <div class="admin-hero-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="48px">
-                    <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Z"/>
-                </svg>
-            </div>
-            <div>
-                <h1 class="admin-hero-title">Panneau d'Administration</h1>
-                <p class="admin-hero-subtitle">Gérez et configurez votre application Scientral</p>
-            </div>
-        </div>
-		
-		<!-- Code d'invitation de l'établissement -->
-		<div class="alert alert-info shadow-sm">
-			<div class="d-flex align-items-center mb-2">
-				<i class="bi bi-ticket-perforated-fill fs-4 me-2"></i>
-				<h5 class="mb-0">Code d'invitation de votre établissement</h5>
-			</div>
-			<p class="mb-2">Partagez ce code avec vos collègues pour qu'ils rejoignent <strong>{{ session.nom_etablissement }}</strong> :</p>
-			<div class="input-group">
-				<input type="text" 
-					   class="form-control form-control-lg text-center fw-bold" 
-					   id="codeInvitation"
-					   value="{{ etablissement.code_invitation }}" 
-					   readonly
-					   style="font-family: monospace; font-size: 1.75rem; letter-spacing: 0.1em; background: #f8f9fa;">
-				<button class="btn btn-primary btn-lg" onclick="copierCode()" type="button">
-					<i class="bi bi-clipboard me-1"></i> Copier
-				</button>
-			</div>
-			<small class="text-muted d-block mt-2">
-				<i class="bi bi-info-circle me-1"></i>
-				Ce code permet à quiconque le possède de créer un compte dans votre établissement
-			</small>
-		</div>
+{% from "_page_header.html" import page_header %}
+{% call page_header(
+     title      = "Panneau d'Administration",
+     subtitle   = "Gérez et configurez votre application Scientral",
+     icon_class = "bi-speedometer2",
+     icon_bg    = "#991b1b",
+     breadcrumbs= breadcrumbs,
+) %}
+{% endcall %}
 
-		<script>
-		function copierCode() {
-			const input = document.getElementById('codeInvitation');
-			input.select();
-			navigator.clipboard.writeText(input.value).then(() => {
-				const btn = event.target.closest('button');
-				const originalHTML = btn.innerHTML;
-				btn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Copié !';
-				btn.classList.remove('btn-primary');
-				btn.classList.add('btn-success');
-				setTimeout(() => {
-					btn.innerHTML = originalHTML;
-					btn.classList.remove('btn-success');
-					btn.classList.add('btn-primary');
-				}, 2000);
-			});
-		}
-		</script>
-        
-        <!-- Statut de la licence -->
-        <div class="license-status {{ 'license-pro' if licence.is_pro else 'license-free' }}">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="20px">
-                <path d="m354-287 126-76 126 77-33-144 111-96-146-13-58-136-58 135-146 13 111 97-33 143ZM233-120l65-281L80-590l288-25 112-265 112 265 288 25-218 189 65 281-247-149-247 149Zm247-350Z"/>
-            </svg>
-            <span>{{ 'Version Pro' if licence.is_pro else 'Version Gratuite' }}</span>
-        </div>
-    </div>
+    <!-- Carte Code Invitation -->
 
-    <!-- Info box -->
-    <div class="admin-info-banner">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24px">
-            <path d="M480-680q-33 0-56.5-23.5T400-760q0-33 23.5-56.5T480-840q33 0 56.5 23.5T560-760q0 33-23.5 56.5T480-680Zm-60 560v-480h120v480H420Z"/>
-        </svg>
-        <p>Cette section vous permet d'effectuer des opérations de maintenance et de gestion sur l'ensemble de l'application.</p>
-    </div>
 
     <!-- SECTION : Gestion Quotidienne -->
     <div class="admin-category">
@@ -436,6 +373,36 @@
         </div>
 
         <div class="admin-grid">
+            <!-- Carte Code Invitation -->
+            <div class="admin-card">
+                <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #1f3b73 0%, #2d4f8f 100%);">
+                    <i class="bi bi-ticket-perforated-fill" style="font-size:2rem;color:white;"></i>
+                </div>
+                <h3 class="card-title">Code d'invitation</h3>
+                <p class="card-description">Partagez ce code avec vos collègues pour qu'ils rejoignent votre établissement.</p>
+                <div class="input-group input-group-sm mb-2">
+                    <input type="text" class="form-control text-center fw-bold font-monospace"
+                           id="codeInvitation" value="{{ etablissement.code_invitation }}" readonly
+                           style="font-size:0.95rem;letter-spacing:0.08em;background:#f8f9fa;">
+                    <button class="btn btn-primary" onclick="copierCode()" type="button">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Quiconque possède ce code peut créer un compte</small>
+            </div>
+            <script>
+            function copierCode() {
+                const input = document.getElementById('codeInvitation');
+                input.select();
+                navigator.clipboard.writeText(input.value).then(() => {
+                    const btn = event.target.closest('button');
+                    const orig = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+                    btn.classList.replace('btn-primary', 'btn-success');
+                    setTimeout(() => { btn.innerHTML = orig; btn.classList.replace('btn-success', 'btn-primary'); }, 2000);
+                });
+            }
+            </script>
             <!-- Carte Base de Données -->
             <div class="admin-card">
                 <div class="card-icon-wrapper" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);">

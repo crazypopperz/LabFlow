@@ -3,24 +3,15 @@
 
 {% block content %}
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
+{% from "_page_header.html" import page_header %}
+{{ page_header(
+     title      = "Reset de l'Établissement",
+     subtitle   = "Réinitialisez les données de votre établissement",
+     icon_class = "bi-arrow-counterclockwise",
+     icon_bg    = "#991b1b",
+     breadcrumbs= breadcrumbs,
+) }}
 
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-5 pb-3 border-bottom">
-        <div class="d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm"
-                 style="width: 56px; height: 56px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
-                <i class="bi bi-arrow-counterclockwise fs-3"></i>
-            </div>
-            <div>
-                <h1 class="h3 mb-0 fw-bold text-dark">Reset de l'établissement</h1>
-                <p class="text-muted mb-0">Supprimez sélectivement les données de votre établissement</p>
-            </div>
-        </div>
-        <a href="{{ url_for('admin.admin') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-2"></i>Retour
-        </a>
-    </div>
 
     <!-- Alerte danger -->
     <div class="alert alert-danger border-0 shadow-sm mb-4">

@@ -5,25 +5,15 @@
 {% block content %}
 
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
+{% from "_page_header.html" import page_header %}
+{{ page_header(
+     title      = "Gestion des Fournisseurs",
+     subtitle   = "Gérez l'annuaire des fournisseurs",
+     icon_class = "bi-truck",
+     icon_bg    = "#991b1b",
+     breadcrumbs= breadcrumbs,
+) }}
 
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-2">
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 40px; height: 40px; background: linear-gradient(135deg, #0ba360 0%, #3cba92 100%);">
-                <!-- Début du SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" fill="currentColor">
-                    <path d="M280-160q-50 0-85-35t-35-85H60l18-80h113q17-19 40-29.5t49-10.5q26 0 49 10.5t40 29.5h167l84-360H182l4-17q6-28 27.5-45.5T264-800h456l-37 160h117l120 160-40 200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H400q0 50-35 85t-85 35Z"/>
-                </svg>
-                <!-- Fin du SVG -->
-            </div>
-            Gestion des Fournisseurs
-        </h2>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#fournisseurModal" onclick="resetModal()">
-            <i class="bi bi-plus-lg me-2"></i> Ajouter un fournisseur
-        </button>
-    </div>
 
     <!-- Tableau -->
     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
@@ -65,20 +55,15 @@
                                 </td>
                                 <td class="text-end">
                                     <!-- Modifier -->
-                                    <button class="btn btn-sm btn-outline-primary btn-icon-only me-1" 
+                                    <button class="btn btn-sm btn-outline-primary btn-icon-only me-1"
                                             title="Modifier"
-                                            onclick='openEditModal({{ item.Fournisseur.id }}, "{{ item.Fournisseur.nom|replace('"', '&quot;') }}", "{{ item.Fournisseur.site_web or "" }}", "{{ item.Fournisseur.logo or "" }}")'>
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#edit-fournisseur-modal"
+                                            data-id="{{ item.Fournisseur.id }}"
+                                            data-nom="{{ item.Fournisseur.nom }}"
+                                            data-site-web="{{ item.Fournisseur.site_web or '' }}"
+                                            data-logo="{{ item.Fournisseur.logo or '' }}">
                                         <i class="bi bi-pencil-fill"></i>
-                                    </button>
-                                    
-                                    <!-- Supprimer -->
-                                    <button class="btn btn-sm btn-outline-danger btn-icon-only" 
-                                            title="Supprimer"
-                                            {% if item.depenses_count > 0 %}disabled{% endif %}
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#deleteModal"
-                                            data-url="{{ url_for('admin.supprimer_fournisseur', id=item.Fournisseur.id) }}">
-                                        <i class="bi bi-trash-fill"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -96,110 +81,26 @@
         </div>
     </div>
 </div>
-
-<!-- Modale Ajout/Modification -->
-<div class="modal fade" id="fournisseurModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="modalTitle"><i class="bi bi-shop me-2"></i>Nouveau Fournisseur</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="fournisseurForm" action="{{ url_for('admin.ajouter_fournisseur') }}" method="post">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Nom du fournisseur *</label>
-                        <input type="text" class="form-control" name="nom" id="inputNom" required placeholder="Ex: Jeulin, Pierron...">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Site Web</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-globe"></i></span>
-                            <input type="url" class="form-control" name="site_web" id="inputSite" placeholder="https://...">
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">URL du Logo</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-image"></i></span>
-                            <input type="url" class="form-control" name="logo_url" id="inputLogo" placeholder="https://...">
-                        </div>
-                        <div class="form-text">Lien direct vers l'image du logo.</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modale Suppression -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Supprimer le fournisseur</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Voulez-vous vraiment supprimer ce fournisseur ?</p>
-                <div class="alert alert-warning small">
-                    <i class="bi bi-exclamation-triangle me-1"></i> Impossible si des dépenses y sont liées.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <form id="deleteForm" method="post" action="">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger">Supprimer</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% include '_modale_fournisseur_add.html' %}
+{% include '_modale_fournisseur_edit.html' %}
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Réinitialiser la modale pour l'ajout
-    function resetModal() {
-        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-shop me-2"></i>Nouveau Fournisseur';
-        document.getElementById('fournisseurForm').action = "{{ url_for('admin.ajouter_fournisseur') }}";
-        document.getElementById('inputNom').value = '';
-        document.getElementById('inputSite').value = '';
-        document.getElementById('inputLogo').value = '';
-    }
-
-    // Remplir la modale pour l'édition
-    function openEditModal(id, nom, site, logo) {
-        // Ouvrir la modale via Bootstrap
-        const modal = new bootstrap.Modal(document.getElementById('fournisseurModal'));
-        modal.show();
-
-        // Remplir les champs
-        document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier le fournisseur';
-        document.getElementById('fournisseurForm').action = "/admin/fournisseurs/modifier/" + id;
-        document.getElementById('inputNom').value = nom;
-        document.getElementById('inputSite').value = site;
-        document.getElementById('inputLogo').value = logo;
-    }
-
-    // Gestion suppression
-    const deleteModal = document.getElementById('deleteModal');
-    if (deleteModal) {
-        deleteModal.addEventListener('show.bs.modal', function(event) {
+    document.addEventListener('DOMContentLoaded', function() {
+    const editModal = document.getElementById('edit-fournisseur-modal');
+    if (editModal) {
+        editModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
-            const url = button.dataset.url;
-            document.getElementById('deleteForm').action = url;
+            if (!button) return;
+            const form = document.getElementById('edit-fournisseur-form');
+            form.action = `/admin/fournisseurs/modifier/${button.dataset.id}`;
+            document.getElementById('edit_nom').value = button.dataset.nom;
+            document.getElementById('edit_site_web').value = button.dataset.siteWeb;
+            const urlInput = document.getElementById('edit_logo_url_input');
+            urlInput.value = (button.dataset.logo && button.dataset.logo.startsWith('http')) ? button.dataset.logo : '';
         });
     }
+});
 </script>
 {% endblock %}

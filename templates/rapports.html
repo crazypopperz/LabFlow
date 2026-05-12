@@ -4,20 +4,15 @@
 
 {% block content %}
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
+{% from "_page_header.html" import page_header %}
+{{ page_header(
+     title      = "Rapports",
+         subtitle   = "Analysez les données de votre inventaire",
+         icon_class = "bi-bar-chart-fill",
+         icon_bg    = "#6f42c1",
+         breadcrumbs= breadcrumbs,
+) }}
 
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32px" fill="white">
-                        <path d="m105-399-65-47 200-320 120 140 160-260 120 180 135-214 65 47-198 314-119-179-152 247-121-141-145 233Zm475 159q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Z"/>
-                    </svg>
-            </div>
-            <span class="fw-bold">Rapports d'Activité</span>
-        </h2>
-    </div>
 
     <div class="row g-4">
         

@@ -1,5 +1,6 @@
 import socket
-from app import app
+from app import create_app
+app = create_app()
 # from waitress import serve
 
 def get_local_ip():

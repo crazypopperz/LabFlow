@@ -2,22 +2,15 @@
 {% block title %}Gestion des Salles - LabFlow{% endblock %}
 {% block content %}
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
- 
-    <!-- En-tête bleu marine -->
-    <div class="salles-hero mb-4">
-        <div class="d-flex align-items-center gap-3">
-            <div class="salles-hero-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="32" height="32" fill="currentColor">
-                    <path d="M80-120v-720h400v160h400v560H80Zm80-80h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm0-160h240v-80H160v80Zm320 480h320v-400H480v400Zm80-240v-80h160v80H560Zm0 160v-80h160v80H560Z"/>
-                </svg>
-            </div>
-            <div>
-                <h2 class="salles-hero-title mb-0">Gestion des Salles</h2>
-            </div>
-        </div>
-        <p class="salles-hero-subtitle mb-0">Ajoutez, modifiez et organisez les salles de votre établissement</p>
-    </div>
+{% from "_page_header.html" import page_header %}
+{{ page_header(
+     title      = "Gestion des Salles",
+     subtitle   = "Ajoutez, modifiez et organisez les salles",
+     icon_class = "bi-building",
+     icon_bg    = "#991b1b",
+     breadcrumbs= breadcrumbs,
+) }}
+
  
     <!-- Cartes de statistiques -->
     <div class="row g-3 mb-4">

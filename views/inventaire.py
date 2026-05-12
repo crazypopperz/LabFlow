@@ -95,7 +95,7 @@ def index():
             ).count()
         }
 
-    admin_user = db.session.execute(db.select(Utilisateur).filter_by(role='admin', etablissement_id=etablissement_id)).scalar_one_or_none()
+    admin_user = db.session.execute(db.select(Utilisateur).filter_by(role='admin', etablissement_id=etablissement_id)).scalars().first()
     dashboard_data['admin_contact'] = admin_user.email if admin_user and admin_user.email else (admin_user.nom_utilisateur if admin_user else "Non défini")
     
     vingt_quatre_heures_avant = datetime.now() - timedelta(hours=24)
@@ -303,8 +303,16 @@ def inventaire():
         armoire_id = request.args.get('armoire', type=int)
         categorie_id = request.args.get('categorie', type=int)
         
+        breadcrumbs = [
+            {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+            {'text': 'Inventaire Complet', 'url': None}
+        ]
+        breadcrumbs = [
+            {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
+            {'text': 'Inventaire Complet', 'url': None}
+        ]
         return render_template("inventaire.html",
-                            objets=dto.items, # Liste de dicts
+                            objets=dto.items,
                             armoires=armoires,
                             categories=categories,
                             pagination=pagination,
@@ -313,6 +321,7 @@ def inventaire():
                             sort_by=sort_by,
                             direction=direction,
                             is_general_inventory=True,
+                            breadcrumbs=breadcrumbs,
                             armoire_id=armoire_id,
                             categorie_id=categorie_id
                             )

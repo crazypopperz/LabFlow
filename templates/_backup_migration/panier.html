@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Mon Panier - Scientral{% endblock %}
+
+{% block content %}
+
+<div class="main-container">
+    
+    <!-- Fil d'ariane -->
+     {% include '_breadcrumb.html' %}
+
+    <!-- En-tête Panier -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #6610f2 0%, #6f42c1 100%);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart-fill" viewBox="0 0 16 16">
+                    <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                </svg>
+            </div>
+            <span class="fw-bold">Mon Panier de Réservation</span>
+        </h2>
+    </div>
+
+    <!-- Carte Principale -->
+    <div class="card border-0 shadow-sm rounded-3">
+        
+        <!-- Zone du contenu (Liste chargée par JS) -->
+        <div id="cart-items-container" class="cart-list-wrapper p-3">
+            <!-- Spinner initial -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+            </div>
+        </div>
+
+        <!-- Message Panier Vide (Caché par défaut) -->
+        <div id="empty-cart-message" class="empty-cart-container text-center py-5" style="display: none;">
+            <div class="mb-3">
+                <i class="bi bi-cart-x display-1 text-muted opacity-25"></i>
+            </div>
+            <h3 class="h5 fw-bold text-dark">Votre panier est vide</h3>
+            <p class="mb-4 text-muted">Sélectionnez des objets dans le calendrier ou l'inventaire pour commencer.</p>
+            <a href="{{ url_for('main.calendrier') }}" class="btn btn-primary">
+                <i class="bi bi-calendar-week me-2"></i>Aller au calendrier
+            </a>
+        </div>
+
+        <!-- Actions (Footer) -->
+        <div id="cart-actions" class="card-footer bg-white d-flex justify-content-between align-items-center p-3" style="display: none;">
+            <button id="clear-cart-btn" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-2"></i>Vider le panier
+            </button>
+            
+            <button id="confirm-cart-btn" class="btn btn-success btn-lg px-4 shadow-sm">
+                <i class="bi bi-check-circle-fill me-2"></i>Confirmer la réservation
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Import du module JS qui gère tout -->
+<script src="{{ url_for('static', filename='js/modules/cart-summary.js') }}" type="module"></script>
+{% endblock %}

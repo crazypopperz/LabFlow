@@ -5,25 +5,15 @@
 {% block content %}
 
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
+{% from "_page_header.html" import page_header %}
+{{ page_header(
+     title      = "Gestion des Kits",
+     subtitle   = "Créez et gérez vos kits de matériel",
+     icon_class = "bi-box-seam-fill",
+     icon_bg    = "#991b1b",
+     breadcrumbs= breadcrumbs,
+) }}
 
-    <!-- En-tête de page -->
-    <div class="management-header mb-4 pb-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <h2 class="page-title h3 mb-0 d-flex align-items-center gap-3">
-            <!-- Icône Kits (Cyan/Rose - ou le style "Valise") -->
-            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
-                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="28" height="28" fill="currentColor">
-                    <path d="M80-160v-400q0-33 23.5-56.5T160-640h120v-80q0-33 23.5-56.5T360-800h240q33 0 56.5 23.5T680-720v80h120q33 0 56.5 23.5T880-560v400H80Zm240-480h320v-80H320v80Z"/>
-                </svg>
-            </div>
-            <span class="fw-bold text-dark">Gestion des Kits</span>
-        </h2>
-        
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addKitModal">
-            <i class="bi bi-plus-lg me-2"></i> Créer un nouveau kit
-        </button>
-    </div>
 
     <!-- Liste des Kits -->
     {% if kits and kits|length > 0 %}

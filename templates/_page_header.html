@@ -1,0 +1,55 @@
+
+{% macro page_header(title, subtitle=None, icon_class=None, icon_bg="var(--couleur-principale)", breadcrumbs=None) %}
+<div class="page-header-zone">
+
+    {# --- BREADCRUMB --- #}
+    {% if breadcrumbs %}
+    <nav class="ph-breadcrumb" aria-label="Fil d'Ariane">
+        {% for item in breadcrumbs %}
+            {% if not loop.first %}<span class="ph-bc-sep">›</span>{% endif %}
+            {% if loop.last or not item.url %}
+                <span class="ph-bc-current">{{ item.text }}</span>
+            {% else %}
+                <a href="{{ item.url }}" class="ph-bc-link">
+                    {% if loop.first %}
+                    <svg class="ph-bc-home" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    {% endif %}
+                    {{ item.text }}
+                </a>
+            {% endif %}
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    {# --- TITRE + ACTIONS --- #}
+    <div class="ph-title-row">
+        <div class="ph-title-left">
+
+            {# Icône optionnelle #}
+            {% if icon_class %}
+            <div class="ph-icon" style="background: {{ icon_bg }};">
+                <i class="bi {{ icon_class }}"></i>
+            </div>
+            {% endif %}
+
+            <div class="ph-title-text">
+                <h1 class="ph-title">{{ title }}</h1>
+                {% if subtitle %}
+                <p class="ph-subtitle">{{ subtitle }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Slot CTA — utilisé via {% call %} #}
+        {% if caller is defined %}
+        <div class="ph-actions">
+            {{ caller() }}
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endmacro %}

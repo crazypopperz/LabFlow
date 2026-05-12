@@ -39,6 +39,48 @@
                                 {% endfor %}
                             </select>
                         </div>
+
+                        <!-- Récurrence -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="recurrenceToggle">
+                                <label class="form-check-label fw-bold small text-uppercase text-muted" for="recurrenceToggle">
+                                    <i class="bi bi-arrow-repeat me-1"></i>Répéter
+                                </label>
+                            </div>
+                            <div id="recurrenceOptions" style="display:none;" class="mt-2 p-3 bg-white rounded-3 border">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">Fréquence</label>
+                                    <select class="form-select form-select-sm" id="recurrenceType">
+                                        <option value="hebdo">Chaque semaine</option>
+                                        <option value="quotidien_ouvre">Chaque jour ouvré</option>
+                                        <option value="bi_hebdo">Toutes les 2 semaines</option>
+                                        <option value="mensuel">Chaque mois</option>
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold">Fin de répétition</label>
+                                    <div class="d-flex gap-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="recurrenceLimite" id="limiteDate" value="date" checked>
+                                            <label class="form-check-label small" for="limiteDate">Jusqu'au...</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="recurrenceLimite" id="limiteOccurrences" value="occurrences">
+                                            <label class="form-check-label small" for="limiteOccurrences">Nombre de répétitions</label>
+                                        </div>
+                                    </div>
+                                    <input type="date" id="recurrenceDateFin" class="form-control form-control-sm">
+                                    <input type="number" id="recurrenceNbOccurrences" class="form-control form-control-sm"
+                                        style="display:none;" min="2" max="52" value="4">
+                                    <div class="text-muted small mt-1" id="occurrencesHelp" style="display:none;">
+                                        <i class="bi bi-info-circle me-1"></i>Inclut la réservation en cours. Ex: 4 = aujourd'hui + 3 répétitions.
+                                    </div>
+                                </div>
+                                <div id="recurrencePreview" class="small text-primary fst-italic mt-1"></div>
+                            </div>
+                        </div>
+
                         <div id="availableItems">
                             <div class="text-center py-4">
                                 <div class="spinner-border text-primary" role="status"></div>

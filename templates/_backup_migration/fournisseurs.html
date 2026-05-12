@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Nos Fournisseurs - Scientral{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    
+    {% include '_breadcrumb.html' %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #20c997 0%, #0ca678 100%);">
+                <i class="bi bi-truck fs-4"></i>
+            </div>
+            <span class="fw-bold">Annuaire Fournisseurs</span>
+        </h2>
+        
+        {% if session.user_role == 'admin' %}
+        <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#addFournisseurModal">
+            <i class="bi bi-plus-lg me-2"></i>Nouveau Fournisseur
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- GRILLE DES FOURNISSEURS -->
+    <div class="row g-4">
+        {% for f in fournisseurs %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm hover-card">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <!-- Logo ou Initiale -->
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border" 
+                             style="width: 64px; height: 64px; overflow: hidden; background-color: #fff;">
+                            {% if f.logo %}
+                                {% if f.logo.startswith('http') %}
+                                    <img src="{{ f.logo }}" alt="{{ f.nom }}" style="width: 100%; height: 100%; object-fit: contain;">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='images/fournisseurs/' + f.logo) }}" alt="{{ f.nom }}" style="width: 100%; height: 100%; object-fit: contain;">
+                                {% endif %}
+                            {% else %}
+                                <span class="fs-3 fw-bold text-muted">{{ f.nom[:1].upper() }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- ACTIONS ADMIN -->
+                        {% if session.user_role == 'admin' %}
+                        <div class="dropdown">
+                            <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
+                                <li>
+                                    <!-- CORRECTION ICI : Utilisation des attributs Bootstrap natifs -->
+                                    <button class="dropdown-item" 
+                                            type="button"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#edit-fournisseur-modal"
+                                            data-id="{{ f.id }}"
+                                            data-nom="{{ f.nom }}"
+                                            data-site-web="{{ f.site_web or '' }}"
+                                            data-logo="{{ f.logo or '' }}">
+                                        <i class="bi bi-pencil me-2 text-primary"></i>Modifier
+                                    </button>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <!-- Formulaire de suppression standard -->
+                                    <form action="{{ url_for('admin.supprimer_fournisseur', id=f.id) }}" method="POST" class="delete-form-interactive" data-item-name="{{ f.nom }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="button" class="dropdown-item text-danger delete-btn">
+                                            <i class="bi bi-trash me-2"></i>Supprimer
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <h5 class="card-title fw-bold text-dark mb-1">{{ f.nom }}</h5>
+                    
+                    <div class="mt-auto pt-3">
+                        {% if f.site_web %}
+                            <a href="{{ f.site_web }}" target="_blank" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="bi bi-box-arrow-up-right me-2"></i>Visiter le site
+                            </a>
+                        {% else %}
+                            <button class="btn btn-light btn-sm w-100 text-muted" disabled>
+                                <i class="bi bi-globe me-2"></i>Pas de site web
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-building-slash display-4 opacity-25"></i>
+                <p class="mt-3">Aucun fournisseur référencé.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- MODALES D'ADMINISTRATION -->
+{% if session.user_role == 'admin' %}
+    
+    <!-- Inclusion des modales spécifiques -->
+    {% include '_modale_fournisseur_add.html' %}
+    {% include '_modale_fournisseur_edit.html' %}
+    
+    <!-- CORRECTION ICI : Inclusion de la modale de danger pour la suppression -->
+    {% include '_modale_danger.html' %}
+
+    <!-- Script pour pré-remplir la modale d'édition -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editModal = document.getElementById('edit-fournisseur-modal');
+            if (editModal) {
+                editModal.addEventListener('show.bs.modal', function(event) {
+                    const button = event.relatedTarget;
+                    if (!button) return;
+
+                    const id = button.dataset.id;
+                    const nom = button.dataset.nom;
+                    const site = button.dataset.siteWeb;
+                    const logo = button.dataset.logo;
+
+                    const form = document.getElementById('edit-fournisseur-form');
+                    form.action = `/admin/fournisseurs/modifier/${id}`;
+                    
+                    document.getElementById('edit_nom').value = nom;
+                    document.getElementById('edit_site_web').value = site;
+                    
+                    const urlInput = document.getElementById('edit_logo_url_input');
+                    if (logo && logo.startsWith('http')) {
+                        urlInput.value = logo;
+                    } else {
+                        urlInput.value = '';
+                    }
+                });
+            }
+        });
+    </script>
+
+{% endif %}
+
+{% endblock %}

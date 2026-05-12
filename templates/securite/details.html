@@ -4,39 +4,23 @@
 
 {% block content %}
 <div class="main-container">
-    {% include '_breadcrumb.html' %}
+{% from "_page_header.html" import page_header %}
+{% call page_header(
+     title      = "Détail Équipement",
+         icon_class = "bi-shield-fill",
+         icon_bg    = "#20c997",
+         breadcrumbs= breadcrumbs,
+) %}
+    <button class="btn btn-success shadow-sm fw-bold" onclick="openLogModal()">
+        <i class="bi bi-journal-plus me-2"></i>Ajouter un log
+    </button>
+    {% if session.user_role == 'admin' %}
+    <button class="btn btn-outline-danger" onclick="confirmDelete()">
+        <i class="bi bi-trash me-2"></i>Supprimer
+    </button>
+    {% endif %}
+{% endcall %}
 
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-start mb-4 pb-3 border-bottom">
-        <div>
-            <div class="d-flex align-items-center gap-3 mb-1">
-                <h2 class="h3 mb-0 fw-bold text-dark">{{ equipement.nom }}</h2>
-                {% if equipement.en_service %}
-                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">En service</span>
-                {% else %}
-                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">Hors service</span>
-                {% endif %}
-            </div>
-            <div class="text-muted small">
-                <i class="bi bi-grid me-1"></i>{{ equipement.type_equipement }} 
-                <span class="mx-2">•</span> 
-                <i class="bi bi-geo-alt me-1"></i>{{ equipement.localisation or 'Non localisé' }}
-            </div>
-        </div>
-        
-        <div class="d-flex gap-2">
-            <!-- BOUTON VERT : NOUVELLE INTERVENTION (Toujours visible) -->
-            {% if session.user_role == 'admin' %}
-            <button class="btn btn-success shadow-sm fw-bold" onclick="openLogModal()">
-                <i class="bi bi-clipboard-check me-2"></i>Nouvelle Intervention
-            </button>
-            
-            <button class="btn btn-outline-danger" onclick="confirmDelete()">
-                <i class="bi bi-trash"></i>
-            </button>
-            {% endif %}
-        </div>
-    </div>
 
     <div class="row g-4 align-items-stretch">
         

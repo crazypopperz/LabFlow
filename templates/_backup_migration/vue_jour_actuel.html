@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Réservations pour le {{ date_concernee | strftime_fr('%A %d %B %Y') }}{% endblock %}
+
+{% block content %}
+<!-- AJOUT CRUCIAL : data-date pour le JS -->
+<div class="main-container" 
+     data-date="{{ date_concernee.strftime('%Y-%m-%d') }}"
+     data-is-admin="{{ 'true' if session.user_role == 'admin' else 'false' }}" 
+     data-user-id="{{ session.user_id }}">
+    
+{% from "_page_header.html" import page_header %}
+{% call page_header(
+     title      = date_concernee | strftime_fr('%A %d %B %Y') | capitalize,
+     subtitle   = "Réservations et disponibilités du jour",
+     icon_class = "bi-calendar2-week-fill",
+     icon_bg    = "#fd7e14",
+     breadcrumbs= breadcrumbs,
+) %}
+    {% if session.user_id %}
+    <button type="button" id="new-reservation-btn" class="btn btn-primary">
+        <i class="bi bi-plus-circle-fill me-2"></i>Nouvelle réservation
+    </button>
+    {% endif %}
+{% endcall %}
+    
+    <!-- Grille Calendrier Style Google -->
+    <div class="card shadow-sm border-0" style="background: white; border-radius: 8px;">
+        <div class="daily-schedule-wrapper">
+            {% for hour in range(8, 21) %}
+                <div class="schedule-row" data-hour="{{ hour }}">
+                    <!-- Colonne Heure -->
+                    <div class="time-col">
+                        <span class="time-text">{{ "%02d:00"|format(hour) }}</span>
+                    </div>
+                    
+                    <!-- Colonne Événements -->
+                    <div class="events-col">
+                        {% set events = reservations_par_heure.get(hour, {}) %}
+                        
+                        <!-- Événements (Suite) -->
+                        {% if events['continues'] %}
+                            {% for resa in events['continues'] %}
+                            <div class="event-item continuation" data-groupe-id="{{ resa.groupe_id }}">
+                                <div class="event-content">
+                                    <small>(Suite)</small> {{ resa.nom_utilisateur }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                        
+                        <!-- Événements (Début) -->
+                        {% if events['starts'] %}
+                            {% for resa in events['starts'] %}
+                            <div class="event-item start" data-groupe-id="{{ resa.groupe_id }}">
+                                <div class="event-content">
+                                    <strong>{{ resa.debut_reservation|strftime('%H:%M') }} - {{ resa.fin_reservation|strftime('%H:%M') }}</strong>
+                                    <span>{{ resa.nom_utilisateur }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Tooltip placé ici pour éviter les problèmes de z-index -->
+<div id="reservation-tooltip" class="calendar-tooltip"></div>
+
+{% include '_modals.html' %} 
+{% include '_modale_danger.html' %}
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ url_for('static', filename='js/modules/calendar-daily.js') }}" type="module"></script>
+{% endblock %}

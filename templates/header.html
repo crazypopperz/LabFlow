@@ -1,7 +1,7 @@
 <header class="app-header">
     <div class="header-container">
         <div class="header-brand">
-			<a href="{{ url_for('inventaire.index') }}">
+			<a href="{{ url_for('inventaire.index') }}" class="brand-logo-link">
 				<svg class="brand-logo me-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="45" height="45">
 					<defs>
 						<linearGradient id="headerGradientDesktop" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -14,12 +14,20 @@
 					<text x="242" y="350" font-family="Arial, sans-serif" font-size="280" font-weight="900" fill="white" text-anchor="middle">Sc</text>
 					<text x="398" y="190" font-family="Arial, sans-serif" font-size="72" font-weight="700" fill="white" text-anchor="start">al</text>
 				</svg>
-				
-				<div class="brand-text">
+			</a>
+			<div class="brand-text">
+				<a href="{{ url_for('inventaire.index') }}" class="brand-name-link">
 					<h1>Scientral</h1>
 					<p class="brand-subtitle">{{ nom_etablissement or 'Mon Espace' }}</p>
-				</div>
-			</a>
+				</a>
+				{% if licence is defined %}
+					{% if licence.is_pro %}
+					<span class="header-version-badge badge-pro"><i class="bi bi-star-fill"></i> Version Pro</span>
+					{% else %}
+					<a href="{{ url_for('main.a_propos') }}#etat-systeme" class="header-version-badge badge-essai" title="Passer en Version Pro"><i class="bi bi-flask"></i> Version Essai</a>
+					{% endif %}
+				{% endif %}
+			</div>
 		</div>
         
         <div class="header-right">

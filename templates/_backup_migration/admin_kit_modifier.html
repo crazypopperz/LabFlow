@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier le Kit : {{ kit.nom }} - Scientral{% endblock %}
+
+{% block content %}
+
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-2">
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white" 
+                 style="width: 40px; height: 40px; background: linear-gradient(135deg, #6f42c1 0%, #a8edea 100%);">
+                <i class="bi bi-box-seam"></i>
+            </div>
+            Modification du Kit : <span class="text-primary">{{ kit.nom }}</span>
+        </h2>
+        <a href="{{ url_for('admin.gestion_kits') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Retour
+        </a>
+    </div>
+
+    <!-- 1. NOUVEAU : PARAMÈTRES DU KIT (NOM & DESCRIPTION) -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-sliders me-2"></i>Paramètres du Kit</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" class="row g-3 align-items-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <!-- Champ Nom -->
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Nom du Kit <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="nom_kit" value="{{ kit.nom }}" required>
+                </div>
+                
+                <!-- Champ Description -->
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold text-muted">Description</label>
+                    <input type="text" class="form-control" name="description_kit" value="{{ kit.description or '' }}" placeholder="Description optionnelle...">
+                </div>
+                
+                <!-- Bouton Enregistrer -->
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">
+                        <i class="bi bi-save me-2"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <!-- COLONNE GAUCHE : Objets DANS le kit -->
+        <div class="col-lg-6">
+            <div class="kit-edit-card">
+                <div class="kit-edit-header">
+                    <h3 class="kit-edit-title">
+                        <i class="bi bi-check-circle-fill text-success"></i> Contenu du Kit
+                    </h3>
+                    <span class="badge bg-white text-dark border">{{ objets_in_kit|length }} objets</span>
+                </div>
+                
+                <div class="kit-edit-body">
+                    {% if objets_in_kit %}
+                    <form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <table class="kit-edit-table">
+                            <thead>
+                                <tr>
+                                    <th>Objet</th>
+                                    <th class="text-center" style="width: 100px;">Qté</th>
+                                    <th class="text-end" style="width: 60px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assoc in objets_in_kit %}
+                                <tr>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ assoc.objet.nom }}</div>
+                                        <small class="text-muted">Stock total : {{ assoc.objet.quantite_physique }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="number" name="quantite_{{ assoc.id }}" 
+                                               value="{{ assoc.quantite }}" 
+                                               class="form-control form-control-sm kit-qty-input mx-auto" 
+                                               min="1">
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-danger border-0"
+                                                title="Retirer du kit"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#removeModal"
+                                                data-url="{{ url_for('admin.retirer_objet_kit', kit_objet_id=assoc.id) }}"
+                                                data-name="{{ assoc.objet.nom }}">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+
+                        <!-- Bouton flottant en bas de la liste -->
+                        <div class="p-3 border-top bg-white text-end sticky-bottom">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save me-2"></i>Mettre à jour les quantités
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-box-seam display-4 mb-3 d-block opacity-25"></i>
+                            <p>Ce kit est vide.</p>
+                            <small>Ajoutez des objets depuis la liste de droite.</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- COLONNE DROITE : Objets DISPONIBLES -->
+        <div class="col-lg-6">
+            <div class="kit-edit-card border-primary border-opacity-25">
+                <div class="kit-edit-header bg-primary bg-opacity-10">
+                    <h3 class="kit-edit-title text-primary">
+                        <i class="bi bi-plus-circle-fill"></i> Ajouter des objets
+                    </h3>
+                </div>
+                
+                <!-- Barre de recherche fixe en haut de la liste -->
+                <div class="kit-edit-toolbar">
+                    <div class="kit-search-wrapper">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="kit-objet-search" class="form-control kit-search-input" placeholder="Rechercher un objet à ajouter...">
+                    </div>
+                </div>
+
+                <div class="kit-edit-body">
+                    <table class="kit-edit-table" id="available-objects-table">
+                        <thead>
+                            <tr>
+                                <th>Objet (Stock)</th>
+                                <th class="text-center" style="width: 90px;">Qté</th>
+                                <th class="text-end" style="width: 60px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for objet in objets_disponibles %}
+                            <tr class="objet-row">
+                                <td>
+                                    <span class="objet-name fw-medium">{{ objet.nom }}</span>
+                                    <small class="text-muted ms-1">({{ objet.quantite_physique }})</small>
+                                </td>
+                                
+                                <!-- Formulaire individuel par ligne -->
+                                <form method="post" action="{{ url_for('admin.modifier_kit', kit_id=kit.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="objet_id" value="{{ objet.id }}">
+                                    
+                                    <td class="text-center">
+                                        <input type="number" name="quantite" value="1" 
+                                               class="form-control form-control-sm kit-qty-input mx-auto" 
+                                               min="1" max="{{ objet.quantite_physique }}">
+                                    </td>
+                                    <td class="text-end">
+                                        <button type="submit" class="btn btn-sm btn-primary" 
+                                                title="Ajouter au kit"
+                                                {% if objet.quantite_physique == 0 %}disabled{% endif %}>
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </td>
+                                </form>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <!-- Message si aucun résultat de recherche -->
+                    <div id="no-results" class="text-center py-5 text-muted d-none">
+                        <i class="bi bi-search mb-2 d-block opacity-50"></i>
+                        Aucun objet trouvé
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale de confirmation de retrait -->
+<div class="modal fade" id="removeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Retirer l'objet</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Voulez-vous vraiment retirer <strong id="remove-object-name"></strong> du kit ?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form id="removeForm" method="post" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Retirer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. Recherche dynamique JS
+    const searchInput = document.getElementById('kit-objet-search');
+    const tableRows = document.querySelectorAll('#available-objects-table .objet-row');
+    const noResults = document.getElementById('no-results');
+
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function(e) {
+            const term = e.target.value.toLowerCase();
+            let visibleCount = 0;
+
+            tableRows.forEach(row => {
+                const name = row.querySelector('.objet-name').textContent.toLowerCase();
+                if (name.includes(term)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('d-none');
+            } else {
+                noResults.classList.add('d-none');
+            }
+        });
+    }
+
+    // 2. Gestion de la modale de retrait
+    const removeModal = document.getElementById('removeModal');
+    if (removeModal) {
+        removeModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const url = button.dataset.url;
+            const name = button.dataset.name;
+            
+            document.getElementById('removeForm').action = url;
+            document.getElementById('remove-object-name').textContent = name;
+        });
+    }
+});
+</script>
+{% endblock %}

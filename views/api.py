@@ -534,6 +534,7 @@ def api_reservation_details(groupe_id):
             'fin': first.fin_reservation.isoformat(),
             'user_name': first.utilisateur.nom_utilisateur if first.utilisateur else "Inconnu",
             'can_edit': (first.utilisateur_id == session.get('user_id')) or (session.get('user_role') == 'admin'),
+            'recurrence_id': first.recurrence_id,
             'items': []
         }
         for r in res:
@@ -552,15 +553,24 @@ def api_reservation_details(groupe_id):
 def api_supprimer_reservation():
     if not request.is_json: return jsonify({'success': False, 'error': 'JSON required'}), 415
     etablissement_id = session.get('etablissement_id')
-    gid = request.get_json().get('groupe_id')
+    data = request.get_json()
+    gid = data.get('groupe_id')
+    supprimer_tout = data.get('supprimer_tout', False)
+    current_user_id = session.get('user_id')
     try:
         existing = db.session.execute(db.select(Reservation).filter_by(groupe_id=gid, etablissement_id=etablissement_id).limit(1)).scalar()
         if not existing: return jsonify({'success': False, 'error': "Introuvable"}), 404
-        if session.get('user_role') != 'admin' and existing.utilisateur_id != session.get('user_id'):
+        if session.get('user_role') != 'admin' and existing.utilisateur_id != current_user_id:
             return jsonify({'success': False, 'error': "Interdit"}), 403
-        db.session.execute(db.delete(Reservation).where(Reservation.groupe_id == gid))
+        if supprimer_tout and existing.recurrence_id:
+            db.session.execute(db.delete(Reservation).where(
+                Reservation.recurrence_id == existing.recurrence_id,
+                Reservation.etablissement_id == etablissement_id
+            ))
+        else:
+            db.session.execute(db.delete(Reservation).where(Reservation.groupe_id == gid))
         db.session.commit()
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'supprime': 'tout' if supprimer_tout else 'occurrence'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': "Erreur technique"}), 500

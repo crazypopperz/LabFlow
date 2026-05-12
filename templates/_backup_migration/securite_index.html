@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Sécurité & Maintenance{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    {% include '_breadcrumb.html' %}
+
+    <!-- En-tête de page -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <h2 class="h3 mb-0 text-dark d-flex align-items-center gap-3">
+            <!-- Icône Sécurité -->
+            <div class="rounded-3 d-flex align-items-center justify-content-center text-white shadow-sm" 
+                 style="width: 48px; height: 48px; background: linear-gradient(135deg, #20c997 0%, #0dcaf0 100%);">
+                <i class="bi bi-shield-check fs-4"></i>
+            </div>
+            <span class="fw-bold">Sécurité & Maintenance</span>
+        </h2>
+        
+        <!-- Bouton d'ajout (Admin uniquement) -->
+        {% if session.user_role == 'admin' %}
+        <div>
+            <button type="button" 
+                    class="btn btn-primary" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#addSecurityModal">
+                <i class="bi bi-plus-circle-fill me-2"></i> 
+                Nouvel Équipement
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Liste des équipements -->
+    {% if equipements %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="bg-light text-uppercase small fw-bold text-muted">
+                        <tr>
+                            <th class="ps-4 py-3">Équipement</th>
+                            <th>Type</th>
+                            <th>Localisation</th>
+                            <th>Installation</th>
+                            <th>État</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for eq in equipements %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">{{ eq.nom }}</div>
+                                {% if eq.numero_serie %}
+                                <div class="text-muted d-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                    <i class="bi bi-upc-scan" title="Numéro de série"></i>
+                                    <span class="font-monospace">{{ eq.numero_serie }}</span>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-light text-dark border">{{ eq.type_equipement }}</span></td>
+                            <td>
+                                {% if eq.localisation %}
+                                    <i class="bi bi-geo-alt text-muted me-1"></i>{{ eq.localisation }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if eq.date_installation %}
+                                    {{ eq.date_installation.strftime('%d/%m/%Y') }}
+                                {% else %}
+                                    <span class="text-muted small fst-italic">Inconnue</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if eq.en_service %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                        <i class="bi bi-check-circle-fill me-1"></i>En service
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
+                                        <i class="bi bi-x-circle-fill me-1"></i>Hors service
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                {% if session.user_role == 'admin' %}
+                                    <a href="{{ url_for('securite.voir_equipement', id=eq.id) }}" class="btn btn-sm btn-outline-primary" title="Gérer la maintenance">
+                                        <i class="bi bi-gear-fill me-1"></i> Gérer
+                                    </a>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-warning text-dark" 
+                                            onclick="openSignalementModal({{ eq.id }}, '{{ eq.nom|replace("'", "\\'") }}')">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Signaler
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- État Vide (Empty State) -->
+    <div class="empty-state-container text-center py-5">
+        <div class="mb-3">
+            <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle" style="width: 80px; height: 80px;">
+                <i class="bi bi-shield-exclamation text-muted opacity-50 display-4"></i>
+            </div>
+        </div>
+        <h4 class="fw-bold text-dark">Aucun équipement suivi</h4>
+        <p class="text-muted mb-4">Commencez par ajouter vos hottes, extincteurs ou douches de sécurité.</p>
+        {% if session.user_role == 'admin' %}
+        <button class="btn btn-primary px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#addSecurityModal">
+            <i class="bi bi-plus-lg me-2"></i>Ajouter mon premier équipement
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Inclusion des modales globales -->
+{% include "_modals.html" %}
+
+<!-- MODALE SIGNALEMENT (Utilisateur) -->
+<div class="modal fade" id="signalementModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Signaler un problème</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Équipement : <strong id="signalement-nom"></strong></p>
+                <input type="hidden" id="signalement-id">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Description du dysfonctionnement</label>
+                    <textarea class="form-control" id="signalement-desc" rows="3" placeholder="Ex: Bruit anormal, vitre fissurée..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-warning fw-bold" onclick="submitSignalement()">Envoyer le signalement</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE SUCCÈS SIGNALEMENT -->
+<div class="modal fade" id="successSignalementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white border-0 justify-content-center py-4">
+                <div class="rounded-circle bg-white d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="bi bi-check-lg text-success display-5"></i>
+                </div>
+            </div>
+            <div class="modal-body text-center px-4 pt-4 pb-0">
+                <h5 class="fw-bold mb-2">Envoyé !</h5>
+                <p class="text-muted small">Le signalement a bien été transmis aux administrateurs.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pb-4">
+                <button type="button" class="btn btn-success px-4 rounded-pill fw-bold" data-bs-dismiss="modal">
+                    Compris
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialisation des modales
+let signalementModal;
+let successModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // On initialise les instances Bootstrap
+    const sigEl = document.getElementById('signalementModal');
+    if(sigEl) signalementModal = new bootstrap.Modal(sigEl);
+
+    const sucEl = document.getElementById('successSignalementModal');
+    if(sucEl) successModal = new bootstrap.Modal(sucEl);
+
+    // Gestion du formulaire d'ajout (Admin)
+    const formAdd = document.getElementById('formAddSecurity');
+    if(formAdd) {
+        formAdd.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btnSave = document.getElementById('btnSaveSecurity');
+            const errorMsg = document.getElementById('security-error-msg');
+            const originalBtnText = btnSave.innerHTML;
+            
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enregistrement...';
+            errorMsg.classList.add('d-none');
+
+            const formData = new FormData(formAdd);
+            const data = Object.fromEntries(formData.entries());
+
+            fetch("{{ url_for('securite.ajouter_equipement') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token() }}" },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) window.location.reload();
+                else throw new Error(result.error || "Erreur inconnue.");
+            })
+            .catch(error => {
+                errorMsg.textContent = error.message;
+                errorMsg.classList.remove('d-none');
+                btnSave.disabled = false;
+                btnSave.innerHTML = originalBtnText;
+            });
+        });
+    }
+});
+
+function openSignalementModal(id, nom) {
+    document.getElementById('signalement-id').value = id;
+    document.getElementById('signalement-nom').textContent = nom;
+    document.getElementById('signalement-desc').value = '';
+    if(signalementModal) signalementModal.show();
+}
+
+function submitSignalement() {
+    const id = document.getElementById('signalement-id').value;
+    const desc = document.getElementById('signalement-desc').value;
+    const btn = document.querySelector('#signalementModal .btn-warning');
+    const originalText = btn.innerHTML;
+    
+    if(!desc.trim()) {
+        const textarea = document.getElementById('signalement-desc');
+        textarea.classList.add('is-invalid');
+        setTimeout(() => textarea.classList.remove('is-invalid'), 2000);
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Envoi...';
+
+    fetch("{{ url_for('securite.signaler_dysfonctionnement') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token() }}" },
+        body: JSON.stringify({ equipement_id: id, description: desc })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            signalementModal.hide();
+            successModal.show(); // Affiche la belle modale
+        } else {
+            alert("Erreur : " + data.error);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Erreur de connexion.");
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
+}
+</script>
+{% endblock %}

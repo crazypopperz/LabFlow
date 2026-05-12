@@ -183,6 +183,7 @@ export function initBookingModal() {
     if (endTimeSelect) endTimeSelect.addEventListener('change', onTimeChange);
 
     setupDelegatedEvents();
+    initRecurrence();
 }
 
 export function openReservationModal(date, groupId = null) {
@@ -561,6 +562,8 @@ async function addItem(item) {
         payload.date = dateInput.value;
         payload.heure_debut = startTimeSelect.value;
         payload.heure_fin = endTimeSelect.value;
+        const recurrence = getRecurrenceData();
+        if (recurrence) payload.recurrence = recurrence;
     }
 
     try {
@@ -772,6 +775,73 @@ function setSmartTime() {
         startTimeSelect.value = "08:00";
         endTimeSelect.value = "09:00";
     }
+}
+
+
+// ============================================================
+// RÉCURRENCE
+// ============================================================
+function initRecurrence() {
+    const toggle = document.getElementById('recurrenceToggle');
+    const options = document.getElementById('recurrenceOptions');
+    const limiteDate = document.getElementById('limiteDate');
+    const limiteOcc = document.getElementById('limiteOccurrences');
+    const dateFinInput = document.getElementById('recurrenceDateFin');
+    const nbOccInput = document.getElementById('recurrenceNbOccurrences');
+    if (!toggle) return;
+
+    toggle.addEventListener('change', () => {
+        options.style.display = toggle.checked ? 'block' : 'none';
+        updateRecurrencePreview();
+    });
+
+    document.querySelectorAll('input[name="recurrenceLimite"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            dateFinInput.style.display = limiteDate.checked ? 'block' : 'none';
+            nbOccInput.style.display = limiteOcc.checked ? 'block' : 'none';
+            const help = document.getElementById('occurrencesHelp');
+            if (help) help.style.display = limiteOcc.checked ? 'block' : 'none';
+            updateRecurrencePreview();
+        });
+    });
+
+    dateFinInput.addEventListener('change', updateRecurrencePreview);
+    nbOccInput.addEventListener('input', () => {
+        const help = document.getElementById('occurrencesHelp');
+        if (help) help.style.display = nbOccInput.style.display !== 'none' ? 'block' : 'none';
+        updateRecurrencePreview();
+    });
+    document.getElementById('recurrenceType')?.addEventListener('change', updateRecurrencePreview);
+}
+
+function updateRecurrencePreview() {
+    const preview = document.getElementById('recurrencePreview');
+    if (!preview) return;
+    const type = document.getElementById('recurrenceType')?.value;
+    const limiteDate = document.getElementById('limiteDate')?.checked;
+    const dateFin = document.getElementById('recurrenceDateFin')?.value;
+    const nbOcc = document.getElementById('recurrenceNbOccurrences')?.value;
+    const labels = {
+        'hebdo': 'chaque semaine',
+        'quotidien_ouvre': 'chaque jour ouvré',
+        'bi_hebdo': 'toutes les 2 semaines',
+        'mensuel': 'chaque mois'
+    };
+    let text = 'Réservation répétée ' + (labels[type] || '');
+    if (limiteDate && dateFin) text += ' jusqu\'au ' + dateFin;
+    else if (!limiteDate && nbOcc) text += ' pendant ' + nbOcc + ' occurrences';
+    preview.textContent = text;
+}
+
+function getRecurrenceData() {
+    const toggle = document.getElementById('recurrenceToggle');
+    if (!toggle?.checked) return null;
+    const limiteDate = document.getElementById('limiteDate')?.checked;
+    return {
+        type: document.getElementById('recurrenceType')?.value,
+        date_fin: limiteDate ? document.getElementById('recurrenceDateFin')?.value : null,
+        nb_occurrences: !limiteDate ? parseInt(document.getElementById('recurrenceNbOccurrences')?.value) : null
+    };
 }
 
 document.addEventListener('DOMContentLoaded', initBookingModal);

@@ -157,6 +157,11 @@ class PanierService:
                 kit = kits_map.get(item.id_item)
                 if kit: nom = kit.nom
 
+            recurrence = None
+            if item.recurrence_data:
+                try: recurrence = json.loads(item.recurrence_data)
+                except: pass
+
             items_data.append({
                 'id': item.id,
                 'type': item.type,
@@ -167,7 +172,8 @@ class PanierService:
                 'date': item.date_reservation.isoformat(),
                 'date_reservation': item.date_reservation.isoformat(),
                 'heure_debut': item.heure_debut,
-                'heure_fin': item.heure_fin
+                'heure_fin': item.heure_fin,
+                'recurrence': recurrence
             })
             
             # Signature unique du créneau
@@ -249,6 +255,7 @@ class PanierService:
                     raise PanierServiceError("Quantité totale excessive.")
                 existing_item.quantite = new_total
             else:
+                recurrence = item_data.get('recurrence')
                 new_item = PanierItem(
                     id_panier=panier.id,
                     type=item_type,
@@ -256,7 +263,8 @@ class PanierService:
                     quantite=qte,
                     date_reservation=start_dt.date(),
                     heure_debut=item_data['heure_debut'],
-                    heure_fin=item_data['heure_fin']
+                    heure_fin=item_data['heure_fin'],
+                    recurrence_data=json.dumps(recurrence) if recurrence else None
                 )
                 db.session.add(new_item)
 
@@ -300,6 +308,77 @@ class PanierService:
             db.session.rollback()
             raise PanierServiceError("Erreur vidage panier.")
 
+
+    def _generer_dates_recurrentes(self, start_dt: datetime, end_dt: datetime, recurrence: dict) -> list:
+        """Génère la liste des créneaux récurrents."""
+        from datetime import timedelta
+        dates = [(start_dt, end_dt)]  # Inclut le créneau de base
+        
+        type_rec = recurrence.get('type', 'hebdo')
+        date_fin = recurrence.get('date_fin')
+        nb_occ = recurrence.get('nb_occurrences')
+        
+        # Limite de sécurité
+        MAX_OCCURRENCES = 52
+        
+        if date_fin:
+            try:
+                limite = datetime.strptime(date_fin, '%Y-%m-%d')
+                limite = limite.replace(hour=23, minute=59)
+            except ValueError:
+                return dates
+        elif nb_occ:
+            limite = None
+            max_iter = min(int(nb_occ) - 1, MAX_OCCURRENCES)
+        else:
+            return dates
+
+        current = start_dt
+        iterations = 0
+        
+        while True:
+            # Calcul du prochain créneau
+            if type_rec == 'hebdo':
+                current = current + timedelta(weeks=1)
+            elif type_rec == 'bi_hebdo':
+                current = current + timedelta(weeks=2)
+            elif type_rec == 'mensuel':
+                month = current.month + 1
+                year = current.year + (1 if month > 12 else 0)
+                month = month if month <= 12 else 1
+                try:
+                    current = current.replace(year=year, month=month)
+                except ValueError:
+                    import calendar
+                    last_day = calendar.monthrange(year, month)[1]
+                    current = current.replace(year=year, month=month, day=last_day)
+            elif type_rec == 'quotidien_ouvre':
+                current = current + timedelta(days=1)
+                # Sauter weekend
+                while current.weekday() >= 5:
+                    current = current + timedelta(days=1)
+            else:
+                break
+
+            duration = end_dt - start_dt
+            next_end = current + duration
+
+            # Vérification limite
+            if date_fin and current > limite:
+                break
+            if not date_fin:
+                iterations += 1
+                if iterations >= max_iter:
+                    break
+
+            dates.append((current, next_end))
+
+            # Sécurité absolue
+            if len(dates) >= MAX_OCCURRENCES:
+                break
+
+        return dates
+
     def valider_panier(self, user_id: int) -> Dict[str, Any]:
         """CHECKOUT ATOMIQUE & SÉCURISÉ."""
         try:
@@ -328,29 +407,61 @@ class PanierService:
                 # Préparation données pour StockService
                 items_dict = [{'type': i.type, 'id': i.id_item, 'quantite': i.quantite} for i in items_list]
 
-                # 1. Vérification Atomique (Lock DB)
-                self.stock_service.verify_stock_atomic(items_dict, start_dt, end_dt, user_id)
-                
-                # 2. Création Réservation
-                groupe_id = str(uuid.uuid4())
-                
-                for item in items_list:
-                    resa = Reservation(
-                        utilisateur_id=user_id,
+                # Récurrence : générer tous les créneaux
+                recurrence = None
+                if items_list[0].recurrence_data:
+                    try: recurrence = json.loads(items_list[0].recurrence_data)
+                    except: pass
+
+                if recurrence:
+                    creneaux_a_creer = self._generer_dates_recurrentes(start_dt, end_dt, recurrence)
+                else:
+                    creneaux_a_creer = [(start_dt, end_dt)]
+
+                # Créer l'entrée de récurrence si nécessaire
+                recurrence_row_id = None
+                if recurrence:
+                    from db import ReservationRecurrence
+                    rec_row = ReservationRecurrence(
                         etablissement_id=self.etablissement_id,
-                        quantite_reservee=item.quantite,
-                        debut_reservation=start_dt,
-                        fin_reservation=end_dt,
-                        groupe_id=groupe_id,
-                        statut='confirmée'
+                        utilisateur_id=user_id,
+                        type_recurrence=recurrence.get('type', 'hebdo'),
+                        date_debut=creneaux_a_creer[0][0].date(),
+                        date_fin=datetime.strptime(recurrence['date_fin'], '%Y-%m-%d').date() if recurrence.get('date_fin') else None,
+                        nb_occurrences=recurrence.get('nb_occurrences'),
+                        heure_debut=h_deb,
+                        heure_fin=h_fin
                     )
-                    if item.type == 'kit': resa.kit_id = item.id_item
-                    else: resa.objet_id = item.id_item
-                    
-                    db.session.add(resa)
-                    audit_details.append(f"{item.type}#{item.id_item} (x{item.quantite}) [{h_deb}-{h_fin}]")
-                
-                resultats.append(groupe_id)
+                    db.session.add(rec_row)
+                    db.session.flush()  # Pour obtenir l'id
+                    recurrence_row_id = rec_row.id
+
+                for (s_dt, e_dt) in creneaux_a_creer:
+                    # 1. Vérification Atomique
+                    self.stock_service.verify_stock_atomic(items_dict, s_dt, e_dt, user_id)
+
+                    # 2. Création Réservation
+                    groupe_id = str(uuid.uuid4())
+
+                    for item in items_list:
+                        resa = Reservation(
+                            utilisateur_id=user_id,
+                            etablissement_id=self.etablissement_id,
+                            quantite_reservee=item.quantite,
+                            debut_reservation=s_dt,
+                            fin_reservation=e_dt,
+                            groupe_id=groupe_id,
+                            statut='confirmée'
+                        )
+                        if recurrence_row_id:
+                            resa.recurrence_id = recurrence_row_id
+                        if item.type == 'kit': resa.kit_id = item.id_item
+                        else: resa.objet_id = item.id_item
+
+                        db.session.add(resa)
+                        audit_details.append(f"{item.type}#{item.id_item} (x{item.quantite}) [{s_dt.strftime('%H:%M')}-{e_dt.strftime('%H:%M')}]")
+
+                    resultats.append(groupe_id)
 
             # 3. Nettoyage
             db.session.execute(delete(PanierItem).where(PanierItem.id_panier == panier.id))

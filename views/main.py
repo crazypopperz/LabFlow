@@ -141,7 +141,7 @@ def vue_jour(date_str):
     breadcrumbs = [
         {'text': 'Tableau de Bord', 'url': url_for('inventaire.index')},
         {'text': 'Calendrier', 'url': url_for('main.calendrier')},
-        {'text': date_obj.strftime('%d %B %Y'), 'url': None}
+        {'text': date_obj.strftime('%d ') + ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][date_obj.month-1] + date_obj.strftime(' %Y'), 'url': None}
     ]
 
     start_of_day = datetime.combine(date_obj, datetime.min.time())
@@ -184,9 +184,27 @@ def vue_jour(date_str):
                         reservations_par_heure[hour]['continues'].append(dict(resa))
 
     # L'appel à render_template est bien présent et complet
+    # Structure plate pour calendar-daily.js
+    reservations = []
+    for resa in reservations_brutes:
+        reservations.append({
+            'groupe_id': resa.groupe_id,
+            'debut': resa.debut_reservation.strftime('%H:%M'),
+            'fin': resa.fin_reservation.strftime('%H:%M'),
+            'nom_utilisateur': resa.nom_utilisateur,
+            'user_id': session.get('user_id')
+        })
+
+    from utils import get_etablissement_params
+    params = get_etablissement_params(etablissement_id)
+    planning_debut = params.get('planning_debut', '08:00')
+    planning_fin = params.get('planning_fin', '18:00')
+
     return render_template("vue_jour.html",
                            date_concernee=date_obj,
-                           reservations_par_heure=reservations_par_heure,
+                           reservations=reservations,
+                           planning_debut=planning_debut,
+                           planning_fin=planning_fin,
                            breadcrumbs=breadcrumbs)
 
 #================================================================

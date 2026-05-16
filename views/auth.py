@@ -44,11 +44,11 @@ def login():
 @limiter.limit("5 per minute")
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')
         username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
         password = request.form.get('password')
         code_invitation = request.form.get('code_invitation', '').strip().upper()
-        
+
         if not validate_email(email):
             flash("Format d'email invalide.", "error")
             return render_template('register.html')
@@ -58,18 +58,23 @@ def register():
             flash(msg_pass, "error")
             return render_template('register.html')
 
-        etablissement = db.session.execute(db.select(Etablissement).filter_by(code_invitation=code_invitation)).scalar_one_or_none()
+        etablissement = db.session.execute(
+            db.select(Etablissement).filter_by(code_invitation=code_invitation)
+        ).scalar_one_or_none()
         if not etablissement:
             flash("Code d'invitation invalide.", "error")
             return render_template('register.html')
-            
-        # VÉRIFICATION STRICTE DU PSEUDO
-        existing_user = db.session.execute(db.select(Utilisateur).filter_by(nom_utilisateur=username)).scalar_one_or_none()
-        if existing_user:
-            flash(f"Le nom d'utilisateur '{username}' est déjà pris. Veuillez en choisir un autre.", "error")
-            return render_template('register.html')
-            
+
+        existing_user = db.session.execute(
             db.select(Utilisateur).filter_by(nom_utilisateur=username)
+        ).scalar_one_or_none()
+        if existing_user:
+            flash(f"Le nom d'utilisateur '{username}' est déjà pris.", "error")
+            return render_template('register.html')
+
+        existing_email = db.session.execute(
+            db.select(Utilisateur).filter_by(email=email)
+        ).scalar_one_or_none()
         if existing_email:
             flash("Cet email est déjà utilisé.", "error")
             return render_template('register.html')
@@ -90,7 +95,7 @@ def register():
             db.session.rollback()
             current_app.logger.error(f"Erreur register: {e}")
             flash("Erreur technique.", "error")
-            
+
     return render_template('register.html')
 
 @auth_bp.route('/logout')
